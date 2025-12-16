@@ -15,9 +15,9 @@
         {
           "id": "gate",
           "name": "正门与序厅",
-          "panoLow": "https://picui.cn/thumbnails/7afa34e8d196e0f66a47689fdce77061.png",
-          "pano": "https://picui.cn/thumbnails/7afa34e8d196e0f66a47689fdce77061.png",
-          "thumb": "https://picui.cn/thumbnails/7afa34e8d196e0f66a47689fdce77061.png",
+          "panoLow": "https://youke2.picui.cn/s1/2025/12/16/6940f301a9097.jpg",
+          "pano": "https://youke2.picui.cn/s1/2025/12/16/6940f301a9097.jpg",
+          "thumb": "https://youke2.picui.cn/s1/2025/12/16/6940f301a9097.jpg",
           "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 180, "y": 320 },
           "hotspots": [

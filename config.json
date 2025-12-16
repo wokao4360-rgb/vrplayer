@@ -16,7 +16,7 @@
           "id": "gate",
           "name": "正门与序厅",
           "panoLow": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.png",
-          "pano": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.png",
+          "pano": "https://picui.cn/thumbnails/7afa34e8d196e0f66a47689fdce77061.png",
           "thumb": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.png",
           "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 180, "y": 320 },

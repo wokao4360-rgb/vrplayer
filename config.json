@@ -15,7 +15,7 @@
         {
           "id": "gate",
           "name": "正门与序厅",
-          "panoLow": "/assets/house.jpg",
+          "panoLow": "/assets/suelue.jpg",
           "pano": "/assets/demo.jpg",
           "thumb": "/assets/suelue.jpg",
           "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },

@@ -5,9 +5,9 @@
       "id": "wangding",
       "name": "王鼎纪念馆",
       "description": "王鼎纪念馆以清末名臣王鼎的生平事迹为主线，展示其禁烟、保疆卫国的历史贡献，面向师生开展红色研学与爱国主义教育。",
-      "cover": "/assets/suelue.jpg",
+      "cover": "",
       "map": {
-        "image": "/assets/suelue.jpg",
+        "image": "",
         "width": 1000,
         "height": 600
       },

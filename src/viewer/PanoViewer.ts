@@ -4,6 +4,7 @@ import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { LoadStatus } from '../ui/QualityIndicator';
 import { NadirPatch } from './NadirPatch';
 import { getYawPitchFromNDC, screenToNDC } from './picking';
+import { setLastPick } from './pickBus';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -866,6 +867,9 @@ export class PanoViewer {
         // 忽略失败
       });
     }
+
+    // 保存拾取点到 pickBus
+    setLastPick({ yaw, pitch, ts: Date.now() });
 
     // 触发自定义事件，让外部 UI 显示 toast 和标记
     window.dispatchEvent(

@@ -36,12 +36,12 @@ npm run dev
 
 ### 本地全景图（避免跨域）
 
-- 将临时全景图放在 `public/assets/panos/demo.png`（如果是 JPG，请改为 `demo.jpg` 并同步修改 `public/config.json` 中的路径）。
-- 示例配置中，王鼎纪念馆的所有场景已指向 `/assets/panos/demo.png`，本地开发时无需跨域即可加载。
+- 将临时全景图放在 `public/assets/panos/demo.jpg`（如果是 JPG，请改为 `demo.jpg` 并同步修改 `public/config.json` 中的路径）。
+- 示例配置中，王鼎纪念馆的所有场景已指向 `/assets/panos/demo.jpg`，本地开发时无需跨域即可加载。
 
 ### 云资源接入说明
 
-- 全景图 / 视频 / 缩略图建议统一存放在腾讯云 COS，并通过 **https** 访问，例如 `https://<bucket>.cos.<region>.myqcloud.com/panos/demo.png`。
+- 全景图 / 视频 / 缩略图建议统一存放在腾讯云 COS，并通过 **https** 访问，例如 `https://<bucket>.cos.<region>.myqcloud.com/panos/demo.jpg`。
 - App / 小程序仅负责打开播放器 URL（`?museum=xxx&scene=yyy`），不直接承载静态资源。
 - COS 公有读或临时签名均可；播放器保持现有 Three.js TextureLoader 直连加载，无需额外 CORS 配置。
 

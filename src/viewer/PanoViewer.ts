@@ -846,14 +846,15 @@ export class PanoViewer {
   private handlePick(clientX: number, clientY: number): void {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const ndc = screenToNDC(clientX, clientY, rect);
-    const result = getYawPitchFromNDC(ndc.x, ndc.y, this.camera, this.getSphereRadius());
-
-    if (!result) {
-      console.warn('[pick] 未能计算 yaw/pitch');
+    let yawPitch: { yaw: number; pitch: number };
+    try {
+      yawPitch = getYawPitchFromNDC(ndc.x, ndc.y, this.camera);
+    } catch (e) {
+      console.warn('[pick] yaw/pitch 计算出现异常', e);
       return;
     }
 
-    const { yaw, pitch } = result;
+    const { yaw, pitch } = yawPitch;
     const text = `yaw: ${yaw.toFixed(2)}, pitch: ${pitch.toFixed(2)}`;
 
     // 输出到 console

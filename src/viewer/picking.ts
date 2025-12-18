@@ -31,36 +31,26 @@ export function screenToNDC(
 export function getYawPitchFromNDC(
   ndcX: number,
   ndcY: number,
-  camera: THREE.Camera,
-  sphereRadius: number = 500
-): { yaw: number; pitch: number } | null {
-  // 创建射线
+  camera: THREE.Camera
+): { yaw: number; pitch: number } {
+  // 直接射线方向
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+  const dir = raycaster.ray.direction.clone().normalize();
 
-  // 创建球体几何用于相交检测
-  const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
-  const sphereMesh = new THREE.Mesh(sphereGeometry);
-  sphereMesh.position.set(0, 0, 0);
+  // 计算 yaw
+  let yaw = THREE.MathUtils.radToDeg(Math.atan2(dir.x, dir.z));
+  // 归一化到 [-180, 180]
+  if (yaw < -180) yaw += 360;
+  if (yaw > 180) yaw -= 360;
 
-  // 计算射线与球面的交点
-  const intersects = raycaster.intersectObject(sphereMesh);
-  if (intersects.length === 0) {
-    return null;
-  }
-
-  // 取第一个交点（最近的点）
-  const point = intersects[0].point;
-
-  // 归一化到单位向量
-  const normalized = point.normalize();
-
-  // 计算 pitch（仰俯角）：arcsin(y)，范围 [-90, 90]
-  const pitch = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, normalized.y))));
-
-  // 计算 yaw（水平角）：atan2(x, z)，范围 [-180, 180]
-  const yaw = THREE.MathUtils.radToDeg(Math.atan2(normalized.x, normalized.z));
+  // 计算 pitch
+  let pitch = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, dir.y))));
+  // 归一化，理论正常 asin 已在区间内
+  if (pitch < -90) pitch = -90;
+  if (pitch > 90) pitch = 90;
 
   return { yaw, pitch };
 }
+
 

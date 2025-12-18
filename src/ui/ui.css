@@ -1,0 +1,626 @@
+/* 全局基础样式（避免 index.html 内联 style 触发构建问题） */
+@import './community/community.css';
+@import './modals/modal.css';
+
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body{
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+#app{
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+:root{
+  --glass-bg: rgba(0,0,0,0.25);
+  --glass-bg-strong: rgba(0,0,0,0.45);
+  --glass-blur: 10px;
+  --radius-lg: 16px;
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --ease-out: cubic-bezier(.2,.8,.2,1);
+  --text-dim: rgba(255,255,255,0.72);
+  --text: rgba(255,255,255,0.92);
+  --shadow: 0 8px 28px rgba(0,0,0,0.35);
+}
+
+/* 基础按钮重置 */
+.vr-btn{
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+.vr-glass{
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+/* TopBar */
+.vr-topbar{
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2600;
+  padding-top: env(safe-area-inset-top, 0px);
+  height: calc(44px + env(safe-area-inset-top, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* 避免遮挡 viewer 拖拽 */
+}
+.vr-topbar-inner{
+  height: 44px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 56px 1fr 56px;
+  align-items: center;
+}
+.vr-topbar-title{
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 0 10px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.vr-topbar-right{
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 10px;
+  pointer-events: auto;
+}
+.vr-icon-btn{
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  color: rgba(255,255,255,0.9);
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.vr-icon-btn:active{
+  transform: scale(0.96);
+  background: rgba(255,255,255,0.10);
+}
+
+/* BrandMark */
+.vr-brandmark{
+  position: fixed;
+  left: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 2400;
+  color: rgba(255,255,255,0.78);
+  opacity: 0.6;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  user-select: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 9999px;
+  transition: opacity var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.vr-brandmark:hover{ opacity: 0.75; }
+.vr-brandmark:active{ opacity: 0.9; background: rgba(255,255,255,0.08); }
+
+/* AboutModal */
+.vr-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.vr-modal.open{
+  opacity: 1;
+  pointer-events: auto;
+}
+.vr-modal-mask{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.vr-modal-card{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.98);
+  width: min(92vw, 420px);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg-strong);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.vr-modal.open .vr-modal-card{
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.vr-modal-title{
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.vr-modal-desc{
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.85);
+}
+.vr-modal-actions{
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.vr-modal-close{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.92);
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.vr-modal-close:active{
+  transform: scale(0.98);
+  background: rgba(255,255,255,0.18);
+}
+
+/* BottomDock */
+.vr-dock-wrap{
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 2500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none; /* 让 viewer 可拖拽，交互交给内部 */
+}
+.vr-dock{
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  border-radius: 9999px;
+  padding: 6px;
+  box-shadow: var(--shadow);
+}
+.vr-dock-tab{
+  width: 64px;
+  height: 42px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  color: rgba(255,255,255,0.8);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.vr-dock-tab.active{
+  background: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.95);
+}
+.vr-dock-tab:active{ transform: scale(0.98); }
+.vr-dock-tab-label{ font-size: 12px; font-weight: 600; }
+
+/* DockPanels */
+.vr-panel{
+  pointer-events: auto;
+  width: min(92vw, 520px);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 12px 12px;
+  color: rgba(255,255,255,0.9);
+  transform: translateY(6px);
+  opacity: 0;
+}
+.vr-panel.visible{
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.vr-panel.hidden{
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.vr-panel-title{
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.vr-panel-body{
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.82);
+}
+
+/* SceneGuideDrawer */
+.vr-guide-drawer{
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.vr-guide-drawer.open{
+  pointer-events: auto;
+  opacity: 1;
+}
+.vr-guide-mask{
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+.vr-guide-panel{
+  position: absolute;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.vr-guide-drawer.open .vr-guide-panel{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Mobile: bottom drawer */
+.vr-guide-panel{
+  left: 12px;
+  right: 12px;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  height: 60vh;
+  border-radius: 16px 16px 16px 16px;
+}
+
+@media (min-width: 900px){
+  /* PC: right floating drawer */
+  .vr-guide-panel{
+    left: auto;
+    right: 12px;
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    width: 360px;
+    height: min(70vh, 620px);
+  }
+}
+
+.vr-guide-header{
+  padding: 10px 12px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.vr-guide-title{
+  font-size: 14px;
+  font-weight: 800;
+}
+.vr-guide-close{
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.9);
+}
+.vr-guide-close:active{
+  transform: scale(0.96);
+}
+
+.vr-guide-search{
+  padding: 0 12px 8px;
+}
+.vr-guide-search-input{
+  width: 100%;
+  height: 34px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.26);
+  color: rgba(255,255,255,0.92);
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+}
+.vr-guide-search-input::placeholder{
+  color: rgba(255,255,255,0.55);
+}
+
+.vr-guide-body{
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.vr-guide-list{
+  flex: 1.1;
+  padding: 4px 8px 10px 8px;
+  overflow: auto;
+}
+
+.vr-guide-item{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.vr-guide-item:hover{
+  background: rgba(255,255,255,0.06);
+}
+.vr-guide-item.active{
+  background: rgba(255,255,255,0.10);
+}
+.vr-guide-thumb{
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: rgba(0,0,0,0.4);
+}
+.vr-guide-meta{
+  flex: 1;
+  min-width: 0;
+}
+.vr-guide-name{
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.94);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vr-guide-id{
+  margin-top: 2px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+}
+
+@media (max-width: 899px){
+  .vr-guide-preview{
+    display: none;
+  }
+}
+
+@media (min-width: 900px){
+  .vr-guide-preview{
+    flex: 1;
+    padding: 6px 8px 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.vr-guide-preview-image{
+  width: 100%;
+  height: 200px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: rgba(0,0,0,0.55);
+}
+
+.vr-guide-preview-title{
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.95);
+}
+.vr-guide-preview-id{
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+}
+
+.vr-guide-preview-enter{
+  margin-top: auto;
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.95);
+  font-size: 13px;
+}
+.vr-guide-preview-enter:active{
+  transform: scale(0.97);
+}
+
+/* Toast */
+.vr-toast{
+  position: fixed;
+  right: 12px;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px)); /* 避开 Dock */
+  z-index: 5200;
+  padding: 8px 10px;
+  border-radius: 9999px;
+  background: rgba(0,0,0,0.42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.88);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.vr-toast.show{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hotspots */
+.hotspots-container{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 120;
+}
+
+.hotspot{
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform, opacity;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+/* hover/press 轻微动效 */
+@media (hover: hover) and (pointer: fine){
+  .hotspot:hover{
+    transform: translate3d(var(--hs-x, 0px), var(--hs-y, 0px), 0) translate(-50%, -50%) scale(1.04);
+  }
+}
+.hotspot.is-pressed{
+  transform: translate3d(var(--hs-x, 0px), var(--hs-y, 0px), 0) translate(-50%, -50%) scale(0.96);
+}
+
+/* 说明：Hotspots.ts 每帧会写 transform；这里用 CSS 变量兜底避免 hover 覆盖。
+   我们在写 transform 时也会同时写入 --hs-x/--hs-y（见下方补丁）。 */
+
+.hotspot--scene .hotspot-ring{
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  background: transparent;
+  border: 2px solid rgba(255,255,255,0.75);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+}
+.hotspot--scene .hotspot-ring::after{
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+
+.hs-scene-wrap{
+  position: relative;
+  width: 34px;
+  height: 34px;
+}
+.hs-scene-shadow{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 38px;
+  height: 18px;
+  transform: translate(-50%, -50%) translateY(14px);
+  border-radius: 9999px;
+  background: rgba(0,0,0,0.22);
+  filter: blur(6px);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.hotspot-icon-circle{
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.30);
+  color: rgba(255,255,255,0.92);
+}
+.hotspot--image .hotspot-icon-circle{ color: rgba(255,255,255,0.92); }
+.hotspot--video .hotspot-icon-circle{ background: rgba(0,0,0,0.32); }
+.hotspot-icon-play svg{ transform: translateX(1px); }
+
+.hotspot-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.28);
+}
+
+.hotspot-info-text{
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.hotspot-tooltip{
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(6px);
+  background: rgba(0,0,0,0.42);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.9);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.hotspot-tooltip::after{
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(0,0,0,0.42);
+}
+.hotspot-tooltip.show{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* PickMarker 拾取落点标记 */
+.vr-pick-marker{
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.85);
+  border-radius: 9999px;
+  background: transparent;
+  box-shadow: 0 0 8px rgba(255,255,255,0.4), 0 0 16px rgba(255,255,255,0.2);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: opacity 100ms var(--ease-out);
+}
+.vr-pick-marker.show{
+  opacity: 1;
+}

@@ -1,0 +1,81 @@
+/* 通用 Modal Shell：轻量、半透明、低干扰 */
+
+.vr-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.vr-modal-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.vr-modal-close-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.94);
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.vr-modal-close-icon:active {
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* 图片 Lightbox */
+.vr-modal-card--media {
+  width: min(96vw, 720px);
+  padding: 14px 14px 16px;
+}
+
+.vr-modal-body--image {
+  max-height: min(72vh, 520px);
+}
+
+.vr-modal-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(72vh, 520px);
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+/* Info 文本卡片 */
+.vr-modal-card--info {
+  width: min(88vw, 420px);
+  padding: 14px 14px 16px;
+}
+
+.vr-modal-body--info {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* 视频弹窗 */
+.vr-modal-body--video {
+  max-height: min(72vh, 520px);
+}
+
+.vr-modal-video {
+  display: block;
+  width: 100%;
+  max-height: min(72vh, 520px);
+  border-radius: 12px;
+  outline: none;
+  background: #000;
+}
+
+
+
+

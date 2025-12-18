@@ -1,0 +1,262 @@
+/* 微社区：轻、透、低干扰（Dock 面板版） */
+
+.vr-panel.vr-panel--community{
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px)); /* 留出 Dock 空间 */
+  height: 55vh;
+  width: auto;
+  padding: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 900px){
+  .vr-panel.vr-panel--community{
+    left: auto;
+    right: 12px;
+    width: 360px;
+    height: min(60vh, 560px);
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.vr-community{
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  color: rgba(255,255,255,0.92);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vr-community-header{
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.vr-community-title{
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.vr-community-subtitle{
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vr-community-content{
+  padding: 10px 12px 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vr-community-auth{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.vr-community-login-hint{
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.9);
+}
+
+.vr-community-userline{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vr-community-username{
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+}
+
+.vr-community-logout{
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.82);
+}
+
+.vr-community-like{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vr-community-likebtn{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.9);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vr-community-likebtn.liked{
+  background: rgba(255,255,255,0.16);
+}
+
+.vr-community-likecount{
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.92);
+}
+
+.vr-community-comments{
+  flex: 1;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.vr-community-tip{
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 6px;
+}
+
+@media (min-width: 900px){
+  .vr-community-comments{ max-height: none; }
+}
+
+.vr-community-empty{
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  padding: 8px 0;
+}
+
+.vr-community-comment{
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.vr-community-comment--flash{
+  animation: vr-community-comment-flash 0.3s ease-out;
+}
+
+@keyframes vr-community-comment-flash{
+  0%{ background: rgba(255,255,255,0.16); }
+  100%{ background: rgba(255,255,255,0.06); }
+}
+
+.vr-community-comment-meta{
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+}
+
+.vr-community-comment-text{
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.88);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.vr-community-inputrow{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vr-community-input{
+  flex: 1;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.22);
+  color: rgba(255,255,255,0.92);
+  padding: 0 10px;
+  outline: none;
+}
+
+.vr-community-input:disabled{
+  opacity: 0.6;
+}
+
+.vr-community-send{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.92);
+}
+
+.vr-community-send.disabled{
+  opacity: 0.6;
+}
+
+/* 登录弹窗的输入样式 */
+.vr-login-card{
+  width: min(92vw, 420px);
+}
+
+.vr-login-form{
+  margin-top: 10px;
+}
+
+.vr-login-input{
+  width: 100%;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.18);
+  color: rgba(255,255,255,0.92);
+  padding: 0 12px;
+  outline: none;
+}
+
+.vr-login-actions{
+  gap: 8px;
+}
+
+.vr-login-btn{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.92);
+}
+
+.vr-login-btn.primary{ background: rgba(255,255,255,0.16); }
+.vr-login-btn.danger{ background: rgba(255,255,255,0.08); }
+
+.vr-login-title-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.vr-login-close{
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.9);
+  display: grid;
+  place-items: center;
+}
+
+
+
+

@@ -1,0 +1,61 @@
+
+> vrplayer@1.0.0 dev
+> vite --host 0.0.0.0 --port 3000
+
+Port 3000 is in use, trying another one...
+
+  VITE v5.4.21  ready in 1141 ms
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: http://192.168.76.36:3001/
+21:28:07 [vite] page reload src/viewer/PanoViewer.ts
+21:28:44 [vite] page reload src/viewer/PanoViewer.ts
+21:42:38 [vite] page reload src/viewer/PanoViewer.ts
+21:43:13 [vite] page reload src/viewer/PanoViewer.ts
+21:55:22 [vite] page reload src/ui/DebugPanel.ts
+21:55:22 [vite] page reload src/ui/TitleBar.ts
+21:55:22 [vite] page reload src/ui/SceneList.ts
+21:55:22 [vite] page reload src/ui/MapOverlay.ts
+21:55:22 [vite] page reload src/ui/ControlBar.ts
+21:55:22 [vite] vite.config.ts changed, restarting server...
+21:55:22 [vite] changed tsconfig file detected: D:\Projects\vrplayer\tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.
+21:55:22 [vite] page reload src/utils/errorMessages.ts
+21:55:22 [vite] page reload src/viewer/PanoViewer.ts
+21:55:22 [vite] page reload src/ui/Loading.ts
+21:55:22 [vite] page reload src/ui/Hotspots.ts
+21:55:22 [vite] page reload src/ui/ConfigErrorPanel.ts
+21:55:22 [vite] page reload src/ui/VideoPlayer.ts
+21:55:22 [vite] page reload src/ui/QualityIndicator.ts
+21:55:22 [vite] page reload src/ui/ConfigStudio.ts
+21:55:22 [vite] page reload src/main.ts
+21:55:22 [vite] page reload src/ui/Hotspots.ts
+21:55:22 [vite] page reload src/ui/Loading.ts
+21:55:22 [vite] page reload index.html
+21:55:22 [vite] page reload src/ui/MuseumList.ts
+21:55:22 [vite] page reload src/ui/QualityIndicator.ts
+21:55:22 [vite] page reload src/ui/VideoPlayer.ts
+21:55:22 [vite] page reload src/utils/router.ts
+21:55:22 [vite] page reload src/utils/config.ts
+21:55:22 [vite] page reload src/utils/errorMessages.ts
+21:55:22 [vite] page reload src/utils/assetResolver.ts
+21:55:22 [vite] page reload src/utils/configValidator.ts
+21:55:22 [vite] page reload src/utils/draftStorage.ts
+21:55:22 [vite] page reload src/viewer/PanoViewer.ts
+21:55:22 [vite] server restarted.
+21:56:59 [vite] page reload src/viewer/PanoViewer.ts
+21:57:20 [vite] page reload src/viewer/PanoViewer.ts
+21:57:40 [vite] page reload src/viewer/PanoViewer.ts
+22:05:57 [vite] page reload src/viewer/PanoViewer.ts
+22:06:16 [vite] page reload src/viewer/PanoViewer.ts
+22:07:47 [vite] page reload src/viewer/PanoViewer.ts
+22:08:07 [vite] page reload src/viewer/PanoViewer.ts
+22:08:36 [vite] page reload src/viewer/PanoViewer.ts
+22:08:57 [vite] page reload src/viewer/PanoViewer.ts
+22:09:18 [vite] page reload src/viewer/PanoViewer.ts
+22:09:49 [vite] page reload src/viewer/PanoViewer.ts
+22:10:34 [vite] page reload src/viewer/PanoViewer.ts
+22:11:01 [vite] page reload src/viewer/PanoViewer.ts
+22:26:47 [vite] page reload src/viewer/PanoViewer.ts
+22:27:03 [vite] page reload src/viewer/PanoViewer.ts
+23:57:44 [vite] page reload src/viewer/PanoViewer.ts
+23:59:42 [vite] page reload src/viewer/PanoViewer.ts

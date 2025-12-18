@@ -1,0 +1,61 @@
+# Project: Dinghu Qingyuan VR Web Player
+# Goal: Multi-museum, multi-scene 360 panorama viewer with hotspots and optional 2D map navigation.
+# Must be practical, demo-friendly, and easy to explain to non-technical judges.
+
+## Product constraints
+- No reverse engineering or tampering with third-party viewers (e.g., removing third-party logos from their hosted pages).
+- We build our own viewer and host it on CloudBase Static Hosting.
+- First version: "teleport" between scenes (hotspot/map click). Do NOT implement true 3D walking physics.
+
+## Tech constraints
+- Use Vite for build.
+- Prefer TypeScript.
+- Prefer Three.js sphere pano viewer implementation.
+- Mobile-first: touch drag, pinch to zoom (FOV).
+- Keep dependencies minimal.
+
+## Architecture
+- public/config.json is the single source of truth for museums/scenes/hotspots.
+- Viewer must support query params:
+  - ?museum=<id>&scene=<id>
+- If no params: show museum list.
+- If museum only: show scene list.
+- If museum+scene: open viewer directly.
+
+## UI rules
+- Title bar must respect safe area and WeChat capsule:
+  - Use CSS env(safe-area-inset-top)
+  - Keep header height minimal and do not cover content.
+  - Title centered.
+- Provide:
+  - Scene list entry (drawer / bottom sheet)
+  - Map entry (button) + map overlay (optional first, but scaffold required)
+  - Loading state for pano textures
+  - Video overlay for video hotspots
+
+## Hotspots
+- hotspot.type:
+  - "scene": jump to target museumId/sceneId and set yaw/pitch if provided
+  - "video": open a video overlay and play target.url
+- Hotspot placement uses yaw/pitch in degrees.
+
+## Performance
+- Show placeholder immediately.
+- Preload next scene thumb after load.
+- Avoid blocking main thread. No heavy loops.
+
+## Code quality
+- No dead code.
+- Functions small and testable.
+- Clear file structure:
+  - src/app (routing/state)
+  - src/viewer (three.js pano)
+  - src/ui (overlays, list, map)
+  - src/types (config types)
+- Add basic runtime validation for config.json (fail gracefully with user-friendly error).
+
+## Delivery
+- Provide README with:
+  - npm install / dev / build
+  - How to upload dist to CloudBase Static Hosting
+  - How to put pano assets in Cloud Storage and reference URLs

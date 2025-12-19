@@ -30,6 +30,16 @@ body{
   --text-dim: rgba(255,255,255,0.72);
   --text: rgba(255,255,255,0.92);
   --shadow: 0 8px 28px rgba(0,0,0,0.35);
+  
+  /* 地面交互层统一视觉变量 */
+  --vr-glass-bg: rgba(255,255,255,0.10);
+  --vr-glass-border: rgba(255,255,255,0.18);
+  --vr-glass-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  --vr-accent: rgba(255,255,255,0.9);
+  --vr-muted: rgba(255,255,255,0.5);
+  --vr-ground-glass-bg: rgba(255,255,255,0.15);
+  --vr-ground-glass-border: rgba(255,255,255,0.5);
+  --vr-ground-glass-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 /* 基础按钮重置 */
@@ -119,6 +129,169 @@ body{
 }
 .vr-brandmark:hover{ opacity: 0.75; }
 .vr-brandmark:active{ opacity: 0.9; background: rgba(255,255,255,0.08); }
+
+/* BrandWatermark 左下角水印 */
+.vr-watermark{
+  position: absolute;
+  left: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  pointer-events: none; /* 默认不拦截事件 */
+}
+
+.vr-watermark__text{
+  color: rgba(255,255,255,0.45);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  user-select: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: auto; /* 只有文字区域可点击 */
+  transition: opacity var(--dur) var(--ease-out), 
+              transform var(--dur) var(--ease-out),
+              background var(--dur) var(--ease-out),
+              color var(--dur) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine){
+  .vr-watermark__text:hover{
+    opacity: 0.75;
+    transform: scale(1.05);
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.6);
+  }
+}
+
+.vr-watermark__text:active{
+  opacity: 0.85;
+  transform: scale(0.98);
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.7);
+}
+
+/* TeamIntroModal 团队介绍弹窗 */
+.vr-teammodal{
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease-out);
+}
+
+.vr-teammodal.open{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vr-teammodal-backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.vr-teammodal-card{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translateY(10px);
+  width: min(86vw, 360px);
+  max-width: 480px;
+  border-radius: 16px;
+  background: var(--vr-glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--vr-glass-border);
+  box-shadow: var(--vr-glass-shadow);
+  padding: 20px;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity 250ms var(--ease-out), 
+              transform 250ms var(--ease-out);
+}
+
+@media (min-width: 900px){
+  .vr-teammodal-card{
+    width: min(420px, 86vw);
+  }
+}
+
+.vr-teammodal.open .vr-teammodal-card{
+  opacity: 1;
+  transform: translate(-50%, -50%) translateY(0);
+}
+
+.vr-teammodal-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.vr-teammodal-title{
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.vr-teammodal-close{
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.9);
+  font-size: 24px;
+  line-height: 1;
+  border: 0;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), 
+              transform var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vr-teammodal-close:active{
+  transform: scale(0.96);
+  background: rgba(255,255,255,0.16);
+}
+
+.vr-teammodal-subtitle{
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.75);
+  margin-bottom: 16px;
+}
+
+.vr-teammodal-content{
+  margin-bottom: 16px;
+}
+
+.vr-teammodal-text{
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 12px;
+}
+
+.vr-teammodal-text:last-child{
+  margin-bottom: 0;
+}
+
+.vr-teammodal-footer{
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
 
 /* AboutModal */
 .vr-modal{
@@ -385,28 +558,32 @@ body{
   width: clamp(88px, 18vw, 120px);
   height: clamp(88px, 18vw, 120px);
   border-radius: 999px;
-  background: rgba(255,255,255,0.10);
+  background: var(--vr-glass-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.18);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  border: 1px solid var(--vr-glass-border);
+  box-shadow: var(--vr-glass-shadow);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* 中心遮罩（摄影杆遮挡） */
+/* 中心遮罩（摄影杆遮挡）- 优化渐变，更柔和的过渡 */
 .vr-compass__mask{
   position: absolute;
   inset: 18%;
   border-radius: 999px;
   background: radial-gradient(circle,
-    rgba(0,0,0,0.35) 0%,
-    rgba(0,0,0,0.20) 45%,
-    rgba(0,0,0,0.00) 70%);
-  filter: blur(0.2px);
+    rgba(0,0,0,0.40) 0%,
+    rgba(0,0,0,0.30) 30%,
+    rgba(0,0,0,0.15) 50%,
+    rgba(0,0,0,0.05) 65%,
+    rgba(0,0,0,0.00) 75%);
+  filter: blur(0.3px);
   pointer-events: none;
+  /* 确保不遮挡 GroundNavDots 圆点（圆点在 mask 外圈） */
+  z-index: 0;
 }
 
 /* 方向标签 */
@@ -414,17 +591,18 @@ body{
   position: absolute;
   font-size: clamp(12px, 2.5vw, 13px);
   font-weight: 600;
-  color: rgba(255,255,255,0.75);
+  color: var(--vr-muted);
   line-height: 1;
   pointer-events: none;
   user-select: none;
+  z-index: 1; /* 确保在 mask 上方 */
 }
 
 .vr-compass__label--north{
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  color: rgba(255,255,255,0.95);
+  color: var(--vr-accent);
 }
 
 .vr-compass__label--east{
@@ -486,11 +664,11 @@ body{
   width: 12px;
   height: 12px;
   border-radius: 9999px;
-  border: 2px solid rgba(255,255,255,0.5);
-  background: rgba(255,255,255,0.15);
+  border: 2px solid var(--vr-ground-glass-border);
+  background: var(--vr-ground-glass-bg);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: var(--vr-ground-glass-shadow);
   pointer-events: auto;
   cursor: pointer;
   transform-origin: center;
@@ -499,40 +677,41 @@ body{
               border-color 150ms cubic-bezier(.2,.8,.2,1),
               background 150ms cubic-bezier(.2,.8,.2,1),
               box-shadow 150ms cubic-bezier(.2,.8,.2,1);
+  z-index: 2; /* 确保在 CompassDisk mask 上方 */
 }
 
 .vr-groundnav__dot:hover{
   opacity: 0.95;
-  transform: scale(1.2);
-  border-color: rgba(255,255,255,0.75);
-  background: rgba(255,255,255,0.25);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transform: scale(1.15);
+  border-color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.22);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
 }
 
 .vr-groundnav__dot.is-hover{
   opacity: 0.9;
-  transform: scale(1.15);
-  border-color: rgba(255,255,255,0.7);
-  background: rgba(255,255,255,0.22);
+  transform: scale(1.12);
+  border-color: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.20);
 }
 
 .vr-groundnav__dot.is-current{
   opacity: 1;
-  transform: scale(1.3);
-  border-color: rgba(255,255,255,0.9);
-  background: rgba(255,255,255,0.3);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.2), 0 4px 16px rgba(0,0,0,0.35);
-  animation: vr-groundnav-pulse 2s ease-in-out infinite;
+  transform: scale(1.25);
+  border-color: var(--vr-accent);
+  background: rgba(255,255,255,0.28);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.15), 0 4px 16px rgba(0,0,0,0.3);
+  animation: vr-groundnav-pulse 3s ease-in-out infinite;
 }
 
 @keyframes vr-groundnav-pulse{
   0%, 100%{
-    transform: scale(1.3);
+    transform: scale(1.25);
     opacity: 1;
   }
   50%{
-    transform: scale(1.4);
-    opacity: 0.9;
+    transform: scale(1.3);
+    opacity: 0.95;
   }
 }
 
@@ -825,14 +1004,14 @@ body{
   height: 40px;
   border-radius: 9999px;
   background: transparent;
-  border: 2px solid rgba(255,255,255,0.65);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  border: 2px solid var(--vr-ground-glass-border);
+  box-shadow: var(--vr-ground-glass-shadow);
   transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .hotspot--ground:hover .hotspot-ground-ring{
   opacity: 0.9;
-  border-color: rgba(255,255,255,0.85);
+  border-color: rgba(255,255,255,0.75);
 }
 
 /* 非地面场景热点：箭头图标 */
@@ -851,21 +1030,22 @@ body{
   border-radius: 9999px;
   display: grid;
   place-items: center;
-  background: rgba(0,0,0,0.25);
+  background: var(--glass-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.28);
-  color: rgba(255,255,255,0.88);
+  box-shadow: var(--vr-glass-shadow);
+  color: var(--vr-muted);
   opacity: 0.85;
   transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 .hotspot:hover .hotspot-icon-circle{
   opacity: 0.95;
+  color: var(--vr-accent);
 }
 
 .hotspot--image .hotspot-icon-circle{ 
-  color: rgba(255,255,255,0.9); 
+  color: var(--vr-accent); 
 }
 
 .hotspot--video .hotspot-icon-circle{ 
@@ -880,8 +1060,8 @@ body{
   width: 10px;
   height: 10px;
   border-radius: 9999px;
-  background: rgba(255,255,255,0.85);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.28);
+  background: var(--vr-accent);
+  box-shadow: var(--vr-glass-shadow);
 }
 
 .hotspot-info-text{

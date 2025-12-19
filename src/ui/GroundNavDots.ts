@@ -7,17 +7,9 @@
 import { onSceneFocus, SceneFocusEvent } from './sceneLinkBus';
 import { navigateToScene } from '../utils/router';
 import { emitSceneFocus } from './sceneLinkBus';
+import { computeGroundOverlayTransform, shouldShowGroundOverlay } from './groundOverlayTransform';
 
-const PITCH_SHOW_THRESHOLD = -55; // 开始显示的 pitch 阈值（度）
-const PITCH_FULL_VISIBLE = -90; // 完全显示的 pitch（度）
 const RING_RADIUS = 60; // 圆环半径（px）
-
-type GroundTransform = {
-  opacity: number;
-  translateY: number; // px
-  scaleY: number;
-  blur: number; // px
-};
 
 type SceneHotspot = {
   id: string;
@@ -80,29 +72,6 @@ export class GroundNavDots {
     this.renderDots();
   }
 
-  /**
-   * 根据 pitch 计算贴地变换参数（与 CompassDisk 一致）
-   */
-  private computeGroundTransform(pitch: number): GroundTransform {
-    // 归一化到 [0, 1]，pitch 从 -55° 到 -90°
-    const t = Math.max(0, Math.min(1, 
-      (pitch - PITCH_SHOW_THRESHOLD) / (PITCH_FULL_VISIBLE - PITCH_SHOW_THRESHOLD)
-    ));
-
-    // opacity: 0 -> 1（pitch 越低越明显）
-    const opacity = t;
-
-    // translateY: 0 -> -8px（向下移动，贴地效果）
-    const translateY = -t * 8;
-
-    // scaleY: 1 -> 0.3（垂直压缩，压扁效果）
-    const scaleY = 1 - t * 0.7;
-
-    // blur: 0 -> 2px（轻微模糊，增强贴地感）
-    const blur = t * 2;
-
-    return { opacity, translateY, scaleY, blur };
-  }
 
   /**
    * 处理场景聚焦事件（hover/focus）
@@ -164,6 +133,9 @@ export class GroundNavDots {
           source: 'pano',
           ts: Date.now(),
         });
+
+        // 关闭可能打开的面板（通过派发事件）
+        window.dispatchEvent(new CustomEvent('vr:close-panels'));
 
         // 导航到场景
         this.onNavigateToScene(hotspot.target.museumId, hotspot.target.sceneId);
@@ -236,12 +208,12 @@ export class GroundNavDots {
     this.currentYaw = yawDeg;
     this.currentPitch = pitchDeg;
 
-    // 计算显示状态
-    const shouldShow = pitchDeg <= PITCH_SHOW_THRESHOLD;
+    // 计算显示状态（使用公共函数）
+    const shouldShow = shouldShowGroundOverlay(pitchDeg);
 
     if (shouldShow) {
-      // 计算贴地变换参数
-      const transform = this.computeGroundTransform(pitchDeg);
+      // 计算贴地变换参数（使用公共函数）
+      const transform = computeGroundOverlayTransform(pitchDeg);
 
       // 应用透明度
       this.root.style.opacity = transform.opacity.toString();

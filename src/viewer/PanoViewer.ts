@@ -6,6 +6,7 @@ import { NadirPatch } from './NadirPatch';
 import { getYawPitchFromNDC, screenToNDC } from './picking';
 import { CompassDisk } from '../ui/CompassDisk';
 import { GroundNavDots } from '../ui/GroundNavDots';
+import { BrandWatermark } from '../ui/BrandWatermark';
 import type { SceneHotspot } from '../types/config';
 
 /**
@@ -98,6 +99,7 @@ export class PanoViewer {
   private nadirPatch: NadirPatch | null = null;
   private compassDisk: CompassDisk | null = null;
   private groundNavDots: GroundNavDots | null = null;
+  private brandWatermark: BrandWatermark | null = null;
   // Enhanced 为默认研学展示档，Original 为兜底备用档
   private renderProfile: RenderProfile = RenderProfile.Enhanced;
   private isDragging = false;
@@ -167,6 +169,10 @@ export class PanoViewer {
       sceneHotspots: [],
     });
     this.groundNavDots.mount(container);
+    
+    // 品牌水印（DOM overlay，左下角）
+    this.brandWatermark = new BrandWatermark();
+    this.brandWatermark.mount(container);
     
     // 绑定事件
     this.setupEvents();
@@ -968,6 +974,10 @@ export class PanoViewer {
     if (this.groundNavDots) {
       this.groundNavDots.dispose();
       this.groundNavDots = null;
+    }
+    if (this.brandWatermark) {
+      this.brandWatermark.dispose();
+      this.brandWatermark = null;
     }
     this.renderer.dispose();
     window.removeEventListener('resize', () => this.handleResize());

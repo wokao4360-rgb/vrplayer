@@ -4,6 +4,7 @@ import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { LoadStatus } from '../ui/QualityIndicator';
 import { NadirPatch } from './NadirPatch';
 import { getYawPitchFromNDC, screenToNDC } from './picking';
+import { CompassDisk } from '../ui/CompassDisk';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -93,6 +94,7 @@ export class PanoViewer {
   private container: HTMLElement;
   private frameListeners: Array<(dtMs: number) => void> = [];
   private nadirPatch: NadirPatch | null = null;
+  private compassDisk: CompassDisk | null = null;
   // Enhanced 为默认研学展示档，Original 为兜底备用档
   private renderProfile: RenderProfile = RenderProfile.Enhanced;
   private isDragging = false;
@@ -150,6 +152,10 @@ export class PanoViewer {
 
     // Nadir patch：额外几何体叠加，不影响全景球主材质
     this.nadirPatch = new NadirPatch(this.scene, 500);
+    
+    // 指南针圆盘（DOM overlay）
+    this.compassDisk = new CompassDisk();
+    this.compassDisk.mount(container);
     
     // 绑定事件
     this.setupEvents();
@@ -642,6 +648,12 @@ export class PanoViewer {
       this.nadirPatch.update(this.camera, { yaw: view.yaw, pitch: view.pitch }, dtMs);
     }
 
+    // 更新指南针圆盘
+    if (this.compassDisk) {
+      const view = this.getCurrentView();
+      this.compassDisk.setYawPitch(view.yaw, view.pitch);
+    }
+
     for (const listener of this.frameListeners) {
       listener(dtMs);
     }
@@ -908,6 +920,10 @@ export class PanoViewer {
     if (this.nadirPatch) {
       this.nadirPatch.dispose(this.scene);
       this.nadirPatch = null;
+    }
+    if (this.compassDisk) {
+      this.compassDisk.dispose();
+      this.compassDisk = null;
     }
     this.renderer.dispose();
     window.removeEventListener('resize', () => this.handleResize());

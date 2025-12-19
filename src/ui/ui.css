@@ -950,6 +950,29 @@ body{
   animation: vr-groundnav-pulse 3s ease-in-out infinite;
 }
 
+/* 视线瞄准状态（is-aimed） */
+.vr-groundnav__dot.is-aimed{
+  transform: scale(1.22);
+  opacity: 0.95;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.28), var(--vr-ground-glass-shadow);
+}
+
+/* 同时是 current 和 aimed 时，current 优先级更高 */
+.vr-groundnav__dot.is-current.is-aimed{
+  transform: scale(1.28);
+}
+
+/* 同时是 hover 和 aimed 时，hover 优先级更高（通过选择器顺序实现） */
+.vr-groundnav__dot.is-hover.is-aimed{
+  transform: scale(1.15); /* hover 的 scale 覆盖 aimed */
+}
+
+/* 交互态弱化 aimed */
+.vr-ui-interacting .vr-groundnav__dot.is-aimed{
+  transform: scale(1.08);
+  opacity: 0.55;
+}
+
 @keyframes vr-groundnav-pulse{
   0%, 100%{
     transform: scale(1.25);
@@ -1362,6 +1385,75 @@ body{
 }
 .vr-pick-marker.show{
   opacity: 1;
+}
+
+/* ScenePreviewCard 场景预览卡片 */
+.vr-previewcard{
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 148px); /* SceneStrip 上方一点 */
+  transform: translateX(-50%) translateY(8px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 17; /* 低于 SceneStrip(18)，高于 ground 层(10-12) */
+  background: var(--vr-glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--vr-glass-border);
+  box-shadow: var(--vr-glass-shadow);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  max-width: min(92vw, 360px);
+  transition: opacity 220ms cubic-bezier(.2,.8,.2,1), 
+              transform 220ms cubic-bezier(.2,.8,.2,1),
+              filter 220ms cubic-bezier(.2,.8,.2,1);
+}
+
+.vr-previewcard.is-visible{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.vr-previewcard__thumb{
+  width: 56px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  overflow: hidden;
+  border: 1px solid var(--vr-glass-border);
+  flex-shrink: 0;
+}
+
+.vr-previewcard__thumb.is-empty{
+  /* 无缩略图时保持占位渐变 */
+}
+
+.vr-previewcard__thumb img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vr-previewcard__title{
+  font-size: 13px;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.86);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 交互态强制隐藏 */
+.vr-ui-interacting .vr-previewcard{
+  opacity: 0 !important;
+  transform: translateX(-50%) translateY(8px) !important;
 }
 
 /* MapPanel */

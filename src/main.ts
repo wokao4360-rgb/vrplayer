@@ -20,6 +20,8 @@ import { BrandMark } from './ui/BrandMark';
 import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { SceneStrip } from './ui/SceneStrip';
+import { ScenePreviewCard } from './ui/ScenePreviewCard';
+import { resolveAssetUrl, AssetType } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
 import type { ValidationError } from './utils/configValidator';
@@ -41,6 +43,7 @@ class App {
   private bottomDock: BottomDock | null = null;
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
   private sceneStrip: SceneStrip | null = null;
+  private scenePreviewCard: ScenePreviewCard | null = null;
   private museumList: MuseumList | null = null;
   private sceneList: SceneList | null = null;
   private mapOverlay: MapOverlay | null = null;
@@ -563,6 +566,23 @@ class App {
     });
     viewerContainer.appendChild(this.sceneStrip.getElement());
 
+    // 新 UI：场景预览卡片（Scene Preview Card）
+    // 构建 sceneIndex Map（sceneId -> { title, thumb }）
+    const sceneIndex = new Map<string, { title: string; thumb?: string }>();
+    museum.scenes.forEach((s) => {
+      sceneIndex.set(s.id, {
+        title: s.name,
+        thumb: s.thumb, // ScenePreviewCard 内部会使用 resolveAssetUrl 解析
+      });
+    });
+
+    this.scenePreviewCard = new ScenePreviewCard(viewerContainer, {
+      museumId: museum.id,
+      getSceneMeta: (sceneId: string) => {
+        return sceneIndex.get(sceneId) ?? null;
+      },
+    });
+
     // 新 UI：底部 Dock（导览 tab 打开抽屉）
     this.bottomDock = new BottomDock({
       initialTab: 'guide',
@@ -685,6 +705,11 @@ class App {
     if (this.sceneStrip) {
       this.sceneStrip.dispose();
       this.sceneStrip = null;
+    }
+
+    if (this.scenePreviewCard) {
+      this.scenePreviewCard.dispose();
+      this.scenePreviewCard = null;
     }
     
     if (this.museumList) {

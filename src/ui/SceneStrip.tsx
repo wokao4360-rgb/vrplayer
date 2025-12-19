@@ -299,6 +299,39 @@ export class SceneStrip {
         }
       });
     });
+
+    // 监听 vr:scene-aim 事件（来自 GroundNavDots）
+    const handleSceneAim = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        type: 'aim' | 'clear';
+        museumId: string;
+        sceneId?: string;
+        source: string;
+        ts: number;
+      }>;
+      
+      // 只处理来自 groundnav 的事件
+      if (customEvent.detail.source !== 'groundnav') return;
+      
+      // 只处理当前博物馆的事件
+      if (customEvent.detail.museumId !== this.museumId) return;
+
+      if (customEvent.detail.type === 'aim' && customEvent.detail.sceneId) {
+        // aim 时滚动到对应场景（不强制，不抢用户手动滚动）
+        this.scrollToItem(customEvent.detail.sceneId, 'smooth', false);
+      }
+      // clear 时不处理（SceneStrip 保持当前状态）
+    };
+
+    window.addEventListener('vr:scene-aim', handleSceneAim);
+
+    // 保存清理函数（在 dispose 中使用）
+    if (!this.scrollHandlers) {
+      this.scrollHandlers = [];
+    }
+    this.scrollHandlers.push(() => {
+      window.removeEventListener('vr:scene-aim', handleSceneAim);
+    });
   }
 
   /**
@@ -460,6 +493,7 @@ export class SceneStrip {
     }
   }
 }
+
 
 
 

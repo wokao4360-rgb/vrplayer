@@ -256,6 +256,21 @@ body{
   color: rgba(255,255,255,0.82);
 }
 
+.vr-panel--map{
+  height: min(70vh, 600px);
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+@media (max-width: 899px){
+  .vr-panel--map{
+    height: min(60vh, 500px);
+    max-height: calc(100vh - 100px);
+  }
+}
+
 /* SceneGuideDrawer */
 .vr-guide-drawer{
   position: fixed;
@@ -623,4 +638,157 @@ body{
 }
 .vr-pick-marker.show{
   opacity: 1;
+}
+
+/* MapPanel */
+.vr-map-panel{
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.vr-map-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  gap: 8px;
+}
+
+.vr-map-title{
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.vr-map-close{
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.9);
+  font-size: 18px;
+  line-height: 1;
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.vr-map-close:active{
+  transform: scale(0.96);
+  background: rgba(255,255,255,0.16);
+}
+
+.vr-map-body{
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  padding: 0 12px 12px;
+}
+
+.vr-map-container{
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.vr-map-image{
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  max-height: 100%;
+}
+
+.vr-map-points{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vr-map-point{
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.vr-map-point:active{
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+.vr-map-point-marker{
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.85);
+  border: 2px solid rgba(255,255,255,0.95);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.vr-map-point--current .vr-map-point-marker{
+  width: 20px;
+  height: 20px;
+  background: rgba(255,255,255,0.95);
+  border-color: rgba(255,255,255,1);
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.2), 0 4px 16px rgba(0,0,0,0.4);
+  animation: vr-map-pulse 2s ease-in-out infinite;
+}
+
+@keyframes vr-map-pulse{
+  0%, 100%{
+    transform: scale(1);
+    opacity: 1;
+  }
+  50%{
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
+
+.vr-map-point-tooltip{
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.95);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.vr-map-point:hover .vr-map-point-tooltip,
+.vr-map-point:focus .vr-map-point-tooltip{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.vr-map-point-tooltip::after{
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(0,0,0,0.75);
 }

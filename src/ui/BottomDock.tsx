@@ -1,15 +1,20 @@
 import type { DockTabKey } from './DockPanels';
 import { DockPanels } from './DockPanels';
+import type { Museum, Scene } from '../types/config';
 
 type BottomDockOptions = {
   initialTab?: DockTabKey;
   onGuideClick?: () => void;
   sceneId?: string;
   sceneName?: string;
+  museum?: Museum;
+  scenes?: Scene[];
+  currentSceneId?: string;
 };
 
 const TAB_LABELS: Array<{ key: DockTabKey; label: string }> = [
   { key: 'guide', label: '导览' },
+  { key: 'map', label: '平面图' },
   { key: 'community', label: '社区' },
   { key: 'settings', label: '设置' },
   { key: 'info', label: '信息' },
@@ -31,6 +36,9 @@ export class BottomDock {
       initialTab: this.activeTab,
       sceneId: options.sceneId,
       sceneName: options.sceneName,
+      museum: options.museum,
+      scenes: options.scenes,
+      currentSceneId: options.currentSceneId || options.sceneId,
     });
     this.panels.setVisible(true);
 
@@ -76,6 +84,10 @@ export class BottomDock {
 
   setSceneContext(sceneId: string, sceneName?: string): void {
     this.panels.setSceneContext(sceneId, sceneName);
+  }
+
+  setMuseumContext(museum: Museum, scenes: Scene[], currentSceneId: string): void {
+    this.panels.setMuseumContext(museum, scenes, currentSceneId);
   }
 
   getElement(): HTMLElement {

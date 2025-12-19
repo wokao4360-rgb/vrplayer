@@ -1,11 +1,16 @@
 import { CommunityPanel } from './community/CommunityPanel';
+import { MapPanel } from './MapPanel';
+import type { Museum, Scene } from '../types/config';
 
-export type DockTabKey = 'guide' | 'info' | 'settings' | 'community';
+export type DockTabKey = 'guide' | 'info' | 'settings' | 'community' | 'map';
 
 type DockPanelsOptions = {
   initialTab: DockTabKey;
   sceneId?: string;
   sceneName?: string;
+  museum?: Museum;
+  scenes?: Scene[];
+  currentSceneId?: string;
 };
 
 export class DockPanels {
@@ -13,20 +18,27 @@ export class DockPanels {
   private currentTab: DockTabKey;
   private sceneId?: string;
   private sceneName?: string;
+  private museum?: Museum;
+  private scenes?: Scene[];
+  private currentSceneId?: string;
   private communityPanel: CommunityPanel | null = null;
+  private mapPanel: MapPanel | null = null;
 
   constructor(options: DockPanelsOptions) {
     this.currentTab = options.initialTab;
     this.sceneId = options.sceneId;
     this.sceneName = options.sceneName;
+    this.museum = options.museum;
+    this.scenes = options.scenes;
+    this.currentSceneId = options.currentSceneId || options.sceneId;
     this.element = document.createElement('div');
     this.element.className = 'vr-panel vr-glass hidden';
     this.render();
   }
 
   private render(): void {
-    // 清理 community 变体
-    this.element.classList.remove('vr-panel--community');
+    // 清理变体类
+    this.element.classList.remove('vr-panel--community', 'vr-panel--map');
 
     if (this.currentTab === 'community') {
       this.element.classList.add('vr-panel--community');
@@ -41,9 +53,49 @@ export class DockPanels {
       return;
     }
 
+    if (this.currentTab === 'map') {
+      this.element.classList.add('vr-panel--map');
+      this.element.innerHTML = '';
+      
+      if (this.communityPanel) {
+        this.communityPanel.remove();
+        this.communityPanel = null;
+      }
+
+      if (this.museum && this.scenes && this.scenes.length > 0) {
+        const sid = this.currentSceneId || this.sceneId || this.scenes[0].id;
+        if (!this.mapPanel) {
+          this.mapPanel = new MapPanel({
+            museum: this.museum,
+            scenes: this.scenes,
+            currentSceneId: sid,
+            onClose: () => {
+              // 关闭 MapPanel 时切换到其他 tab
+              this.setTab('guide');
+            },
+          });
+        } else {
+          this.mapPanel.updateCurrentScene(sid);
+        }
+        this.element.appendChild(this.mapPanel.getElement());
+      } else {
+        // 如果没有数据，显示提示
+        this.element.innerHTML = `
+          <div class="vr-panel-title">平面图</div>
+          <div class="vr-panel-body">暂无平面图数据</div>
+        `;
+      }
+      return;
+    }
+
+    // 清理其他面板
     if (this.communityPanel) {
       this.communityPanel.remove();
       this.communityPanel = null;
+    }
+    if (this.mapPanel) {
+      this.mapPanel.remove();
+      this.mapPanel = null;
     }
 
     const { title, body } = this.getContentForTab(this.currentTab);
@@ -69,8 +121,27 @@ export class DockPanels {
   setSceneContext(sceneId: string, sceneName?: string): void {
     this.sceneId = sceneId;
     this.sceneName = sceneName;
+    this.currentSceneId = sceneId;
+    
     if (this.currentTab === 'community' && this.communityPanel) {
       this.communityPanel.setScene(sceneId, sceneName);
+    }
+    
+    if (this.currentTab === 'map' && this.mapPanel) {
+      this.mapPanel.updateCurrentScene(sceneId);
+    }
+  }
+
+  setMuseumContext(museum: Museum, scenes: Scene[], currentSceneId: string): void {
+    this.museum = museum;
+    this.scenes = scenes;
+    this.currentSceneId = currentSceneId;
+    
+    if (this.currentTab === 'map' && this.mapPanel) {
+      this.mapPanel.updateMuseum(museum, scenes, currentSceneId);
+    } else if (this.currentTab === 'map') {
+      // 如果当前是 map tab 但没有 panel，重新渲染
+      this.render();
     }
   }
 
@@ -97,6 +168,10 @@ export class DockPanels {
     if (this.communityPanel) {
       this.communityPanel.remove();
       this.communityPanel = null;
+    }
+    if (this.mapPanel) {
+      this.mapPanel.remove();
+      this.mapPanel = null;
     }
     this.element.remove();
   }

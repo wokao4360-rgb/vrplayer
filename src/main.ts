@@ -553,6 +553,9 @@ class App {
       onGuideClick: () => this.sceneGuideDrawer?.toggle(),
       sceneId: scene.id,
       sceneName: scene.name,
+      museum: museum,
+      scenes: museum.scenes,
+      currentSceneId: scene.id,
     });
     this.appElement.appendChild(this.bottomDock.getElement());
 

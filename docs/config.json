@@ -25,8 +25,8 @@
               "id": "gate_to_yard",
               "type": "scene",
               "label": "步入前院",
-              "yaw": -63.3,
-              "pitch": -28.10,
+              "yaw": 20,
+              "pitch": -4,
               "target": { "museumId": "wangding", "sceneId": "front_yard", "yaw": 15, "pitch": 0 }
             },
             {

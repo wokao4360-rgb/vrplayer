@@ -3,6 +3,8 @@
  * 固定在左下角，低对比度，可点击弹出团队介绍
  */
 
+import { interactionBus } from './interactionBus';
+
 type BrandWatermarkOptions = {
   // 可扩展选项
 };
@@ -12,6 +14,9 @@ export class BrandWatermark {
   private textEl: HTMLElement;
   private isModalOpen: boolean = false;
   private modalInstance: any = null; // TeamIntroModal 实例，延迟加载避免循环依赖
+  private unsubscribeInteracting: (() => void) | null = null;
+  private unsubscribeIdle: (() => void) | null = null;
+  private unsubscribeUIEngaged: (() => void) | null = null;
 
   constructor(options: BrandWatermarkOptions = {}) {
     this.root = document.createElement('div');
@@ -24,15 +29,36 @@ export class BrandWatermark {
     this.root.appendChild(this.textEl);
 
     // 点击事件
-    this.textEl.addEventListener('click', () => this.handleClick());
+    this.textEl.addEventListener('click', () => {
+      // UI 被点击，立即恢复
+      interactionBus.emitUIEngaged();
+      this.handleClick();
+    });
     this.textEl.addEventListener('touchstart', (e) => {
       e.stopPropagation();
+      // UI 被点击，立即恢复
+      interactionBus.emitUIEngaged();
       this.handleClick();
     });
 
     // 初始状态
     this.root.style.pointerEvents = 'none'; // 默认不拦截事件
     this.textEl.style.pointerEvents = 'auto'; // 只有文字区域可点击
+
+    this.setupInteractionListeners();
+  }
+
+  private setupInteractionListeners(): void {
+    // 监听交互事件
+    this.unsubscribeInteracting = interactionBus.on('user-interacting', () => {
+      this.root.classList.add('vr-ui-interacting');
+    });
+    this.unsubscribeIdle = interactionBus.on('user-idle', () => {
+      this.root.classList.remove('vr-ui-interacting');
+    });
+    this.unsubscribeUIEngaged = interactionBus.on('ui-engaged', () => {
+      this.root.classList.remove('vr-ui-interacting');
+    });
   }
 
   /**
@@ -73,6 +99,19 @@ export class BrandWatermark {
    * 清理资源
    */
   dispose(): void {
+    // 清理事件监听
+    if (this.unsubscribeInteracting) {
+      this.unsubscribeInteracting();
+      this.unsubscribeInteracting = null;
+    }
+    if (this.unsubscribeIdle) {
+      this.unsubscribeIdle();
+      this.unsubscribeIdle = null;
+    }
+    if (this.unsubscribeUIEngaged) {
+      this.unsubscribeUIEngaged();
+      this.unsubscribeUIEngaged = null;
+    }
     if (this.modalInstance) {
       this.modalInstance.dispose();
     }

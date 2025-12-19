@@ -2,6 +2,7 @@ import { CommunityPanel } from './community/CommunityPanel';
 import { MapPanel } from './MapPanel';
 import { Dollhouse3DPanel } from './Dollhouse3DPanel';
 import type { Museum, Scene } from '../types/config';
+import { interactionBus } from './interactionBus';
 
 export type DockTabKey = 'guide' | 'info' | 'settings' | 'community' | 'map' | 'dollhouse';
 
@@ -25,6 +26,9 @@ export class DockPanels {
   private communityPanel: CommunityPanel | null = null;
   private mapPanel: MapPanel | null = null;
   private dollhousePanel: Dollhouse3DPanel | null = null;
+  private unsubscribeInteracting: (() => void) | null = null;
+  private unsubscribeIdle: (() => void) | null = null;
+  private unsubscribeUIEngaged: (() => void) | null = null;
 
   constructor(options: DockPanelsOptions) {
     this.currentTab = options.initialTab;
@@ -36,6 +40,26 @@ export class DockPanels {
     this.element = document.createElement('div');
     this.element.className = 'vr-panel vr-glass hidden';
     this.render();
+    this.setupInteractionListeners();
+  }
+
+  private setupInteractionListeners(): void {
+    // 监听交互事件
+    this.unsubscribeInteracting = interactionBus.on('user-interacting', () => {
+      this.element.classList.add('vr-ui-interacting');
+    });
+    this.unsubscribeIdle = interactionBus.on('user-idle', () => {
+      this.element.classList.remove('vr-ui-interacting');
+    });
+    this.unsubscribeUIEngaged = interactionBus.on('ui-engaged', () => {
+      this.element.classList.remove('vr-ui-interacting');
+    });
+
+    // 监听面板内的点击事件（包括 MapPanel 和 Dollhouse3DPanel）
+    this.element.addEventListener('click', (e) => {
+      // UI 被点击，立即恢复
+      interactionBus.emitUIEngaged();
+    }, true); // 使用捕获阶段确保所有子元素点击都能捕获
   }
 
   private render(): void {
@@ -225,6 +249,19 @@ export class DockPanels {
   }
 
   remove(): void {
+    // 清理事件监听
+    if (this.unsubscribeInteracting) {
+      this.unsubscribeInteracting();
+      this.unsubscribeInteracting = null;
+    }
+    if (this.unsubscribeIdle) {
+      this.unsubscribeIdle();
+      this.unsubscribeIdle = null;
+    }
+    if (this.unsubscribeUIEngaged) {
+      this.unsubscribeUIEngaged();
+      this.unsubscribeUIEngaged = null;
+    }
     if (this.communityPanel) {
       this.communityPanel.remove();
       this.communityPanel = null;

@@ -1,6 +1,7 @@
 import type { DockTabKey } from './DockPanels';
 import { DockPanels } from './DockPanels';
 import type { Museum, Scene } from '../types/config';
+import { interactionBus } from './interactionBus';
 
 type BottomDockOptions = {
   initialTab?: DockTabKey;
@@ -26,6 +27,9 @@ export class BottomDock {
   private dockEl: HTMLElement;
   private panels: DockPanels;
   private activeTab: DockTabKey;
+  private unsubscribeInteracting: (() => void) | null = null;
+  private unsubscribeIdle: (() => void) | null = null;
+  private unsubscribeUIEngaged: (() => void) | null = null;
 
   constructor(options: BottomDockOptions = {}) {
     this.activeTab = options.initialTab || 'guide';
@@ -54,6 +58,8 @@ export class BottomDock {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // UI 被点击，立即恢复
+        interactionBus.emitUIEngaged();
         this.setActiveTab(tab.key);
         if (tab.key === 'guide' && options.onGuideClick) {
           options.onGuideClick();
@@ -66,6 +72,20 @@ export class BottomDock {
     this.element.appendChild(this.dockEl);
 
     this.syncActiveClass();
+    this.setupInteractionListeners();
+  }
+
+  private setupInteractionListeners(): void {
+    // 监听交互事件
+    this.unsubscribeInteracting = interactionBus.on('user-interacting', () => {
+      this.element.classList.add('vr-ui-interacting');
+    });
+    this.unsubscribeIdle = interactionBus.on('user-idle', () => {
+      this.element.classList.remove('vr-ui-interacting');
+    });
+    this.unsubscribeUIEngaged = interactionBus.on('ui-engaged', () => {
+      this.element.classList.remove('vr-ui-interacting');
+    });
   }
 
   private syncActiveClass(): void {
@@ -96,6 +116,19 @@ export class BottomDock {
   }
 
   remove(): void {
+    // 清理事件监听
+    if (this.unsubscribeInteracting) {
+      this.unsubscribeInteracting();
+      this.unsubscribeInteracting = null;
+    }
+    if (this.unsubscribeIdle) {
+      this.unsubscribeIdle();
+      this.unsubscribeIdle = null;
+    }
+    if (this.unsubscribeUIEngaged) {
+      this.unsubscribeUIEngaged();
+      this.unsubscribeUIEngaged = null;
+    }
     this.panels.remove();
     this.element.remove();
   }

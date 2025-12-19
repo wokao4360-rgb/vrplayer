@@ -19,6 +19,7 @@ import { TopBar } from './ui/TopBar';
 import { BrandMark } from './ui/BrandMark';
 import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
+import { SceneStrip } from './ui/SceneStrip';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
 import type { ValidationError } from './utils/configValidator';
@@ -39,6 +40,7 @@ class App {
   private brandMark: BrandMark | null = null;
   private bottomDock: BottomDock | null = null;
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
+  private sceneStrip: SceneStrip | null = null;
   private museumList: MuseumList | null = null;
   private sceneList: SceneList | null = null;
   private mapOverlay: MapOverlay | null = null;
@@ -547,6 +549,20 @@ class App {
     this.sceneGuideDrawer = new SceneGuideDrawer({ scenes: museum.scenes });
     this.appElement.appendChild(this.sceneGuideDrawer.getElement());
 
+    // 新 UI：场景导览条（Scene Strip）
+    // 收集所有场景的热点（从所有场景的 hotspots 中提取 type='scene' 的热点）
+    const allSceneHotspots = museum.scenes.flatMap((s) => s.hotspots);
+    this.sceneStrip = new SceneStrip({
+      museumId: museum.id,
+      currentSceneId: scene.id,
+      hotspots: allSceneHotspots,
+      scenes: museum.scenes,
+      onNavigateToScene: (sceneId) => {
+        navigateToScene(museum.id, sceneId);
+      },
+    });
+    viewerContainer.appendChild(this.sceneStrip.getElement());
+
     // 新 UI：底部 Dock（导览 tab 打开抽屉）
     this.bottomDock = new BottomDock({
       initialTab: 'guide',
@@ -664,6 +680,11 @@ class App {
     if (this.sceneGuideDrawer) {
       this.sceneGuideDrawer.remove();
       this.sceneGuideDrawer = null;
+    }
+
+    if (this.sceneStrip) {
+      this.sceneStrip.dispose();
+      this.sceneStrip = null;
     }
     
     if (this.museumList) {

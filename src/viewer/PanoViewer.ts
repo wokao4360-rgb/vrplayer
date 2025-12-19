@@ -8,6 +8,7 @@ import { CompassDisk } from '../ui/CompassDisk';
 import { GroundNavDots } from '../ui/GroundNavDots';
 import { BrandWatermark } from '../ui/BrandWatermark';
 import type { SceneHotspot } from '../types/config';
+import { interactionBus } from '../ui/interactionBus';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -130,6 +131,13 @@ export class PanoViewer {
   private pickHasMoved = false;
   private pickDragThreshold = 8; // 拖动判定阈值（像素）
   private pickTimeThreshold = 250; // 拖动判定阈值（毫秒）
+
+  // 交互检测（用于 UI 自动让位）
+  private lastYaw: number = 0;
+  private lastPitch: number = 0;
+  private lastFov: number = 75;
+  private isViewChanging: boolean = false;
+  private viewChangeThreshold: number = 0.5; // 视角变化阈值（度）
 
   constructor(container: HTMLElement, debugMode = false) {
     this.container = container;
@@ -259,6 +267,8 @@ export class PanoViewer {
     this.isDragging = true;
     this.lastMouseX = e.clientX;
     this.lastMouseY = e.clientY;
+    // 拖动开始时发出交互信号
+    interactionBus.emitInteracting();
   }
 
   private onPointerMove(e: MouseEvent): void {
@@ -299,12 +309,16 @@ export class PanoViewer {
       this.touchStartY = e.touches[0].clientY;
       this.lastMouseX = this.touchStartX;
       this.lastMouseY = this.touchStartY;
+      // 拖动开始时发出交互信号
+      interactionBus.emitInteracting();
     } else if (e.touches.length === 2) {
       this.isPinching = true;
       this.isDragging = false;
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       this.lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+      // 缩放开始时发出交互信号
+      interactionBus.emitInteracting();
     }
   }
 
@@ -355,6 +369,9 @@ export class PanoViewer {
     this.fov = Math.max(30, Math.min(120, this.fov));
     this.camera.fov = this.fov;
     this.camera.updateProjectionMatrix();
+    
+    // 缩放时发出交互信号
+    interactionBus.emitInteracting();
     
     // 调试模式：实时更新调试面板
     if (this.debugMode && this.onDebugClick) {
@@ -410,6 +427,12 @@ export class PanoViewer {
     this.camera.fov = this.fov;
     this.camera.updateProjectionMatrix();
     this.updateCamera();
+    
+    // 初始化视角检测状态
+    this.lastYaw = this.yaw;
+    this.lastPitch = this.pitch;
+    this.lastFov = this.fov;
+    this.isViewChanging = false;
 
     // 创建球体几何
     const geometry = new THREE.SphereGeometry(500, 64, 64);
@@ -659,21 +682,43 @@ export class PanoViewer {
     const dtMs = this.lastFrameTimeMs ? now - this.lastFrameTimeMs : 16.7;
     this.lastFrameTimeMs = now;
 
+    // 检测视角变化（用于 UI 自动让位）
+    const view = this.getCurrentView();
+    const yawDelta = Math.abs(view.yaw - this.lastYaw);
+    const pitchDelta = Math.abs(view.pitch - this.lastPitch);
+    const fovDelta = Math.abs(view.fov - this.lastFov);
+    const isChanging = yawDelta > this.viewChangeThreshold || 
+                       pitchDelta > this.viewChangeThreshold || 
+                       fovDelta > this.viewChangeThreshold;
+
+    if (isChanging) {
+      if (!this.isViewChanging) {
+        this.isViewChanging = true;
+        interactionBus.emitInteracting();
+      }
+    } else {
+      if (this.isViewChanging) {
+        this.isViewChanging = false;
+        interactionBus.scheduleIdle();
+      }
+    }
+
+    this.lastYaw = view.yaw;
+    this.lastPitch = view.pitch;
+    this.lastFov = view.fov;
+
     // 更新 nadir patch（低头时渐显 + yaw 罗盘旋转）
     if (this.nadirPatch) {
-      const view = this.getCurrentView();
       this.nadirPatch.update(this.camera, { yaw: view.yaw, pitch: view.pitch }, dtMs);
     }
 
     // 更新指南针圆盘
     if (this.compassDisk) {
-      const view = this.getCurrentView();
       this.compassDisk.setYawPitch(view.yaw, view.pitch);
     }
 
     // 更新地面导航点
     if (this.groundNavDots) {
-      const view = this.getCurrentView();
       this.groundNavDots.setYawPitch(view.yaw, view.pitch);
     }
 

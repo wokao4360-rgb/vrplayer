@@ -388,6 +388,7 @@ body{
   gap: 10px;
   padding: 8px 16px;
   scroll-snap-type: x mandatory;
+  scroll-behavior: smooth; /* 保底，JS 仍指定 behavior */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
   max-width: min(92vw, 600px);
@@ -413,6 +414,10 @@ body{
   scroll-snap-align: center;
   transition: opacity 150ms cubic-bezier(.2,.8,.2,1),
               transform 150ms cubic-bezier(.2,.8,.2,1);
+}
+/* 手动滚动中状态：让反馈更跟手 */
+.vr-scenestrip.is-user-scrolling .vr-scenestrip__item{
+  transition-duration: 120ms;
 }
 .vr-scenestrip__item:hover{
   opacity: 0.85;
@@ -664,14 +669,26 @@ body{
   transform: translateX(-50%);
   transform-origin: 50% 100%; /* 底部中心作为变换原点 */
   pointer-events: none;
-  z-index: 40;
+  z-index: 10; /* 调整：确保不盖住 GroundNavDots (z=12) */
+  --vr-ground-clarity: 0;
+  --vr-ground-base-blur: 0px;
   transition: opacity 200ms cubic-bezier(.2,.8,.2,1), 
               transform 200ms cubic-bezier(.2,.8,.2,1),
               filter 200ms cubic-bezier(.2,.8,.2,1);
+  /* clarity 越高：整体滤镜更少、略更清晰 */
+  filter: blur(calc(var(--vr-ground-base-blur) * (1 - var(--vr-ground-clarity) * 0.6)));
 }
-/* 交互时轻微缩放，filter 的 opacity 由 JS 控制以合并 blur */
+/* 交互时轻微缩放 */
 .vr-compass.vr-ui-interacting{
   transform: translateX(-50%) scale(0.98);
+}
+
+/* interacting 时地面层额外降噪 */
+.vr-ui-interacting.vr-compass,
+.vr-ui-interacting.vr-groundnav,
+.vr-ui-interacting.vr-groundheading{
+  opacity: 0.28 !important;          /* 比通用 UI 更淡一点 */
+  filter: blur(0.8px) !important;    /* 拖动时统一轻糊，减少视觉噪声 */
 }
 
 /* 非常轻微的地面阴影效果 */
@@ -706,21 +723,50 @@ body{
   justify-content: center;
 }
 
-/* 中心遮罩（摄影杆遮挡）- 优化渐变，更柔和的过渡 */
+/* 中心遮罩（摄影杆遮挡）- 如视风格：椭圆遮罩 + 轻噪点/渐变 */
 .vr-compass__mask{
   position: absolute;
   inset: 18%;
   border-radius: 999px;
-  background: radial-gradient(circle,
-    rgba(0,0,0,0.40) 0%,
-    rgba(0,0,0,0.30) 30%,
-    rgba(0,0,0,0.15) 50%,
-    rgba(0,0,0,0.05) 65%,
-    rgba(0,0,0,0.00) 75%);
+  /* 使用 ellipse radial-gradient，更贴合如视风格 */
+  background: 
+    radial-gradient(ellipse 70% 55% at 50% 55%,
+      rgba(0,0,0,0.38) 0%,
+      rgba(0,0,0,0.28) 28%,
+      rgba(0,0,0,0.16) 48%,
+      rgba(0,0,0,0.08) 62%,
+      rgba(0,0,0,0.0) 78%),
+    /* 叠加很淡的纹理（轻噪点感） */
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      transparent 0px,
+      transparent 2px,
+      rgba(0,0,0,0.02) 2px,
+      rgba(0,0,0,0.02) 3px,
+      transparent 3px,
+      transparent 5px
+    );
   filter: blur(0.3px);
   pointer-events: none;
   /* 确保不遮挡 GroundNavDots 圆点（圆点在 mask 外圈） */
   z-index: 0;
+}
+
+/* 杆形胶囊遮罩（pole mask）- 如视风格的杆遮挡增强 */
+.vr-compass__polemask{
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 26px;
+  height: 84px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(0,0,0,0.26), rgba(0,0,0,0.0) 72%);
+  filter: blur(2px);
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 0; /* 必须 <= mask/labels 的体系里，不要盖住 label */
 }
 
 /* 方向标签 */
@@ -774,6 +820,65 @@ body{
   pointer-events: none;
 }
 
+/* GroundHeadingMarker 地面方向标 - 贴地方向层 */
+.vr-groundheading{
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 86px);
+  transform: translateX(-50%);
+  transform-origin: 50% 100%; /* 底部中心作为变换原点 */
+  width: clamp(140px, 26vw, 200px);
+  height: clamp(140px, 26vw, 200px);
+  pointer-events: none;
+  z-index: 11; /* 介于 CompassDisk mask 与 GroundNavDots dot 之间 */
+  --vr-ground-clarity: 0;
+  --vr-ground-base-blur: 0px;
+  transition: opacity 220ms cubic-bezier(.2,.8,.2,1), 
+              transform 220ms cubic-bezier(.2,.8,.2,1),
+              filter 220ms cubic-bezier(.2,.8,.2,1);
+  /* clarity 越高：整体滤镜更少、略更清晰 */
+  filter: blur(calc(var(--vr-ground-base-blur) * (1 - var(--vr-ground-clarity) * 0.6)));
+}
+.vr-groundheading.vr-ui-interacting{
+  transform: translateX(-50%) scale(0.98);
+  /* opacity 和 filter 由上面的通用规则控制 */
+}
+.vr-groundheading__inner{
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+}
+.vr-groundheading__wedge{
+  position: absolute;
+  inset: 0;
+  /* 使用 conic-gradient 画一个很淡的扇形/箭头光带 */
+  background: conic-gradient(
+    from 270deg,
+    transparent 0deg,
+    rgba(255,255,255,0.16) 10deg,
+    rgba(255,255,255,0.08) 14deg,
+    rgba(255,255,255,0.02) 18deg,
+    transparent 28deg
+  );
+  mix-blend-mode: normal;
+  pointer-events: none;
+}
+
+/* 北向刻度线（可读性增强） */
+.vr-groundheading__northTick{
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  width: 2px;
+  height: 18px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: rgba(255,255,255,0.22);
+  box-shadow: 0 0 8px rgba(255,255,255,0.12);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 /* GroundNavDots 地面导航点 - 贴地方向层 */
 .vr-groundnav{
   position: absolute;
@@ -782,10 +887,14 @@ body{
   transform: translateX(-50%);
   transform-origin: 50% 100%; /* 底部中心作为变换原点 */
   pointer-events: none;
-  z-index: 39; /* 在 CompassDisk 下方 */
+  z-index: 12; /* 调整：确保在 CompassDisk (z=10) 和 GroundHeadingMarker (z=11) 之上 */
+  --vr-ground-clarity: 0;
+  --vr-ground-base-blur: 0px;
   transition: opacity 200ms cubic-bezier(.2,.8,.2,1), 
               transform 200ms cubic-bezier(.2,.8,.2,1),
               filter 200ms cubic-bezier(.2,.8,.2,1);
+  /* clarity 越高：整体滤镜更少、略更清晰 */
+  filter: blur(calc(var(--vr-ground-base-blur) * (1 - var(--vr-ground-clarity) * 0.6)));
 }
 
 .vr-groundnav__container{
@@ -814,7 +923,7 @@ body{
               border-color 150ms cubic-bezier(.2,.8,.2,1),
               background 150ms cubic-bezier(.2,.8,.2,1),
               box-shadow 150ms cubic-bezier(.2,.8,.2,1);
-  z-index: 2; /* 确保在 CompassDisk mask 上方 */
+  z-index: 2; /* 在 GroundNavDots 容器内，确保在 CompassDisk mask 上方 */
 }
 
 .vr-groundnav__dot:hover{

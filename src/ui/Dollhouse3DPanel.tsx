@@ -131,3 +131,6 @@ export class Dollhouse3DPanel {
     this.element.remove();
   }
 }
+
+
+

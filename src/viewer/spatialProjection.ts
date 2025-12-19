@@ -87,3 +87,6 @@ export function yawPitchToScreen(
   // 投影到屏幕
   return projectToScreen(worldPos, camera, dom);
 }
+
+
+

@@ -58,3 +58,6 @@ export function onSceneFocus(handler: SceneFocusHandler): () => void {
     window.removeEventListener('vr:scene-focus', wrappedHandler);
   };
 }
+
+
+

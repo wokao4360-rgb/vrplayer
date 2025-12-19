@@ -15,6 +15,7 @@ export class CompassDisk {
   private root: HTMLElement;
   private disk: HTMLElement;
   private mask: HTMLElement;
+  private polemask: HTMLElement;
   private northLabel: HTMLElement;
   private eastLabel: HTMLElement;
   private southLabel: HTMLElement;
@@ -39,6 +40,11 @@ export class CompassDisk {
     this.mask = document.createElement('div');
     this.mask.className = 'vr-compass__mask';
 
+    // 杆形胶囊遮罩（pole mask）
+    this.polemask = document.createElement('div');
+    this.polemask.className = 'vr-compass__polemask';
+    this.polemask.setAttribute('aria-hidden', 'true');
+
     // 方向标签
     this.northLabel = document.createElement('div');
     this.northLabel.className = 'vr-compass__label vr-compass__label--north';
@@ -56,8 +62,9 @@ export class CompassDisk {
     this.westLabel.className = 'vr-compass__label vr-compass__label--west';
     this.westLabel.textContent = 'W';
 
-    // 组装
+    // 组装（从下到上：mask -> polemask -> labels）
     this.disk.appendChild(this.mask);
+    this.disk.appendChild(this.polemask);
     this.disk.appendChild(this.northLabel);
     this.disk.appendChild(this.eastLabel);
     this.disk.appendChild(this.southLabel);
@@ -67,7 +74,7 @@ export class CompassDisk {
     // 初始隐藏
     this.root.style.opacity = '0';
     this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
-    this.root.style.filter = 'blur(0px)';
+    this.root.style.setProperty('--vr-ground-base-blur', '0px');
 
     this.setupInteractionListeners();
   }
@@ -76,33 +83,15 @@ export class CompassDisk {
     // 监听交互事件
     this.unsubscribeInteracting = interactionBus.on('user-interacting', () => {
       this.root.classList.add('vr-ui-interacting');
-      // 更新 filter 以合并 blur 和 opacity
-      if (this.isVisible) {
-        const currentFilter = this.root.style.filter;
-        const blurMatch = currentFilter.match(/blur\(([^)]+)\)/);
-        const blur = blurMatch ? blurMatch[1] : '0px';
-        this.root.style.filter = `blur(${blur}) opacity(0.4)`;
-      }
+      // filter 现在由 CSS 控制，不需要 JS 处理
     });
     this.unsubscribeIdle = interactionBus.on('user-idle', () => {
       this.root.classList.remove('vr-ui-interacting');
-      // 恢复 filter，移除 opacity
-      if (this.isVisible) {
-        const currentFilter = this.root.style.filter;
-        const blurMatch = currentFilter.match(/blur\(([^)]+)\)/);
-        const blur = blurMatch ? blurMatch[1] : '0px';
-        this.root.style.filter = `blur(${blur})`;
-      }
+      // filter 现在由 CSS 控制，不需要 JS 处理
     });
     this.unsubscribeUIEngaged = interactionBus.on('ui-engaged', () => {
       this.root.classList.remove('vr-ui-interacting');
-      // 恢复 filter，移除 opacity
-      if (this.isVisible) {
-        const currentFilter = this.root.style.filter;
-        const blurMatch = currentFilter.match(/blur\(([^)]+)\)/);
-        const blur = blurMatch ? blurMatch[1] : '0px';
-        this.root.style.filter = `blur(${blur})`;
-      }
+      // filter 现在由 CSS 控制，不需要 JS 处理
     });
   }
 
@@ -130,6 +119,9 @@ export class CompassDisk {
       // 保存基础透明度（由 pitch 控制）
       this.baseOpacity = transform.opacity;
 
+      // 设置 clarity CSS 变量（用于降噪/清晰度策略）
+      this.root.style.setProperty('--vr-ground-clarity', String(transform.clarity));
+
       // 应用透明度
       this.root.style.opacity = transform.opacity.toString();
 
@@ -145,14 +137,11 @@ export class CompassDisk {
         this.root.style.transform = baseTransform;
       }
       
-      // 应用模糊效果（注意：filter 会被 CSS 类叠加 opacity，所以需要合并）
-      const isInteracting = this.root.classList.contains('vr-ui-interacting');
-      if (isInteracting) {
-        // 交互时，CSS 会添加 filter: opacity(0.4)，这里需要合并 blur
-        this.root.style.filter = `blur(${transform.blur}px) opacity(0.4)`;
-      } else {
-        this.root.style.filter = `blur(${transform.blur}px)`;
-      }
+      // 设置基础 blur CSS 变量（用于与 clarity 合并）
+      this.root.style.setProperty('--vr-ground-base-blur', `${transform.blur}px`);
+      
+      // 注意：filter 现在由 CSS 控制（结合 clarity），JS 不再直接设置 filter
+      // interacting 时的 opacity 由 CSS 的 .vr-ui-interacting 类控制
       
       // 旋转圆盘内容（反向旋转以保持方向正确）
       // 相机往右转（yaw 增加），罗盘应反向旋转
@@ -167,7 +156,7 @@ export class CompassDisk {
       if (this.isVisible) {
         this.root.style.opacity = '0';
         this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
-        this.root.style.filter = 'blur(0px)';
+        this.root.style.setProperty('--vr-ground-base-blur', '0px');
         this.isVisible = false;
         this.baseOpacity = 0;
       }
@@ -210,3 +199,7 @@ export class CompassDisk {
 export function createCompassDisk(options?: CompassDiskOptions): CompassDisk {
   return new CompassDisk(options);
 }
+
+
+
+

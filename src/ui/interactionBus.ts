@@ -145,3 +145,6 @@ class InteractionBus {
 
 // 单例
 export const interactionBus = new InteractionBus();
+
+
+

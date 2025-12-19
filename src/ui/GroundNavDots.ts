@@ -61,7 +61,7 @@ export class GroundNavDots {
     // 初始隐藏
     this.root.style.opacity = '0';
     this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
-    this.root.style.filter = 'blur(0px)';
+    this.root.style.setProperty('--vr-ground-base-blur', '0px');
 
     // 监听场景聚焦事件
     this.unsubscribeFocus = onSceneFocus((event: SceneFocusEvent) => {
@@ -215,6 +215,9 @@ export class GroundNavDots {
       // 计算贴地变换参数（使用公共函数）
       const transform = computeGroundOverlayTransform(pitchDeg);
 
+      // 设置 clarity CSS 变量（用于降噪/清晰度策略）
+      this.root.style.setProperty('--vr-ground-clarity', String(transform.clarity));
+
       // 应用透明度
       this.root.style.opacity = transform.opacity.toString();
 
@@ -222,8 +225,8 @@ export class GroundNavDots {
       // transform-origin 已在 CSS 中设为底部中心 (50% 100%)
       this.root.style.transform = `translateX(-50%) translateY(${transform.translateY}px) scaleY(${transform.scaleY})`;
 
-      // 应用模糊效果
-      this.root.style.filter = `blur(${transform.blur}px)`;
+      // 设置基础 blur CSS 变量（用于与 clarity 合并）
+      this.root.style.setProperty('--vr-ground-base-blur', `${transform.blur}px`);
 
       if (!this.isVisible) {
         this.isVisible = true;
@@ -233,7 +236,7 @@ export class GroundNavDots {
       if (this.isVisible) {
         this.root.style.opacity = '0';
         this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
-        this.root.style.filter = 'blur(0px)';
+        this.root.style.setProperty('--vr-ground-base-blur', '0px');
         this.isVisible = false;
       }
     }
@@ -287,3 +290,7 @@ export class GroundNavDots {
 export function createGroundNavDots(options: GroundNavDotsOptions): GroundNavDots {
   return new GroundNavDots(options);
 }
+
+
+
+

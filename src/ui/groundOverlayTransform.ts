@@ -11,6 +11,7 @@ export type GroundOverlayTransform = {
   translateY: number; // px
   scaleY: number;
   blur: number; // px
+  clarity: number; // [0..1] pitch 越低（越接近 -90），clarity 越高
 };
 
 /**
@@ -36,7 +37,11 @@ export function computeGroundOverlayTransform(pitch: number): GroundOverlayTrans
   // blur: 0 -> 2px（轻微模糊，增强贴地感）
   const blur = t * 2;
 
-  return { opacity, translateY, scaleY, blur };
+  // clarity: 0 -> 1（pitch 越低越清晰）
+  // t 已经是从 0 到 1，pitch 从 -55° 到 -90°，所以 clarity = t
+  const clarity = t;
+
+  return { opacity, translateY, scaleY, blur, clarity };
 }
 
 /**
@@ -45,3 +50,7 @@ export function computeGroundOverlayTransform(pitch: number): GroundOverlayTrans
 export function shouldShowGroundOverlay(pitch: number): boolean {
   return pitch <= PITCH_SHOW_THRESHOLD;
 }
+
+
+
+

@@ -7,6 +7,7 @@ import { getYawPitchFromNDC, screenToNDC } from './picking';
 import { CompassDisk } from '../ui/CompassDisk';
 import { GroundNavDots } from '../ui/GroundNavDots';
 import { BrandWatermark } from '../ui/BrandWatermark';
+import { GroundHeadingMarker } from '../ui/GroundHeadingMarker';
 import type { SceneHotspot } from '../types/config';
 import { interactionBus } from '../ui/interactionBus';
 
@@ -100,6 +101,7 @@ export class PanoViewer {
   private nadirPatch: NadirPatch | null = null;
   private compassDisk: CompassDisk | null = null;
   private groundNavDots: GroundNavDots | null = null;
+  private groundHeading: GroundHeadingMarker | null = null;
   private brandWatermark: BrandWatermark | null = null;
   // Enhanced 为默认研学展示档，Original 为兜底备用档
   private renderProfile: RenderProfile = RenderProfile.Enhanced;
@@ -177,6 +179,9 @@ export class PanoViewer {
       sceneHotspots: [],
     });
     this.groundNavDots.mount(container);
+    
+    // 地面方向标（DOM overlay）
+    this.groundHeading = new GroundHeadingMarker(container);
     
     // 品牌水印（DOM overlay，左下角）
     this.brandWatermark = new BrandWatermark();
@@ -722,6 +727,11 @@ export class PanoViewer {
       this.groundNavDots.setYawPitch(view.yaw, view.pitch);
     }
 
+    // 更新地面方向标
+    if (this.groundHeading) {
+      this.groundHeading.setYawPitch(view.yaw, view.pitch);
+    }
+
     for (const listener of this.frameListeners) {
       listener(dtMs);
     }
@@ -1019,6 +1029,10 @@ export class PanoViewer {
     if (this.groundNavDots) {
       this.groundNavDots.dispose();
       this.groundNavDots = null;
+    }
+    if (this.groundHeading) {
+      this.groundHeading.dispose();
+      this.groundHeading = null;
     }
     if (this.brandWatermark) {
       this.brandWatermark.dispose();

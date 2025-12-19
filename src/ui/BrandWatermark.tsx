@@ -134,3 +134,6 @@ export class BrandWatermark {
 export function createBrandWatermark(options?: BrandWatermarkOptions): BrandWatermark {
   return new BrandWatermark(options);
 }
+
+
+

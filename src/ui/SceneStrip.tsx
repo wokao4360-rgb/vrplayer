@@ -29,6 +29,13 @@ export class SceneStrip {
   private unsubscribeInteracting?: () => void;
   private unsubscribeIdle?: () => void;
   private unsubscribeUIEngaged?: () => void;
+  
+  // 用户手动滚动检测
+  private userScrolling: boolean = false;
+  private lastUserScrollTs: number = 0;
+  private userScrollCheckTimer: number | null = null; // requestAnimationFrame ID
+  private scrollHandlers: Array<() => void> = [];
+  private itemsSignature: string = ''; // 用于检测列表变化
 
   constructor(options: SceneStripOptions) {
     this.museumId = options.museumId;
@@ -54,6 +61,9 @@ export class SceneStrip {
 
     // 接入 interactionBus
     this.setupInteractionListeners();
+
+    // 设置用户手动滚动检测
+    this.setupUserScrollDetection();
   }
 
   /**
@@ -107,6 +117,9 @@ export class SceneStrip {
     this.sceneItems.clear();
 
     const sceneHotspots = this.getSceneHotspots();
+    
+    // 更新 itemsSignature（用于检测列表变化）
+    this.itemsSignature = sceneHotspots.map((h) => h.sceneId).join('|');
 
     sceneHotspots.forEach((hotspot) => {
       const sceneId = hotspot.sceneId;
@@ -198,23 +211,52 @@ export class SceneStrip {
       this.sceneItems.set(sceneId, item);
     });
 
-    // 滚动到当前场景
-    this.scrollToCurrent();
+    // 延迟滚动到当前场景（确保 DOM 已更新）
+    requestAnimationFrame(() => {
+      this.scrollToCurrent();
+    });
+  }
+
+  /**
+   * 滚动到指定场景项（居中）
+   * @param sceneId 场景 ID
+   * @param behavior 滚动行为
+   * @param force 是否强制滚动（忽略 userScrolling 状态）
+   */
+  private scrollToItem(sceneId: string, behavior: ScrollBehavior = 'smooth', force: boolean = false): void {
+    const item = this.sceneItems.get(sceneId);
+    if (!item || !this.scrollContainer) return;
+
+    // 如果正在用户手动滚动且不是强制，则跳过
+    if (this.userScrolling && !force) return;
+
+    // 计算居中位置
+    const stripRect = this.scrollContainer.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    
+    // 计算 strip 中心位置
+    const stripCenter = stripRect.left + stripRect.width / 2;
+    
+    // 计算 item 中心位置
+    const itemCenter = itemRect.left + itemRect.width / 2;
+    
+    // 计算需要的滚动距离
+    const delta = itemCenter - stripCenter;
+    const targetScrollLeft = this.scrollContainer.scrollLeft + delta;
+
+    // 执行滚动
+    this.scrollContainer.scrollTo({
+      left: targetScrollLeft,
+      behavior: behavior,
+    });
   }
 
   /**
    * 滚动到当前场景
    */
   private scrollToCurrent(): void {
-    const currentItem = this.sceneItems.get(this.currentSceneId);
-    if (currentItem) {
-      // 使用 scrollIntoView 平滑滚动
-      currentItem.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
-      });
-    }
+    // 使用新的 scrollToItem 方法
+    this.scrollToItem(this.currentSceneId, 'smooth', false);
   }
 
   /**
@@ -230,6 +272,10 @@ export class SceneStrip {
         if (event.type === 'hover') {
           if (event.sceneId === sceneId) {
             item.classList.add('is-hover');
+            // hover 时轻滑入视野（不强制，不抢用户手动滚动）
+            if (event.museumId === this.museumId) {
+              this.scrollToItem(sceneId, 'smooth', false);
+            }
           } else {
             item.classList.remove('is-hover');
           }
@@ -247,12 +293,8 @@ export class SceneStrip {
               }
             });
             this.currentSceneId = sceneId;
-            // 滚动到该场景
-            item.scrollIntoView({
-              behavior: 'smooth',
-              block: 'nearest',
-              inline: 'center',
-            });
+            // 滚动到该场景（外部切换后居中，force=true 确保执行）
+            this.scrollToItem(sceneId, 'smooth', true);
           }
         }
       });
@@ -280,6 +322,72 @@ export class SceneStrip {
   }
 
   /**
+   * 设置用户手动滚动检测
+   */
+  private setupUserScrollDetection(): void {
+    // 检查是否停止滚动的轮询函数
+    const checkUserScrollStop = () => {
+      const now = performance.now();
+      if (now - this.lastUserScrollTs >= 400) {
+        // 用户已停止滚动 400ms
+        this.userScrolling = false;
+        this.element.classList.remove('is-user-scrolling');
+        this.userScrollCheckTimer = null;
+      } else {
+        // 继续检查
+        this.userScrollCheckTimer = requestAnimationFrame(checkUserScrollStop);
+      }
+    };
+
+    // 标记用户开始手动滚动
+    const markUserScrolling = () => {
+      this.userScrolling = true;
+      this.lastUserScrollTs = performance.now();
+      this.element.classList.add('is-user-scrolling');
+      
+      // 清除之前的定时器
+      if (this.userScrollCheckTimer !== null) {
+        cancelAnimationFrame(this.userScrollCheckTimer);
+      }
+      
+      // 开始轮询检查是否停止滚动
+      this.userScrollCheckTimer = requestAnimationFrame(checkUserScrollStop);
+    };
+
+    // 监听滚动事件
+    const onScroll = () => {
+      markUserScrolling();
+    };
+
+    // 监听指针/触摸/滚轮事件
+    const onPointerDown = () => {
+      markUserScrolling();
+    };
+
+    const onTouchStart = () => {
+      markUserScrolling();
+    };
+
+    const onWheel = () => {
+      markUserScrolling();
+    };
+
+    // 绑定事件
+    this.scrollContainer.addEventListener('scroll', onScroll, { passive: true });
+    this.scrollContainer.addEventListener('pointerdown', onPointerDown, { passive: true });
+    this.scrollContainer.addEventListener('touchstart', onTouchStart, { passive: true });
+    this.scrollContainer.addEventListener('wheel', onWheel, { passive: true });
+
+    // 保存清理函数
+    this.scrollHandlers.push(() => {
+      this.scrollContainer.removeEventListener('scroll', onScroll);
+      this.scrollContainer.removeEventListener('pointerdown', onPointerDown);
+      this.scrollContainer.removeEventListener('touchstart', onTouchStart);
+      this.scrollContainer.removeEventListener('wheel', onWheel);
+    });
+  }
+
+  /**
    * 更新当前场景
    */
   updateCurrentScene(sceneId: string): void {
@@ -295,8 +403,10 @@ export class SceneStrip {
     const newItem = this.sceneItems.get(sceneId);
     if (newItem) {
       newItem.classList.add('is-current');
-      // 滚动到新场景
-      this.scrollToCurrent();
+      // 延迟滚动到新场景（确保 DOM 已更新）
+      requestAnimationFrame(() => {
+        this.scrollToCurrent();
+      });
     }
   }
 
@@ -319,6 +429,16 @@ export class SceneStrip {
    * 清理资源
    */
   dispose(): void {
+    // 清理用户滚动检测定时器（requestAnimationFrame）
+    if (this.userScrollCheckTimer !== null) {
+      cancelAnimationFrame(this.userScrollCheckTimer);
+      this.userScrollCheckTimer = null;
+    }
+
+    // 清理滚动事件监听器
+    this.scrollHandlers.forEach((cleanup) => cleanup());
+    this.scrollHandlers = [];
+
     if (this.unsubscribeFocus) {
       this.unsubscribeFocus();
       this.unsubscribeFocus = undefined;
@@ -340,3 +460,6 @@ export class SceneStrip {
     }
   }
 }
+
+
+

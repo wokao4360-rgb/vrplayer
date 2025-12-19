@@ -568,6 +568,7 @@ class App {
         // 走既有路由/加载链路，避免重构私有 showScene
         navigateToScene(museum.id, sceneId);
       },
+      museumId: museum.id, // 传入 museumId 用于匹配 hover 事件
     });
     viewerContainer.appendChild(this.hotspots.getElement());
 

@@ -15,6 +15,7 @@ type BottomDockOptions = {
 const TAB_LABELS: Array<{ key: DockTabKey; label: string }> = [
   { key: 'guide', label: '导览' },
   { key: 'map', label: '平面图' },
+  { key: 'dollhouse', label: '三维图' },
   { key: 'community', label: '社区' },
   { key: 'settings', label: '设置' },
   { key: 'info', label: '信息' },

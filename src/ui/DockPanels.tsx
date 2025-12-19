@@ -1,8 +1,9 @@
 import { CommunityPanel } from './community/CommunityPanel';
 import { MapPanel } from './MapPanel';
+import { Dollhouse3DPanel } from './Dollhouse3DPanel';
 import type { Museum, Scene } from '../types/config';
 
-export type DockTabKey = 'guide' | 'info' | 'settings' | 'community' | 'map';
+export type DockTabKey = 'guide' | 'info' | 'settings' | 'community' | 'map' | 'dollhouse';
 
 type DockPanelsOptions = {
   initialTab: DockTabKey;
@@ -23,6 +24,7 @@ export class DockPanels {
   private currentSceneId?: string;
   private communityPanel: CommunityPanel | null = null;
   private mapPanel: MapPanel | null = null;
+  private dollhousePanel: Dollhouse3DPanel | null = null;
 
   constructor(options: DockPanelsOptions) {
     this.currentTab = options.initialTab;
@@ -38,7 +40,7 @@ export class DockPanels {
 
   private render(): void {
     // 清理变体类
-    this.element.classList.remove('vr-panel--community', 'vr-panel--map');
+    this.element.classList.remove('vr-panel--community', 'vr-panel--map', 'vr-panel--dollhouse');
 
     if (this.currentTab === 'community') {
       this.element.classList.add('vr-panel--community');
@@ -60,6 +62,10 @@ export class DockPanels {
       if (this.communityPanel) {
         this.communityPanel.remove();
         this.communityPanel = null;
+      }
+      if (this.dollhousePanel) {
+        this.dollhousePanel.remove();
+        this.dollhousePanel = null;
       }
 
       if (this.museum && this.scenes && this.scenes.length > 0) {
@@ -88,6 +94,45 @@ export class DockPanels {
       return;
     }
 
+    if (this.currentTab === 'dollhouse') {
+      this.element.classList.add('vr-panel--dollhouse');
+      this.element.innerHTML = '';
+      
+      if (this.communityPanel) {
+        this.communityPanel.remove();
+        this.communityPanel = null;
+      }
+      if (this.mapPanel) {
+        this.mapPanel.remove();
+        this.mapPanel = null;
+      }
+
+      if (this.museum && this.scenes && this.scenes.length > 0) {
+        const sid = this.currentSceneId || this.sceneId || this.scenes[0].id;
+        if (!this.dollhousePanel) {
+          this.dollhousePanel = new Dollhouse3DPanel({
+            museum: this.museum,
+            scenes: this.scenes,
+            currentSceneId: sid,
+            onClose: () => {
+              // 关闭 DollhousePanel 时切换到其他 tab
+              this.setTab('guide');
+            },
+          });
+        } else {
+          this.dollhousePanel.updateCurrentScene(sid);
+        }
+        this.element.appendChild(this.dollhousePanel.getElement());
+      } else {
+        // 如果没有数据，显示提示
+        this.element.innerHTML = `
+          <div class="vr-panel-title">三维图</div>
+          <div class="vr-panel-body">暂无场景数据</div>
+        `;
+      }
+      return;
+    }
+
     // 清理其他面板
     if (this.communityPanel) {
       this.communityPanel.remove();
@@ -96,6 +141,10 @@ export class DockPanels {
     if (this.mapPanel) {
       this.mapPanel.remove();
       this.mapPanel = null;
+    }
+    if (this.dollhousePanel) {
+      this.dollhousePanel.remove();
+      this.dollhousePanel = null;
     }
 
     const { title, body } = this.getContentForTab(this.currentTab);
@@ -130,6 +179,10 @@ export class DockPanels {
     if (this.currentTab === 'map' && this.mapPanel) {
       this.mapPanel.updateCurrentScene(sceneId);
     }
+    
+    if (this.currentTab === 'dollhouse' && this.dollhousePanel) {
+      this.dollhousePanel.updateCurrentScene(sceneId);
+    }
   }
 
   setMuseumContext(museum: Museum, scenes: Scene[], currentSceneId: string): void {
@@ -141,6 +194,13 @@ export class DockPanels {
       this.mapPanel.updateMuseum(museum, scenes, currentSceneId);
     } else if (this.currentTab === 'map') {
       // 如果当前是 map tab 但没有 panel，重新渲染
+      this.render();
+    }
+    
+    if (this.currentTab === 'dollhouse' && this.dollhousePanel) {
+      this.dollhousePanel.updateMuseum(museum, scenes, currentSceneId);
+    } else if (this.currentTab === 'dollhouse') {
+      // 如果当前是 dollhouse tab 但没有 panel，重新渲染
       this.render();
     }
   }
@@ -172,6 +232,10 @@ export class DockPanels {
     if (this.mapPanel) {
       this.mapPanel.remove();
       this.mapPanel = null;
+    }
+    if (this.dollhousePanel) {
+      this.dollhousePanel.remove();
+      this.dollhousePanel = null;
     }
     this.element.remove();
   }

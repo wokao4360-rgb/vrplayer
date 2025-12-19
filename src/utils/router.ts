@@ -1,4 +1,5 @@
 import { buildSameDirUrl, buildCleanUrl } from './urlBuilder';
+import { emitSceneFocus } from '../ui/sceneLinkBus';
 
 export interface RouteParams {
   museumId?: string;
@@ -60,6 +61,16 @@ export function navigateToScene(museumId: string, sceneId: string, view?: { yaw?
     fov: view?.fov,
   });
   window.history.pushState({}, '', url);
+  
+  // 派发场景聚焦事件（在 popstate 之前，确保其他端能收到）
+  emitSceneFocus({
+    type: 'focus',
+    museumId,
+    sceneId,
+    source: 'dock',
+    ts: Date.now(),
+  });
+  
   window.dispatchEvent(new Event('popstate'));
 }
 

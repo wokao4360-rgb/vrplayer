@@ -4,6 +4,7 @@ export type HotspotSkinInput = {
   id: string;
   type: string;
   tooltip?: string;
+  isGround?: boolean; // 是否为地面热点（pitch < -20）
 };
 
 function svgMagnifier(): string {
@@ -36,12 +37,20 @@ function createIconCircle(innerHtml: string, extraClass?: string): HTMLDivElemen
   return icon;
 }
 
+function svgArrow(): string {
+  return `
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 4v16M12 4l6 6M12 4l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+}
+
 export function createHotspotSkin(input: HotspotSkinInput): {
   rootClassName: string;
   contentEl: HTMLElement;
   tooltipEl: HTMLDivElement;
 } {
   const tooltipEl = createTooltip(input.tooltip);
+  const isGround = input.isGround ?? false;
 
   // 默认兜底：圆点
   let rootClassName = 'hotspot hotspot--unknown';
@@ -49,20 +58,17 @@ export function createHotspotSkin(input: HotspotSkinInput): {
   contentEl.className = 'hotspot-dot';
 
   const type = input.type as HotspotSkinType;
-  if (type === 'scene') {
-    rootClassName = 'hotspot hotspot--scene';
-    const wrap = document.createElement('div');
-    wrap.className = 'hs-scene-wrap';
-
-    const shadow = document.createElement('div');
-    shadow.className = 'hs-scene-shadow';
-
+  
+  if (isGround) {
+    // 地面热点：中空圆环（如视风格）
+    rootClassName = 'hotspot hotspot--ground';
     const ring = document.createElement('div');
-    ring.className = 'hotspot-ring';
-
-    wrap.appendChild(shadow);
-    wrap.appendChild(ring);
-    contentEl = wrap;
+    ring.className = 'hotspot-ground-ring';
+    contentEl = ring;
+  } else if (type === 'scene') {
+    // 非地面场景热点：箭头
+    rootClassName = 'hotspot hotspot--scene';
+    contentEl = createIconCircle(svgArrow(), 'hotspot-icon hotspot-icon-arrow');
   } else if (type === 'image') {
     rootClassName = 'hotspot hotspot--image';
     contentEl = createIconCircle(svgMagnifier(), 'hotspot-icon');

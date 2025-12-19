@@ -1,13 +1,16 @@
 import * as THREE from 'three';
 import type { SceneHotspot } from '../types/config';
 import type { PanoViewer } from '../viewer/PanoViewer';
+import { yawPitchToScreen } from '../viewer/spatialProjection';
 import { createHotspotSkin } from './hotspots/HotspotSkins.ts';
 import { openVrModal } from './modals/ModalHost';
 import { showToast } from './toast';
+import { onSceneFocus, type SceneFocusEvent } from './sceneLinkBus';
 
 type HotspotsOptions = {
   onEnterScene?: (sceneId: string) => void;
   resolveSceneName?: (sceneId: string) => string | undefined;
+  museumId?: string; // 用于匹配 hover 事件
 };
 
 type HotspotBaseData = {
@@ -30,11 +33,26 @@ abstract class BaseDomHotspot<T extends HotspotBaseData> {
   constructor(data: T) {
     this.data = data;
     this.el = document.createElement('div');
-    const skin = createHotspotSkin({ id: data.id, type: data.type, tooltip: data.tooltip });
+    
+    // 判断是否为地面热点（pitch < -20）
+    const isGroundHotspot = data.pitch < -20;
+    const skin = createHotspotSkin({ 
+      id: data.id, 
+      type: data.type, 
+      tooltip: data.tooltip,
+      isGround: isGroundHotspot 
+    });
+    
     this.el.className = skin.rootClassName;
+    if (isGroundHotspot) {
+      this.el.classList.add('hotspot--ground');
+    }
     this.el.setAttribute('data-hotspot-id', data.id);
     this.el.setAttribute('data-hotspot-type', data.type);
     this.el.style.pointerEvents = 'auto';
+    this.el.style.position = 'absolute';
+    this.el.style.left = '0';
+    this.el.style.top = '0';
 
     this.contentEl = skin.contentEl;
     this.tooltipEl = skin.tooltipEl;
@@ -59,9 +77,6 @@ abstract class BaseDomHotspot<T extends HotspotBaseData> {
     this.el.addEventListener('pointerup', clearPress);
     this.el.addEventListener('pointercancel', clearPress);
     this.el.addEventListener('pointerleave', clearPress);
-
-    this.worldPos = new THREE.Vector3();
-    this.updateWorldPosition();
   }
 
   getElement(): HTMLElement {
@@ -72,46 +87,25 @@ abstract class BaseDomHotspot<T extends HotspotBaseData> {
     return this.data;
   }
 
-  updateWorldPosition(): void {
-    const yawRad = THREE.MathUtils.degToRad(this.data.yaw);
-    const pitchRad = THREE.MathUtils.degToRad(this.data.pitch);
-
-    const x = Math.cos(pitchRad) * Math.sin(yawRad);
-    const y = Math.sin(pitchRad);
-    const z = Math.cos(pitchRad) * Math.cos(yawRad);
-
-    this.worldPos.set(x, y, z).multiplyScalar(this.radius);
-  }
-
   /**
-   * 每帧调用：根据 camera matrix 更新屏幕位置；超出视野自动隐藏
+   * 每帧调用：根据 camera 和 DOM 更新屏幕位置；超出视野自动隐藏
    */
-  updateScreenPosition(camera: THREE.PerspectiveCamera, viewport: { width: number; height: number }): void {
-    // 视野/背面裁剪：在相机后方的点直接隐藏
-    const camPos = camera.getWorldPosition(_tmpCamPos);
-    const camDir = camera.getWorldDirection(_tmpCamDir);
-    const toPoint = _tmpToPoint.copy(this.worldPos).sub(camPos);
-    if (toPoint.dot(camDir) <= 0) {
+  updateScreenPosition(camera: THREE.PerspectiveCamera, dom: HTMLElement): void {
+    const result = yawPitchToScreen(this.data.yaw, this.data.pitch, camera, dom, this.radius);
+    
+    if (!result.visible) {
+      this.el.style.display = 'none';
       this.el.style.opacity = '0';
       return;
     }
 
-    const ndc = _tmpNdc.copy(this.worldPos).project(camera);
-    const inFrustum = ndc.x >= -1 && ndc.x <= 1 && ndc.y >= -1 && ndc.y <= 1 && ndc.z >= -1 && ndc.z <= 1;
-    if (!inFrustum) {
-      this.el.style.opacity = '0';
-      return;
-    }
-
-    const x = (ndc.x + 1) * 0.5 * viewport.width;
-    const y = (1 - (ndc.y + 1) * 0.5) * viewport.height;
-
+    this.el.style.display = '';
     this.el.style.opacity = '1';
     // 给 CSS hover/press 动效提供稳定基准（避免覆盖 transform）
-    this.el.style.setProperty('--hs-x', `${x}px`);
-    this.el.style.setProperty('--hs-y', `${y}px`);
-    // 不使用固定 left/top 百分比；每帧用 transform 写入像素位置
-    this.el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+    this.el.style.setProperty('--hs-x', `${result.x}px`);
+    this.el.style.setProperty('--hs-y', `${result.y}px`);
+    // 使用 transform 定位到屏幕坐标
+    this.el.style.transform = `translate3d(${result.x}px, ${result.y}px, 0) translate(-50%, -50%)`;
   }
 
   showTooltip(ms?: number): void {
@@ -137,10 +131,6 @@ abstract class BaseDomHotspot<T extends HotspotBaseData> {
   abstract onClick(): void;
 }
 
-const _tmpCamPos = new THREE.Vector3();
-const _tmpCamDir = new THREE.Vector3();
-const _tmpToPoint = new THREE.Vector3();
-const _tmpNdc = new THREE.Vector3();
 
 export class SceneLinkHotspot extends BaseDomHotspot<
   HotspotBaseData & { type: 'scene'; targetSceneId?: string }
@@ -215,6 +205,8 @@ export class Hotspots {
   private disposeFrameListener: (() => void) | null = null;
   private hotspotInstances: BaseDomHotspot<any>[] = [];
   private options: HotspotsOptions;
+  private unsubscribeFocus: (() => void) | null = null;
+  private hoveredSceneId: string | null = null;
 
   constructor(viewer: PanoViewer, hotspots: SceneHotspot[], options: HotspotsOptions = {}) {
     this.viewer = viewer;
@@ -224,11 +216,60 @@ export class Hotspots {
     this.element.style.pointerEvents = 'none';
     this.updateHotspots(hotspots);
 
+    const domElement = this.viewer.getDomElement();
     this.disposeFrameListener = this.viewer.onFrame(() => {
       const camera = this.viewer.getCamera();
-      const viewport = this.viewer.getViewportSize();
       for (const hs of this.hotspotInstances) {
-        hs.updateScreenPosition(camera, viewport);
+        hs.updateScreenPosition(camera, domElement);
+      }
+    });
+
+    // 监听场景聚焦事件（hover）
+    this.unsubscribeFocus = onSceneFocus((event) => {
+      this.handleSceneFocus(event);
+    });
+  }
+
+  private handleSceneFocus(event: SceneFocusEvent): void {
+    // 只处理 hover 事件，且来源不是 pano
+    if (event.type === 'hover' && event.source !== 'pano') {
+      // 检查是否是当前 museum
+      if (this.options.museumId && event.museumId !== this.options.museumId) {
+        return;
+      }
+
+      const targetSceneId = event.sceneId;
+      
+      // 如果 hover 的 sceneId 变化了，更新高亮
+      if (this.hoveredSceneId !== targetSceneId) {
+        // 清除之前的高亮
+        if (this.hoveredSceneId) {
+          this.setHotspotHighlight(this.hoveredSceneId, false);
+        }
+        
+        // 设置新的高亮
+        this.hoveredSceneId = targetSceneId;
+        if (targetSceneId) {
+          this.setHotspotHighlight(targetSceneId, true);
+        }
+      }
+    }
+  }
+
+  private setHotspotHighlight(sceneId: string, highlight: boolean): void {
+    // 找到所有指向该 sceneId 的 scene 类型热点
+    this.hotspotInstances.forEach((hotspot) => {
+      const data = hotspot.getData();
+      if (data.type === 'scene') {
+        const targetSceneId = (data as any).targetSceneId;
+        if (targetSceneId === sceneId) {
+          const el = hotspot.getElement();
+          if (highlight) {
+            el.classList.add('hotspot--external-hover');
+          } else {
+            el.classList.remove('hotspot--external-hover');
+          }
+        }
       }
     });
   }
@@ -337,6 +378,10 @@ export class Hotspots {
     if (this.disposeFrameListener) {
       this.disposeFrameListener();
       this.disposeFrameListener = null;
+    }
+    if (this.unsubscribeFocus) {
+      this.unsubscribeFocus();
+      this.unsubscribeFocus = null;
     }
     this.element.remove();
   }

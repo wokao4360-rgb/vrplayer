@@ -1,5 +1,6 @@
 import type { Museum, Scene } from '../types/config';
 import { navigateToScene } from '../utils/router';
+import { emitSceneFocus, onSceneFocus, type SceneFocusEvent } from './sceneLinkBus';
 
 type MapPanelProps = {
   museum: Museum;
@@ -17,6 +18,7 @@ export class MapPanel {
   private mapContainer: HTMLElement;
   private mapImage: HTMLImageElement;
   private pointsContainer: HTMLElement;
+  private unsubscribeFocus: (() => void) | null = null;
 
   constructor(props: MapPanelProps) {
     this.museum = props.museum;
@@ -90,6 +92,27 @@ export class MapPanel {
     if (this.mapImage.complete) {
       this.renderPoints();
     }
+
+    // 监听场景聚焦事件
+    this.unsubscribeFocus = onSceneFocus((event) => {
+      this.handleSceneFocus(event);
+    });
+  }
+
+  private handleSceneFocus(event: SceneFocusEvent): void {
+    if (event.type === 'focus' && event.source !== 'map') {
+      // 聚焦动画：让当前场景点位执行一次轻微 pulse
+      const point = this.pointsContainer.querySelector(
+        `[data-scene-id="${event.sceneId}"]`
+      ) as HTMLElement | null;
+      
+      if (point) {
+        point.classList.add('vr-map-point--focus-flash');
+        setTimeout(() => {
+          point.classList.remove('vr-map-point--focus-flash');
+        }, 300);
+      }
+    }
   }
 
   private renderPoints(): void {
@@ -146,10 +169,39 @@ export class MapPanel {
       tooltip.textContent = scene.name;
       point.appendChild(tooltip);
 
+      // Hover handlers
+      point.addEventListener('mouseenter', () => {
+        emitSceneFocus({
+          type: 'hover',
+          museumId: this.museum.id,
+          sceneId: scene.id,
+          source: 'map',
+          ts: Date.now(),
+        });
+      });
+
+      point.addEventListener('mouseleave', () => {
+        emitSceneFocus({
+          type: 'hover',
+          museumId: this.museum.id,
+          sceneId: null,
+          source: 'map',
+          ts: Date.now(),
+        });
+      });
+
       // Click handler
       point.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        // 点击前先 emit focus（虽然 router 也会发，但这里确保立即响应）
+        emitSceneFocus({
+          type: 'focus',
+          museumId: this.museum.id,
+          sceneId: scene.id,
+          source: 'map',
+          ts: Date.now(),
+        });
         navigateToScene(this.museum.id, scene.id);
         if (this.onClose) {
           this.onClose();
@@ -181,6 +233,10 @@ export class MapPanel {
   }
 
   remove(): void {
+    if (this.unsubscribeFocus) {
+      this.unsubscribeFocus();
+      this.unsubscribeFocus = null;
+    }
     this.element.remove();
   }
 }

@@ -4,7 +4,6 @@ import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { LoadStatus } from '../ui/QualityIndicator';
 import { NadirPatch } from './NadirPatch';
 import { getYawPitchFromNDC, screenToNDC } from './picking';
-import { setLastPick } from './pickBus';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -847,15 +846,14 @@ export class PanoViewer {
   private handlePick(clientX: number, clientY: number): void {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const ndc = screenToNDC(clientX, clientY, rect);
-    let yawPitch: { yaw: number; pitch: number };
-    try {
-      yawPitch = getYawPitchFromNDC(ndc.x, ndc.y, this.camera);
-    } catch (e) {
-      console.warn('[pick] yaw/pitch 计算出现异常', e);
+    const result = getYawPitchFromNDC(ndc.x, ndc.y, this.camera, this.getSphereRadius());
+
+    if (!result) {
+      console.warn('[pick] 未能计算 yaw/pitch');
       return;
     }
 
-    const { yaw, pitch } = yawPitch;
+    const { yaw, pitch } = result;
     const text = `yaw: ${yaw.toFixed(2)}, pitch: ${pitch.toFixed(2)}`;
 
     // 输出到 console
@@ -867,9 +865,6 @@ export class PanoViewer {
         // 忽略失败
       });
     }
-
-    // 保存拾取点到 pickBus
-    setLastPick({ yaw, pitch, ts: Date.now() });
 
     // 触发自定义事件，让外部 UI 显示 toast 和标记
     window.dispatchEvent(

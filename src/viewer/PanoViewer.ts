@@ -5,6 +5,8 @@ import { LoadStatus } from '../ui/QualityIndicator';
 import { NadirPatch } from './NadirPatch';
 import { getYawPitchFromNDC, screenToNDC } from './picking';
 import { CompassDisk } from '../ui/CompassDisk';
+import { GroundNavDots } from '../ui/GroundNavDots';
+import type { SceneHotspot } from '../types/config';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -95,6 +97,7 @@ export class PanoViewer {
   private frameListeners: Array<(dtMs: number) => void> = [];
   private nadirPatch: NadirPatch | null = null;
   private compassDisk: CompassDisk | null = null;
+  private groundNavDots: GroundNavDots | null = null;
   // Enhanced 为默认研学展示档，Original 为兜底备用档
   private renderProfile: RenderProfile = RenderProfile.Enhanced;
   private isDragging = false;
@@ -156,6 +159,14 @@ export class PanoViewer {
     // 指南针圆盘（DOM overlay）
     this.compassDisk = new CompassDisk();
     this.compassDisk.mount(container);
+    
+    // 地面导航点（DOM overlay，初始为空，后续通过 setSceneData 设置）
+    this.groundNavDots = new GroundNavDots({
+      museumId: '',
+      currentSceneId: '',
+      sceneHotspots: [],
+    });
+    this.groundNavDots.mount(container);
     
     // 绑定事件
     this.setupEvents();
@@ -654,6 +665,12 @@ export class PanoViewer {
       this.compassDisk.setYawPitch(view.yaw, view.pitch);
     }
 
+    // 更新地面导航点
+    if (this.groundNavDots) {
+      const view = this.getCurrentView();
+      this.groundNavDots.setYawPitch(view.yaw, view.pitch);
+    }
+
     for (const listener of this.frameListeners) {
       listener(dtMs);
     }
@@ -684,6 +701,29 @@ export class PanoViewer {
    */
   getDomElement(): HTMLElement {
     return this.renderer.domElement;
+  }
+
+  /**
+   * 设置场景数据（用于 GroundNavDots）
+   */
+  setSceneData(museumId: string, currentSceneId: string, sceneHotspots: SceneHotspot[]): void {
+    if (this.groundNavDots) {
+      // 过滤出 type=scene 且 target.sceneId 存在的热点
+      const sceneHotspotsFiltered = sceneHotspots
+        .filter((hotspot) => hotspot.type === 'scene' && hotspot.target?.sceneId)
+        .map((hotspot) => ({
+          id: hotspot.id,
+          label: hotspot.label,
+          yaw: hotspot.yaw,
+          pitch: hotspot.pitch,
+          target: {
+            museumId: hotspot.target!.museumId!,
+            sceneId: hotspot.target!.sceneId!,
+          },
+        }));
+      
+      this.groundNavDots.updateScene(museumId, currentSceneId, sceneHotspotsFiltered);
+    }
   }
 
   /**
@@ -924,6 +964,10 @@ export class PanoViewer {
     if (this.compassDisk) {
       this.compassDisk.dispose();
       this.compassDisk = null;
+    }
+    if (this.groundNavDots) {
+      this.groundNavDots.dispose();
+      this.groundNavDots = null;
     }
     this.renderer.dispose();
     window.removeEventListener('resize', () => this.handleResize());

@@ -5,10 +5,17 @@
  */
 
 const PITCH_SHOW_THRESHOLD = -55; // 开始显示的 pitch 阈值（度）
-const PITCH_FULL_VISIBLE = -80; // 完全显示的 pitch（度）
+const PITCH_FULL_VISIBLE = -90; // 完全显示的 pitch（度）
 
 type CompassDiskOptions = {
   // 可扩展选项
+};
+
+type GroundTransform = {
+  opacity: number;
+  translateY: number; // px
+  scaleY: number;
+  blur: number; // px
 };
 
 export class CompassDisk {
@@ -62,7 +69,8 @@ export class CompassDisk {
 
     // 初始隐藏
     this.root.style.opacity = '0';
-    this.root.style.transform = 'translateX(-50%) scale(0.9)';
+    this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
+    this.root.style.filter = 'blur(0px)';
   }
 
   /**
@@ -73,24 +81,54 @@ export class CompassDisk {
   }
 
   /**
+   * 根据 pitch 计算贴地变换参数
+   * pitch 范围：-55° ~ -90°
+   * pitch 越往下，圆盘越贴地、越压扁、越明显
+   */
+  private computeGroundTransform(pitch: number): GroundTransform {
+    // 归一化到 [0, 1]，pitch 从 -55° 到 -90°
+    const t = Math.max(0, Math.min(1, 
+      (pitch - PITCH_SHOW_THRESHOLD) / (PITCH_FULL_VISIBLE - PITCH_SHOW_THRESHOLD)
+    ));
+
+    // opacity: 0 -> 1（pitch 越低越明显）
+    const opacity = t;
+
+    // translateY: 0 -> -8px（向下移动，贴地效果）
+    const translateY = -t * 8;
+
+    // scaleY: 1 -> 0.3（垂直压缩，压扁效果）
+    const scaleY = 1 - t * 0.7;
+
+    // blur: 0 -> 2px（轻微模糊，增强贴地感）
+    const blur = t * 2;
+
+    return { opacity, translateY, scaleY, blur };
+  }
+
+  /**
    * 设置当前视角（yaw 和 pitch，单位：度）
    */
   setYawPitch(yawDeg: number, pitchDeg: number): void {
     this.currentYaw = yawDeg;
     this.currentPitch = pitchDeg;
 
-    // 计算显示状态和透明度
+    // 计算显示状态
     const shouldShow = pitchDeg <= PITCH_SHOW_THRESHOLD;
     
     if (shouldShow) {
-      // 计算透明度：pitch 越低（越朝下），opacity 越高
-      // t = clamp01(((-pitchDeg) - 55) / 25)
-      const t = Math.max(0, Math.min(1, ((-pitchDeg) - (-PITCH_SHOW_THRESHOLD)) / ((-PITCH_FULL_VISIBLE) - (-PITCH_SHOW_THRESHOLD))));
-      const opacity = t; // lerp(0, 1, t)
-      const scale = 0.9 + t * 0.1; // lerp(0.9, 1.0, t)
+      // 计算贴地变换参数
+      const transform = this.computeGroundTransform(pitchDeg);
 
-      this.root.style.opacity = opacity.toString();
-      this.root.style.transform = `translateX(-50%) scale(${scale})`;
+      // 应用透明度
+      this.root.style.opacity = transform.opacity.toString();
+
+      // 应用贴地变换：translateX(-50%) + translateY + scaleY
+      // transform-origin 已在 CSS 中设为底部中心 (50% 100%)
+      this.root.style.transform = `translateX(-50%) translateY(${transform.translateY}px) scaleY(${transform.scaleY})`;
+      
+      // 应用模糊效果
+      this.root.style.filter = `blur(${transform.blur}px)`;
       
       // 旋转圆盘内容（反向旋转以保持方向正确）
       // 相机往右转（yaw 增加），罗盘应反向旋转
@@ -104,7 +142,8 @@ export class CompassDisk {
       // 隐藏
       if (this.isVisible) {
         this.root.style.opacity = '0';
-        this.root.style.transform = 'translateX(-50%) scale(0.9)';
+        this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
+        this.root.style.filter = 'blur(0px)';
         this.isVisible = false;
       }
     }

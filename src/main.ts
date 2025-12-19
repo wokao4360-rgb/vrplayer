@@ -608,6 +608,9 @@ class App {
     
     this.panoViewer.setView(targetYaw, targetPitch, targetFov);
     this.panoViewer.loadScene(scene);
+    
+    // 设置场景数据（用于 GroundNavDots）
+    this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
   }
 
   /**

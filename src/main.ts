@@ -590,7 +590,7 @@ class App {
         brandText: '鼎虎清源',
       });
       this.appElement.appendChild(this.brandMark.getElement());
-      this.appElement.appendChild(this.brandMark.getAboutModal().getElement());
+      this.appElement.appendChild(this.brandMark.getTeamModal().getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
         console.debug('[showScene] BrandMark 创建失败，跳过:', err);
@@ -710,20 +710,20 @@ class App {
       });
     });
 
-    // 新 UI：场景预览卡片（Scene Preview Card）- 降级保护
-    try {
-      this.scenePreviewCard = new ScenePreviewCard(viewerContainer, {
-        museumId: museum.id,
-        getSceneMeta: (sceneId: string) => {
-          return sceneIndex.get(sceneId) ?? null;
-        },
-      });
-    } catch (err) {
-      if (__VR_DEBUG__) {
-        console.debug('[showScene] ScenePreviewCard 创建失败，跳过:', err);
-      }
-      this.scenePreviewCard = null;
-    }
+    // (已移除) 场景预览卡片（Scene Preview Card）- 本项目不需要，彻底不挂载也不渲染。
+    // try {
+    //   this.scenePreviewCard = new ScenePreviewCard(viewerContainer, {
+    //     museumId: museum.id,
+    //     getSceneMeta: (sceneId: string) => {
+    //       return sceneIndex.get(sceneId) ?? null;
+    //     },
+    //   });
+    // } catch (err) {
+    //   if (__VR_DEBUG__) {
+    //     console.debug('[showScene] ScenePreviewCard 创建失败，跳过:', err);
+    //   }
+    //   this.scenePreviewCard = null;
+    // }
 
     // 新 UI：底部 Dock（导览 tab 打开抽屉）- 降级保护
     try {
@@ -926,10 +926,7 @@ class App {
       this.sceneGuideDrawer = null;
     }
 
-    if (this.scenePreviewCard) {
-      this.scenePreviewCard.dispose();
-      this.scenePreviewCard = null;
-    }
+    // 已移除 scenePreviewCard，不再清理相关引用
     
     if (this.museumList) {
       this.museumList.remove();

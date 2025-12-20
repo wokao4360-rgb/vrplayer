@@ -5,6 +5,7 @@
 
 import { copyText } from './copyText';
 import { showToast } from './toast';
+import { __VR_DEBUG__ } from '../utils/debug';
 
 type TeamIntroModalOptions = {
   onClose?: () => void;

@@ -1,4 +1,4 @@
-import { AboutModal } from './modals/AboutModal';
+import { TeamIntroModal } from './TeamIntroModal';
 
 type BrandMarkOptions = {
   appName?: string;
@@ -7,13 +7,10 @@ type BrandMarkOptions = {
 
 export class BrandMark {
   private element: HTMLElement;
-  private aboutModal: AboutModal;
+  private teamModal: TeamIntroModal;
 
   constructor(options: BrandMarkOptions = {}) {
-    this.aboutModal = new AboutModal({
-      appName: options.appName,
-      brandText: options.brandText || '鼎虎清源',
-    });
+    this.teamModal = new TeamIntroModal({});
 
     this.element = document.createElement('div');
     this.element.className = 'vr-brandmark';
@@ -22,7 +19,7 @@ export class BrandMark {
     this.element.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.aboutModal.open();
+      this.teamModal.open();
     });
   }
 
@@ -30,12 +27,12 @@ export class BrandMark {
     return this.element;
   }
 
-  getAboutModal(): AboutModal {
-    return this.aboutModal;
+  getTeamModal(): TeamIntroModal {
+    return this.teamModal;
   }
 
   remove(): void {
     this.element.remove();
-    this.aboutModal.remove();
+    this.teamModal.dispose();
   }
 }

@@ -5,6 +5,8 @@
 
 import { copyText } from './copyText';
 import { showToast } from './toast';
+import { __VR_DEBUG__ } from '../utils/debug';
+import { ensureModalHost } from './modals/ModalHost';
 
 type TeamIntroModalOptions = {
   onClose?: () => void;
@@ -163,28 +165,62 @@ export class TeamIntroModal {
     };
     window.addEventListener('keydown', this.escapeHandler);
 
-    // 初始隐藏
-    this.root.style.opacity = '0';
-    this.root.style.pointerEvents = 'none';
+    // 初始状态：不挂载到 DOM
+    // root 只在 open() 时挂载到 #vr-modal-root
   }
 
   /**
-   * 挂载到父容器
+   * 获取 modal root 容器
+   */
+  private getModalRoot(): HTMLElement {
+    let root = document.getElementById('vr-modal-root');
+    if (!root) {
+      // 如果不存在，尝试通过 ensureModalHost 创建
+      ensureModalHost();
+      root = document.getElementById('vr-modal-root');
+      if (!root) {
+        throw new Error('vr-modal-root missing, please call ensureModalHost() first');
+      }
+    }
+    return root;
+  }
+
+  /**
+   * 挂载到父容器（保留向后兼容，但建议使用 open()）
    */
   mount(parent: HTMLElement): void {
-    parent.appendChild(this.root);
+    if (this.root.parentNode !== parent) {
+      if (this.root.parentNode) {
+        this.root.parentNode.removeChild(this.root);
+      }
+      parent.appendChild(this.root);
+    }
   }
 
   /**
    * 打开弹窗
    */
   open(): void {
+    if (__VR_DEBUG__) {
+      console.debug('[TeamIntroModal] open called', new Error().stack);
+    }
+
+    // 先关闭，防止重复叠层
     if (this.isOpen) {
       return;
     }
 
+    // 确保已挂载到 #vr-modal-root
+    const modalRoot = this.getModalRoot();
+    if (this.root.parentNode !== modalRoot) {
+      // 如果已经挂载在其他地方，先移除
+      if (this.root.parentNode) {
+        this.root.parentNode.removeChild(this.root);
+      }
+      modalRoot.appendChild(this.root);
+    }
+
     this.isOpen = true;
-    this.root.style.pointerEvents = 'auto';
     
     // 触发动画
     requestAnimationFrame(() => {
@@ -202,8 +238,11 @@ export class TeamIntroModal {
 
     this.isOpen = false;
     this.root.classList.remove('open');
-    // 立即禁用 pointer-events，防止拦截事件
-    this.root.style.pointerEvents = 'none';
+
+    // 移除 DOM，而不是只隐藏
+    if (this.root.parentNode) {
+      this.root.parentNode.removeChild(this.root);
+    }
 
     if (this.onCloseCallback) {
       this.onCloseCallback();

@@ -588,7 +588,7 @@ class App {
         brandText: '鼎虎清源',
       });
       this.appElement.appendChild(this.brandMark.getElement());
-      this.appElement.appendChild(this.brandMark.getAboutModal().getElement());
+      // TeamIntroModal 不再直接挂载，只在 open() 时挂载到 #vr-modal-root
     } catch (err) {
       if (__VR_DEBUG__) {
         console.debug('[showScene] BrandMark 创建失败，跳过:', err);

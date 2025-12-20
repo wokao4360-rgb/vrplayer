@@ -15,7 +15,7 @@ import { DebugPanel } from './ui/DebugPanel';
 import { ConfigStudio } from './ui/ConfigStudio';
 import { QualityIndicator, LoadStatus } from './ui/QualityIndicator';
 import './ui/ui.css';
-import { TopBar } from './ui/TopBar';
+import { TopRightControls } from './ui/TopRightControls';
 import { BrandMark } from './ui/BrandMark';
 import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
@@ -95,7 +95,7 @@ class App {
   private config: AppConfig | null = null;
   private panoViewer: PanoViewer | null = null;
   private titleBar: TitleBar | null = null;
-  private topBar: TopBar | null = null;
+  private topRightControls: TopRightControls | null = null;
   private topModeTabs: TopModeTabs | null = null;
   private sceneTitleEl: HTMLElement | null = null;
   private brandMark: BrandMark | null = null;
@@ -139,8 +139,8 @@ class App {
     this.hasBoundFullscreenEvents = true;
 
     const handler = () => {
-      // 同步 TopBar 图标/aria
-      this.topBar?.syncFullscreenState();
+      // 同步 TopRightControls 图标/aria
+      this.topRightControls?.syncFullscreenState();
       // 退出全屏后：尽量恢复方向锁定
       if (!isFullscreen()) {
         unlockOrientationBestEffort();
@@ -531,6 +531,30 @@ class App {
     const debugMode = isDebugMode();
     this.panoViewer = new PanoViewer(viewerContainer, debugMode);
 
+    // 新 UI：右上角控制按钮（全屏 + 坐标拾取）- 降级保护
+    try {
+      this.topRightControls = new TopRightControls({
+        viewerRootEl: viewerContainer,
+        onTogglePickMode: () => {
+          if (this.panoViewer) {
+            if (this.panoViewer.isPickModeEnabled()) {
+              this.panoViewer.disablePickMode();
+            } else {
+              this.panoViewer.enablePickMode();
+            }
+            return this.panoViewer.isPickModeEnabled();
+          }
+          return false;
+        },
+      });
+      this.appElement.appendChild(this.topRightControls.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] TopRightControls 创建失败，跳过:', err);
+      }
+      this.topRightControls = null;
+    }
+
     // 新 UI：左上角场景标题（如视风格）
     this.sceneTitleEl = document.createElement('div');
     this.sceneTitleEl.className = 'vr-scenetitle';
@@ -556,10 +580,7 @@ class App {
       const evt = e as CustomEvent<{ enabled: boolean }>;
       if (this.panoViewer && !evt.detail.enabled && this.panoViewer.isPickModeEnabled()) {
         this.panoViewer.disablePickMode();
-        if (this.topBar) {
-          // 同步 TopBar 按钮状态（需要添加一个方法来更新状态）
-          // 这里暂时通过重新创建 TopBar 的方式同步，或者 TopBar 自己监听事件
-        }
+        // TopRightControls 会通过 vr:pickmode 事件自动更新状态
       }
     };
     window.addEventListener('vr:pickmode', handlePickModeChange);
@@ -891,9 +912,9 @@ class App {
       this.titleBar = null;
     }
 
-    if (this.topBar) {
-      this.topBar.remove();
-      this.topBar = null;
+    if (this.topRightControls) {
+      this.topRightControls.remove();
+      this.topRightControls = null;
     }
 
     if (this.topModeTabs) {

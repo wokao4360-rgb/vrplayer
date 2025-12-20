@@ -79,6 +79,7 @@ export class GuideTray {
     this.scenes.forEach((scene) => {
       const item = document.createElement('div');
       item.className = 'vr-guidetray-item';
+      item.setAttribute('data-scene-id', scene.id);
       if (scene.id === this.currentSceneId) {
         item.classList.add('is-current');
       }

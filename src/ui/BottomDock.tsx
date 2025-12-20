@@ -72,6 +72,16 @@ export class BottomDock {
 
     this.syncActiveClass();
     this.setupInteractionListeners();
+    
+    // 监听外部 tab 切换事件（用于同步状态，例如从 DockPanels 内部关闭面板时）
+    const handleTabChange = (e: Event) => {
+      const evt = e as CustomEvent<{ tab: DockTabKey }>;
+      if (evt.detail.tab && evt.detail.tab !== this.activeTab) {
+        this.activeTab = evt.detail.tab;
+        this.syncActiveClass();
+      }
+    };
+    window.addEventListener('vr:bottom-dock-tab-change', handleTabChange);
   }
 
   private setupInteractionListeners(): void {

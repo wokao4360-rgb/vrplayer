@@ -52,6 +52,19 @@ export class DockPanels {
       // UI 被点击，立即恢复
       interactionBus.emitUIEngaged();
     }, true); // 使用捕获阶段确保所有子元素点击都能捕获
+
+    // 监听关闭面板事件
+    const handleClosePanels = () => {
+      // 关闭社区面板时，切换到 guide tab（guide tab 面板是隐藏的）
+      if (this.currentTab === 'community') {
+        this.setTab('guide');
+        // 派发事件通知 BottomDock 同步 tab 状态
+        window.dispatchEvent(new CustomEvent('vr:bottom-dock-tab-change', {
+          detail: { tab: 'guide' },
+        }));
+      }
+    };
+    window.addEventListener('vr:close-panels', handleClosePanels);
   }
 
   private render(): void {
@@ -163,22 +176,10 @@ export class DockPanels {
       this.dollhousePanel = null;
     }
 
-    // 不再显示说明文字，直接隐藏panel（保留功能面板如map/dollhouse）
+    // guide/info/settings 标签：直接隐藏panel，不显示任何说明框
+    // 点击"导览"后直接由 GuideTray 处理，不再显示中间说明框
     this.element.classList.add('hidden');
     this.element.innerHTML = '';
-  }
-
-  private getContentForTab(tab: DockTabKey): { title: string; body: string } {
-    if (tab === 'guide') {
-      return { title: '导览', body: '打开导览抽屉，选择一个场景进入。' };
-    }
-    if (tab === 'info') {
-      return { title: '信息', body: '这里预留展示当前场景/展馆信息（后续接入配置与热点说明）。' };
-    }
-    if (tab === 'settings') {
-      return { title: '设置', body: '这里预留清晰度/灵敏度/陀螺仪等设置入口（仅骨架）。' };
-    }
-    return { title: '社区', body: '' };
   }
 
   setSceneContext(sceneId: string, sceneName?: string): void {

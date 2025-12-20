@@ -105,10 +105,13 @@ export class SceneGuideDrawer {
     enterBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // 框4：只使用选中的场景，不使用hover
+      // 框4：只使用选中的场景作为进入来源，如果没有选中则使用当前场景
       const targetSceneId = this.selectedSceneId || this.currentSceneId;
-      if (targetSceneId) {
+      if (targetSceneId && targetSceneId !== this.currentSceneId) {
         navigateToScene(this.museumId, targetSceneId);
+        this.close();
+      } else if (targetSceneId === this.currentSceneId) {
+        // 如果选中的就是当前场景，直接关闭抽屉即可
         this.close();
       }
     });
@@ -140,6 +143,12 @@ export class SceneGuideDrawer {
     if (this.isOpen) return;
     this.isOpen = true;
     this.element.classList.add('open');
+    // 打开时初始化选中状态为当前场景
+    if (!this.selectedSceneId) {
+      this.selectedSceneId = this.currentSceneId;
+    }
+    this.updateActiveState();
+    this.updatePreview();
   }
 
   close(): void {
@@ -233,14 +242,17 @@ export class SceneGuideDrawer {
       item.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // 框4：点击列表项只选中，不直接进入
+        // 框4：点击列表项只选中，不直接进入场景
         this.selectedSceneId = scene.id;
-        // 更新选中状态
+        // 清除所有选中状态
         this.listEl?.querySelectorAll('.vr-guide-item').forEach((el) => {
-          el.classList.toggle('selected', el.getAttribute('data-scene-id') === scene.id);
+          el.classList.remove('selected');
         });
+        // 设置当前项的选中状态
+        item.classList.add('selected');
         // 更新预览（使用选中的场景）
         this.updatePreview();
+        // 注意：这里不调用 navigateToScene，只有点击"进入"按钮才会进入场景
       });
 
       this.listEl.appendChild(item);
@@ -251,7 +263,13 @@ export class SceneGuideDrawer {
     if (!this.listEl) return;
     this.listEl.querySelectorAll<HTMLElement>('.vr-guide-item').forEach((el) => {
       const id = el.getAttribute('data-scene-id');
-      el.classList.toggle('active', id === this.currentSceneId);
+      const isActive = id === this.currentSceneId;
+      el.classList.toggle('active', isActive);
+      // 如果当前项是当前场景且还没有选中项，则设置为选中状态
+      if (isActive && !this.selectedSceneId) {
+        this.selectedSceneId = this.currentSceneId;
+        el.classList.add('selected');
+      }
     });
   }
 

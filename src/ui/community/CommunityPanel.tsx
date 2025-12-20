@@ -41,19 +41,23 @@ export class CommunityPanel {
     const header = document.createElement('div');
     header.className = 'vr-community-header';
 
+    // 左侧：标题
     const title = document.createElement('div');
     title.className = 'vr-community-title';
     title.textContent = '微社区';
 
+    // 中间：场景名（可选）
     this.subtitleEl = document.createElement('div');
     this.subtitleEl.className = 'vr-community-subtitle';
 
-    // 右上角关闭按钮
+    // 右侧：关闭按钮
     const closeBtn = document.createElement('button');
     closeBtn.className = 'vr-community-close';
     closeBtn.innerHTML = '×';
     closeBtn.setAttribute('aria-label', '关闭');
-    closeBtn.addEventListener('click', () => {
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       window.dispatchEvent(new CustomEvent('vr:close-panels'));
     });
 

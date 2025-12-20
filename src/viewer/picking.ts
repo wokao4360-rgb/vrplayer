@@ -22,11 +22,11 @@ export function screenToNDC(
  * @param ndcX NDC X 坐标 [-1, 1]
  * @param ndcY NDC Y 坐标 [-1, 1]
  * @param camera Three.js 相机
- * @param sphereRadius 全景球半径（默认 500）
+ * @param sphereRadius 全景球半径（不再使用，保留参数以兼容调用方）
  * @returns { yaw: number, pitch: number } | null
  *   - yaw: 水平角（度），范围 [-180, 180]
  *   - pitch: 仰俯角（度），范围 [-90, 90]
- *   - null: 射线未击中球（理论上不会发生）
+ *   - null: 仅在 ray.direction 不存在时返回
  */
 export function getYawPitchFromNDC(
   ndcX: number,
@@ -38,28 +38,22 @@ export function getYawPitchFromNDC(
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
 
-  // 创建球体几何用于相交检测
-  const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
-  const sphereMesh = new THREE.Mesh(sphereGeometry);
-  sphereMesh.position.set(0, 0, 0);
-
-  // 计算射线与球面的交点
-  const intersects = raycaster.intersectObject(sphereMesh);
-  if (intersects.length === 0) {
+  // 直接使用 ray.direction（归一化向量）计算 yaw/pitch，不依赖球体相交
+  const dir = raycaster.ray.direction;
+  if (!dir || dir.length() === 0) {
     return null;
   }
 
-  // 取第一个交点（最近的点）
-  const point = intersects[0].point;
-
-  // 归一化到单位向量
-  const normalized = point.normalize();
+  // 归一化方向向量（确保是单位向量）
+  const normalized = dir.normalize();
 
   // 计算 pitch（仰俯角）：arcsin(y)，范围 [-90, 90]
-  const pitch = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, normalized.y))));
+  const pitchRad = Math.asin(Math.max(-1, Math.min(1, normalized.y)));
+  const pitch = THREE.MathUtils.radToDeg(pitchRad);
 
   // 计算 yaw（水平角）：atan2(x, z)，范围 [-180, 180]
-  const yaw = THREE.MathUtils.radToDeg(Math.atan2(normalized.x, normalized.z));
+  const yawRad = Math.atan2(normalized.x, normalized.z);
+  const yaw = THREE.MathUtils.radToDeg(yawRad);
 
   return { yaw, pitch };
 }

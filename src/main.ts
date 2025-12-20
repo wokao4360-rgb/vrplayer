@@ -20,7 +20,6 @@ import { BrandMark } from './ui/BrandMark';
 import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { GuideTray } from './ui/GuideTray';
-import { SceneStrip } from './ui/SceneStrip';
 import { ScenePreviewCard } from './ui/ScenePreviewCard';
 import { TopModeTabs } from './ui/TopModeTabs';
 import { resolveAssetUrl, AssetType } from './utils/assetResolver';
@@ -102,7 +101,6 @@ class App {
   private bottomDock: BottomDock | null = null;
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
   private guideTray: GuideTray | null = null;
-  private sceneStrip: SceneStrip | null = null;
   private scenePreviewCard: ScenePreviewCard | null = null;
   private museumList: MuseumList | null = null;
   private sceneList: SceneList | null = null;
@@ -689,26 +687,7 @@ class App {
     // 新 UI：导览抽屉（框4）- 延迟创建，只在点击"更多"时创建
     // this.sceneGuideDrawer 将在 onMoreClick 中创建
 
-    // 新 UI：场景导览条（Scene Strip）- 降级保护
-    try {
-      // 收集所有场景的热点（从所有场景的 hotspots 中提取 type='scene' 的热点）
-      const allSceneHotspots = museum.scenes.flatMap((s) => s.hotspots);
-      this.sceneStrip = new SceneStrip({
-        museumId: museum.id,
-        currentSceneId: scene.id,
-        hotspots: allSceneHotspots,
-        scenes: museum.scenes,
-        onNavigateToScene: (sceneId) => {
-          navigateToScene(museum.id, sceneId);
-        },
-      });
-      viewerContainer.appendChild(this.sceneStrip.getElement());
-    } catch (err) {
-      if (__VR_DEBUG__) {
-        console.debug('[showScene] SceneStrip 创建失败，跳过:', err);
-      }
-      this.sceneStrip = null;
-    }
+    // SceneStrip 已删除，不再创建常驻缩略图横条
 
     // 新 UI：场景预览卡片（Scene Preview Card）
     // 构建 sceneIndex Map（sceneId -> { title, thumb, panoUrl }）
@@ -945,11 +924,6 @@ class App {
     if (this.sceneGuideDrawer) {
       this.sceneGuideDrawer.remove();
       this.sceneGuideDrawer = null;
-    }
-
-    if (this.sceneStrip) {
-      this.sceneStrip.dispose();
-      this.sceneStrip = null;
     }
 
     if (this.scenePreviewCard) {

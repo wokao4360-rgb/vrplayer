@@ -3,7 +3,7 @@
  * 独立于 TopBar，浮动在右上角
  */
 
-import { isFullscreen, toggleFullscreen, unlockOrientationBestEffort } from './fullscreen';
+import { isFullscreen, requestFullscreenBestEffort, exitFullscreenBestEffort } from './fullscreen';
 
 type TopRightControlsOptions = {
   viewerRootEl?: HTMLElement;
@@ -71,17 +71,29 @@ export class TopRightControls {
     this.fullscreenBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const target = this.viewerRootEl;
-      if (!target) {
-        console.warn('[TopRightControls] fullscreen target not set');
-        return;
-      }
+      const isCurrentlyFullscreen = isFullscreen();
       try {
-        await toggleFullscreen(target);
+        if (isCurrentlyFullscreen) {
+          // 当前是全屏状态，退出全屏
+          await exitFullscreenBestEffort();
+        } else {
+          // 当前不是全屏，进入全屏
+          const target = this.viewerRootEl;
+          if (!target) {
+            console.warn('[TopRightControls] fullscreen target not set');
+            return;
+          }
+          await requestFullscreenBestEffort(target);
+        }
       } catch (err) {
-        console.warn('[TopRightControls] toggleFullscreen failed', err);
+        if (__VR_DEBUG__) {
+          console.debug('[TopRightControls] fullscreen toggle failed', err);
+        }
       } finally {
-        this.syncFullscreenState();
+        // 延迟一下确保状态更新
+        setTimeout(() => {
+          this.syncFullscreenState();
+        }, 100);
       }
     });
 

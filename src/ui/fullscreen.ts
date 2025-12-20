@@ -43,6 +43,31 @@ export async function exitFullscreen(): Promise<void> {
   }
 }
 
+/**
+ * 请求全屏（best-effort，包含错误处理）
+ */
+export async function requestFullscreenBestEffort(el?: HTMLElement): Promise<void> {
+  if (!el) {
+    const el = document.body;
+    return requestFullscreen(el);
+  }
+  return requestFullscreen(el);
+}
+
+/**
+ * 退出全屏（best-effort，包含错误处理）
+ */
+export async function exitFullscreenBestEffort(): Promise<void> {
+  try {
+    await exitFullscreen();
+    unlockOrientationBestEffort();
+  } catch (err) {
+    // 忽略错误，best-effort
+    // 注意：这里不使用 __VR_DEBUG__，因为可能未定义，使用 console.debug 即可
+    console.debug('[fullscreen] exitFullscreenBestEffort failed:', err);
+  }
+}
+
 function isMobileLike(): boolean {
   // 尽量保守：移动端才提示“建议横屏观看”
   const ua = navigator.userAgent || '';

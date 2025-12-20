@@ -3,6 +3,9 @@
  * 半透明玻璃态弹窗，显示团队信息
  */
 
+import { copyText } from './copyText';
+import { showToast } from './toast';
+
 type TeamIntroModalOptions = {
   onClose?: () => void;
 };
@@ -71,15 +74,59 @@ export class TeamIntroModal {
     intro3.className = 'vr-teammodal-text';
     intro3.textContent = '融合创新科技与教育理念，开启数字化学习新篇章。';
 
+    // 技术支持信息
+    const supportRow = document.createElement('div');
+    supportRow.className = 'vr-teammodal-text';
+    supportRow.textContent = '技术支持：kyu';
+
+    // 微信号（可点击复制）
+    const wechatRow = document.createElement('div');
+    wechatRow.className = 'vr-teammodal-text vr-teammodal-copyable';
+    wechatRow.innerHTML = '微信号：<span class="vr-teammodal-value">1888888</span>';
+    wechatRow.style.cursor = 'pointer';
+    wechatRow.addEventListener('click', async () => {
+      const success = await copyText('1888888');
+      if (success) {
+        showToast('微信号已复制');
+      }
+    });
+
+    // QQ号（可点击复制）
+    const qqRow = document.createElement('div');
+    qqRow.className = 'vr-teammodal-text vr-teammodal-copyable';
+    qqRow.innerHTML = 'QQ号：<span class="vr-teammodal-value">2888888</span>';
+    qqRow.style.cursor = 'pointer';
+    qqRow.addEventListener('click', async () => {
+      const success = await copyText('2888888');
+      if (success) {
+        showToast('QQ号已复制');
+      }
+    });
+
+    // QQ链接（可点击跳转）
+    const qqLinkRow = document.createElement('div');
+    qqLinkRow.className = 'vr-teammodal-text';
+    const qqLink = document.createElement('a');
+    qqLink.href = 'https://qm.qq.com/q/sNWlsarvtS';
+    qqLink.target = '_blank';
+    qqLink.rel = 'noreferrer noopener';
+    qqLink.textContent = '点击链接加我为QQ好友：https://qm.qq.com/q/sNWlsarvtS';
+    qqLink.className = 'vr-teammodal-link';
+    qqLinkRow.appendChild(qqLink);
+
     // 版权/联系方式
     const footer = document.createElement('div');
     footer.className = 'vr-teammodal-footer';
-    footer.textContent = '© 2024 鼎虎清源 | 联系方式待补充';
+    footer.textContent = '© 2024 鼎虎清源';
 
     // 组装内容
     content.appendChild(intro1);
     content.appendChild(intro2);
     content.appendChild(intro3);
+    content.appendChild(supportRow);
+    content.appendChild(wechatRow);
+    content.appendChild(qqRow);
+    content.appendChild(qqLinkRow);
 
     // 组装卡片
     const header = document.createElement('div');

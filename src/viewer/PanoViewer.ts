@@ -961,8 +961,12 @@ export class PanoViewer {
     const ndc = screenToNDC(clientX, clientY, rect);
     const result = getYawPitchFromNDC(ndc.x, ndc.y, this.camera, this.getSphereRadius());
 
+    // 使用 ray.direction 计算，理论上不会返回 null，但做防御性检查
     if (!result) {
-      console.warn('[pick] 未能计算 yaw/pitch');
+      // 只在 debug 模式输出，避免生产环境日志污染
+      if (typeof __VR_DEBUG__ !== 'undefined' && __VR_DEBUG__) {
+        console.debug('[pick] 未能计算 yaw/pitch（ray.direction 为空）');
+      }
       return;
     }
 

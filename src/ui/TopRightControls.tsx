@@ -86,10 +86,6 @@ export class TopRightControls {
           await requestFullscreenBestEffort(target);
         }
       } catch (err) {
-        // 兼容 iOS 或非标准浏览器，操作失败时给出可见提示
-        if (typeof showToast === 'function') {
-          showToast('浏览器不支持全屏或已自动退出');
-        }
         if (__VR_DEBUG__) {
           console.debug('[TopRightControls] fullscreen toggle failed', err);
         }

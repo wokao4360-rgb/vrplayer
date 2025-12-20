@@ -48,8 +48,18 @@ export class CommunityPanel {
     this.subtitleEl = document.createElement('div');
     this.subtitleEl.className = 'vr-community-subtitle';
 
+    // 右上角关闭按钮
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'vr-community-close';
+    closeBtn.innerHTML = '×';
+    closeBtn.setAttribute('aria-label', '关闭');
+    closeBtn.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('vr:close-panels'));
+    });
+
     header.appendChild(title);
     header.appendChild(this.subtitleEl);
+    header.appendChild(closeBtn);
 
     // content
     const content = document.createElement('div');

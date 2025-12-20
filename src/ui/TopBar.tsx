@@ -46,6 +46,13 @@ export class TopBar {
     this.element = document.createElement('div');
     this.element.className = 'vr-topbar vr-glass';
 
+    // 监听全屏状态变化，更新按钮图标
+    const handleFullscreenChange = () => {
+      this.syncFullscreenState();
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
+
     // 监听拾取模式切换事件（用于从外部关闭拾取模式）
     const handlePickModeChange = (e: Event) => {
       const evt = e as CustomEvent<{ enabled: boolean }>;

@@ -565,6 +565,10 @@ body{
   border-radius: 9999px;
   padding: 6px;
   box-shadow: var(--shadow);
+  /* 移除模糊，只保留半透明背景 */
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .vr-dock-tab{
   width: 64px;
@@ -1244,10 +1248,16 @@ body{
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  position: relative;
+}
+.vr-guide-header-left{
+  width: 40px; /* 占位，保持标题居中 */
 }
 .vr-guide-title{
   font-size: 14px;
   font-weight: 800;
+  flex: 1;
+  text-align: center;
 }
 .vr-guide-close{
   width: 32px;
@@ -1306,6 +1316,10 @@ body{
 }
 .vr-guide-item.active{
   background: rgba(255,255,255,0.10);
+}
+.vr-guide-item.selected{
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.25);
 }
 .vr-guide-thumb{
   width: 56px;
@@ -1369,7 +1383,7 @@ body{
 
 .vr-guide-preview-enter{
   margin-top: auto;
-  align-self: flex-start;
+  align-self: center; /* 居中显示 */
   height: 32px;
   padding: 0 14px;
   border-radius: 9999px;
@@ -1379,6 +1393,107 @@ body{
 }
 .vr-guide-preview-enter:active{
   transform: scale(0.97);
+}
+
+/* GuideTray - 导览轻量预览条（框3） */
+.vr-guidetray{
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  z-index: 2501; /* 略高于 Dock */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+  background: rgba(0,0,0,0.32);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 16px;
+  padding: 8px 0;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.vr-guidetray.visible{
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.vr-guidetray-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.vr-guidetray-more,
+.vr-guidetray-close{
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.9);
+  border: 0;
+  cursor: pointer;
+}
+.vr-guidetray-close{
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+.vr-guidetray-scroll{
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 12px 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.vr-guidetray-scroll::-webkit-scrollbar{
+  display: none;
+}
+.vr-guidetray-item{
+  flex-shrink: 0;
+  width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 150ms var(--ease-out);
+}
+.vr-guidetray-item:active{
+  transform: scale(0.95);
+}
+.vr-guidetray-item.is-current{
+  opacity: 0.9;
+}
+.vr-guidetray-item-thumb{
+  width: 80px;
+  height: 60px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: rgba(0,0,0,0.4);
+}
+.vr-guidetray-item-more .vr-guidetray-item-thumb{
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.08);
+  border: 1px dashed rgba(255,255,255,0.3);
+  font-size: 24px;
+  color: rgba(255,255,255,0.7);
+}
+.vr-guidetray-item-title{
+  font-size: 11px;
+  color: rgba(255,255,255,0.85);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
 }
 
 /* Toast */

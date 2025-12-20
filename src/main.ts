@@ -100,6 +100,7 @@ class App {
   private brandMark: BrandMark | null = null;
   private bottomDock: BottomDock | null = null;
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
+  private guideTray: GuideTray | null = null;
   private sceneStrip: SceneStrip | null = null;
   private scenePreviewCard: ScenePreviewCard | null = null;
   private museumList: MuseumList | null = null;
@@ -607,9 +608,41 @@ class App {
     this.videoPlayer = new VideoPlayer();
     this.appElement.appendChild(this.videoPlayer.getElement());
 
-    // 新 UI：导览抽屉（替换旧 SceneList Drawer）
-    this.sceneGuideDrawer = new SceneGuideDrawer({ scenes: museum.scenes });
-    this.appElement.appendChild(this.sceneGuideDrawer.getElement());
+    // 新 UI：导览轻量预览条（框3）
+    this.guideTray = new GuideTray({
+      museumId: museum.id,
+      currentSceneId: scene.id,
+      scenes: museum.scenes,
+      onSceneClick: (sceneId) => {
+        // 框3点击直接切换场景
+        navigateToScene(museum.id, sceneId);
+      },
+      onMoreClick: () => {
+        // 打开框4（完整导览抽屉）
+        if (!this.sceneGuideDrawer) {
+          this.sceneGuideDrawer = new SceneGuideDrawer({
+            museumId: museum.id,
+            currentSceneId: scene.id,
+            scenes: museum.scenes,
+            onClose: () => {
+              // 框4关闭时，框3保持显示
+            },
+          });
+          this.appElement.appendChild(this.sceneGuideDrawer.getElement());
+        }
+        this.guideTray?.setVisible(false);
+        this.sceneGuideDrawer.open();
+      },
+      onClose: () => {
+        // 关闭框3
+        this.guideTray?.setVisible(false);
+      },
+    });
+    this.guideTray.setVisible(false); // 初始隐藏
+    this.appElement.appendChild(this.guideTray.getElement());
+
+    // 新 UI：导览抽屉（框4）- 延迟创建，只在点击"更多"时创建
+    // this.sceneGuideDrawer 将在 onMoreClick 中创建
 
     // 新 UI：场景导览条（Scene Strip）
     // 收集所有场景的热点（从所有场景的 hotspots 中提取 type='scene' 的热点）
@@ -656,7 +689,12 @@ class App {
     // 新 UI：底部 Dock（导览 tab 打开抽屉）
     this.bottomDock = new BottomDock({
       initialTab: 'guide',
-      onGuideClick: () => this.sceneGuideDrawer?.toggle(),
+      onGuideClick: () => {
+        // 点击"导览"时显示框3（GuideTray）
+        if (this.guideTray) {
+          this.guideTray.setVisible(true);
+        }
+      },
       sceneId: scene.id,
       sceneName: scene.name,
       museum: museum,
@@ -808,6 +846,11 @@ class App {
     if (this.bottomDock) {
       this.bottomDock.remove();
       this.bottomDock = null;
+    }
+
+    if (this.guideTray) {
+      this.guideTray.remove();
+      this.guideTray = null;
     }
 
     if (this.sceneGuideDrawer) {

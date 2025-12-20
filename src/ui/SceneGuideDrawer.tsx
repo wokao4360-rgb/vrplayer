@@ -22,6 +22,7 @@ export class SceneGuideDrawer {
   private previewIdEl: HTMLElement | null = null;
   private searchInputEl: HTMLInputElement | null = null;
   private hoveredSceneId: string | null = null;
+  private selectedSceneId: string | null = null; // 选中的场景ID（框4需要先选中再进入）
   private onClose?: () => void;
 
   constructor(options: SceneGuideDrawerOptions) {
@@ -43,10 +44,15 @@ export class SceneGuideDrawer {
     const header = document.createElement('div');
     header.className = 'vr-guide-header';
 
+    // 左上角：占位（保持标题居中）
+    const leftBtn = document.createElement('div');
+    leftBtn.className = 'vr-guide-header-left';
+
     const title = document.createElement('div');
     title.className = 'vr-guide-title';
     title.textContent = '导览';
 
+    // 右上角：关闭按钮
     const closeBtn = document.createElement('button');
     closeBtn.className = 'vr-btn vr-guide-close';
     closeBtn.setAttribute('aria-label', '关闭');
@@ -58,6 +64,7 @@ export class SceneGuideDrawer {
       this.close();
     });
 
+    header.appendChild(leftBtn);
     header.appendChild(title);
     header.appendChild(closeBtn);
 
@@ -98,7 +105,8 @@ export class SceneGuideDrawer {
     enterBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const targetSceneId = this.hoveredSceneId || this.currentSceneId;
+      // 框4：只使用选中的场景，不使用hover
+      const targetSceneId = this.selectedSceneId || this.currentSceneId;
       if (targetSceneId) {
         navigateToScene(this.museumId, targetSceneId);
         this.close();
@@ -225,8 +233,14 @@ export class SceneGuideDrawer {
       item.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        navigateToScene(this.museumId, scene.id);
-        this.close();
+        // 框4：点击列表项只选中，不直接进入
+        this.selectedSceneId = scene.id;
+        // 更新选中状态
+        this.listEl?.querySelectorAll('.vr-guide-item').forEach((el) => {
+          el.classList.toggle('selected', el.getAttribute('data-scene-id') === scene.id);
+        });
+        // 更新预览（使用选中的场景）
+        this.updatePreview();
       });
 
       this.listEl.appendChild(item);
@@ -243,7 +257,8 @@ export class SceneGuideDrawer {
 
   private updatePreview(): void {
     if (!this.previewImgEl || !this.previewTitleEl || !this.previewIdEl) return;
-    const targetId = this.hoveredSceneId || this.currentSceneId;
+    // 框4：优先使用选中的场景，其次hover，最后当前场景
+    const targetId = this.selectedSceneId || this.hoveredSceneId || this.currentSceneId;
     const scene = this.scenes.find((s) => s.id === targetId) || this.scenes[0];
     if (!scene) return;
     this.previewImgEl.src = scene.thumb || DEFAULT_COVER_DATA_URI;

@@ -76,6 +76,7 @@ export function unlockOrientationBestEffort(): void {
 export async function toggleFullscreen(targetEl: HTMLElement): Promise<void> {
   if (isFullscreen()) {
     await exitFullscreen();
+    unlockOrientationBestEffort(); // 退出全屏时解锁横屏
     return;
   }
 

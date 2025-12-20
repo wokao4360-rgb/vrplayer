@@ -42,9 +42,9 @@
         {
           "id": "front_yard",
           "name": "前院与故居外景",
-          "panoLow": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
-          "pano": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
-          "thumb": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
+          "panoLow": "/assets/demo.jpg",
+          "pano": "/assets/demo.jpg",
+          "thumb": "/assets/demo.jpg",
           "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 420, "y": 310 },
           "hotspots": [
@@ -77,9 +77,9 @@
         {
           "id": "exhibit_hall",
           "name": "生平展厅",
-          "panoLow": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
-          "pano": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
-          "thumb": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
+          "panoLow": "/assets/demo.jpg",
+          "pano": "/assets/demo.jpg",
+          "thumb": "/assets/demo.jpg",
           "initialView": { "yaw": 90, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 620, "y": 260 },
           "hotspots": [
@@ -112,9 +112,9 @@
         {
           "id": "memorial_wall",
           "name": "家国记忆墙（总结）",
-          "panoLow": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
-          "pano": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
-          "thumb": "https://yx-1391378012.cos.ap-guangzhou.myqcloud.com/demo.jpg",
+          "panoLow": "/assets/demo.jpg",
+          "pano": "/assets/demo.jpg",
+          "thumb": "/assets/demo.jpg",
           "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 780, "y": 240 },
           "hotspots": [

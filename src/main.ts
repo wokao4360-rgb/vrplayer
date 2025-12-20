@@ -20,7 +20,6 @@ import { BrandMark } from './ui/BrandMark';
 import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { GuideTray } from './ui/GuideTray';
-import { ScenePreviewCard } from './ui/ScenePreviewCard';
 import { TopModeTabs } from './ui/TopModeTabs';
 import { resolveAssetUrl, AssetType } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
@@ -101,7 +100,6 @@ class App {
   private bottomDock: BottomDock | null = null;
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
   private guideTray: GuideTray | null = null;
-  private scenePreviewCard: ScenePreviewCard | null = null;
   private museumList: MuseumList | null = null;
   private sceneList: SceneList | null = null;
   private mapOverlay: MapOverlay | null = null;
@@ -590,7 +588,7 @@ class App {
         brandText: '鼎虎清源',
       });
       this.appElement.appendChild(this.brandMark.getElement());
-      this.appElement.appendChild(this.brandMark.getTeamModal().getElement());
+      this.appElement.appendChild(this.brandMark.getAboutModal().getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
         console.debug('[showScene] BrandMark 创建失败，跳过:', err);
@@ -705,25 +703,11 @@ class App {
 
       sceneIndex.set(s.id, {
         title: s.name,
-        thumb: s.thumb, // ScenePreviewCard 内部会使用 resolveAssetUrl 解析
+        thumb: s.thumb, // 缩略图URL（用于场景索引，可选）
         panoUrl, // 可选：用于预热
       });
     });
 
-    // (已移除) 场景预览卡片（Scene Preview Card）- 本项目不需要，彻底不挂载也不渲染。
-    // try {
-    //   this.scenePreviewCard = new ScenePreviewCard(viewerContainer, {
-    //     museumId: museum.id,
-    //     getSceneMeta: (sceneId: string) => {
-    //       return sceneIndex.get(sceneId) ?? null;
-    //     },
-    //   });
-    // } catch (err) {
-    //   if (__VR_DEBUG__) {
-    //     console.debug('[showScene] ScenePreviewCard 创建失败，跳过:', err);
-    //   }
-    //   this.scenePreviewCard = null;
-    // }
 
     // 新 UI：底部 Dock（导览 tab 打开抽屉）- 降级保护
     try {
@@ -926,8 +910,6 @@ class App {
       this.sceneGuideDrawer = null;
     }
 
-    // 已移除 scenePreviewCard，不再清理相关引用
-    
     if (this.museumList) {
       this.museumList.remove();
       this.museumList = null;

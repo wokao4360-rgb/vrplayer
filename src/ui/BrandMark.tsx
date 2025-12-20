@@ -7,10 +7,10 @@ type BrandMarkOptions = {
 
 export class BrandMark {
   private element: HTMLElement;
-  private teamModal: TeamIntroModal;
+  private teamIntroModal: TeamIntroModal;
 
   constructor(options: BrandMarkOptions = {}) {
-    this.teamModal = new TeamIntroModal({});
+    this.teamIntroModal = new TeamIntroModal({});
 
     this.element = document.createElement('div');
     this.element.className = 'vr-brandmark';
@@ -19,7 +19,7 @@ export class BrandMark {
     this.element.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.teamModal.open();
+      this.teamIntroModal.open();
     });
   }
 
@@ -27,12 +27,12 @@ export class BrandMark {
     return this.element;
   }
 
-  getTeamModal(): TeamIntroModal {
-    return this.teamModal;
+  getAboutModal(): TeamIntroModal {
+    return this.teamIntroModal;
   }
 
   remove(): void {
     this.element.remove();
-    this.teamModal.dispose();
+    this.teamIntroModal.dispose();
   }
 }

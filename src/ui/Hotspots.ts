@@ -284,7 +284,7 @@ export class Hotspots {
       if (h.type === 'scene') {
         const sceneId = h.target?.sceneId;
         const sceneName = sceneId ? this.options.resolveSceneName?.(sceneId) : undefined;
-        const tooltip = `进入：${sceneName || h.label || sceneId || '未知场景'}`;
+        const tooltip = `进进入：`进sceneName || h.label || sceneId || '未知场景'}`;
         return new SceneLinkHotspot({
           id: h.id,
           type: 'scene',

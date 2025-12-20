@@ -633,56 +633,6 @@ class App {
     }
 
     // 新 UI：导览轻量预览条（框3）- 降级保护
-    try {
-      this.guideTray = new GuideTray({
-        museumId: museum.id,
-        currentSceneId: scene.id,
-        scenes: museum.scenes,
-        onSceneClick: (sceneId) => {
-          // 框3点击直接切换场景
-          navigateToScene(museum.id, sceneId);
-        },
-        onMoreClick: () => {
-          // 打开框4（完整导览抽屉）
-          if (!this.sceneGuideDrawer) {
-            try {
-              this.sceneGuideDrawer = new SceneGuideDrawer({
-                museumId: museum.id,
-                currentSceneId: scene.id,
-                scenes: museum.scenes,
-                onClose: () => {
-                  // 框4关闭时，框3保持显示
-                },
-              });
-              this.appElement.appendChild(this.sceneGuideDrawer.getElement());
-            } catch (err) {
-              if (__VR_DEBUG__) {
-                console.debug('[GuideTray] SceneGuideDrawer 创建失败:', err);
-              }
-            }
-          }
-          if (this.guideTray) {
-            this.guideTray.setVisible(false);
-          }
-          if (this.sceneGuideDrawer) {
-            this.sceneGuideDrawer.open();
-          }
-        },
-        onClose: () => {
-          // 关闭框3
-          if (this.guideTray) {
-            this.guideTray.setVisible(false);
-          }
-        },
-      });
-      this.guideTray.setVisible(false); // 初始隐藏
-      this.appElement.appendChild(this.guideTray.getElement());
-    } catch (err) {
-      if (__VR_DEBUG__) {
-        console.debug('[showScene] GuideTray 创建失败，跳过:', err);
-      }
-      this.guideTray = null;
-    }
 
     // 新 UI：导览抽屉（框4）- 延迟创建，只在点击"更多"时创建
     // this.sceneGuideDrawer 将在 onMoreClick 中创建

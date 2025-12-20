@@ -204,11 +204,22 @@ body{
   color: rgba(255,255,255,0.7);
 }
 
+/* Modal Root：全局 modal 容器，默认不拦截事件 */
+#vr-modal-root{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4000;
+}
+#vr-modal-root > *{
+  pointer-events: auto;  /* 只有真正的 modal 内容可点 */
+}
+
 /* TeamIntroModal 团队介绍弹窗 */
 .vr-teammodal{
   position: fixed;
   inset: 0;
-  z-index: 30;
+  z-index: 4100;  /* 确保在 modal root 之上 */
   opacity: 0;
   pointer-events: none;
   transition: opacity 200ms var(--ease-out);
@@ -244,6 +255,8 @@ body{
   padding: 20px;
   color: var(--text);
   opacity: 0;
+  pointer-events: auto;  /* 确保卡片内容可交互 */
+  z-index: 1;  /* 确保在 backdrop 之上 */
   transition: opacity 250ms var(--ease-out), 
               transform 250ms var(--ease-out);
 }

@@ -202,13 +202,8 @@ export class TeamIntroModal {
 
     this.isOpen = false;
     this.root.classList.remove('open');
-    
-    // 动画结束后禁用 pointer-events
-    setTimeout(() => {
-      if (!this.isOpen) {
-        this.root.style.pointerEvents = 'none';
-      }
-    }, 250);
+    // 立即禁用 pointer-events，防止拦截事件
+    this.root.style.pointerEvents = 'none';
 
     if (this.onCloseCallback) {
       this.onCloseCallback();

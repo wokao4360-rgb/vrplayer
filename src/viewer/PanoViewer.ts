@@ -715,6 +715,9 @@ export class PanoViewer {
     this.lastPitch = view.pitch;
     this.lastFov = view.fov;
 
+    // 关键：每帧更新相机，确保热点和罗盘使用最新的相机状态（无延迟）
+    this.updateCamera();
+
     // 更新 nadir patch（低头时渐显 + yaw 罗盘旋转）
     if (this.nadirPatch) {
       this.nadirPatch.update(this.camera, { yaw: view.yaw, pitch: view.pitch }, dtMs);
@@ -735,6 +738,7 @@ export class PanoViewer {
       this.groundHeading.setYawPitch(view.yaw, view.pitch);
     }
 
+    // 更新热点（必须在相机更新后，使用最新的相机状态）
     for (const listener of this.frameListeners) {
       listener(dtMs);
     }

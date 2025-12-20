@@ -52,6 +52,8 @@ export class ScenePreviewCard {
     // 创建根元素
     this.root = document.createElement('div');
     this.root.className = 'vr-previewcard';
+    // 初始彻底隐藏，不占位
+    this.root.style.display = 'none';
 
     // 创建缩略图容器
     this.thumbEl = document.createElement('div');
@@ -391,6 +393,7 @@ export class ScenePreviewCard {
   private show(): void {
     if (!this.visible) {
       this.visible = true;
+      this.root.style.display = 'flex';
       this.root.classList.add('is-visible');
     }
   }
@@ -403,6 +406,8 @@ export class ScenePreviewCard {
       this.visible = false;
       this.root.classList.remove('is-visible');
     }
+    // 彻底隐藏，不占位
+    this.root.style.display = 'none';
   }
 
   /**

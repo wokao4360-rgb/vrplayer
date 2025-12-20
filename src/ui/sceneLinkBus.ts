@@ -3,7 +3,7 @@
  * 用于 PanoViewer / MapPanel / Dollhouse 三端共享"当前场景"与"选中/hover场景"状态
  */
 
-export type SceneFocusSource = 'pano' | 'map' | 'dollhouse' | 'dock';
+export type SceneFocusSource = 'pano' | 'map' | 'dollhouse' | 'dock' | 'pano-auto';
 
 export type SceneFocusEvent =
   | { type: 'focus'; museumId: string; sceneId: string; source: SceneFocusSource; ts: number }
@@ -58,6 +58,11 @@ export function onSceneFocus(handler: SceneFocusHandler): () => void {
     window.removeEventListener('vr:scene-focus', wrappedHandler);
   };
 }
+
+
+
+
+
 
 
 

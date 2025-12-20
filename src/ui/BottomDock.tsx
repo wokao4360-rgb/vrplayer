@@ -76,16 +76,8 @@ export class BottomDock {
   }
 
   private setupInteractionListeners(): void {
-    // 监听交互事件
-    this.unsubscribeInteracting = interactionBus.on('user-interacting', () => {
-      this.element.classList.add('vr-ui-interacting');
-    });
-    this.unsubscribeIdle = interactionBus.on('user-idle', () => {
-      this.element.classList.remove('vr-ui-interacting');
-    });
-    this.unsubscribeUIEngaged = interactionBus.on('ui-engaged', () => {
-      this.element.classList.remove('vr-ui-interacting');
-    });
+    // 注意：class管理由 yieldClassManager 统一处理（通过 document.documentElement）
+    // 这里不需要手动管理 class，保留空实现以避免类型错误
   }
 
   private syncActiveClass(): void {

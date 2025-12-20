@@ -272,10 +272,11 @@ export class SceneStrip {
         if (event.type === 'hover') {
           if (event.sceneId === sceneId) {
             item.classList.add('is-hover');
-            // hover 时轻滑入视野（不强制，不抢用户手动滚动）
-            if (event.museumId === this.museumId) {
-              this.scrollToItem(sceneId, 'smooth', false);
-            }
+          // hover 时轻滑入视野（不强制，不抢用户手动滚动）
+          // 如果正在用户手动滚动，完全忽略
+          if (event.museumId === this.museumId && !this.userScrolling) {
+            this.scrollToItem(sceneId, 'smooth', false);
+          }
           } else {
             item.classList.remove('is-hover');
           }
@@ -293,8 +294,13 @@ export class SceneStrip {
               }
             });
             this.currentSceneId = sceneId;
-            // 滚动到该场景（外部切换后居中，force=true 确保执行）
-            this.scrollToItem(sceneId, 'smooth', true);
+            // 滚动到该场景（外部切换后居中，但要在下一帧执行并再次检查userScrolling）
+            requestAnimationFrame(() => {
+              // 再次检查是否仍在用户滚动状态
+              if (!this.userScrolling) {
+                this.scrollToItem(sceneId, 'smooth', true);
+              }
+            });
           }
         }
       });
@@ -316,9 +322,20 @@ export class SceneStrip {
       // 只处理当前博物馆的事件
       if (customEvent.detail.museumId !== this.museumId) return;
 
+      // 如果正在用户手动滚动，完全忽略（绝不抢回控制权）
+      if (this.userScrolling) return;
+
       if (customEvent.detail.type === 'aim' && customEvent.detail.sceneId) {
-        // aim 时滚动到对应场景（不强制，不抢用户手动滚动）
-        this.scrollToItem(customEvent.detail.sceneId, 'smooth', false);
+        const sceneId = customEvent.detail.sceneId;
+        
+        // 严格过滤：忽略当前场景的目标
+        if (this.currentSceneId && sceneId === this.currentSceneId) return;
+        
+        // aim 时只允许轻滑入视野，禁止强制居中
+        // 再次检查 userScrolling（双重保险）
+        if (!this.userScrolling) {
+          this.scrollToItem(sceneId, 'smooth', false);
+        }
       }
       // clear 时不处理（SceneStrip 保持当前状态）
     };
@@ -336,17 +353,10 @@ export class SceneStrip {
 
   /**
    * 接入 interactionBus
+   * 注意：class管理由 yieldClassManager 统一处理（通过 document.documentElement）
    */
   private setupInteractionListeners(): void {
-    this.unsubscribeInteracting = interactionBus.on('user-interacting', () => {
-      this.element.classList.add('vr-ui-interacting');
-    });
-    this.unsubscribeIdle = interactionBus.on('user-idle', () => {
-      this.element.classList.remove('vr-ui-interacting');
-    });
-    this.unsubscribeUIEngaged = interactionBus.on('ui-engaged', () => {
-      this.element.classList.remove('vr-ui-interacting');
-    });
+    // class管理由 yieldClassManager 统一处理，这里不需要手动管理
 
     // 条内任意点击先 emit ui-engaged
     this.scrollContainer.addEventListener('click', () => {
@@ -377,6 +387,10 @@ export class SceneStrip {
       this.userScrolling = true;
       this.lastUserScrollTs = performance.now();
       this.element.classList.add('is-user-scrolling');
+      
+      // 触发交互信号（中断自动导航倒计时）
+      debugLog('统一终止触发点: 横条滚动');
+      interactionBus.emitInteracting();
       
       // 清除之前的定时器
       if (this.userScrollCheckTimer !== null) {
@@ -493,6 +507,7 @@ export class SceneStrip {
     }
   }
 }
+
 
 
 

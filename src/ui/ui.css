@@ -2,6 +2,22 @@
 @import './community/community.css';
 @import './modals/modal.css';
 
+/*
+ * UI 层级统一规范（z-index 固定档位）
+ * 
+ * 层级从低到高：
+ * - ground (10-12): 地面层（CompassDisk=10, GroundHeadingMarker=11, GroundNavDots=12）
+ * - preview (17): 预览卡（ScenePreviewCard）
+ * - strip (18): 底部横条（SceneStrip）
+ * - dock (2500): 底部 Dock（BottomDock + DockPanels）
+ * - modal (4000+): 弹窗/遮罩（Modal=4000, ModalMask=3999, Toast=5200, TopBar=2600）
+ * 
+ * 规则：
+ * - 可点击元素必须确保不被遮挡
+ * - 预览卡永远在横条下面一层
+ * - 弹窗永远最高
+ */
+
 *{
   margin: 0;
   padding: 0;
@@ -30,6 +46,11 @@ body{
   --text-dim: rgba(255,255,255,0.72);
   --text: rgba(255,255,255,0.92);
   --shadow: 0 8px 28px rgba(0,0,0,0.35);
+  
+  /* UI 让位策略统一时间参数 */
+  --vr-yield-fade-ms: 150ms;
+  --vr-yield-restore-ms: 150ms;
+  --vr-yield-restore-delay-ms: 400ms;
   
   /* 地面交互层统一视觉变量 */
   --vr-glass-bg: rgba(255,255,255,0.10);
@@ -140,9 +161,13 @@ body{
   transition: opacity 300ms cubic-bezier(.2,.8,.2,1), 
               transform 300ms cubic-bezier(.2,.8,.2,1);
 }
+/* 半透明让位：水印 */
 .vr-watermark.vr-ui-interacting{
-  opacity: 0.4;
-  transform: scale(0.98);
+  opacity: 0.35;
+  transition: opacity var(--vr-yield-fade-ms) var(--ease-out);
+}
+.vr-watermark.vr-ui-restoring{
+  transition: opacity var(--vr-yield-restore-ms) var(--ease-out);
 }
 
 .vr-watermark__text{
@@ -331,7 +356,7 @@ body{
   padding: 16px;
   color: var(--text);
   opacity: 0;
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 .vr-modal.open .vr-modal-card{
   opacity: 1;
@@ -376,9 +401,15 @@ body{
   transition: opacity 300ms cubic-bezier(.2,.8,.2,1), 
               transform 300ms cubic-bezier(.2,.8,.2,1);
 }
+/* 半透明让位：横条 */
 .vr-scenestrip.vr-ui-interacting{
-  opacity: 0.4;
-  transform: translateX(-50%) scale(0.98);
+  opacity: 0.35;
+  transition: opacity var(--vr-yield-fade-ms) var(--ease-out),
+              transform var(--vr-yield-fade-ms) var(--ease-out);
+}
+.vr-scenestrip.vr-ui-restoring{
+  transition: opacity var(--vr-yield-restore-ms) var(--ease-out),
+              transform var(--vr-yield-restore-ms) var(--ease-out);
 }
 .vr-scenestrip__scroll{
   pointer-events: auto;
@@ -416,16 +447,36 @@ body{
               transform 150ms cubic-bezier(.2,.8,.2,1);
 }
 /* 手动滚动中状态：让反馈更跟手 */
-.vr-scenestrip.is-user-scrolling .vr-scenestrip__item{
+.vr-scenestrip.is-user-scrolling .vr-scenestrip__item,
+.vr-scenestrip.vr-ui-interacting .vr-scenestrip__item{
   transition-duration: 120ms;
+  /* 禁止pulse动画 */
+  transform: scale(1) !important;
+}
+.vr-scenestrip.vr-ui-restoring .vr-scenestrip__item{
+  transition-duration: var(--vr-yield-restore-ms);
+}
+.vr-scenestrip.is-user-scrolling .vr-scenestrip__item.is-current::before,
+.vr-scenestrip.vr-ui-interacting .vr-scenestrip__item.is-current::before{
+  animation: none;
 }
 .vr-scenestrip__item:hover{
   opacity: 0.85;
   transform: scale(1.05);
 }
+/* 在userScrolling或interacting时限制hover scale */
+.vr-scenestrip.is-user-scrolling .vr-scenestrip__item:hover,
+.vr-scenestrip.vr-ui-interacting .vr-scenestrip__item:hover{
+  transform: scale(1.02);
+}
 .vr-scenestrip__item.is-hover{
   opacity: 0.9;
   transform: scale(1.08);
+}
+/* 在userScrolling或interacting时限制hover scale */
+.vr-scenestrip.is-user-scrolling .vr-scenestrip__item.is-hover,
+.vr-scenestrip.vr-ui-interacting .vr-scenestrip__item.is-hover{
+  transform: scale(1.02);
 }
 .vr-scenestrip__item.is-current{
   opacity: 1;
@@ -496,9 +547,15 @@ body{
   transition: opacity 300ms cubic-bezier(.2,.8,.2,1), 
               transform 300ms cubic-bezier(.2,.8,.2,1);
 }
+/* 半透明让位：底部 Dock */
 .vr-dock-wrap.vr-ui-interacting{
-  opacity: 0.4;
-  transform: translateX(-50%) scale(0.98);
+  opacity: 0.35;
+  transition: opacity var(--vr-yield-fade-ms) var(--ease-out),
+              transform var(--vr-yield-fade-ms) var(--ease-out);
+}
+.vr-dock-wrap.vr-ui-restoring{
+  transition: opacity var(--vr-yield-restore-ms) var(--ease-out),
+              transform var(--vr-yield-restore-ms) var(--ease-out);
 }
 .vr-dock{
   pointer-events: auto;
@@ -538,23 +595,26 @@ body{
   transition: opacity 300ms cubic-bezier(.2,.8,.2,1), 
               transform 300ms cubic-bezier(.2,.8,.2,1);
 }
+/* 半透明让位：面板 */
 .vr-panel.vr-ui-interacting{
-  opacity: 0.4;
-  transform: translateY(6px) scale(0.98);
+  opacity: 0.35;
+  transition: opacity var(--vr-yield-fade-ms) var(--ease-out);
+}
+.vr-panel.vr-ui-restoring{
+  transition: opacity var(--vr-yield-restore-ms) var(--ease-out);
 }
 .vr-panel.visible.vr-ui-interacting{
-  opacity: 0.4;
-  transform: translateY(0) scale(0.98);
+  opacity: 0.35;
 }
 .vr-panel.visible{
   opacity: 1;
   transform: translateY(0);
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 .vr-panel.hidden{
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 .vr-panel-title{
   font-size: 13px;
@@ -683,12 +743,24 @@ body{
   transform: translateX(-50%) scale(0.98);
 }
 
-/* interacting 时地面层额外降噪 */
+/* 半透明让位：地面层（更淡） */
 .vr-ui-interacting.vr-compass,
-.vr-ui-interacting.vr-groundnav,
+.vr-ui-interacting .vr-groundnav,
+.vr-groundnav.vr-ui-interacting,
 .vr-ui-interacting.vr-groundheading{
   opacity: 0.28 !important;          /* 比通用 UI 更淡一点 */
   filter: blur(0.8px) !important;    /* 拖动时统一轻糊，减少视觉噪声 */
+  transition: opacity var(--vr-yield-fade-ms) var(--ease-out),
+              filter var(--vr-yield-fade-ms) var(--ease-out),
+              transform var(--vr-yield-fade-ms) var(--ease-out);
+}
+.vr-ui-restoring.vr-compass,
+.vr-ui-restoring .vr-groundnav,
+.vr-groundnav.vr-ui-restoring,
+.vr-ui-restoring.vr-groundheading{
+  transition: opacity var(--vr-yield-restore-ms) var(--ease-out),
+              filter var(--vr-yield-restore-ms) var(--ease-out),
+              transform var(--vr-yield-restore-ms) var(--ease-out);
 }
 
 /* 非常轻微的地面阴影效果 */
@@ -967,10 +1039,65 @@ body{
   transform: scale(1.15); /* hover 的 scale 覆盖 aimed */
 }
 
-/* 交互态弱化 aimed */
-.vr-ui-interacting .vr-groundnav__dot.is-aimed{
-  transform: scale(1.08);
-  opacity: 0.55;
+/* 交互态弱化 aimed（降级为静态） */
+.vr-ui-interacting .vr-groundnav__dot.is-aimed,
+.vr-groundnav.vr-ui-interacting .vr-groundnav__dot.is-aimed{
+  transform: scale(1);
+  opacity: 0.4;
+}
+
+/* 自动导航倒计时视觉提示 */
+.vr-groundnav__dot.is-autonav{
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.38), 0 0 18px rgba(255,255,255,0.10);
+}
+
+.vr-ui-interacting .vr-groundnav__dot.is-autonav{
+  box-shadow: none;
+}
+
+/* 自动导航进度指示器 */
+.vr-groundnav__dot{
+  position: relative; /* 确保 progress 可以绝对定位 */
+  z-index: 0;
+}
+
+.vr-groundnav__progress{
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--vr-accent) 0deg,
+    var(--vr-accent) var(--p, 0deg),
+    transparent var(--p, 0deg),
+    transparent 360deg
+  );
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.85;
+  animation: vr-autonav-progress linear forwards;
+  animation-duration: var(--progress-duration, 650ms);
+}
+
+.vr-groundnav__dot.is-autonav-progress .vr-groundnav__progress{
+  /* 确保动画运行 */
+}
+
+/* 进度动画：从 0deg 到 360deg */
+@keyframes vr-autonav-progress{
+  from{
+    --p: 0deg;
+  }
+  to{
+    --p: 360deg;
+  }
+}
+
+/* 交互态或非目标时停止动画 */
+.vr-ui-interacting .vr-groundnav__progress,
+.vr-groundnav__dot:not(.is-autonav-progress) .vr-groundnav__progress{
+  animation: none;
+  --p: 0deg;
 }
 
 @keyframes vr-groundnav-pulse{
@@ -1031,7 +1158,7 @@ body{
   flex-direction: column;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 .vr-guide-drawer.open .vr-guide-panel{
   opacity: 1;
@@ -1275,7 +1402,7 @@ body{
   background: transparent;
   border: 2px solid var(--vr-ground-glass-border);
   box-shadow: var(--vr-ground-glass-shadow);
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 
 .hotspot--ground:hover .hotspot-ground-ring{
@@ -1305,7 +1432,7 @@ body{
   box-shadow: var(--vr-glass-shadow);
   color: var(--vr-muted);
   opacity: 0.85;
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 
 .hotspot:hover .hotspot-icon-circle{
@@ -1355,7 +1482,7 @@ body{
   opacity: 0;
   pointer-events: none;
   box-shadow: 0 10px 24px rgba(0,0,0,0.35);
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 .hotspot-tooltip::after{
   content: "";
@@ -1394,6 +1521,8 @@ body{
   bottom: calc(env(safe-area-inset-bottom, 0px) + 148px); /* SceneStrip 上方一点 */
   transform: translateX(-50%) translateY(8px);
   opacity: 0;
+  pointer-events: none; /* 永远不可点击，不允许挡住任何点击 */
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
   pointer-events: none;
   z-index: 17; /* 低于 SceneStrip(18)，高于 ground 层(10-12) */
   background: var(--vr-glass-bg);
@@ -1408,9 +1537,8 @@ body{
   gap: 10px;
   min-width: 220px;
   max-width: min(92vw, 360px);
-  transition: opacity 220ms cubic-bezier(.2,.8,.2,1), 
-              transform 220ms cubic-bezier(.2,.8,.2,1),
-              filter 220ms cubic-bezier(.2,.8,.2,1);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+  position: relative; /* 为 hint 的绝对定位提供上下文 */
 }
 
 .vr-previewcard.is-visible{
@@ -1448,6 +1576,31 @@ body{
   text-overflow: ellipsis;
   flex: 1;
   min-width: 0;
+}
+
+/* 意图提示文案 */
+.vr-previewcard__hint{
+  position: absolute;
+  left: 50%;
+  bottom: -22px;
+  transform: translateX(-50%) translateY(4px);
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+}
+
+.vr-previewcard__hint.is-visible{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* 倒计时最后25%时的视觉强调（轻微提高不透明度） */
+.vr-previewcard__hint.is-visible.is-emphasizing{
+  opacity: 0.85;
 }
 
 /* 交互态强制隐藏 */
@@ -1590,7 +1743,7 @@ body{
   opacity: 0;
   pointer-events: none;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 
 .vr-map-point:hover .vr-map-point-tooltip,

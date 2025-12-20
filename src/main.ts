@@ -29,9 +29,64 @@ import { ensureModalHost } from './ui/modals/ModalHost';
 import { showToast } from './ui/toast';
 import { showPickMarker } from './ui/PickMarker';
 import { setLastPick } from './viewer/pickBus';
+import { initYieldClassManager } from './ui/yieldClassManager';
+import { initYieldPolicy } from './ui/uiYieldPolicy';
+import { interactionBus } from './ui/interactionBus';
+import { __VR_DEBUG__ } from './utils/debug';
+import { dumpVRState, resetVRUI } from './utils/debugHelper';
+
+/**
+ * 初始化调试工具（仅在 debug=1 时启用）
+ */
+if (__VR_DEBUG__) {
+  // 挂载状态快照函数
+  (window as any).__vrDump = () => {
+    const snapshot = dumpVRState();
+    console.debug('[VR State Snapshot]', snapshot);
+    return snapshot;
+  };
+
+  // 挂载一键复位函数
+  (window as any).__vrResetUI = () => {
+    console.debug('[VR Reset UI] 正在清理所有 UI 状态...');
+    resetVRUI(interactionBus);
+    console.debug('[VR Reset UI] 清理完成');
+  };
+
+  console.debug('[VR Debug] 调试模式已启用。使用 __vrDump() 查看状态，使用 __vrResetUI() 复位 UI');
+}
+
+/**
+ * 最后一次人工回归路径清单（上线前人工确认）
+ * 
+ * 1. 快速左右拖动
+ *    - 验证：所有 UI 立即隐藏，无残留状态
+ * 
+ * 2. 低头扫多个地面点
+ *    - 验证：只有一个目标被认定，无闪烁
+ *    - 验证：底部横条只轻微跟随，不抢控制权
+ *    - 验证：预览卡稳定切换无闪烁
+ * 
+ * 3. 扫点 → 立刻滑横条
+ *    - 验证：系统不抢控制权，自动行为立即停止
+ *    - 验证：停手后才恢复自动行为
+ * 
+ * 4. 扫点 → 抬头
+ *    - 验证：所有状态立即清空，无残留
+ * 
+ * 5. 自动进入触发瞬间点击其他 UI
+ *    - 验证：所有提示/倒计时/瞄准状态立即清空
+ *    - 验证：不会触发自动进入
+ * 
+ * 调试开关：在 src/utils/debug.ts 中将 __VR_DEBUG__ 设为 true 可查看状态流转日志
+ */
 
 // 【入口】修复双斜杠路径问题（如 //vrplayer// -> /vrplayer/）
 normalizePathname();
+
+// 初始化 UI 让位策略
+initYieldPolicy();
+initYieldClassManager();
 
 class App {
   private appElement: HTMLElement;
@@ -567,12 +622,23 @@ class App {
     viewerContainer.appendChild(this.sceneStrip.getElement());
 
     // 新 UI：场景预览卡片（Scene Preview Card）
-    // 构建 sceneIndex Map（sceneId -> { title, thumb }）
-    const sceneIndex = new Map<string, { title: string; thumb?: string }>();
+    // 构建 sceneIndex Map（sceneId -> { title, thumb, panoUrl }）
+    const sceneIndex = new Map<string, { title: string; thumb?: string; panoUrl?: string }>();
     museum.scenes.forEach((s) => {
+      // 解析 pano URL（优先 panoLow，否则 pano）
+      let panoUrl: string | undefined;
+      if (s.panoLow) {
+        const resolved = resolveAssetUrl(s.panoLow, AssetType.PANO_LOW);
+        if (resolved) panoUrl = resolved;
+      } else if (s.pano) {
+        const resolved = resolveAssetUrl(s.pano, AssetType.PANO);
+        if (resolved) panoUrl = resolved;
+      }
+
       sceneIndex.set(s.id, {
         title: s.name,
         thumb: s.thumb, // ScenePreviewCard 内部会使用 resolveAssetUrl 解析
+        panoUrl, // 可选：用于预热
       });
     });
 

@@ -49,16 +49,8 @@ export class BrandWatermark {
   }
 
   private setupInteractionListeners(): void {
-    // 监听交互事件
-    this.unsubscribeInteracting = interactionBus.on('user-interacting', () => {
-      this.root.classList.add('vr-ui-interacting');
-    });
-    this.unsubscribeIdle = interactionBus.on('user-idle', () => {
-      this.root.classList.remove('vr-ui-interacting');
-    });
-    this.unsubscribeUIEngaged = interactionBus.on('ui-engaged', () => {
-      this.root.classList.remove('vr-ui-interacting');
-    });
+    // 注意：class管理由 yieldClassManager 统一处理（通过 document.documentElement）
+    // 这里不需要手动管理 class
   }
 
   /**
@@ -134,6 +126,11 @@ export class BrandWatermark {
 export function createBrandWatermark(options?: BrandWatermarkOptions): BrandWatermark {
   return new BrandWatermark(options);
 }
+
+
+
+
+
 
 
 

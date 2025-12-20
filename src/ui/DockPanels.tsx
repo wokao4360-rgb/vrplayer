@@ -44,16 +44,8 @@ export class DockPanels {
   }
 
   private setupInteractionListeners(): void {
-    // 监听交互事件
-    this.unsubscribeInteracting = interactionBus.on('user-interacting', () => {
-      this.element.classList.add('vr-ui-interacting');
-    });
-    this.unsubscribeIdle = interactionBus.on('user-idle', () => {
-      this.element.classList.remove('vr-ui-interacting');
-    });
-    this.unsubscribeUIEngaged = interactionBus.on('ui-engaged', () => {
-      this.element.classList.remove('vr-ui-interacting');
-    });
+    // 注意：class管理由 yieldClassManager 统一处理（通过 document.documentElement）
+    // 这里不需要手动管理 class
 
     // 监听面板内的点击事件（包括 MapPanel 和 Dollhouse3DPanel）
     this.element.addEventListener('click', (e) => {

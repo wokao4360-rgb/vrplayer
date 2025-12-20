@@ -19,6 +19,7 @@ import { TopBar } from './ui/TopBar';
 import { BrandMark } from './ui/BrandMark';
 import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
+import { GuideTray } from './ui/GuideTray';
 import { SceneStrip } from './ui/SceneStrip';
 import { ScenePreviewCard } from './ui/ScenePreviewCard';
 import { TopModeTabs } from './ui/TopModeTabs';
@@ -172,19 +173,9 @@ class App {
       // 监听路由变化
       window.addEventListener('popstate', () => this.handleRoute());
       
-      // 处理初始路由（这里可能触发UI组件初始化）
-      try {
-        await this.handleRoute();
-      } catch (uiError: any) {
-        // UI初始化失败（例如 GroundNavDots/SceneStrip/ScenePreviewCard 等组件报错）
-        console.error('界面初始化失败:', uiError);
-        if (__VR_DEBUG__) {
-          console.error('详细错误信息:', uiError);
-        }
-        this.loading.hide();
-        this.showError('界面初始化失败，请刷新页面重试');
-        return;
-      }
+      // 处理初始路由（UI组件初始化失败不阻塞全景显示）
+      // showScene 内部已有降级保护，单个组件失败不会抛出异常
+      await this.handleRoute();
       
       this.loading.hide();
     } catch (error: any) {
@@ -573,13 +564,20 @@ class App {
     };
     window.addEventListener('vr:pickmode', handlePickModeChange);
 
-    // 新 UI：左下角水印 + About 弹窗
-    this.brandMark = new BrandMark({
-      appName: this.config?.appName,
-      brandText: '鼎虎清源',
-    });
-    this.appElement.appendChild(this.brandMark.getElement());
-    this.appElement.appendChild(this.brandMark.getAboutModal().getElement());
+    // 新 UI：左下角水印 + About 弹窗 - 降级保护
+    try {
+      this.brandMark = new BrandMark({
+        appName: this.config?.appName,
+        brandText: '鼎虎清源',
+      });
+      this.appElement.appendChild(this.brandMark.getElement());
+      this.appElement.appendChild(this.brandMark.getAboutModal().getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] BrandMark 创建失败，跳过:', err);
+      }
+      this.brandMark = null;
+    }
     
     // 如果启用调试模式，创建调试面板
     if (debugMode) {
@@ -604,59 +602,92 @@ class App {
       updateDebugPanel();
     }
     
-    // 创建视频播放器
-    this.videoPlayer = new VideoPlayer();
-    this.appElement.appendChild(this.videoPlayer.getElement());
+    // 创建视频播放器 - 降级保护
+    try {
+      this.videoPlayer = new VideoPlayer();
+      this.appElement.appendChild(this.videoPlayer.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] VideoPlayer 创建失败，跳过:', err);
+      }
+      this.videoPlayer = null;
+    }
 
-    // 新 UI：导览轻量预览条（框3）
-    this.guideTray = new GuideTray({
-      museumId: museum.id,
-      currentSceneId: scene.id,
-      scenes: museum.scenes,
-      onSceneClick: (sceneId) => {
-        // 框3点击直接切换场景
-        navigateToScene(museum.id, sceneId);
-      },
-      onMoreClick: () => {
-        // 打开框4（完整导览抽屉）
-        if (!this.sceneGuideDrawer) {
-          this.sceneGuideDrawer = new SceneGuideDrawer({
-            museumId: museum.id,
-            currentSceneId: scene.id,
-            scenes: museum.scenes,
-            onClose: () => {
-              // 框4关闭时，框3保持显示
-            },
-          });
-          this.appElement.appendChild(this.sceneGuideDrawer.getElement());
-        }
-        this.guideTray?.setVisible(false);
-        this.sceneGuideDrawer.open();
-      },
-      onClose: () => {
-        // 关闭框3
-        this.guideTray?.setVisible(false);
-      },
-    });
-    this.guideTray.setVisible(false); // 初始隐藏
-    this.appElement.appendChild(this.guideTray.getElement());
+    // 新 UI：导览轻量预览条（框3）- 降级保护
+    try {
+      this.guideTray = new GuideTray({
+        museumId: museum.id,
+        currentSceneId: scene.id,
+        scenes: museum.scenes,
+        onSceneClick: (sceneId) => {
+          // 框3点击直接切换场景
+          navigateToScene(museum.id, sceneId);
+        },
+        onMoreClick: () => {
+          // 打开框4（完整导览抽屉）
+          if (!this.sceneGuideDrawer) {
+            try {
+              this.sceneGuideDrawer = new SceneGuideDrawer({
+                museumId: museum.id,
+                currentSceneId: scene.id,
+                scenes: museum.scenes,
+                onClose: () => {
+                  // 框4关闭时，框3保持显示
+                },
+              });
+              this.appElement.appendChild(this.sceneGuideDrawer.getElement());
+            } catch (err) {
+              if (__VR_DEBUG__) {
+                console.debug('[GuideTray] SceneGuideDrawer 创建失败:', err);
+              }
+            }
+          }
+          if (this.guideTray) {
+            this.guideTray.setVisible(false);
+          }
+          if (this.sceneGuideDrawer) {
+            this.sceneGuideDrawer.open();
+          }
+        },
+        onClose: () => {
+          // 关闭框3
+          if (this.guideTray) {
+            this.guideTray.setVisible(false);
+          }
+        },
+      });
+      this.guideTray.setVisible(false); // 初始隐藏
+      this.appElement.appendChild(this.guideTray.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] GuideTray 创建失败，跳过:', err);
+      }
+      this.guideTray = null;
+    }
 
     // 新 UI：导览抽屉（框4）- 延迟创建，只在点击"更多"时创建
     // this.sceneGuideDrawer 将在 onMoreClick 中创建
 
-    // 新 UI：场景导览条（Scene Strip）
-    // 收集所有场景的热点（从所有场景的 hotspots 中提取 type='scene' 的热点）
-    const allSceneHotspots = museum.scenes.flatMap((s) => s.hotspots);
-    this.sceneStrip = new SceneStrip({
-      museumId: museum.id,
-      currentSceneId: scene.id,
-      hotspots: allSceneHotspots,
-      scenes: museum.scenes,
-      onNavigateToScene: (sceneId) => {
-        navigateToScene(museum.id, sceneId);
-      },
-    });
-    viewerContainer.appendChild(this.sceneStrip.getElement());
+    // 新 UI：场景导览条（Scene Strip）- 降级保护
+    try {
+      // 收集所有场景的热点（从所有场景的 hotspots 中提取 type='scene' 的热点）
+      const allSceneHotspots = museum.scenes.flatMap((s) => s.hotspots);
+      this.sceneStrip = new SceneStrip({
+        museumId: museum.id,
+        currentSceneId: scene.id,
+        hotspots: allSceneHotspots,
+        scenes: museum.scenes,
+        onNavigateToScene: (sceneId) => {
+          navigateToScene(museum.id, sceneId);
+        },
+      });
+      viewerContainer.appendChild(this.sceneStrip.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] SceneStrip 创建失败，跳过:', err);
+      }
+      this.sceneStrip = null;
+    }
 
     // 新 UI：场景预览卡片（Scene Preview Card）
     // 构建 sceneIndex Map（sceneId -> { title, thumb, panoUrl }）
@@ -679,79 +710,114 @@ class App {
       });
     });
 
-    this.scenePreviewCard = new ScenePreviewCard(viewerContainer, {
-      museumId: museum.id,
-      getSceneMeta: (sceneId: string) => {
-        return sceneIndex.get(sceneId) ?? null;
-      },
-    });
+    // 新 UI：场景预览卡片（Scene Preview Card）- 降级保护
+    try {
+      this.scenePreviewCard = new ScenePreviewCard(viewerContainer, {
+        museumId: museum.id,
+        getSceneMeta: (sceneId: string) => {
+          return sceneIndex.get(sceneId) ?? null;
+        },
+      });
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] ScenePreviewCard 创建失败，跳过:', err);
+      }
+      this.scenePreviewCard = null;
+    }
 
-    // 新 UI：底部 Dock（导览 tab 打开抽屉）
-    this.bottomDock = new BottomDock({
-      initialTab: 'guide',
-      onGuideClick: () => {
-        // 点击"导览"时显示框3（GuideTray）
-        if (this.guideTray) {
-          this.guideTray.setVisible(true);
-        }
-      },
-      sceneId: scene.id,
-      sceneName: scene.name,
-      museum: museum,
-      scenes: museum.scenes,
-      currentSceneId: scene.id,
-    });
-    this.appElement.appendChild(this.bottomDock.getElement());
+    // 新 UI：底部 Dock（导览 tab 打开抽屉）- 降级保护
+    try {
+      this.bottomDock = new BottomDock({
+        initialTab: 'guide',
+        onGuideClick: () => {
+          // 点击"导览"时显示框3（GuideTray）
+          if (this.guideTray) {
+            this.guideTray.setVisible(true);
+          }
+        },
+        sceneId: scene.id,
+        sceneName: scene.name,
+        museum: museum,
+        scenes: museum.scenes,
+        currentSceneId: scene.id,
+      });
+      this.appElement.appendChild(this.bottomDock.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] BottomDock 创建失败，跳过:', err);
+      }
+      this.bottomDock = null;
+    }
 
-    // 新 UI：顶部模式切换Tab（如视风格）- 在bottomDock之后创建以便同步状态
-    this.topModeTabs = new TopModeTabs({
-      initialMode: 'pano',
-      onModeChange: (mode) => {
-        // 切换模式：通过BottomDock的setActiveTab来切换
-        if (this.bottomDock) {
-          if (mode === 'map') {
-            this.bottomDock.setActiveTab('map');
-          } else if (mode === 'dollhouse') {
-            this.bottomDock.setActiveTab('dollhouse');
+    // 新 UI：顶部模式切换Tab（如视风格）- 降级保护
+    try {
+      this.topModeTabs = new TopModeTabs({
+        initialMode: 'pano',
+        onModeChange: (mode) => {
+          // 切换模式：通过BottomDock的setActiveTab来切换
+          if (this.bottomDock) {
+            if (mode === 'map') {
+              this.bottomDock.setActiveTab('map');
+            } else if (mode === 'dollhouse') {
+              this.bottomDock.setActiveTab('dollhouse');
+            } else {
+              // pano模式：切换到guide tab
+              this.bottomDock.setActiveTab('guide');
+            }
+          }
+        },
+      });
+      // 监听bottomDock的tab变化，同步到topModeTabs
+      const handleBottomDockTabChange = (e: Event) => {
+        const evt = e as CustomEvent<{ tab: string }>;
+        if (this.topModeTabs) {
+          if (evt.detail.tab === 'map') {
+            this.topModeTabs.setMode('map');
+          } else if (evt.detail.tab === 'dollhouse') {
+            this.topModeTabs.setMode('dollhouse');
           } else {
-            // pano模式：切换到guide tab
-            this.bottomDock.setActiveTab('guide');
+            this.topModeTabs.setMode('pano');
           }
         }
-      },
-    });
-    // 监听bottomDock的tab变化，同步到topModeTabs
-    const handleBottomDockTabChange = (e: Event) => {
-      const evt = e as CustomEvent<{ tab: string }>;
-      if (this.topModeTabs) {
-        if (evt.detail.tab === 'map') {
-          this.topModeTabs.setMode('map');
-        } else if (evt.detail.tab === 'dollhouse') {
-          this.topModeTabs.setMode('dollhouse');
-        } else {
-          this.topModeTabs.setMode('pano');
-        }
+      };
+      window.addEventListener('vr:bottom-dock-tab-change', handleBottomDockTabChange);
+      this.appElement.appendChild(this.topModeTabs.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] TopModeTabs 创建失败，跳过:', err);
       }
-    };
-    window.addEventListener('vr:bottom-dock-tab-change', handleBottomDockTabChange);
-    this.appElement.appendChild(this.topModeTabs.getElement());
+      this.topModeTabs = null;
+    }
 
-    // 创建热点（DOM Overlay：每帧跟随 camera 投影）
-    // SceneLink：点击将真正切换场景（通过路由进入既有 showScene 流程）
-    const sceneNameMap = new Map(museum.scenes.map((s) => [s.id, s.name]));
-    this.hotspots = new Hotspots(this.panoViewer, scene.hotspots, {
-      resolveSceneName: (sceneId) => sceneNameMap.get(sceneId),
-      onEnterScene: (sceneId) => {
-        // 走既有路由/加载链路，避免重构私有 showScene
-        navigateToScene(museum.id, sceneId);
-      },
-      museumId: museum.id, // 传入 museumId 用于匹配 hover 事件
-    });
-    viewerContainer.appendChild(this.hotspots.getElement());
+    // 创建热点（DOM Overlay：每帧跟随 camera 投影）- 降级保护
+    try {
+      const sceneNameMap = new Map(museum.scenes.map((s) => [s.id, s.name]));
+      this.hotspots = new Hotspots(this.panoViewer, scene.hotspots, {
+        resolveSceneName: (sceneId) => sceneNameMap.get(sceneId),
+        onEnterScene: (sceneId) => {
+          // 走既有路由/加载链路，避免重构私有 showScene
+          navigateToScene(museum.id, sceneId);
+        },
+        museumId: museum.id, // 传入 museumId 用于匹配 hover 事件
+      });
+      viewerContainer.appendChild(this.hotspots.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] Hotspots 创建失败，跳过:', err);
+      }
+      this.hotspots = null;
+    }
 
-    // 创建清晰度状态指示器
-    this.qualityIndicator = new QualityIndicator();
-    this.appElement.appendChild(this.qualityIndicator.getElement());
+    // 创建清晰度状态指示器 - 降级保护
+    try {
+      this.qualityIndicator = new QualityIndicator();
+      this.appElement.appendChild(this.qualityIndicator.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] QualityIndicator 创建失败，跳过:', err);
+      }
+      this.qualityIndicator = null;
+    }
 
     // 设置加载状态变化回调
     this.panoViewer.setOnStatusChange((status) => {
@@ -763,6 +829,8 @@ class App {
     // 加载场景
     this.panoViewer.setOnLoad(() => {
       this.loading.hide();
+      // 全景加载成功后，清除任何 UI 错误遮罩（但保留 config 错误）
+      this.hideUIError();
       
       // 预加载下一个场景的缩略图
       this.preloadNextScene(museum, scene);
@@ -918,11 +986,22 @@ class App {
     this.appElement.appendChild(this.loading.getElement());
   }
 
+  private uiErrorElement: HTMLElement | null = null;
+
+  private hideUIError(): void {
+    if (this.uiErrorElement && this.uiErrorElement.parentNode) {
+      this.uiErrorElement.parentNode.removeChild(this.uiErrorElement);
+      this.uiErrorElement = null;
+    }
+  }
+
   private showError(message: string): void {
-    const errorElement = document.createElement('div');
-    errorElement.className = 'error-message';
-    errorElement.textContent = message;
-    errorElement.style.cssText = `
+    // 隐藏之前的错误（如果有）
+    this.hideUIError();
+    this.uiErrorElement = document.createElement('div');
+    this.uiErrorElement.className = 'error-message';
+    this.uiErrorElement.textContent = message;
+    this.uiErrorElement.style.cssText = `
       position: fixed;
       top: 50%;
       left: 50%;
@@ -936,10 +1015,10 @@ class App {
       text-align: center;
       max-width: 80vw;
     `;
-    this.appElement.appendChild(errorElement);
+    this.appElement.appendChild(this.uiErrorElement);
     
     setTimeout(() => {
-      errorElement.remove();
+      this.hideUIError();
     }, 3000);
   }
 }

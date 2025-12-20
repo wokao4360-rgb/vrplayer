@@ -50,6 +50,7 @@ export interface Scene {
   initialView: InitialView;
   mapPoint: MapPoint;
   hotspots: SceneHotspot[];
+  northYaw?: number; // 世界北方向（度），相对于全景图纹理的正前方。如果未指定，默认为 0（纹理正前方就是北）
 }
 
 export interface Museum {

@@ -442,6 +442,12 @@ export class PanoViewer {
     this.lastFov = this.fov;
     this.isViewChanging = false;
 
+    // 设置罗盘的世界北方向
+    // 如果场景配置中没有 northYaw，默认为 0（表示纹理正前方就是北）
+    if (this.compassDisk) {
+      this.compassDisk.setNorthYaw(sceneData.northYaw ?? 0);
+    }
+
     // 创建球体几何
     const geometry = new THREE.SphereGeometry(500, 64, 64);
     geometry.scale(-1, 1, 1); // 内表面

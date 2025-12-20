@@ -22,6 +22,7 @@ export class CompassDisk {
   private westLabel: HTMLElement;
   private currentYaw: number = 0;
   private currentPitch: number = 0;
+  private northYaw: number = 0; // 世界北方向（度），相对于全景图纹理的正前方
   private isVisible: boolean = false;
   private unsubscribeInteracting: (() => void) | null = null;
   private unsubscribeIdle: (() => void) | null = null;
@@ -106,6 +107,14 @@ export class CompassDisk {
   }
 
   /**
+   * 设置世界北方向（度）
+   * @param yaw 世界北方向，相对于全景图纹理的正前方。如果未指定，默认为 0（纹理正前方就是北）
+   */
+  setNorthYaw(yaw: number): void {
+    this.northYaw = yaw;
+  }
+
+  /**
    * 设置当前视角（yaw 和 pitch，单位：度）
    */
   setYawPitch(yawDeg: number, pitchDeg: number): void {
@@ -146,17 +155,21 @@ export class CompassDisk {
       // 注意：filter 现在由 CSS 控制（结合 clarity），JS 不再直接设置 filter
       // interacting 时的 opacity 由 CSS 的 .vr-ui-interacting 类控制
       
-      // 旋转圆盘内容（反向旋转以保持方向正确）
-      // 相机往右转（yaw 增加），罗盘盘面应反向旋转，使 N 始终指向世界北
+      // 关键公式：世界北 - 相机朝向
+      // 这样罗盘只反映"我现在面向哪里"，而不是跟着镜头一起转
       // yaw 定义：0° 为正前方（+Z），逆时针为正
-      // 正确做法：盘面旋转 -yawDeg，这样相机右转时盘面左转，N 保持指向世界北
-      const rotationDeg = -yawDeg;
+      // cameraYawDeg: 相机当前朝向（度）
+      // northYawDeg: 世界北方向（度），相对于全景图纹理的正前方
+      // compassDeg: 罗盘盘面应该旋转的角度，使 N 指向世界北
+      const cameraYawDeg = yawDeg;
+      const northYawDeg = this.northYaw;
+      const compassDeg = northYawDeg - cameraYawDeg;
       
       // 使用 CSS 变量控制盘面和标签的旋转
-      // 盘面旋转：反向旋转以抵消相机旋转
+      // 盘面旋转：表示方向（世界北 - 相机朝向）
       // 标签旋转：再反向旋转回来，保持字母正向可读
-      this.root.style.setProperty('--compass-disk-rot', `${rotationDeg}deg`);
-      this.root.style.setProperty('--compass-label-rot', `${-rotationDeg}deg`);
+      this.root.style.setProperty('--compass-disk-rot', `${compassDeg}deg`);
+      this.root.style.setProperty('--compass-label-rot', `${-compassDeg}deg`);
 
       if (!this.isVisible) {
         this.isVisible = true;

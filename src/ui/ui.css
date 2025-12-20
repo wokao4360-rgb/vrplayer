@@ -852,6 +852,9 @@ body{
               filter 200ms cubic-bezier(.2,.8,.2,1);
   /* clarity 越高：整体滤镜更少、略更清晰 */
   filter: blur(calc(var(--vr-ground-base-blur) * (1 - var(--vr-ground-clarity) * 0.6)));
+  /* 彻底禁用 wrapper 级别的旋转（只允许贴地变换 translateY/scaleY） */
+  /* transform 中的 translateX(-50%) 是定位用的，不能移除 */
+  /* 但禁止任何 rotate 相关的变换 */
 }
 /* 交互时轻微缩放 */
 .vr-compass.vr-ui-interacting{
@@ -1059,8 +1062,8 @@ body{
   --vr-ground-clarity: 0;
   --vr-ground-base-blur: 0px;
   transition: opacity 220ms cubic-bezier(.2,.8,.2,1), 
-              transform 220ms cubic-bezier(.2,.8,.2,1),
               filter 220ms cubic-bezier(.2,.8,.2,1);
+  /* 移除 transform transition：地面方向标旋转必须每帧立即更新，无延迟 */
   /* clarity 越高：整体滤镜更少、略更清晰 */
   filter: blur(calc(var(--vr-ground-base-blur) * (1 - var(--vr-ground-clarity) * 0.6)));
 }
@@ -1072,6 +1075,9 @@ body{
   position: absolute;
   inset: 0;
   transform-origin: 50% 50%;
+  /* inner 固定不旋转，只旋转 needle */
+  transform: none !important;
+  transition: none !important;
 }
 .vr-groundheading__wedge{
   position: absolute;
@@ -1102,6 +1108,37 @@ body{
   box-shadow: 0 0 8px rgba(255,255,255,0.12);
   opacity: 0.75;
   pointer-events: none;
+  /* 北向刻度线永远不旋转，固定在顶部 */
+  transition: none !important;
+}
+
+/* 指针元素（指示当前朝向） */
+.vr-groundheading__needle{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 35%; /* 指针长度，按容器大小调整 */
+  transform-origin: 50% 100%; /* 底部为旋转点 */
+  transform: translate(-50%, -100%) rotate(var(--groundheading-needle-rot, 0deg));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  z-index: 2; /* 确保在 wedge 和 northTick 上方 */
+  transition: none !important; /* 指针旋转必须每帧立即更新，无延迟 */
+}
+
+/* 指针顶部箭头 */
+.vr-groundheading__needle::after{
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 10px solid rgba(255, 255, 255, 0.9);
 }
 
 /* GroundNavDots 地面导航点 - 贴地方向层 */
@@ -2158,6 +2195,10 @@ body{
  * ========================================
  * 强制确保罗盘盘面和标签固定不转，指针无延迟旋转
  */
+.vr-compass {
+  /* wrapper 只允许贴地变换（translateX/translateY/scaleY），禁止旋转 */
+  /* 注意：translateX(-50%) 是定位用的，必须保留 */
+}
 .vr-compass__disk {
   transform: none !important; /* 盘面永远不旋转 */
   transition: none !important;

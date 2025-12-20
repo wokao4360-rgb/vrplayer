@@ -15,8 +15,10 @@ export class GroundHeadingMarker {
   private inner: HTMLElement;
   private wedge: HTMLElement;
   private northTick: HTMLElement;
+  private needle: HTMLElement; // 指针元素（指示当前朝向）
   private currentYaw: number = 0;
   private currentPitch: number = 0;
+  private northYaw: number = 0; // 世界北方向（度），相对于全景图纹理的正前方
   private isVisible: boolean = false;
   private unsubscribeInteracting?: () => void;
   private unsubscribeIdle?: () => void;
@@ -26,6 +28,9 @@ export class GroundHeadingMarker {
     // 创建根元素
     this.root = document.createElement('div');
     this.root.className = 'vr-groundheading';
+    this.root.setAttribute('data-ui', 'GroundHeadingMarker');
+    // 临时 outline 用于调试
+    this.root.style.outline = '2px solid #00ffff';
 
     // 创建内部容器（用于旋转）
     this.inner = document.createElement('div');
@@ -39,21 +44,36 @@ export class GroundHeadingMarker {
     this.northTick = document.createElement('div');
     this.northTick.className = 'vr-groundheading__northTick';
 
-    // 组装
+    // 创建指针元素（指示当前朝向）
+    this.needle = document.createElement('div');
+    this.needle.className = 'vr-groundheading__needle';
+
+    // 组装（inner 固定不旋转，只旋转 needle）
     this.inner.appendChild(this.wedge);
     this.inner.appendChild(this.northTick);
+    this.inner.appendChild(this.needle);
     this.root.appendChild(this.inner);
 
     // 初始隐藏
     this.root.style.opacity = '0';
     this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
     this.root.style.setProperty('--vr-ground-base-blur', '0px');
+    // 初始化指针旋转 CSS 变量
+    this.root.style.setProperty('--groundheading-needle-rot', '0deg');
 
     // 挂载到容器
     container.appendChild(this.root);
 
     // 接入 interactionBus
     this.setupInteractionListeners();
+  }
+
+  /**
+   * 设置世界北方向（度）
+   * @param yaw 世界北方向，相对于全景图纹理的正前方。如果未指定，默认为 0（纹理正前方就是北）
+   */
+  setNorthYaw(yaw: number): void {
+    this.northYaw = yaw;
   }
 
   /**
@@ -83,11 +103,23 @@ export class GroundHeadingMarker {
       // 设置基础 blur CSS 变量（用于与 clarity 合并）
       this.root.style.setProperty('--vr-ground-base-blur', `${transform.blur}px`);
       
-      // 旋转方向标（与 CompassDisk 一致，使用反向旋转）
-      // 相机往右转（yaw 增加），方向标应同向转，使箭头指向前进方向
-      // 采用 rotateZ(-yawDeg) 与 CompassDisk disk 一致
-      const rotationDeg = -yawDeg;
-      this.inner.style.transform = `rotateZ(${rotationDeg}deg)`;
+      // 指针旋转逻辑：盘面固定（wedge 和 northTick 永远不动），只有指针旋转指示当前朝向
+      // yaw 定义：0° 为正前方（+Z），逆时针为正
+      // cameraYawDeg: 相机当前朝向（度）
+      // northYawDeg: 世界北方向（度），相对于全景图纹理的正前方
+      // needleDeg: 指针应该旋转的角度，使指针指向当前朝向（相对于世界北）
+      const cameraYawDeg = yawDeg;
+      const northYawDeg = this.northYaw ?? 0;
+      
+      // 指针表示"我面向哪里"，盘面固定 northTick 在上
+      // 如果方向反了，改为 (cameraYawDeg - northYawDeg)
+      const needleDeg = northYawDeg - cameraYawDeg;
+      
+      // inner 固定不旋转（由 CSS 控制）
+      this.inner.style.transform = 'none';
+      
+      // 只设置指针旋转
+      this.root.style.setProperty('--groundheading-needle-rot', `${needleDeg}deg`);
 
       if (!this.isVisible) {
         this.isVisible = true;

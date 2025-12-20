@@ -33,10 +33,14 @@ export class CompassDisk {
   constructor(options: CompassDiskOptions = {}) {
     this.root = document.createElement('div');
     this.root.className = 'vr-compass';
+    this.root.setAttribute('data-ui', 'CompassDisk');
+    // 临时 outline 用于调试
+    this.root.style.outline = '2px solid #ff00ff';
 
     // 圆盘容器
     this.disk = document.createElement('div');
     this.disk.className = 'vr-compass__disk';
+    this.disk.setAttribute('data-ui', 'CompassDisk-disk');
 
     // 中心遮罩（摄影杆遮挡）
     this.mask = document.createElement('div');
@@ -67,6 +71,7 @@ export class CompassDisk {
     // 指针元素（指示当前朝向）
     this.needle = document.createElement('div');
     this.needle.className = 'vr-compass__needle';
+    this.needle.setAttribute('data-ui', 'CompassDisk-needle');
 
     // 组装（从下到上：mask -> polemask -> labels -> needle）
     this.disk.appendChild(this.mask);

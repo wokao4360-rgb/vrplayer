@@ -442,10 +442,14 @@ export class PanoViewer {
     this.lastFov = this.fov;
     this.isViewChanging = false;
 
-    // 设置罗盘的世界北方向
+    // 设置罗盘和地面方向标的世界北方向
     // 如果场景配置中没有 northYaw，默认为 0（表示纹理正前方就是北）
+    const northYaw = sceneData.northYaw ?? 0;
     if (this.compassDisk) {
-      this.compassDisk.setNorthYaw(sceneData.northYaw ?? 0);
+      this.compassDisk.setNorthYaw(northYaw);
+    }
+    if (this.groundHeading) {
+      this.groundHeading.setNorthYaw(northYaw);
     }
 
     // 创建球体几何

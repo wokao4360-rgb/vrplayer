@@ -908,10 +908,9 @@ body{
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 移除 transition：圆盘旋转必须每帧立即更新，无延迟 */
-  transition: none;
-  /* 使用 CSS 变量控制旋转，每帧由 JS 更新 */
-  transform: rotate(var(--compass-disk-rot, 0deg));
+  /* 盘面永远不旋转，固定在屏幕上 */
+  transform: none !important;
+  transition: none !important;
 }
 
 /* 中心遮罩（摄影杆遮挡）- 如视风格：椭圆遮罩 + 轻噪点/渐变 */
@@ -970,33 +969,66 @@ body{
   pointer-events: none;
   user-select: none;
   z-index: 1; /* 确保在 mask 上方 */
-  /* 移除 transition：标签旋转必须每帧立即更新，无延迟 */
-  transition: none;
+  /* 标签永远不旋转，固定在四个方向 */
+  transition: none !important;
+}
+
+/* 指针元素（指示当前朝向） */
+.vr-compass__needle{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 38%; /* 指针长度，按盘大小调整 */
+  transform-origin: 50% 100%; /* 底部为旋转点 */
+  transform: translate(-50%, -100%) rotate(var(--compass-needle-rot, 0deg));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 2; /* 确保在标签上方 */
+  transition: none !important; /* 指针旋转必须每帧立即更新，无延迟 */
+}
+
+/* 指针顶部箭头 */
+.vr-compass__needle::after{
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 8px solid rgba(255, 255, 255, 0.95);
 }
 
 .vr-compass__label--north{
   top: 8px;
   left: 50%;
-  transform: translateX(-50%) rotate(var(--compass-label-rot, 0deg));
+  /* 标签永远不旋转，固定在四个方向 */
+  transform: translateX(-50%) !important;
   color: var(--vr-accent);
 }
 
 .vr-compass__label--east{
   right: 8px;
   top: 50%;
-  transform: translateY(-50%) rotate(var(--compass-label-rot, 0deg));
+  /* 标签永远不旋转，固定在四个方向 */
+  transform: translateY(-50%) !important;
 }
 
 .vr-compass__label--south{
   bottom: 8px;
   left: 50%;
-  transform: translateX(-50%) rotate(var(--compass-label-rot, 0deg));
+  /* 标签永远不旋转，固定在四个方向 */
+  transform: translateX(-50%) !important;
 }
 
 .vr-compass__label--west{
   left: 8px;
   top: 50%;
-  transform: translateY(-50%) rotate(var(--compass-label-rot, 0deg));
+  /* 标签永远不旋转，固定在四个方向 */
+  transform: translateY(-50%) !important;
 }
 
 /* 外圈刻度（可选，很淡） */
@@ -2124,17 +2156,19 @@ body{
 /* ========================================
  * 罗盘旋转兜底规则：确保 transform 无延迟
  * ========================================
- * 强制确保罗盘盘面和标签的旋转无 transition，每帧立即更新
+ * 强制确保罗盘盘面和标签固定不转，指针无延迟旋转
  */
-.vr-compass__disk,
-.vr-compass__label {
-  transition-property: opacity, filter !important;
+.vr-compass__disk {
+  transform: none !important; /* 盘面永远不旋转 */
+  transition: none !important;
 }
-.vr-compass__disk,
 .vr-compass__label,
 .vr-compass__label--north,
 .vr-compass__label--east,
 .vr-compass__label--south,
 .vr-compass__label--west {
-  transition: none !important;
+  transition: none !important; /* 标签永远不旋转 */
+}
+.vr-compass__needle {
+  transition: none !important; /* 指针旋转必须每帧立即更新，无延迟 */
 }

@@ -20,6 +20,7 @@ export class CompassDisk {
   private eastLabel: HTMLElement;
   private southLabel: HTMLElement;
   private westLabel: HTMLElement;
+  private needle: HTMLElement; // 指针元素
   private currentYaw: number = 0;
   private currentPitch: number = 0;
   private northYaw: number = 0; // 世界北方向（度），相对于全景图纹理的正前方
@@ -63,22 +64,26 @@ export class CompassDisk {
     this.westLabel.className = 'vr-compass__label vr-compass__label--west';
     this.westLabel.textContent = 'W';
 
-    // 组装（从下到上：mask -> polemask -> labels）
+    // 指针元素（指示当前朝向）
+    this.needle = document.createElement('div');
+    this.needle.className = 'vr-compass__needle';
+
+    // 组装（从下到上：mask -> polemask -> labels -> needle）
     this.disk.appendChild(this.mask);
     this.disk.appendChild(this.polemask);
     this.disk.appendChild(this.northLabel);
     this.disk.appendChild(this.eastLabel);
     this.disk.appendChild(this.southLabel);
     this.disk.appendChild(this.westLabel);
+    this.disk.appendChild(this.needle);
     this.root.appendChild(this.disk);
 
     // 初始隐藏
     this.root.style.opacity = '0';
     this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
     this.root.style.setProperty('--vr-ground-base-blur', '0px');
-    // 初始化罗盘旋转 CSS 变量
-    this.root.style.setProperty('--compass-disk-rot', '0deg');
-    this.root.style.setProperty('--compass-label-rot', '0deg');
+    // 初始化指针旋转 CSS 变量
+    this.root.style.setProperty('--compass-needle-rot', '0deg');
 
     this.setupInteractionListeners();
   }
@@ -155,21 +160,20 @@ export class CompassDisk {
       // 注意：filter 现在由 CSS 控制（结合 clarity），JS 不再直接设置 filter
       // interacting 时的 opacity 由 CSS 的 .vr-ui-interacting 类控制
       
-      // 关键公式：世界北 - 相机朝向
-      // 这样罗盘只反映"我现在面向哪里"，而不是跟着镜头一起转
+      // 指针旋转逻辑：盘面固定（N/E/S/W 永远不动），只有指针旋转指示当前朝向
       // yaw 定义：0° 为正前方（+Z），逆时针为正
       // cameraYawDeg: 相机当前朝向（度）
       // northYawDeg: 世界北方向（度），相对于全景图纹理的正前方
-      // compassDeg: 罗盘盘面应该旋转的角度，使 N 指向世界北
+      // needleDeg: 指针应该旋转的角度，使指针指向当前朝向（相对于世界北）
       const cameraYawDeg = yawDeg;
-      const northYawDeg = this.northYaw;
-      const compassDeg = northYawDeg - cameraYawDeg;
+      const northYawDeg = this.northYaw ?? 0;
       
-      // 使用 CSS 变量控制盘面和标签的旋转
-      // 盘面旋转：表示方向（世界北 - 相机朝向）
-      // 标签旋转：再反向旋转回来，保持字母正向可读
-      this.root.style.setProperty('--compass-disk-rot', `${compassDeg}deg`);
-      this.root.style.setProperty('--compass-label-rot', `${-compassDeg}deg`);
+      // 指针表示"我面向哪里"，盘面固定 N 在上
+      // 如果方向反了，改为 (northYawDeg - cameraYawDeg)
+      const needleDeg = cameraYawDeg - northYawDeg;
+      
+      // 只设置指针旋转，盘面和标签永远不旋转（由 CSS 控制）
+      this.root.style.setProperty('--compass-needle-rot', `${needleDeg}deg`);
 
       if (!this.isVisible) {
         this.isVisible = true;

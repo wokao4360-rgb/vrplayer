@@ -172,7 +172,7 @@ export class DockPanels {
 
   private getContentForTab(tab: DockTabKey): { title: string; body: string } {
     if (tab === 'guide') {
-      return { title: '导览', body: '打开导览抽屉，选择一个场景进入（当前仅 console.log）。' };
+      return { title: '导览', body: '打开导览抽屉，选择一个场景进入。' };
     }
     if (tab === 'info') {
       return { title: '信息', body: '这里预留展示当前场景/展馆信息（后续接入配置与热点说明）。' };

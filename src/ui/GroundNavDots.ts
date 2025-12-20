@@ -150,9 +150,21 @@ export class GroundNavDots {
   }
 
   /**
+   * 清理防抖定时器
+   */
+  private clearAimDebounce(): void {
+    if (this.aimDebounceTimer !== null) {
+      window.clearTimeout(this.aimDebounceTimer);
+      this.aimDebounceTimer = null;
+    }
+  }
+
+  /**
    * 清理所有定时器（统一入口）
    */
   private clearAllTimers(): void {
+    // 先清理防抖定时器，避免回调里再触发旧逻辑
+    this.clearAimDebounce();
     if (this.idleRecoveryTimer !== null) {
       clearTimeout(this.idleRecoveryTimer);
       this.idleRecoveryTimer = null;
@@ -161,7 +173,6 @@ export class GroundNavDots {
       clearTimeout(this.autoNavTimer);
       this.autoNavTimer = null;
     }
-    this.clearAimDebounce();
   }
 
   /**

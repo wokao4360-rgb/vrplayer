@@ -168,18 +168,30 @@ class App {
       // 监听路由变化
       window.addEventListener('popstate', () => this.handleRoute());
       
-      // 处理初始路由
-      await this.handleRoute();
+      // 处理初始路由（这里可能触发UI组件初始化）
+      try {
+        await this.handleRoute();
+      } catch (uiError: any) {
+        // UI初始化失败（例如 GroundNavDots/SceneStrip/ScenePreviewCard 等组件报错）
+        console.error('界面初始化失败:', uiError);
+        if (__VR_DEBUG__) {
+          console.error('详细错误信息:', uiError);
+        }
+        this.loading.hide();
+        this.showError('界面初始化失败，请刷新页面重试');
+        return;
+      }
       
       this.loading.hide();
     } catch (error: any) {
-      console.error('初始化失败:', error);
+      console.error('配置加载失败:', error);
       this.loading.hide();
       
       // 检查是否是配置校验错误
       if (error.validationErrors && Array.isArray(error.validationErrors)) {
         this.showConfigErrorPanel(error.validationErrors);
       } else {
+        // 配置加载失败（fetch/解析失败）
         this.showError('加载配置失败，请刷新页面重试');
       }
     }

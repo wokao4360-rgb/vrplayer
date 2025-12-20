@@ -1856,11 +1856,6 @@ body{
   position: relative; /* 为 hint 的绝对定位提供上下文 */
 }
 
-/* 兜底：空内容时不显示 */
-.vr-previewcard:empty {
-  display: none !important;
-}
-
 .vr-previewcard.is-visible{
   opacity: 1;
   transform: translateX(-50%) translateY(0);

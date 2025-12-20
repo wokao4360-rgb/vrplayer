@@ -865,17 +865,17 @@ body{
 .vr-ui-interacting.vr-groundheading{
   opacity: 0.28 !important;          /* 比通用 UI 更淡一点 */
   filter: blur(0.8px) !important;    /* 拖动时统一轻糊，减少视觉噪声 */
+  /* 注意：罗盘的 transform（旋转）必须无延迟，只有 opacity 和 filter 有过渡 */
   transition: opacity var(--vr-yield-fade-ms) var(--ease-out),
-              filter var(--vr-yield-fade-ms) var(--ease-out),
-              transform var(--vr-yield-fade-ms) var(--ease-out);
+              filter var(--vr-yield-fade-ms) var(--ease-out);
 }
 .vr-ui-restoring.vr-compass,
 .vr-ui-restoring .vr-groundnav,
 .vr-groundnav.vr-ui-restoring,
 .vr-ui-restoring.vr-groundheading{
+  /* 注意：罗盘的 transform（旋转）必须无延迟，只有 opacity 和 filter 有过渡 */
   transition: opacity var(--vr-yield-restore-ms) var(--ease-out),
-              filter var(--vr-yield-restore-ms) var(--ease-out),
-              transform var(--vr-yield-restore-ms) var(--ease-out);
+              filter var(--vr-yield-restore-ms) var(--ease-out);
 }
 
 /* 非常轻微的地面阴影效果 */
@@ -910,6 +910,8 @@ body{
   justify-content: center;
   /* 移除 transition：圆盘旋转必须每帧立即更新，无延迟 */
   transition: none;
+  /* 使用 CSS 变量控制旋转，每帧由 JS 更新 */
+  transform: rotate(var(--compass-disk-rot, 0deg));
 }
 
 /* 中心遮罩（摄影杆遮挡）- 如视风格：椭圆遮罩 + 轻噪点/渐变 */
@@ -968,31 +970,33 @@ body{
   pointer-events: none;
   user-select: none;
   z-index: 1; /* 确保在 mask 上方 */
+  /* 移除 transition：标签旋转必须每帧立即更新，无延迟 */
+  transition: none;
 }
 
 .vr-compass__label--north{
   top: 8px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) rotate(var(--compass-label-rot, 0deg));
   color: var(--vr-accent);
 }
 
 .vr-compass__label--east{
   right: 8px;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) rotate(var(--compass-label-rot, 0deg));
 }
 
 .vr-compass__label--south{
   bottom: 8px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) rotate(var(--compass-label-rot, 0deg));
 }
 
 .vr-compass__label--west{
   left: 8px;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) rotate(var(--compass-label-rot, 0deg));
 }
 
 /* 外圈刻度（可选，很淡） */
@@ -2115,4 +2119,22 @@ body{
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
+}
+
+/* ========================================
+ * 罗盘旋转兜底规则：确保 transform 无延迟
+ * ========================================
+ * 强制确保罗盘盘面和标签的旋转无 transition，每帧立即更新
+ */
+.vr-compass__disk,
+.vr-compass__label {
+  transition-property: opacity, filter !important;
+}
+.vr-compass__disk,
+.vr-compass__label,
+.vr-compass__label--north,
+.vr-compass__label--east,
+.vr-compass__label--south,
+.vr-compass__label--west {
+  transition: none !important;
 }

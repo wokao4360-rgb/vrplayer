@@ -75,6 +75,9 @@ export class CompassDisk {
     this.root.style.opacity = '0';
     this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
     this.root.style.setProperty('--vr-ground-base-blur', '0px');
+    // 初始化罗盘旋转 CSS 变量
+    this.root.style.setProperty('--compass-disk-rot', '0deg');
+    this.root.style.setProperty('--compass-label-rot', '0deg');
 
     this.setupInteractionListeners();
   }
@@ -144,9 +147,16 @@ export class CompassDisk {
       // interacting 时的 opacity 由 CSS 的 .vr-ui-interacting 类控制
       
       // 旋转圆盘内容（反向旋转以保持方向正确）
-      // 相机往右转（yaw 增加），罗盘应反向旋转
+      // 相机往右转（yaw 增加），罗盘盘面应反向旋转，使 N 始终指向世界北
+      // yaw 定义：0° 为正前方（+Z），逆时针为正
+      // 正确做法：盘面旋转 -yawDeg，这样相机右转时盘面左转，N 保持指向世界北
       const rotationDeg = -yawDeg;
-      this.disk.style.transform = `rotateZ(${rotationDeg}deg)`;
+      
+      // 使用 CSS 变量控制盘面和标签的旋转
+      // 盘面旋转：反向旋转以抵消相机旋转
+      // 标签旋转：再反向旋转回来，保持字母正向可读
+      this.root.style.setProperty('--compass-disk-rot', `${rotationDeg}deg`);
+      this.root.style.setProperty('--compass-label-rot', `${-rotationDeg}deg`);
 
       if (!this.isVisible) {
         this.isVisible = true;

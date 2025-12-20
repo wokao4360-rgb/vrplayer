@@ -170,7 +170,7 @@ export class CompassDisk {
       
       // 指针表示"我面向哪里"，盘面固定 N 在上
       // 如果方向反了，改为 (northYawDeg - cameraYawDeg)
-      const needleDeg = cameraYawDeg - northYawDeg;
+      const needleDeg = northYawDeg - cameraYawDeg;
       
       // 只设置指针旋转，盘面和标签永远不旋转（由 CSS 控制）
       this.root.style.setProperty('--compass-needle-rot', `${needleDeg}deg`);

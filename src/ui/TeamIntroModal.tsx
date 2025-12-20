@@ -88,8 +88,8 @@ export class TeamIntroModal {
     // 微信号（可点击复制）
     const wechatRow = document.createElement('div');
     wechatRow.className = 'copyable';
-    wechatRow.setAttribute('data-copy', '1888888');
-    wechatRow.textContent = '微信号：1888888';
+    wechatRow.setAttribute('data-copy', 'onekyu');
+    wechatRow.textContent = '微信号：onekyu(点此复制)';
     wechatRow.style.cursor = 'pointer';
     wechatRow.addEventListener('click', async () => {
       const copyValue = wechatRow.getAttribute('data-copy');
@@ -108,8 +108,8 @@ export class TeamIntroModal {
     // QQ号（可点击复制）
     const qqRow = document.createElement('div');
     qqRow.className = 'copyable';
-    qqRow.setAttribute('data-copy', '2888888');
-    qqRow.textContent = 'QQ号：2888888';
+    qqRow.setAttribute('data-copy', '3386453830');
+    qqRow.textContent = 'QQ：3386453830(点此复制)';
     qqRow.style.cursor = 'pointer';
     qqRow.addEventListener('click', async () => {
       const copyValue = qqRow.getAttribute('data-copy');
@@ -130,13 +130,13 @@ export class TeamIntroModal {
     qqLink.href = 'https://qm.qq.com/q/sNWlsarvtS';
     qqLink.target = '_blank';
     qqLink.rel = 'noreferrer noopener';
-    qqLink.textContent = '点击链接加我为QQ好友：https://qm.qq.com/q/sNWlsarvtS';
+    qqLink.textContent = '点此唤起QQ加我为好友';
     supportContainer.appendChild(qqLink);
 
     // 版权/联系方式
     const footer = document.createElement('div');
     footer.className = 'vr-teammodal-footer';
-    footer.textContent = '© 2024 鼎虎清源';
+    footer.textContent = '© 2025 鼎虎清源';
 
     // 组装内容
     content.appendChild(intro1);

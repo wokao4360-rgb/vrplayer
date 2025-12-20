@@ -38,7 +38,7 @@ export class DockPanels {
     this.scenes = options.scenes;
     this.currentSceneId = options.currentSceneId || options.sceneId;
     this.element = document.createElement('div');
-    this.element.className = 'vr-panel vr-glass hidden';
+    this.element.className = 'vr-panl vr-glass hidden';
     this.render();
     this.setupInteractionListeners();
   }

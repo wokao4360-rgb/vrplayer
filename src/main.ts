@@ -21,6 +21,7 @@ import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { SceneStrip } from './ui/SceneStrip';
 import { ScenePreviewCard } from './ui/ScenePreviewCard';
+import { TopModeTabs } from './ui/TopModeTabs';
 import { resolveAssetUrl, AssetType } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
@@ -94,6 +95,8 @@ class App {
   private panoViewer: PanoViewer | null = null;
   private titleBar: TitleBar | null = null;
   private topBar: TopBar | null = null;
+  private topModeTabs: TopModeTabs | null = null;
+  private sceneTitleEl: HTMLElement | null = null;
   private brandMark: BrandMark | null = null;
   private bottomDock: BottomDock | null = null;
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
@@ -519,12 +522,12 @@ class App {
 
     this.loading.show();
 
-    // 创建全景查看器容器
+    // 创建全景查看器容器（不再需要为TopBar预留空间）
     const viewerContainer = document.createElement('div');
     viewerContainer.className = 'viewer-container';
     viewerContainer.style.cssText = `
       position: fixed;
-      top: calc(44px + env(safe-area-inset-top, 0px));
+      top: 0;
       left: 0;
       right: 0;
       bottom: 0;
@@ -536,22 +539,11 @@ class App {
     const debugMode = isDebugMode();
     this.panoViewer = new PanoViewer(viewerContainer, debugMode);
 
-    // 新 UI：顶部半透明 TopBar（全屏目标：viewerContainer）
-    this.topBar = new TopBar({
-      title: scene.name || this.config?.appName || 'VR Player',
-      viewerRootEl: viewerContainer,
-      onTogglePickMode: () => {
-        if (!this.panoViewer) return false;
-        const isActive = this.panoViewer.togglePickMode();
-        if (isActive) {
-          showToast('拾取已开启：点一下画面获取 yaw/pitch');
-        } else {
-          showToast('拾取已关闭');
-        }
-        return isActive;
-      },
-    });
-    this.appElement.appendChild(this.topBar.getElement());
+    // 新 UI：左上角场景标题（如视风格）
+    this.sceneTitleEl = document.createElement('div');
+    this.sceneTitleEl.className = 'vr-scenetitle';
+    this.sceneTitleEl.textContent = scene.name || this.config?.appName || 'VR Player';
+    this.appElement.appendChild(this.sceneTitleEl);
 
     // 监听拾取事件
     const handlePick = (e: Event) => {
@@ -673,6 +665,39 @@ class App {
     });
     this.appElement.appendChild(this.bottomDock.getElement());
 
+    // 新 UI：顶部模式切换Tab（如视风格）- 在bottomDock之后创建以便同步状态
+    this.topModeTabs = new TopModeTabs({
+      initialMode: 'pano',
+      onModeChange: (mode) => {
+        // 切换模式：通过BottomDock的setActiveTab来切换
+        if (this.bottomDock) {
+          if (mode === 'map') {
+            this.bottomDock.setActiveTab('map');
+          } else if (mode === 'dollhouse') {
+            this.bottomDock.setActiveTab('dollhouse');
+          } else {
+            // pano模式：切换到guide tab
+            this.bottomDock.setActiveTab('guide');
+          }
+        }
+      },
+    });
+    // 监听bottomDock的tab变化，同步到topModeTabs
+    const handleBottomDockTabChange = (e: Event) => {
+      const evt = e as CustomEvent<{ tab: string }>;
+      if (this.topModeTabs) {
+        if (evt.detail.tab === 'map') {
+          this.topModeTabs.setMode('map');
+        } else if (evt.detail.tab === 'dollhouse') {
+          this.topModeTabs.setMode('dollhouse');
+        } else {
+          this.topModeTabs.setMode('pano');
+        }
+      }
+    };
+    window.addEventListener('vr:bottom-dock-tab-change', handleBottomDockTabChange);
+    this.appElement.appendChild(this.topModeTabs.getElement());
+
     // 创建热点（DOM Overlay：每帧跟随 camera 投影）
     // SceneLink：点击将真正切换场景（通过路由进入既有 showScene 流程）
     const sceneNameMap = new Map(museum.scenes.map((s) => [s.id, s.name]));
@@ -763,6 +788,16 @@ class App {
     if (this.topBar) {
       this.topBar.remove();
       this.topBar = null;
+    }
+
+    if (this.topModeTabs) {
+      this.topModeTabs.getElement().remove();
+      this.topModeTabs = null;
+    }
+
+    if (this.sceneTitleEl) {
+      this.sceneTitleEl.remove();
+      this.sceneTitleEl = null;
     }
 
     if (this.brandMark) {

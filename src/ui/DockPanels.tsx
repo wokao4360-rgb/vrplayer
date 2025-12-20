@@ -163,11 +163,9 @@ export class DockPanels {
       this.dollhousePanel = null;
     }
 
-    const { title, body } = this.getContentForTab(this.currentTab);
-    this.element.innerHTML = `
-      <div class="vr-panel-title">${title}</div>
-      <div class="vr-panel-body">${body}</div>
-    `;
+    // 不再显示说明文字，直接隐藏panel（保留功能面板如map/dollhouse）
+    this.element.classList.add('hidden');
+    this.element.innerHTML = '';
   }
 
   private getContentForTab(tab: DockTabKey): { title: string; body: string } {

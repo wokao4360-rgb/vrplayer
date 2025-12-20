@@ -15,8 +15,7 @@ type BottomDockOptions = {
 
 const TAB_LABELS: Array<{ key: DockTabKey; label: string }> = [
   { key: 'guide', label: '导览' },
-  { key: 'map', label: '平面图' },
-  { key: 'dollhouse', label: '三维图' },
+  // 移除 map 和 dollhouse，它们已移到顶部Tab
   { key: 'community', label: '社区' },
   { key: 'settings', label: '设置' },
   { key: 'info', label: '信息' },
@@ -93,6 +92,14 @@ export class BottomDock {
     this.activeTab = tab;
     this.syncActiveClass();
     this.panels.setTab(tab);
+    // 派发事件通知TopModeTabs同步状态
+    window.dispatchEvent(new CustomEvent('vr:bottom-dock-tab-change', {
+      detail: { tab },
+    }));
+  }
+
+  getActiveTab(): DockTabKey {
+    return this.activeTab;
   }
 
   setSceneContext(sceneId: string, sceneName?: string): void {

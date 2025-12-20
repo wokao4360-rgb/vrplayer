@@ -168,20 +168,23 @@ export class PanoViewer {
     // Nadir patch：额外几何体叠加，不影响全景球主材质
     this.nadirPatch = new NadirPatch(this.scene, 500);
     
-    // 指南针圆盘（DOM overlay）
+    // 指南针圆盘（DOM overlay）- 强制关闭
     this.compassDisk = new CompassDisk();
     this.compassDisk.mount(container);
+    this.compassDisk.getElement().style.display = 'none';
     
-    // 地面导航点（DOM overlay，初始为空，后续通过 setSceneData 设置）
+    // 地面导航点（DOM overlay，初始为空，后续通过 setSceneData 设置）- 强制关闭
     this.groundNavDots = new GroundNavDots({
       museumId: '',
       currentSceneId: '',
       sceneHotspots: [],
     });
     this.groundNavDots.mount(container);
+    this.groundNavDots.getElement().style.display = 'none';
     
-    // 地面方向标（DOM overlay）
+    // 地面方向标（DOM overlay）- 强制关闭
     this.groundHeading = new GroundHeadingMarker(container);
+    this.groundHeading.getElement().style.display = 'none';
     
     // 品牌水印（DOM overlay，左下角）
     this.brandWatermark = new BrandWatermark();

@@ -316,6 +316,57 @@ body{
   margin-bottom: 0;
 }
 
+.vr-teammodal-support{
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.vr-teammodal-support > div{
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 8px;
+}
+
+.vr-teammodal-support > div:last-child{
+  margin-bottom: 0;
+}
+
+.vr-teammodal-support .copyable{
+  cursor: pointer;
+  transition: opacity 150ms ease-out;
+  color: rgba(255,255,255,0.9);
+}
+
+.vr-teammodal-support .copyable:hover{
+  opacity: 0.8;
+}
+
+.vr-teammodal-support .copyable:active{
+  opacity: 0.6;
+}
+
+.vr-teammodal-support a{
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.9);
+  text-decoration: underline;
+  text-decoration-color: rgba(255,255,255,0.4);
+  transition: opacity 150ms ease-out, text-decoration-color 150ms ease-out;
+  cursor: pointer;
+  display: block;
+  margin-top: 8px;
+}
+
+.vr-teammodal-support a:hover{
+  opacity: 0.8;
+  text-decoration-color: rgba(255,255,255,0.6);
+}
+
+.vr-teammodal-support a:active{
+  opacity: 0.7;
+}
+
 .vr-teammodal-footer{
   font-size: 11px;
   color: rgba(255,255,255,0.6);
@@ -762,6 +813,14 @@ body{
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* CompassDisk 指南针圆盘 - 贴地方向层 - 强制关闭 */
+.vr-compass,
+.vr-groundnav,
+.vr-groundheading {
+  display: none !important;
+  pointer-events: none;
 }
 
 /* CompassDisk 指南针圆盘 - 贴地方向层 */
@@ -1285,9 +1344,9 @@ body{
 /* TopRightControls - 右上角控制按钮（全屏 + 坐标拾取） */
 .vr-topright-controls{
   position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  top: env(safe-area-inset-top, 12px);
   right: 12px;
-  z-index: 35; /* 高于顶部 tabs (z-index: 30)，确保全屏时也可见 */
+  z-index: 1000;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -1295,10 +1354,10 @@ body{
 }
 
 .vr-topright-btn{
-  min-width: 40px;
-  min-height: 40px;
-  width: 40px;
-  height: 40px;
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
   border-radius: 9999px;
   display: grid;
   place-items: center;
@@ -1312,11 +1371,6 @@ body{
   padding: 0;
   font-size: 0;
   line-height: 0;
-}
-
-.vr-topright-btn:hover{
-  background: rgba(0, 0, 0, 0.42);
-  border-color: rgba(255,255,255,0.25);
 }
 
 .vr-topright-btn:active{

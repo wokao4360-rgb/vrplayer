@@ -74,45 +74,62 @@ export class TeamIntroModal {
     intro3.className = 'vr-teammodal-text';
     intro3.textContent = '融合创新科技与教育理念，开启数字化学习新篇章。';
 
-    // 技术支持信息
+    // 技术支持信息容器
+    const supportContainer = document.createElement('div');
+    supportContainer.className = 'vr-teammodal-support';
+
+    // 技术支持：kyu
     const supportRow = document.createElement('div');
-    supportRow.className = 'vr-teammodal-text';
     supportRow.textContent = '技术支持：kyu';
+    supportContainer.appendChild(supportRow);
 
     // 微信号（可点击复制）
     const wechatRow = document.createElement('div');
-    wechatRow.className = 'vr-teammodal-text vr-teammodal-copyable';
-    wechatRow.innerHTML = '微信号：<span class="vr-teammodal-value">1888888</span>';
+    wechatRow.className = 'copyable';
+    wechatRow.setAttribute('data-copy', '1888888');
+    wechatRow.textContent = '微信号：1888888';
     wechatRow.style.cursor = 'pointer';
     wechatRow.addEventListener('click', async () => {
-      const success = await copyText('1888888');
-      if (success) {
-        showToast('微信号已复制');
+      const copyValue = wechatRow.getAttribute('data-copy');
+      if (copyValue) {
+        const success = await copyText(copyValue);
+        if (success) {
+          showToast('微信号已复制');
+          if (__VR_DEBUG__) {
+            console.debug('[TeamIntroModal] 微信号已复制:', copyValue);
+          }
+        }
       }
     });
+    supportContainer.appendChild(wechatRow);
 
     // QQ号（可点击复制）
     const qqRow = document.createElement('div');
-    qqRow.className = 'vr-teammodal-text vr-teammodal-copyable';
-    qqRow.innerHTML = 'QQ号：<span class="vr-teammodal-value">2888888</span>';
+    qqRow.className = 'copyable';
+    qqRow.setAttribute('data-copy', '2888888');
+    qqRow.textContent = 'QQ号：2888888';
     qqRow.style.cursor = 'pointer';
     qqRow.addEventListener('click', async () => {
-      const success = await copyText('2888888');
-      if (success) {
-        showToast('QQ号已复制');
+      const copyValue = qqRow.getAttribute('data-copy');
+      if (copyValue) {
+        const success = await copyText(copyValue);
+        if (success) {
+          showToast('QQ号已复制');
+          if (__VR_DEBUG__) {
+            console.debug('[TeamIntroModal] QQ号已复制:', copyValue);
+          }
+        }
       }
     });
+    supportContainer.appendChild(qqRow);
 
     // QQ链接（可点击跳转）
-    const qqLinkRow = document.createElement('div');
-    qqLinkRow.className = 'vr-teammodal-text';
     const qqLink = document.createElement('a');
     qqLink.href = 'https://qm.qq.com/q/sNWlsarvtS';
     qqLink.target = '_blank';
     qqLink.rel = 'noreferrer noopener';
     qqLink.textContent = '点击链接加我为QQ好友：https://qm.qq.com/q/sNWlsarvtS';
-    qqLink.className = 'vr-teammodal-link';
-    qqLinkRow.appendChild(qqLink);
+    supportContainer.appendChild(qqLink);
 
     // 版权/联系方式
     const footer = document.createElement('div');
@@ -123,10 +140,7 @@ export class TeamIntroModal {
     content.appendChild(intro1);
     content.appendChild(intro2);
     content.appendChild(intro3);
-    content.appendChild(supportRow);
-    content.appendChild(wechatRow);
-    content.appendChild(qqRow);
-    content.appendChild(qqLinkRow);
+    content.appendChild(supportContainer);
 
     // 组装卡片
     const header = document.createElement('div');

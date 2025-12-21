@@ -34,6 +34,7 @@ import { initYieldPolicy } from './ui/uiYieldPolicy';
 import { interactionBus } from './ui/interactionBus';
 import { __VR_DEBUG__ } from './utils/debug';
 import { dumpVRState, resetVRUI } from './utils/debugHelper';
+import { NorthCalibrationPanel } from './ui/NorthCalibrationPanel';
 
 /**
  * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：
@@ -127,6 +128,7 @@ class App {
   private debugPanel: DebugPanel | null = null;
   private configStudio: ConfigStudio | null = null;
   private qualityIndicator: QualityIndicator | null = null;
+  private northCalibrationPanel: NorthCalibrationPanel | null = null;
   private currentMuseum: Museum | null = null;
   private currentScene: Scene | null = null;
   private hasBoundFullscreenEvents = false;
@@ -544,7 +546,7 @@ class App {
     const debugMode = isDebugMode();
     this.panoViewer = new PanoViewer(viewerContainer, debugMode);
 
-    // 新 UI：右上角控制按钮（全屏 + 坐标拾取）- 降级保护
+    // 新 UI：右上角控制按钮（全屏 + 坐标拾取 + 校准北向）- 降级保护
     try {
       this.topRightControls = new TopRightControls({
         viewerRootEl: viewerContainer,
@@ -559,6 +561,10 @@ class App {
           }
           return false;
         },
+        onOpenNorthCalibration: () => {
+          this.openNorthCalibration(scene.id);
+        },
+        showNorthCalibration: true, // 常驻显示（也可以在 debug 模式才显示）
       });
       this.appElement.appendChild(this.topRightControls.getElement());
     } catch (err) {
@@ -897,6 +903,11 @@ class App {
       this.topRightControls = null;
     }
 
+    if (this.northCalibrationPanel) {
+      this.northCalibrationPanel.close();
+      this.northCalibrationPanel = null;
+    }
+
     if (this.topModeTabs) {
       this.topModeTabs.getElement().remove();
       this.topModeTabs = null;
@@ -983,6 +994,36 @@ class App {
     if (this.uiErrorElement && this.uiErrorElement.parentNode) {
       this.uiErrorElement.parentNode.removeChild(this.uiErrorElement);
       this.uiErrorElement = null;
+    }
+  }
+
+  private openNorthCalibration(sceneId: string): void {
+    // 清理之前的校准面板（如果存在）
+    if (this.northCalibrationPanel) {
+      this.northCalibrationPanel.close();
+      this.northCalibrationPanel = null;
+    }
+
+    if (!this.panoViewer) {
+      console.warn('[openNorthCalibration] PanoViewer 未初始化');
+      return;
+    }
+
+    // 创建校准面板
+    try {
+      this.northCalibrationPanel = new NorthCalibrationPanel({
+        getCurrentYaw: () => {
+          const view = this.panoViewer?.getCurrentView();
+          return view?.yaw ?? 0;
+        },
+        sceneId: sceneId,
+        onClose: () => {
+          this.northCalibrationPanel = null;
+        },
+      });
+    } catch (err) {
+      console.error('[openNorthCalibration] 创建校准面板失败:', err);
+      this.northCalibrationPanel = null;
     }
   }
 

@@ -4,10 +4,13 @@
  */
 
 import { isFullscreen, requestFullscreenBestEffort, exitFullscreenBestEffort } from './fullscreen';
+import { __VR_DEBUG__ } from '../utils/debug';
 
 type TopRightControlsOptions = {
   viewerRootEl?: HTMLElement;
   onTogglePickMode?: () => boolean;
+  onOpenNorthCalibration?: () => void;
+  showNorthCalibration?: boolean; // 是否显示校准北向按钮（默认仅在 debug 模式）
 };
 
 function createFullscreenIcon(): string {
@@ -39,13 +42,16 @@ export class TopRightControls {
   private element: HTMLElement;
   private fullscreenBtn: HTMLButtonElement;
   private pickModeBtn: HTMLButtonElement | null = null;
+  private northCalibrationBtn: HTMLButtonElement | null = null;
   private viewerRootEl?: HTMLElement;
   private onTogglePickMode?: () => boolean;
+  private onOpenNorthCalibration?: () => void;
   private isPickModeActive = false;
 
   constructor(options: TopRightControlsOptions = {}) {
     this.viewerRootEl = options.viewerRootEl;
     this.onTogglePickMode = options.onTogglePickMode;
+    this.onOpenNorthCalibration = options.onOpenNorthCalibration;
 
     this.element = document.createElement('div');
     this.element.className = 'vr-topright-controls';
@@ -116,6 +122,26 @@ export class TopRightControls {
         }
       });
       this.element.appendChild(this.pickModeBtn);
+    }
+
+    // 校准北向按钮（如果提供了回调，或显示标志为 true）
+    const shouldShowNorthCalibration = options.showNorthCalibration !== false && 
+                                       (options.onOpenNorthCalibration || __VR_DEBUG__);
+    if (shouldShowNorthCalibration && this.onOpenNorthCalibration) {
+      this.northCalibrationBtn = document.createElement('button');
+      this.northCalibrationBtn.className = 'vr-topright-btn';
+      this.northCalibrationBtn.setAttribute('aria-label', '校准北向');
+      this.northCalibrationBtn.title = '校准北向：设置当前场景的北方向';
+      this.northCalibrationBtn.textContent = '🧭';
+      this.northCalibrationBtn.style.fontSize = '18px';
+      this.northCalibrationBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.onOpenNorthCalibration) {
+          this.onOpenNorthCalibration();
+        }
+      });
+      this.element.appendChild(this.northCalibrationBtn);
     }
 
     this.element.appendChild(this.fullscreenBtn);

@@ -442,9 +442,15 @@ export class PanoViewer {
     this.lastFov = this.fov;
     this.isViewChanging = false;
 
-    // 设置罗盘和地面方向标的世界北方向
-    // 如果场景配置中没有 northYaw，默认为 0（表示纹理正前方就是北）
-    const northYaw = sceneData.northYaw ?? 0;
+    // 统一世界北方向的最终规则：
+    // - 若 scene.northYaw 已存在，用它
+    // - 否则，使用 initialView.yaw 作为世界北
+    const northYaw =
+      typeof sceneData.northYaw === 'number'
+        ? sceneData.northYaw
+        : sceneData.initialView?.yaw ?? 0;
+    
+    // 只做一次传递（不要再计算）
     if (this.nadirPatch) {
       this.nadirPatch.setNorthYaw(northYaw);
     }

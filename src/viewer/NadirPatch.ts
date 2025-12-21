@@ -146,7 +146,7 @@ export class NadirPatch {
     // needleYaw = northYaw - cameraYaw（指针指向当前朝向）
     const cameraYawDeg = view.yaw;
     const northYawDeg = this.northYaw;
-    const needleYawDeg = northYawDeg - cameraYawDeg;
+    const needleYawDeg = cameraYawDeg - northYawDeg;
     const needleYawRad = THREE.MathUtils.degToRad(needleYawDeg);
     if (this.needleMesh) {
       this.needleMesh.rotation.y = needleYawRad;

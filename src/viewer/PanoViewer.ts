@@ -427,20 +427,18 @@ export class PanoViewer {
     }
 
     // 【最终铁律】所有来自 config.json 的 yaw（northYaw、initialView.yaw）都是【现实世界角度】
-    // 内部坐标系 yaw 方向与现实世界一致，直接使用：internalYaw = worldYaw
+    // 进入渲染/罗盘系统前，必须统一取反一次：internalYaw = -worldYaw
     
-    // 设置初始视角（world yaw → internal yaw，直接使用，不取反）
+    // 设置初始视角（world yaw → internal yaw）
     // 注意：如果 this.yaw 已经被 setView 设置过（例如来自 URL 参数），则不再覆盖
     const iv = sceneData.initialView;
     const worldInitialYaw = iv.yaw || 0;
     // 只有在 yaw 为初始值（0）或未设置时才使用 initialView.yaw
     // 这样可以保留 URL 参数或 setView 设置的值
     if (this.yaw === 0 && worldInitialYaw !== 0) {
-      this.yaw = worldInitialYaw; // 直接使用：现实世界 = 内部坐标系
+      this.yaw = -worldInitialYaw; // 统一取反：现实世界 → 内部坐标系
     }
-    // pitch 方向：现实世界向下为正，内部向上为正，需要取反
-    const worldInitialPitch = iv.pitch || 0;
-    this.pitch = -worldInitialPitch;
+    this.pitch = iv.pitch || 0;
     const preset = RENDER_PRESETS[this.renderProfile];
     this.fov = iv.fov !== undefined ? iv.fov : preset.camera.defaultFov;
     this.camera.fov = this.fov;
@@ -461,8 +459,8 @@ export class PanoViewer {
         ? sceneData.northYaw
         : sceneData.initialView?.yaw ?? 0;
     
-    // 统一世界 → 内部 yaw（直接使用，不取反）
-    const northYaw = worldNorthYaw;
+    // 统一世界 → 内部 yaw（关键）
+    const northYaw = -worldNorthYaw;
     
     // 只做一次传递（不要再计算，不要在组件里再 fallback 或再取反）
     if (this.nadirPatch) {

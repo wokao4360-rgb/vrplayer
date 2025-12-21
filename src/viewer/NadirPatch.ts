@@ -154,9 +154,18 @@ export class NadirPatch {
       this.needleMesh.rotation.y = needleYawRad;
     }
 
-    // 调试：旋转监控（每 30 帧打印一次）
+    // 临时日志：每 60 帧打印一次（便于验证）
+    this.debugFrameCount++;
+    if (this.debugFrameCount % 60 === 0) {
+      console.log('[nadir]', {
+        cameraYawDeg: cameraYawDeg.toFixed(2),
+        northYawDeg: northYawDeg.toFixed(2),
+        needleDeg: needleYawDeg.toFixed(2),
+      });
+    }
+
+    // 调试：旋转监控（每 30 帧打印一次，仅在 __VR_DEBUG__ 时）
     if (__VR_DEBUG__) {
-      this.debugFrameCount++;
       if (this.debugFrameCount % 30 === 0) {
         const rotationChanged = Math.abs(this.mesh.rotation.y - this.lastRotationY) > 0.001;
         if (rotationChanged) {

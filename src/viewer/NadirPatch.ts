@@ -20,7 +20,6 @@ export class NadirPatch {
   private radius: number;
   private opacity = 0;
   private northYaw = 0; // 世界北方向（度），相对于全景图纹理的正前方
-  private yawOffsetDeg = 0; // yaw 补偿偏移（度），用于校正贴图北向与 yaw=0 的不一致
   private debugHelper: THREE.AxesHelper | null = null;
 
   // 低头阈值（越小越"低头"）
@@ -138,43 +137,26 @@ export class NadirPatch {
     this.northYaw = yaw;
   }
 
-  /**
-   * 设置 yaw 补偿偏移（度）
-   */
-  setYawOffset(deg: number): void {
-    this.yawOffsetDeg = deg ?? 0;
-  }
-
   update(_camera: THREE.PerspectiveCamera, view: ViewAngles, dtMs: number): void {
     // 修复：盘面固定不旋转，只有指针旋转
     // 盘面 rotation.y 保持为 0（盘面固定，N 始终在上）
     this.mesh.rotation.y = 0;
 
     // 指针旋转：根据当前相机 yaw 和世界北方向计算
-    // 公式：needleYawDeg = (cameraYawDeg - northYawDeg) + yawOffsetDeg
-    // 当 cameraYaw = northYaw 时，needle = yawOffsetDeg（指针朝北/朝上，加上偏移补偿）
+    // 公式：needleYawDeg = cameraYawDeg - northYawDeg
+    // 当 cameraYaw = northYaw 时，needle = 0（指针朝北/朝上）
     // 当 cameraYaw 增加（向右转），needle 也增加（指针向右转）
     const cameraYawDeg = view.yaw;
     const northYawDeg = this.northYaw;
-    const needleYawDeg = (cameraYawDeg - northYawDeg) + this.yawOffsetDeg;
+    const needleYawDeg = cameraYawDeg - northYawDeg;
     const needleYawRad = THREE.MathUtils.degToRad(needleYawDeg);
     if (this.needleMesh) {
       this.needleMesh.rotation.y = needleYawRad;
     }
 
-    // 临时日志：每 120 帧打印一次（便于现场校准）
-    this.debugFrameCount++;
-    if (this.debugFrameCount % 120 === 0) {
-      console.log('[nadir]', {
-        yaw: cameraYawDeg.toFixed(2),
-        northYaw: northYawDeg.toFixed(2),
-        offset: this.yawOffsetDeg.toFixed(2),
-        needle: needleYawDeg.toFixed(2),
-      });
-    }
-
-    // 调试：旋转监控（每 30 帧打印一次，仅在 __VR_DEBUG__ 时）
+    // 调试：旋转监控（每 30 帧打印一次）
     if (__VR_DEBUG__) {
+      this.debugFrameCount++;
       if (this.debugFrameCount % 30 === 0) {
         const rotationChanged = Math.abs(this.mesh.rotation.y - this.lastRotationY) > 0.001;
         if (rotationChanged) {

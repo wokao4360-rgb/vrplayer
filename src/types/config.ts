@@ -51,7 +51,6 @@ export interface Scene {
   mapPoint: MapPoint;
   hotspots: SceneHotspot[];
   northYaw?: number; // 世界北方向（度），相对于全景图纹理的正前方。如果未指定，默认为 0（纹理正前方就是北）
-  nadirYawOffset?: number; // NadirPatch 脚底罗盘指针的 yaw 补偿偏移（度），用于校正贴图北向与 yaw=0 的不一致。默认 0
 }
 
 export interface Museum {

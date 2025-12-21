@@ -89,7 +89,7 @@ export class TeamIntroModal {
     const wechatRow = document.createElement('div');
     wechatRow.className = 'copyable';
     wechatRow.setAttribute('data-copy', 'onekyu');
-    wechatRow.textContent = '微信号：onekyu(点此复制)';
+    wechatRow.textContent = '微信：onekyu(点此复制)';
     wechatRow.style.cursor = 'pointer';
     wechatRow.addEventListener('click', async () => {
       const copyValue = wechatRow.getAttribute('data-copy');
@@ -130,7 +130,7 @@ export class TeamIntroModal {
     qqLink.href = 'https://qm.qq.com/q/sNWlsarvtS';
     qqLink.target = '_blank';
     qqLink.rel = 'noreferrer noopener';
-    qqLink.textContent = '点此唤起QQ加我为好友';
+    qqLink.textContent = '点此唤起QQ';
     supportContainer.appendChild(qqLink);
 
     // 版权/联系方式

@@ -36,6 +36,15 @@ import { __VR_DEBUG__ } from './utils/debug';
 import { dumpVRState, resetVRUI } from './utils/debugHelper';
 
 /**
+ * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：
+ * - 非全屏模式下拖动视角：罗盘盘面（N/E/S/W 或 wedge/tick）不随 yaw 旋转；needle 旋转。
+ * - 如果盘面仍跟着转：说明还有一个 transform 写在更外层 wrapper（继续向上找 parent 元素的 style.transform 写入点，直到消失）。
+ * - GroundHeadingMarker: root 和 inner 的 transform 只包含 translateX/translateY/scaleY，不包含 rotate
+ * - CompassDisk: root 的 transform 只包含 translateX/translateY/scaleY，不包含 rotate
+ * - 只有 needle 通过 CSS 变量 --groundheading-needle-rot 和 --compass-needle-rot 旋转
+ */
+
+/**
  * 初始化调试工具（仅在 debug=1 时启用）
  */
 if (__VR_DEBUG__) {

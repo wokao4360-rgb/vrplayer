@@ -111,8 +111,8 @@ export class GroundHeadingMarker {
       // 向右转视角（yaw 增加）时，指针向右转（方向一致）
       const cameraYawDeg = yawDeg;
       const northYawDeg = this.northYaw ?? 0;
-      const diskDeg = -northYawDeg;  // 盘面旋转：让盘面 N 对齐世界北
-      const needleDeg = cameraYawDeg; // 指针旋转：表示当前相机朝向
+      const diskDeg = northYawDeg;  // 盘面旋转：让盘面 N 对齐世界北
+      const needleDeg = -cameraYawDeg; // 指针旋转：表示当前相机朝向
       
       // 设置盘面和指针旋转
       this.root.style.setProperty('--groundheading-disk-rot', `${diskDeg}deg`);

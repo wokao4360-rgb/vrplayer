@@ -852,13 +852,19 @@ class App {
       }
     });
 
+    // 【最终铁律】所有来自 config.json 或 URL 的 yaw 都是【现实世界角度】
+    // 进入渲染/罗盘系统前，必须统一取反一次：internalYaw = -worldYaw
+    
     // 应用初始视角（优先使用 URL 参数中的视角，否则使用场景配置的视角）
     const route = parseRoute();
-    const targetYaw = route.yaw !== undefined ? route.yaw : (scene.initialView.yaw || 0);
+    const worldTargetYaw = route.yaw !== undefined ? route.yaw : (scene.initialView.yaw || 0);
     const targetPitch = route.pitch !== undefined ? route.pitch : (scene.initialView.pitch || 0);
     const targetFov = route.fov !== undefined ? route.fov : (scene.initialView.fov || 75);
     
-    this.panoViewer.setView(targetYaw, targetPitch, targetFov);
+    // 统一世界 → 内部 yaw（关键）
+    const internalTargetYaw = -worldTargetYaw;
+    
+    this.panoViewer.setView(internalTargetYaw, targetPitch, targetFov);
     this.panoViewer.loadScene(scene);
     
     // 设置场景数据（用于 GroundNavDots）

@@ -24,6 +24,8 @@ export class CompassDisk {
   private currentYaw: number = 0;
   private currentPitch: number = 0;
   private northYaw: number = 0; // 世界北方向（度），相对于全景图纹理的正前方
+  private sceneId: string = ''; // 当前场景 ID（用于可视化验收点）
+  private northYawLabel: HTMLElement | null = null; // 可视化验收点（仅在 gate 场景显示）
   private isVisible: boolean = false;
   private unsubscribeInteracting: (() => void) | null = null;
   private unsubscribeIdle: (() => void) | null = null;
@@ -73,6 +75,20 @@ export class CompassDisk {
     this.needle.className = 'vr-compass__needle';
     this.needle.setAttribute('data-ui', 'CompassDisk-needle');
 
+    // 可视化验收点（仅在 gate 场景显示 northYaw 值）
+    this.northYawLabel = document.createElement('div');
+    this.northYawLabel.className = 'vr-compass__north-yaw-label';
+    this.northYawLabel.style.cssText = `
+      position: absolute;
+      bottom: -20px;
+      right: 10px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.6);
+      font-family: monospace;
+      pointer-events: none;
+      display: none;
+    `;
+
     // 组装（从下到上：mask -> polemask -> labels -> needle）
     this.disk.appendChild(this.mask);
     this.disk.appendChild(this.polemask);
@@ -82,6 +98,7 @@ export class CompassDisk {
     this.disk.appendChild(this.westLabel);
     this.disk.appendChild(this.needle);
     this.root.appendChild(this.disk);
+    this.root.appendChild(this.northYawLabel);
 
     // 初始隐藏
     this.root.style.opacity = '0';
@@ -117,11 +134,34 @@ export class CompassDisk {
   }
 
   /**
+   * 设置场景 ID（用于可视化验收点）
+   */
+  setSceneId(sceneId: string): void {
+    this.sceneId = sceneId;
+    this.updateNorthYawLabel();
+  }
+
+  /**
    * 设置世界北方向（度）
    * @param yaw 世界北方向，相对于全景图纹理的正前方。如果未指定，默认为 0（纹理正前方就是北）
    */
   setNorthYaw(yaw: number): void {
     this.northYaw = yaw;
+    this.updateNorthYawLabel();
+  }
+
+  /**
+   * 更新可视化验收点（仅在 gate 场景显示 northYaw 值）
+   */
+  private updateNorthYawLabel(): void {
+    if (!this.northYawLabel) return;
+    
+    if (this.sceneId === 'gate' && typeof this.northYaw === 'number') {
+      this.northYawLabel.textContent = `N=${this.northYaw.toFixed(1)}`;
+      this.northYawLabel.style.display = 'block';
+    } else {
+      this.northYawLabel.style.display = 'none';
+    }
   }
 
   /**

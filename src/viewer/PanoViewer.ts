@@ -455,6 +455,7 @@ export class PanoViewer {
       this.nadirPatch.setNorthYaw(northYaw);
     }
     if (this.compassDisk) {
+      this.compassDisk.setSceneId(sceneData.id);
       this.compassDisk.setNorthYaw(northYaw);
     }
     if (this.groundHeading) {

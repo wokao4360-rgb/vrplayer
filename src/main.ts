@@ -81,6 +81,14 @@ if (__VR_DEBUG__) {
  * 调试开关：在 src/utils/debug.ts 中将 __VR_DEBUG__ 设为 true 可查看状态流转日志
  */
 
+/**
+ * 发布流程清单
+ * 
+ * PowerShell 下删除 docs/assets 和 docs/index.html 的命令：
+ * Remove-Item -Recurse -Force .\docs\assets -ErrorAction SilentlyContinue
+ * Remove-Item -Force .\docs\index.html -ErrorAction SilentlyContinue
+ */
+
 // 【入口】修复双斜杠路径问题（如 //vrplayer// -> /vrplayer/）
 normalizePathname();
 

@@ -18,8 +18,8 @@
           "panoLow": "/assets/demo.jpg",
           "pano": "/assets/demo.jpg",
           "thumb": "/assets/demo.jpg",
-          "initialView": { "yaw": -27.0, "pitch": -27.0, "fov": 75 },
-          "northYaw": 27.0,
+          "initialView": { "yaw": 27.0, "pitch": -27.0, "fov": 75 },
+          "northYaw": -27.0,
           "mapPoint": { "x": 180, "y": 320 },
           "hotspots": [
             {

@@ -138,20 +138,20 @@ export class NadirPatch {
   }
 
   update(_camera: THREE.PerspectiveCamera, view: ViewAngles, dtMs: number): void {
-    // 修复：盘面固定不旋转，只有指针旋转
-    // 盘面 rotation.y 保持为 0（盘面固定，N 始终在上）
-    this.mesh.rotation.y = 0;
-
-    // 指针旋转：根据当前相机 yaw 和世界北方向计算
-    // 公式：needleYawDeg = cameraYawDeg - northYawDeg
-    // 当 cameraYaw = northYaw 时，needle = 0（指针朝北/朝上）
-    // 当 cameraYaw 增加（向右转），needle 也增加（指针向右转）
+    // 统一旋转规则：盘面按 -northYaw 旋转，指针按 cameraYaw 旋转
+    // 总角度 = diskDeg + needleDeg = -northYaw + cameraYaw
+    // 当 cameraYaw == northYaw 时，总角度 = 0，指针指向盘面 N
+    // yaw 定义：0° 为正前方（+Z），逆时针为正
+    // 向右转视角（yaw 增加）时，指针向右转（方向一致）
     const cameraYawDeg = view.yaw;
-    const northYawDeg = this.northYaw;
-    const needleYawDeg = cameraYawDeg - northYawDeg;
-    const needleYawRad = THREE.MathUtils.degToRad(needleYawDeg);
+    const northYawDeg = this.northYaw ?? 0;
+    
+    // 盘面基准：让贴图的 N 对齐世界北
+    this.mesh.rotation.y = THREE.MathUtils.degToRad(-northYawDeg);
+    
+    // 指针表示相机朝向（相对纹理 0 的 yaw）
     if (this.needleMesh) {
-      this.needleMesh.rotation.y = needleYawRad;
+      this.needleMesh.rotation.y = THREE.MathUtils.degToRad(cameraYawDeg);
     }
 
     // 调试：旋转监控（每 30 帧打印一次）

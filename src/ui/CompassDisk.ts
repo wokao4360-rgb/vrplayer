@@ -104,7 +104,8 @@ export class CompassDisk {
     this.root.style.opacity = '0';
     this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
     this.root.style.setProperty('--vr-ground-base-blur', '0px');
-    // 初始化指针旋转 CSS 变量
+    // 初始化旋转 CSS 变量
+    this.root.style.setProperty('--compass-disk-rot', '0deg');
     this.root.style.setProperty('--compass-needle-rot', '0deg');
 
     this.setupInteractionListeners();
@@ -151,13 +152,27 @@ export class CompassDisk {
   }
 
   /**
-   * 更新可视化验收点（仅在 gate 场景显示 northYaw 值）
+   * 更新可视化验收点（仅在 gate 场景显示 northYaw 和当前 yaw）
    */
   private updateNorthYawLabel(): void {
     if (!this.northYawLabel) return;
     
     if (this.sceneId === 'gate' && typeof this.northYaw === 'number') {
       this.northYawLabel.textContent = `N=${this.northYaw.toFixed(1)}`;
+      this.northYawLabel.style.display = 'block';
+    } else {
+      this.northYawLabel.style.display = 'none';
+    }
+  }
+
+  /**
+   * 更新可视化验收点（显示 northYaw 和当前 yaw）
+   */
+  private updateYawLabel(currentYaw: number): void {
+    if (!this.northYawLabel) return;
+    
+    if (this.sceneId === 'gate' && typeof this.northYaw === 'number') {
+      this.northYawLabel.textContent = `N=${this.northYaw.toFixed(1)} Yaw=${currentYaw.toFixed(1)}`;
       this.northYawLabel.style.display = 'block';
     } else {
       this.northYawLabel.style.display = 'none';
@@ -205,20 +220,22 @@ export class CompassDisk {
       // 注意：filter 现在由 CSS 控制（结合 clarity），JS 不再直接设置 filter
       // interacting 时的 opacity 由 CSS 的 .vr-ui-interacting 类控制
       
-      // 指针旋转逻辑：盘面固定（N/E/S/W 永远不动），只有指针旋转指示当前朝向
+      // 统一旋转规则：盘面按 -northYaw 旋转，指针按 cameraYaw 旋转
+      // 总角度 = diskDeg + needleDeg = -northYaw + cameraYaw
+      // 当 cameraYaw == northYaw 时，总角度 = 0，指针指向盘面 N
       // yaw 定义：0° 为正前方（+Z），逆时针为正
-      // cameraYawDeg: 相机当前朝向（度）
-      // northYawDeg: 世界北方向（度），相对于全景图纹理的正前方
-      // needleDeg: 指针应该旋转的角度，使指针指向当前朝向（相对于世界北）
-      // 公式：needleDeg = cameraYawDeg - northYawDeg
-      // 当 cameraYaw = northYaw 时，needle = 0（指针朝北/朝上）
-      // 当 cameraYaw 增加（向右转），needle 也增加（指针向右转）
+      // 向右转视角（yaw 增加）时，指针向右转（方向一致）
       const cameraYawDeg = yawDeg;
       const northYawDeg = this.northYaw ?? 0;
-      const needleDeg = cameraYawDeg - northYawDeg;
+      const diskDeg = -northYawDeg;  // 盘面旋转：让盘面 N 对齐世界北
+      const needleDeg = cameraYawDeg; // 指针旋转：表示当前相机朝向
       
-      // 只设置指针旋转，盘面和标签永远不旋转（由 CSS 控制）
+      // 设置盘面和指针旋转
+      this.root.style.setProperty('--compass-disk-rot', `${diskDeg}deg`);
       this.root.style.setProperty('--compass-needle-rot', `${needleDeg}deg`);
+      
+      // 更新可视化验收点（显示 northYaw 和当前 yaw）
+      this.updateYawLabel(yawDeg);
 
       if (!this.isVisible) {
         this.isVisible = true;

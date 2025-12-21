@@ -58,7 +58,8 @@ export class GroundHeadingMarker {
     this.root.style.opacity = '0';
     this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
     this.root.style.setProperty('--vr-ground-base-blur', '0px');
-    // 初始化指针旋转 CSS 变量
+    // 初始化旋转 CSS 变量
+    this.root.style.setProperty('--groundheading-disk-rot', '0deg');
     this.root.style.setProperty('--groundheading-needle-rot', '0deg');
 
     // 挂载到容器
@@ -103,22 +104,18 @@ export class GroundHeadingMarker {
       // 设置基础 blur CSS 变量（用于与 clarity 合并）
       this.root.style.setProperty('--vr-ground-base-blur', `${transform.blur}px`);
       
-      // 指针旋转逻辑：盘面固定（wedge 和 northTick 永远不动），只有指针旋转指示当前朝向
+      // 统一旋转规则：盘面（inner）按 -northYaw 旋转，指针按 cameraYaw 旋转
+      // 总角度 = diskDeg + needleDeg = -northYaw + cameraYaw
+      // 当 cameraYaw == northYaw 时，总角度 = 0，指针指向盘面 N
       // yaw 定义：0° 为正前方（+Z），逆时针为正
-      // cameraYawDeg: 相机当前朝向（度）
-      // northYawDeg: 世界北方向（度），相对于全景图纹理的正前方
-      // needleDeg: 指针应该旋转的角度，使指针指向当前朝向（相对于世界北）
-      // 公式：needleDeg = cameraYawDeg - northYawDeg
-      // 当 cameraYaw = northYaw 时，needle = 0（指针朝北/朝上）
-      // 当 cameraYaw 增加（向右转），needle 也增加（指针向右转）
+      // 向右转视角（yaw 增加）时，指针向右转（方向一致）
       const cameraYawDeg = yawDeg;
       const northYawDeg = this.northYaw ?? 0;
-      const needleDeg = cameraYawDeg - northYawDeg;
+      const diskDeg = -northYawDeg;  // 盘面旋转：让盘面 N 对齐世界北
+      const needleDeg = cameraYawDeg; // 指针旋转：表示当前相机朝向
       
-      // inner 固定不旋转（由 CSS 控制）
-      this.inner.style.transform = 'none';
-      
-      // 只设置指针旋转
+      // 设置盘面和指针旋转
+      this.root.style.setProperty('--groundheading-disk-rot', `${diskDeg}deg`);
       this.root.style.setProperty('--groundheading-needle-rot', `${needleDeg}deg`);
 
       if (!this.isVisible) {

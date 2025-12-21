@@ -1075,8 +1075,8 @@ body{
   position: absolute;
   inset: 0;
   transform-origin: 50% 50%;
-  /* inner 固定不旋转，只旋转 needle */
-  transform: none !important;
+  /* inner（盘面）按 northYaw 旋转 */
+  transform: rotate(var(--groundheading-disk-rot, 0deg));
   transition: none !important;
 }
 .vr-groundheading__wedge{
@@ -2204,7 +2204,7 @@ body{
   /* transition 已在上面定义（只包含 opacity 和 filter），不包含 transform，所以无延迟 */
 }
 .vr-compass__disk {
-  transform: none !important; /* 盘面永远不旋转 */
+  transform: rotate(var(--compass-disk-rot, 0deg));
   transition: none !important;
 }
 .vr-compass__label,
@@ -2239,7 +2239,7 @@ body{
   /* transition 已在上面定义（只包含 opacity 和 filter），不包含 transform，所以无延迟 */
 }
 .vr-groundheading__inner {
-  transform: none !important; /* inner 永远不旋转 */
+  transform: rotate(var(--groundheading-disk-rot, 0deg));
   transition: none !important;
 }
 .vr-groundheading__wedge {

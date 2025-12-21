@@ -139,11 +139,13 @@ export class NadirPatch {
 
   update(_camera: THREE.PerspectiveCamera, view: ViewAngles, dtMs: number): void {
     // 修复：盘面固定不旋转，只有指针旋转
-    // 盘面 rotation.y 保持为 0（或 northYaw 的基准值）
-    this.mesh.rotation.y = THREE.MathUtils.degToRad(-this.northYaw);
+    // 盘面 rotation.y 保持为 0（盘面固定，N 始终在上）
+    this.mesh.rotation.y = 0;
 
     // 指针旋转：根据当前相机 yaw 和世界北方向计算
-    // needleYaw = northYaw - cameraYaw（指针指向当前朝向）
+    // 公式：needleYawDeg = cameraYawDeg - northYawDeg
+    // 当 cameraYaw = northYaw 时，needle = 0（指针朝北/朝上）
+    // 当 cameraYaw 增加（向右转），needle 也增加（指针向右转）
     const cameraYawDeg = view.yaw;
     const northYawDeg = this.northYaw;
     const needleYawDeg = cameraYawDeg - northYawDeg;

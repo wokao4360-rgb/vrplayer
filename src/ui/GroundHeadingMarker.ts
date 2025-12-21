@@ -108,12 +108,12 @@ export class GroundHeadingMarker {
       // cameraYawDeg: 相机当前朝向（度）
       // northYawDeg: 世界北方向（度），相对于全景图纹理的正前方
       // needleDeg: 指针应该旋转的角度，使指针指向当前朝向（相对于世界北）
+      // 公式：needleDeg = cameraYawDeg - northYawDeg
+      // 当 cameraYaw = northYaw 时，needle = 0（指针朝北/朝上）
+      // 当 cameraYaw 增加（向右转），needle 也增加（指针向右转）
       const cameraYawDeg = yawDeg;
       const northYawDeg = this.northYaw ?? 0;
-      
-      // 指针表示"我面向哪里"，盘面固定 northTick 在上
-      // 如果方向反了，改为 (cameraYawDeg - northYawDeg)
-      const needleDeg = northYawDeg - cameraYawDeg;
+      const needleDeg = cameraYawDeg - northYawDeg;
       
       // inner 固定不旋转（由 CSS 控制）
       this.inner.style.transform = 'none';

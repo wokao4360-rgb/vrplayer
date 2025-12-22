@@ -49,8 +49,9 @@ export class StructureView3D {
     this.container.className = 'vr-structure3d-canvas';
 
     this.render();
-    this.init3D();
-    this.bindEvents();
+    this.init3D().then(() => {
+      this.bindEvents();
+    });
   }
 
   private render(): void {
@@ -379,8 +380,9 @@ export class StructureView3D {
   }
 
   private bindEvents(): void {
-    const canvas = this.renderer?.domElement;
-    if (!canvas) return;
+    if (!this.renderer) return;
+    
+    const canvas = this.renderer.domElement;
 
     canvas.addEventListener('click', (e) => this.handleClick(e));
     canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));

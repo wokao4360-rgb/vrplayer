@@ -1,31 +1,31 @@
 /**
  * 顶部模式切换Tab组件（如视风格）
- * 显示：漫游 / 平面图 / 三维模型
+ * 显示：漫游 / 结构图 / 三维模型
  */
 
-type ViewMode = 'pano' | 'map' | 'dollhouse';
+export type AppViewMode = 'tour' | 'structure2d' | 'structure3d';
 
 type TopModeTabsOptions = {
-  initialMode?: ViewMode;
-  onModeChange?: (mode: ViewMode) => void;
+  initialMode?: AppViewMode;
+  onModeChange?: (mode: AppViewMode) => void;
 };
 
 export class TopModeTabs {
   private element: HTMLElement;
-  private currentMode: ViewMode;
-  private onModeChange?: (mode: ViewMode) => void;
+  private currentMode: AppViewMode;
+  private onModeChange?: (mode: AppViewMode) => void;
 
   constructor(options: TopModeTabsOptions = {}) {
-    this.currentMode = options.initialMode || 'pano';
+    this.currentMode = options.initialMode || 'tour';
     this.onModeChange = options.onModeChange;
 
     this.element = document.createElement('div');
     this.element.className = 'vr-topmodes';
 
-    const modes: Array<{ key: ViewMode; label: string }> = [
-      { key: 'pano', label: '漫游' },
-      { key: 'map', label: '平面图' },
-      { key: 'dollhouse', label: '三维模型' },
+    const modes: Array<{ key: AppViewMode; label: string }> = [
+      { key: 'tour', label: '漫游' },
+      { key: 'structure2d', label: '结构图' },
+      { key: 'structure3d', label: '三维模型' },
     ];
 
     modes.forEach((mode) => {
@@ -52,12 +52,12 @@ export class TopModeTabs {
 
   private syncActiveState(): void {
     this.element.querySelectorAll('.vr-topmodes__btn').forEach((btn) => {
-      const mode = btn.getAttribute('data-mode') as ViewMode;
+      const mode = btn.getAttribute('data-mode') as AppViewMode;
       btn.classList.toggle('is-active', mode === this.currentMode);
     });
   }
 
-  setMode(mode: ViewMode): void {
+  setMode(mode: AppViewMode): void {
     if (this.currentMode === mode) return;
     this.currentMode = mode;
     this.syncActiveState();
@@ -66,7 +66,7 @@ export class TopModeTabs {
     }
   }
 
-  getMode(): ViewMode {
+  getMode(): AppViewMode {
     return this.currentMode;
   }
 

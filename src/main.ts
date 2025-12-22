@@ -20,7 +20,7 @@ import { BrandMark } from './ui/BrandMark';
 import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { GuideTray } from './ui/GuideTray';
-import { TopModeTabs } from './ui/TopModeTabs';
+import { TopModeTabs, type AppViewMode } from './ui/TopModeTabs';
 import { resolveAssetUrl, AssetType } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
@@ -132,6 +132,8 @@ class App {
   private currentMuseum: Museum | null = null;
   private currentScene: Scene | null = null;
   private hasBoundFullscreenEvents = false;
+  private mode: AppViewMode = 'tour';
+  private modeIndicatorEl: HTMLElement | null = null;
 
   constructor() {
     const appElement = document.getElementById('app');
@@ -759,35 +761,11 @@ class App {
     // 新 UI：顶部模式切换Tab（如视风格）- 降级保护
     try {
       this.topModeTabs = new TopModeTabs({
-        initialMode: 'pano',
+        initialMode: this.mode,
         onModeChange: (mode) => {
-          // 切换模式：通过BottomDock的setActiveTab来切换
-          if (this.bottomDock) {
-            if (mode === 'map') {
-              this.bottomDock.setActiveTab('map');
-            } else if (mode === 'dollhouse') {
-              this.bottomDock.setActiveTab('dollhouse');
-            } else {
-              // pano模式：切换到guide tab
-              this.bottomDock.setActiveTab('guide');
-            }
-          }
+          this.setMode(mode);
         },
       });
-      // 监听bottomDock的tab变化，同步到topModeTabs
-      const handleBottomDockTabChange = (e: Event) => {
-        const evt = e as CustomEvent<{ tab: string }>;
-        if (this.topModeTabs) {
-          if (evt.detail.tab === 'map') {
-            this.topModeTabs.setMode('map');
-          } else if (evt.detail.tab === 'dollhouse') {
-            this.topModeTabs.setMode('dollhouse');
-          } else {
-            this.topModeTabs.setMode('pano');
-          }
-        }
-      };
-      window.addEventListener('vr:bottom-dock-tab-change', handleBottomDockTabChange);
       this.appElement.appendChild(this.topModeTabs.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
@@ -795,6 +773,12 @@ class App {
       }
       this.topModeTabs = null;
     }
+
+    // Mode 指示器（右上角显示当前模式，用于验收）
+    this.modeIndicatorEl = document.createElement('div');
+    this.modeIndicatorEl.className = 'vr-mode-indicator';
+    this.modeIndicatorEl.textContent = `mode: ${this.mode}`;
+    this.appElement.appendChild(this.modeIndicatorEl);
 
     // 创建热点（DOM Overlay：每帧跟随 camera 投影）- 降级保护
     try {
@@ -989,6 +973,14 @@ class App {
       this.qualityIndicator = null;
     }
 
+    if (this.modeIndicatorEl) {
+      this.modeIndicatorEl.remove();
+      this.modeIndicatorEl = null;
+    }
+
+    // 重置 mode（刷新后回到 tour）
+    this.mode = 'tour';
+
     // 清空容器
     this.appElement.innerHTML = '';
     this.appElement.appendChild(this.loading.getElement());
@@ -1001,6 +993,27 @@ class App {
       this.uiErrorElement.parentNode.removeChild(this.uiErrorElement);
       this.uiErrorElement = null;
     }
+  }
+
+  /**
+   * 设置全局模式（tour / structure2d / structure3d）
+   */
+  private setMode(mode: AppViewMode): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+    
+    // 更新 TopModeTabs
+    if (this.topModeTabs) {
+      this.topModeTabs.setMode(mode);
+    }
+    
+    // 更新 mode 指示器
+    if (this.modeIndicatorEl) {
+      this.modeIndicatorEl.textContent = `mode: ${mode}`;
+    }
+    
+    // TODO: 第2步将在这里实现 structure2d/structure3d overlay 的打开/关闭逻辑
+    // 目前只做状态管理，不触发任何 UI 变化
   }
 
   private openNorthCalibration(sceneId: string): void {

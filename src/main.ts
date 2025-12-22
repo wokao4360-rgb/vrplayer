@@ -21,8 +21,8 @@ import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { GuideTray } from './ui/GuideTray';
 import { TopModeTabs, type AppViewMode } from './ui/TopModeTabs';
+import { StructureView2D } from './ui/StructureView2D';
 import { buildSceneGraph } from './graph/sceneGraph';
-import { forceLayout2D, shouldUseAutoLayout } from './graph/autoLayout';
 import { resolveAssetUrl, AssetType } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
@@ -136,6 +136,7 @@ class App {
   private hasBoundFullscreenEvents = false;
   private mode: AppViewMode = 'tour';
   private modeIndicatorEl: HTMLElement | null = null;
+  private structureView2D: StructureView2D | null = null;
 
   constructor() {
     const appElement = document.getElementById('app');
@@ -855,49 +856,6 @@ class App {
     
     // 设置场景数据（用于 GroundNavDots）
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
-
-    // ========================================
-    // 第2步：Scene Graph + Auto Layout 测试调用（纯数据层）
-    // ========================================
-    // 构建场景图
-    const graph = buildSceneGraph(museum, scene.id);
-    
-    // 判断是否需要自动布局
-    const useAutoLayout = shouldUseAutoLayout(graph.nodes);
-    
-    // 如果需要自动布局，计算布局
-    let layout2D: Record<string, { x: number; y: number }> | null = null;
-    if (useAutoLayout) {
-      layout2D = forceLayout2D(graph.nodes, graph.edges, {
-        width: museum.map.width,
-        height: museum.map.height,
-        iterations: 300,
-        padding: 40,
-      });
-    } else {
-      // 使用现有的 mapPoint
-      layout2D = {};
-      for (const node of graph.nodes) {
-        if (node.mapPoint) {
-          layout2D[node.id] = { x: node.mapPoint.x, y: node.mapPoint.y };
-        }
-      }
-    }
-    
-    // 示例：数据结构说明
-    // 输入：museum (Museum)
-    // 输出：
-    //   - graph.nodes: SceneGraphNode[] (每个scene一个节点)
-    //   - graph.edges: SceneGraphEdge[] (从hotspots提取的跳转关系)
-    //   - graph.currentNodeId: string | undefined (当前场景ID)
-    //   - layout2D: Record<sceneId, {x, y}> (归一化后的2D坐标)
-    // 
-    // 使用示例：
-    //   const graph = buildSceneGraph(museum, currentSceneId);
-    //   const layout = forceLayout2D(graph.nodes, graph.edges, { width: 1000, height: 600 });
-    // 
-    // 注意：此测试调用不输出到控制台，仅用于验证数据结构正确性
-    // ========================================
   }
 
   /**
@@ -1023,6 +981,11 @@ class App {
       this.modeIndicatorEl = null;
     }
 
+    if (this.structureView2D) {
+      this.structureView2D.remove();
+      this.structureView2D = null;
+    }
+
     // 重置 mode（刷新后回到 tour）
     this.mode = 'tour';
 
@@ -1057,8 +1020,42 @@ class App {
       this.modeIndicatorEl.textContent = `mode: ${mode}`;
     }
     
-    // TODO: 第2步将在这里实现 structure2d/structure3d overlay 的打开/关闭逻辑
-    // 目前只做状态管理，不触发任何 UI 变化
+    // 处理 structure2d overlay
+    if (mode === 'structure2d') {
+      if (!this.currentMuseum || !this.currentScene) return;
+      
+      const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
+      
+      if (!this.structureView2D) {
+        this.structureView2D = new StructureView2D({
+          museum: this.currentMuseum,
+          graph,
+          currentSceneId: this.currentScene.id,
+          onNodeClick: (museumId, sceneId) => {
+            // 先切回 tour mode（关闭 overlay）
+            this.setMode('tour');
+            // 再跳转场景（确保视觉上切回漫游）
+            navigateToScene(museumId, sceneId);
+          },
+        });
+        this.appElement.appendChild(this.structureView2D.getElement());
+      } else {
+        this.structureView2D.updateContext({
+          museum: this.currentMuseum,
+          graph,
+          currentSceneId: this.currentScene.id,
+        });
+      }
+      
+      this.structureView2D.open();
+    } else {
+      // 关闭 structure2d overlay
+      if (this.structureView2D) {
+        this.structureView2D.close();
+      }
+    }
+    
+    // TODO: 第4步将在这里实现 structure3d overlay 的打开/关闭逻辑
   }
 
   private openNorthCalibration(sceneId: string): void {

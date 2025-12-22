@@ -62,7 +62,9 @@ export function forceLayout2D(
     };
   });
 
-  // 如果没有边，创建最小生成树（避免节点完全孤立）
+  // 如果没有任何边，创建简单链式连接（避免节点完全孤立，便于布局算法收敛）
+  // 注意：这不是真正的 MST（最小生成树），只是按数组顺序连接相邻节点
+  // 位置：forceLayout2D 函数内，第59-66行
   const edgeList =
     edges.length > 0
       ? edges

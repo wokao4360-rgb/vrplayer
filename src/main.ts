@@ -22,6 +22,7 @@ import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { GuideTray } from './ui/GuideTray';
 import { TopModeTabs, type AppViewMode } from './ui/TopModeTabs';
 import { StructureView2D } from './ui/StructureView2D';
+import { StructureView3D } from './ui/StructureView3D';
 import { buildSceneGraph } from './graph/sceneGraph';
 import { resolveAssetUrl, AssetType } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
@@ -137,6 +138,7 @@ class App {
   private mode: AppViewMode = 'tour';
   private modeIndicatorEl: HTMLElement | null = null;
   private structureView2D: StructureView2D | null = null;
+  private structureView3D: StructureView3D | null = null;
 
   constructor() {
     const appElement = document.getElementById('app');
@@ -986,6 +988,11 @@ class App {
       this.structureView2D = null;
     }
 
+    if (this.structureView3D) {
+      this.structureView3D.remove();
+      this.structureView3D = null;
+    }
+
     // 重置 mode（刷新后回到 tour）
     this.mode = 'tour';
 
@@ -1024,6 +1031,11 @@ class App {
     if (mode === 'structure2d') {
       if (!this.currentMuseum || !this.currentScene) return;
       
+      // 关闭 structure3d overlay
+      if (this.structureView3D) {
+        this.structureView3D.close();
+      }
+      
       const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
       
       if (!this.structureView2D) {
@@ -1048,14 +1060,47 @@ class App {
       }
       
       this.structureView2D.open();
-    } else {
+    } else if (mode === 'structure3d') {
+      if (!this.currentMuseum || !this.currentScene) return;
+      
       // 关闭 structure2d overlay
       if (this.structureView2D) {
         this.structureView2D.close();
       }
+      
+      const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
+      
+      if (!this.structureView3D) {
+        this.structureView3D = new StructureView3D({
+          museum: this.currentMuseum,
+          graph,
+          currentSceneId: this.currentScene.id,
+          onNodeClick: (museumId, sceneId) => {
+            // 先切回 tour mode（关闭 overlay）
+            this.setMode('tour');
+            // 再跳转场景（确保视觉上切回漫游）
+            navigateToScene(museumId, sceneId);
+          },
+        });
+        this.appElement.appendChild(this.structureView3D.getElement());
+      } else {
+        this.structureView3D.updateContext({
+          museum: this.currentMuseum,
+          graph,
+          currentSceneId: this.currentScene.id,
+        });
+      }
+      
+      this.structureView3D.open();
+    } else {
+      // 关闭所有 structure overlays
+      if (this.structureView2D) {
+        this.structureView2D.close();
+      }
+      if (this.structureView3D) {
+        this.structureView3D.close();
+      }
     }
-    
-    // TODO: 第4步将在这里实现 structure3d overlay 的打开/关闭逻辑
   }
 
   private openNorthCalibration(sceneId: string): void {

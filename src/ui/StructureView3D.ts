@@ -21,9 +21,9 @@ type StructureView3DOptions = {
 export class StructureView3D {
   private element: HTMLElement;
   private container: HTMLElement;
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
+  private scene: THREE.Scene | null = null;
+  private camera: THREE.PerspectiveCamera | null = null;
+  private renderer: THREE.WebGLRenderer | null = null;
   private controls: any; // OrbitControls (动态导入)
   private museum: Museum;
   private graph: SceneGraph;
@@ -34,6 +34,9 @@ export class StructureView3D {
   private sceneNodes: Map<string, THREE.Mesh> = new Map();
   private edgeLines: THREE.Line[] = [];
   private hoveredSceneId: string | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private statusEl: HTMLElement | null = null;
+  private webglErrorEl: HTMLElement | null = null;
 
   constructor(options: StructureView3DOptions) {
     this.museum = options.museum;
@@ -59,9 +62,22 @@ export class StructureView3D {
     const header = document.createElement('div');
     header.className = 'vr-structure3d-header';
 
+    const titleWrapper = document.createElement('div');
+    titleWrapper.style.display = 'flex';
+    titleWrapper.style.flexDirection = 'column';
+    titleWrapper.style.gap = '4px';
+
     const title = document.createElement('div');
     title.className = 'vr-structure3d-title';
     title.textContent = '三维模型';
+
+    // 状态自检文本（可视化，不看控制台）
+    this.statusEl = document.createElement('div');
+    this.statusEl.className = 'vr-structure3d-status';
+    this.updateStatusText();
+
+    titleWrapper.appendChild(title);
+    titleWrapper.appendChild(this.statusEl);
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'vr-btn vr-structure3d-close';
@@ -71,68 +87,138 @@ export class StructureView3D {
       this.close();
     });
 
-    header.appendChild(title);
+    header.appendChild(titleWrapper);
     header.appendChild(closeBtn);
+
+    // WebGL 错误提示（初始隐藏）
+    this.webglErrorEl = document.createElement('div');
+    this.webglErrorEl.className = 'vr-structure3d-webgl-error';
+    this.webglErrorEl.style.display = 'none';
+    this.webglErrorEl.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px;">
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">WebGL 不可用</div>
+        <div style="font-size: 13px; opacity: 0.8;">请尝试更换浏览器或设备</div>
+      </div>
+    `;
 
     // Assemble
     this.element.appendChild(header);
     this.element.appendChild(this.container);
+    this.element.appendChild(this.webglErrorEl);
+  }
+
+  private updateStatusText(): void {
+    if (!this.statusEl) return;
+    const nodeCount = this.graph.nodes.length;
+    const edgeCount = this.graph.edges.length;
+    const w = this.container?.clientWidth || 0;
+    const h = this.container?.clientHeight || 0;
+    
+    if (nodeCount === 0) {
+      this.statusEl.textContent = 'No nodes (check museum.scenes)';
+      this.statusEl.style.color = 'rgba(255,200,100,0.9)';
+    } else {
+      this.statusEl.textContent = `nodes: ${nodeCount}, edges: ${edgeCount}, size: ${w}x${h}`;
+      this.statusEl.style.color = 'rgba(255,255,255,0.65)';
+    }
   }
 
   private async init3D(): Promise<void> {
-    // 创建场景
-    this.scene = new THREE.Scene();
-    this.scene.background = null; // 透明背景
-
-    // 创建相机
-    this.camera = new THREE.PerspectiveCamera(
-      50,
-      this.container.clientWidth / this.container.clientHeight,
-      0.1,
-      1000
-    );
-    this.camera.position.set(0, 5, 15);
-    this.camera.lookAt(0, 0, 0);
-
-    // 创建渲染器
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-    });
-    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.container.appendChild(this.renderer.domElement);
-
-    // 初始化 OrbitControls
     try {
-      const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
-      this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-      this.controls.enableDamping = true;
-      this.controls.dampingFactor = 0.05;
-      this.controls.minDistance = 3;
-      this.controls.maxDistance = 50;
-      this.controls.maxPolarAngle = Math.PI / 2.2;
-      this.controls.minPolarAngle = Math.PI / 6;
+      // 创建场景
+      this.scene = new THREE.Scene();
+      this.scene.background = null; // 透明背景
+
+      // 创建相机（使用合理的初始值，后续会在 open() 时重新设置）
+      const initialAspect = this.container.clientWidth > 0 
+        ? this.container.clientWidth / this.container.clientHeight 
+        : window.innerWidth / window.innerHeight;
+      this.camera = new THREE.PerspectiveCamera(60, initialAspect, 0.1, 1000);
+      this.camera.position.set(0, 12, 18);
+      this.camera.lookAt(0, 0, 0);
+
+      // 创建渲染器（捕获 WebGL 错误）
+      try {
+        this.renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          alpha: true,
+        });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.container.appendChild(this.renderer.domElement);
+      } catch (webglError) {
+        // WebGL 不可用
+        if (this.webglErrorEl) {
+          this.webglErrorEl.style.display = 'block';
+        }
+        return;
+      }
+
+      // 初始化 OrbitControls
+      try {
+        const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.05;
+        this.controls.minDistance = 3;
+        this.controls.maxDistance = 50;
+        this.controls.maxPolarAngle = Math.PI / 2.2;
+        this.controls.minPolarAngle = Math.PI / 6;
+        this.controls.target.set(0, 0, 0);
+      } catch (error) {
+        // OrbitControls 加载失败，仍然可以渲染，只是没有交互控制
+      }
+
+      // 添加基础光照
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      this.scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
+      directionalLight.position.set(5, 10, 5);
+      this.scene.add(directionalLight);
+
+      // 生成节点和边
+      this.generateGraph();
+
+      // 设置 ResizeObserver（监听容器尺寸变化）
+      this.setupResizeObserver();
+
+      // 更新状态文本
+      this.updateStatusText();
     } catch (error) {
-      // OrbitControls 加载失败，仍然可以渲染，只是没有交互控制
+      // 初始化失败，显示错误提示
+      if (this.webglErrorEl) {
+        this.webglErrorEl.style.display = 'block';
+      }
+    }
+  }
+
+  private setupResizeObserver(): void {
+    if (!this.container || typeof ResizeObserver === 'undefined') {
+      // 降级到 window resize
+      window.addEventListener('resize', () => this.handleResize());
+      return;
     }
 
-    // 添加基础光照
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    this.scene.add(ambientLight);
+    this.resizeObserver = new ResizeObserver(() => {
+      this.handleResize();
+    });
+    this.resizeObserver.observe(this.container);
+  }
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    directionalLight.position.set(5, 10, 5);
-    this.scene.add(directionalLight);
+  private handleResize(): void {
+    if (!this.renderer || !this.camera || !this.container) return;
 
-    // 生成节点和边
-    this.generateGraph();
+    const width = this.container.clientWidth;
+    const height = this.container.clientHeight;
 
-    // 开始渲染循环
-    this.animate();
+    if (width === 0 || height === 0) return;
 
-    // 响应窗口大小变化
-    window.addEventListener('resize', () => this.handleResize());
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height, false);
+    
+    // 更新状态文本
+    this.updateStatusText();
   }
 
   private generateGraph(): void {
@@ -288,6 +374,10 @@ export class StructureView3D {
   }
 
   private animate = (): void => {
+    if (!this.renderer || !this.scene || !this.camera) {
+      return;
+    }
+
     this.animationId = requestAnimationFrame(this.animate);
 
     // 更新 controls
@@ -310,16 +400,9 @@ export class StructureView3D {
     this.renderer.render(this.scene, this.camera);
   };
 
-  private handleResize(): void {
-    const width = this.container.clientWidth;
-    const height = this.container.clientHeight;
-
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
-  }
-
   private handleClick(event: MouseEvent): void {
+    if (!this.renderer || !this.camera || this.sceneNodes.size === 0) return;
+
     const rect = this.renderer.domElement.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -335,13 +418,15 @@ export class StructureView3D {
       const mesh = intersects[0].object as THREE.Mesh;
       const sceneId = mesh.userData.sceneId;
 
-      if (this.onNodeClick) {
+      if (sceneId && this.onNodeClick) {
         this.onNodeClick(this.museum.id, sceneId);
       }
     }
   }
 
   private handleMouseMove(event: MouseEvent): void {
+    if (!this.renderer || !this.camera || this.sceneNodes.size === 0) return;
+
     const rect = this.renderer.domElement.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -408,11 +493,25 @@ export class StructureView3D {
     this.graph = opts.graph;
     this.currentSceneId = opts.currentSceneId;
 
-    this.generateGraph();
+    if (this.scene) {
+      this.generateGraph();
+      this.updateStatusText();
+    }
   }
 
   open(): void {
     this.element.classList.add('is-visible');
+    
+    // overlay visible 后，延迟一帧确保尺寸正确
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this.handleResize();
+        // 确保渲染循环已启动
+        if (!this.animationId && this.renderer && this.scene && this.camera) {
+          this.animate();
+        }
+      });
+    });
   }
 
   close(): void {
@@ -433,29 +532,37 @@ export class StructureView3D {
       this.animationId = null;
     }
 
-    // 清理节点
-    this.sceneNodes.forEach((mesh) => {
-      this.scene.remove(mesh);
-      mesh.geometry.dispose();
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((m) => m.dispose());
-      } else {
-        mesh.material.dispose();
-      }
-    });
-    this.sceneNodes.clear();
+    // 清理 ResizeObserver
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
 
-    // 清理边
-    this.edgeLines.forEach((line) => {
-      this.scene.remove(line);
-      line.geometry.dispose();
-      if (Array.isArray(line.material)) {
-        line.material.forEach((m) => m.dispose());
-      } else {
-        line.material.dispose();
-      }
-    });
-    this.edgeLines = [];
+    // 清理节点
+    if (this.scene) {
+      this.sceneNodes.forEach((mesh) => {
+        this.scene!.remove(mesh);
+        mesh.geometry.dispose();
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((m) => m.dispose());
+        } else {
+          mesh.material.dispose();
+        }
+      });
+      this.sceneNodes.clear();
+
+      // 清理边
+      this.edgeLines.forEach((line) => {
+        this.scene!.remove(line);
+        line.geometry.dispose();
+        if (Array.isArray(line.material)) {
+          line.material.forEach((m) => m.dispose());
+        } else {
+          line.material.dispose();
+        }
+      });
+      this.edgeLines = [];
+    }
 
     // 清理渲染器
     if (this.renderer) {
@@ -463,15 +570,20 @@ export class StructureView3D {
       if (this.renderer.domElement.parentNode) {
         this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
       }
+      this.renderer = null;
     }
 
     // 清理 controls
     if (this.controls) {
       this.controls.dispose();
+      this.controls = null;
     }
 
     // 清理事件监听
     window.removeEventListener('resize', () => this.handleResize());
+
+    this.scene = null;
+    this.camera = null;
 
     this.element.remove();
   }

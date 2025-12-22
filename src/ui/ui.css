@@ -2459,10 +2459,32 @@ body{
   flex: 1;
   min-height: 0;
   position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .vr-structure3d-canvas canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.vr-structure3d-status {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.65);
+  margin-top: 2px;
+}
+
+.vr-structure3d-webgl-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.9);
+  z-index: 10;
+  pointer-events: auto;
 }

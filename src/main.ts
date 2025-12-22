@@ -21,6 +21,8 @@ import { BottomDock } from './ui/BottomDock';
 import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { GuideTray } from './ui/GuideTray';
 import { TopModeTabs, type AppViewMode } from './ui/TopModeTabs';
+import { buildSceneGraph } from './graph/sceneGraph';
+import { forceLayout2D, shouldUseAutoLayout } from './graph/autoLayout';
 import { resolveAssetUrl, AssetType } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
@@ -853,6 +855,49 @@ class App {
     
     // 设置场景数据（用于 GroundNavDots）
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
+
+    // ========================================
+    // 第2步：Scene Graph + Auto Layout 测试调用（纯数据层）
+    // ========================================
+    // 构建场景图
+    const graph = buildSceneGraph(museum, scene.id);
+    
+    // 判断是否需要自动布局
+    const useAutoLayout = shouldUseAutoLayout(graph.nodes);
+    
+    // 如果需要自动布局，计算布局
+    let layout2D: Record<string, { x: number; y: number }> | null = null;
+    if (useAutoLayout) {
+      layout2D = forceLayout2D(graph.nodes, graph.edges, {
+        width: museum.map.width,
+        height: museum.map.height,
+        iterations: 300,
+        padding: 40,
+      });
+    } else {
+      // 使用现有的 mapPoint
+      layout2D = {};
+      for (const node of graph.nodes) {
+        if (node.mapPoint) {
+          layout2D[node.id] = { x: node.mapPoint.x, y: node.mapPoint.y };
+        }
+      }
+    }
+    
+    // 示例：数据结构说明
+    // 输入：museum (Museum)
+    // 输出：
+    //   - graph.nodes: SceneGraphNode[] (每个scene一个节点)
+    //   - graph.edges: SceneGraphEdge[] (从hotspots提取的跳转关系)
+    //   - graph.currentNodeId: string | undefined (当前场景ID)
+    //   - layout2D: Record<sceneId, {x, y}> (归一化后的2D坐标)
+    // 
+    // 使用示例：
+    //   const graph = buildSceneGraph(museum, currentSceneId);
+    //   const layout = forceLayout2D(graph.nodes, graph.edges, { width: 1000, height: 600 });
+    // 
+    // 注意：此测试调用不输出到控制台，仅用于验证数据结构正确性
+    // ========================================
   }
 
   /**

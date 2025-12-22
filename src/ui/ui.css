@@ -2313,6 +2313,27 @@ body{
   color: rgba(255,255,255,0.95);
 }
 
+.vr-structure2d-status {
+  font-size: 11px;
+  color: rgba(255,255,255,0.65);
+  font-weight: 400;
+}
+
+.vr-structure2d-toggle {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.9);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background var(--dur-fast) var(--ease-out);
+  margin-right: 8px;
+}
+
+.vr-structure2d-toggle:active {
+  background: rgba(255,255,255,0.20);
+}
+
 .vr-structure2d-close {
   width: 32px;
   height: 32px;
@@ -2338,6 +2359,19 @@ body{
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.vr-structure2d-floorplan {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .vr-structure2d-svg {
@@ -2478,6 +2512,18 @@ body{
 }
 
 .vr-structure3d-webgl-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.9);
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.vr-structure3d-model-error {
   position: absolute;
   inset: 0;
   display: flex;

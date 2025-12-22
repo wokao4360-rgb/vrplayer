@@ -1027,6 +1027,13 @@ class App {
       this.modeIndicatorEl.textContent = `mode: ${mode}`;
     }
     
+    // 控制 body overflow（overlay 打开时禁止滚动，关闭时恢复）
+    if (mode === 'structure2d' || mode === 'structure3d') {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
     // 处理 structure2d overlay
     if (mode === 'structure2d') {
       if (!this.currentMuseum || !this.currentScene) return;

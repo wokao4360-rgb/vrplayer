@@ -13,6 +13,7 @@ export enum AssetType {
   VIDEO = 'video',       // 视频：点击热点后才加载
   COVER = 'cover',       // 封面图：博物馆封面
   MAP = 'map',           // 地图图片
+  DOLLHOUSE = 'dollhouse', // 三维模型（glb/gltf）
 }
 
 /**

@@ -10,9 +10,15 @@ export interface MapPoint {
 }
 
 export interface MapConfig {
-  image: string;
+  image?: string; // 真实平面图图片（可选，如视导出的结构图/平面图）
   width: number;
   height: number;
+}
+
+export interface DollhouseConfig {
+  modelUrl?: string; // 真实三维模型 glb/gltf（如视导出或其他）
+  scale?: number; // 可选缩放
+  offset?: { x: number; y: number; z: number }; // 可选平移
 }
 
 export interface SceneHotspotTarget {
@@ -58,6 +64,7 @@ export interface Museum {
   name: string;
   cover: string;
   map: MapConfig;
+  dollhouse?: DollhouseConfig; // 真实三维模型配置（可选）
   scenes: Scene[];
 }
 

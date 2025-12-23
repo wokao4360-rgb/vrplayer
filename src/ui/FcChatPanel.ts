@@ -26,8 +26,10 @@ export class FcChatPanel {
   private isMobile = false;
   private swipeStartY = 0;
   private swipeActive = false;
+  private currentTransformY = 0;
 
   private messages: ChatMsg[] = [];
+  private thinkingBubble: HTMLElement | null = null;
 
   constructor(client: FcChatClient, context: FcChatContext) {
     this.client = client;
@@ -143,25 +145,47 @@ export class FcChatPanel {
     window.addEventListener("mousemove", (e) => this.onDragMove(e));
     window.addEventListener("mouseup", () => this.onDragEnd());
 
-    // mobile swipe-to-close (pointer events)
-    this.header.addEventListener("pointerdown", (e) => this.onSwipeStart(e));
-    this.header.addEventListener("pointermove", (e) => this.onSwipeMove(e));
-    this.header.addEventListener("pointerup", () => this.onSwipeEnd());
-    this.header.addEventListener("pointercancel", () => this.onSwipeEnd());
+    // mobile swipe-to-close (touch events)
+    if (this.isMobile) {
+      this.header.addEventListener("touchstart", (e) => this.onSwipeStartTouch(e), { passive: false });
+      this.header.addEventListener("touchmove", (e) => this.onSwipeMoveTouch(e), { passive: false });
+      this.header.addEventListener("touchend", () => this.onSwipeEndTouch());
+      this.header.addEventListener("touchcancel", () => this.onSwipeEndTouch());
+    }
 
     // on resize re-detect
-    window.addEventListener("resize", () => this.detectMobile());
+    window.addEventListener("resize", () => {
+      const wasMobile = this.isMobile;
+      this.detectMobile();
+      if (wasMobile !== this.isMobile && this.isMobile) {
+        // re-bind touch events when switching to mobile
+        this.header.addEventListener("touchstart", (e) => this.onSwipeStartTouch(e), { passive: false });
+        this.header.addEventListener("touchmove", (e) => this.onSwipeMoveTouch(e), { passive: false });
+        this.header.addEventListener("touchend", () => this.onSwipeEndTouch());
+        this.header.addEventListener("touchcancel", () => this.onSwipeEndTouch());
+      }
+    });
   }
 
   private hide() {
-    this.root.style.display = "none";
+    this.root.classList.add("fcchat-hiding");
+    setTimeout(() => {
+      this.root.style.display = "none";
+      this.root.classList.remove("fcchat-hiding");
+      this.root.style.transform = "";
+      this.currentTransformY = 0;
+    }, 300);
     this.ensureToggleButton();
   }
 
   private show() {
     this.detectMobile();
     this.root.style.display = "flex";
+    this.root.classList.add("fcchat-showing");
     document.getElementById("fcchat-toggle-btn")?.remove();
+    setTimeout(() => {
+      this.root.classList.remove("fcchat-showing");
+    }, 300);
     this.scrollToBottom();
     this.input.focus();
   }
@@ -175,6 +199,10 @@ export class FcChatPanel {
     btn.textContent = "三馆学伴";
     btn.addEventListener("click", () => this.show());
     document.body.appendChild(btn);
+    // animate in
+    requestAnimationFrame(() => {
+      btn.classList.add("fcchat-toggle-btn-visible");
+    });
   }
 
   private onDragStart(e: MouseEvent) {
@@ -214,44 +242,52 @@ export class FcChatPanel {
     this.dragging = false;
   }
 
-  private onSwipeStart(e: PointerEvent) {
+  private onSwipeStartTouch(e: TouchEvent) {
     if (!this.isMobile) return;
     const target = e.target as HTMLElement;
     if (target.closest("button")) return;
 
     this.swipeActive = true;
-    this.swipeStartY = e.clientY;
+    this.swipeStartY = e.touches[0].clientY;
+    this.currentTransformY = 0;
     this.root.classList.add("is-swiping");
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    e.preventDefault();
   }
 
-  private onSwipeMove(e: PointerEvent) {
+  private onSwipeMoveTouch(e: TouchEvent) {
     if (!this.isMobile || !this.swipeActive) return;
-    const dy = e.clientY - this.swipeStartY;
+    const dy = e.touches[0].clientY - this.swipeStartY;
     if (dy <= 0) return;
-    // translate down a bit (visual feedback)
-    this.root.style.transform = `translateY(${Math.min(dy, 160)}px)`;
+    
+    this.currentTransformY = Math.min(dy, 200);
+    this.root.style.transform = `translateY(${this.currentTransformY}px)`;
+    e.preventDefault();
   }
 
-  private onSwipeEnd() {
+  private onSwipeEndTouch() {
     if (!this.isMobile || !this.swipeActive) return;
     this.swipeActive = false;
     this.root.classList.remove("is-swiping");
 
-    const currentTransform = this.root.style.transform || "";
-    const m = currentTransform.match(/translateY\(([-\d.]+)px\)/);
-    const dy = m ? Number(m[1]) : 0;
-
-    this.root.style.transform = "";
-    if (dy >= 90) {
+    if (this.currentTransformY >= 100) {
+      // close
       this.hide();
+    } else {
+      // snap back
+      this.root.style.transition = "transform 0.3s ease-out";
+      this.root.style.transform = "";
+      setTimeout(() => {
+        this.root.style.transition = "";
+      }, 300);
     }
+    this.currentTransformY = 0;
   }
 
   private clear() {
     this.messages = [];
     this.list.innerHTML = "";
     this.statusLine.textContent = "";
+    this.removeThinkingBubble();
     this.ensureWelcome();
   }
 
@@ -270,7 +306,45 @@ export class FcChatPanel {
     return (s ?? "").replace(/^\s+/, "");
   }
 
+  private createThinkingBubble(): HTMLElement {
+    const row = document.createElement("div");
+    row.className = "fcchat-row is-assistant";
+
+    const bubble = document.createElement("div");
+    bubble.className = "fcchat-bubble bubble-assistant fcchat-thinking";
+    
+    const dot1 = document.createElement("span");
+    dot1.className = "fcchat-dot";
+    const dot2 = document.createElement("span");
+    dot2.className = "fcchat-dot";
+    const dot3 = document.createElement("span");
+    dot3.className = "fcchat-dot";
+    
+    bubble.appendChild(dot1);
+    bubble.appendChild(dot2);
+    bubble.appendChild(dot3);
+    
+    row.appendChild(bubble);
+    return row;
+  }
+
+  private showThinkingBubble() {
+    if (this.thinkingBubble) return;
+    this.thinkingBubble = this.createThinkingBubble();
+    this.list.appendChild(this.thinkingBubble);
+    this.scrollToBottom();
+  }
+
+  private removeThinkingBubble() {
+    if (this.thinkingBubble) {
+      this.thinkingBubble.remove();
+      this.thinkingBubble = null;
+    }
+  }
+
   private addMessage(role: Role, text: string) {
+    this.removeThinkingBubble();
+    
     const msg: ChatMsg = { role, text: this.normalizeText(text) };
     this.messages.push(msg);
 
@@ -296,13 +370,16 @@ export class FcChatPanel {
 
     this.input.value = "";
     this.addMessage("user", q);
+    this.showThinkingBubble();
 
     try {
       this.setBusy(true, "思考中…");
       const res = await this.client.ask(q, this.context);
+      this.removeThinkingBubble();
       this.addMessage("assistant", res.answer);
       this.setBusy(false, "");
     } catch (e: any) {
+      this.removeThinkingBubble();
       const msg = typeof e?.message === "string" ? e.message : String(e);
       this.addMessage("assistant", `请求失败：${msg}`);
       this.setBusy(false, "");
@@ -330,6 +407,14 @@ export class FcChatPanel {
         min-width: 320px;
         min-height: 360px;
         transform: none;
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+        transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+      }
+      
+      .fcchat-root.fcchat-showing {
+        opacity: 1;
+        transform: translateY(0) scale(1);
       }
 
       .fcchat-header{
@@ -385,7 +470,22 @@ export class FcChatPanel {
         -webkit-overflow-scrolling: touch;
       }
 
-      .fcchat-row{ display:flex; }
+      .fcchat-row{ 
+        display:flex; 
+        animation: fcchat-fade-in 0.3s ease-out;
+      }
+      
+      @keyframes fcchat-fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
       .fcchat-row.is-user{ justify-content:flex-end; }
       .fcchat-row.is-assistant{ justify-content:flex-start; }
 
@@ -410,6 +510,46 @@ export class FcChatPanel {
         border-top-left-radius: 6px;
       }
 
+      /* 思考中动画 */
+      .fcchat-thinking {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 14px !important;
+      }
+      
+      .fcchat-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #6b7280;
+        display: inline-block;
+        animation: fcchat-dot-bounce 1.4s infinite ease-in-out;
+      }
+      
+      .fcchat-dot:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      
+      .fcchat-dot:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+      
+      .fcchat-dot:nth-child(3) {
+        animation-delay: 0s;
+      }
+      
+      @keyframes fcchat-dot-bounce {
+        0%, 80%, 100% {
+          transform: scale(0.8);
+          opacity: 0.5;
+        }
+        40% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+      }
+
       .fcchat-status{
         padding: 6px 12px 0 12px;
         font-size: 12px;
@@ -432,6 +572,7 @@ export class FcChatPanel {
         padding: 0 10px;
         font-size: 13px;
         outline:none;
+        transition: border-color 0.2s, box-shadow 0.2s;
       }
       .fcchat-input:focus{
         border-color: rgba(37,99,235,.55);
@@ -446,9 +587,19 @@ export class FcChatPanel {
         font-size: 13px;
         cursor:pointer;
         user-select:none;
+        transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+      }
+      .fcchat-btn:active {
+        transform: scale(0.95);
       }
       .fcchat-btn:disabled{ opacity:.6; cursor:not-allowed; }
-      .fcchat-btn-primary{ background:#2563eb; color:#fff; }
+      .fcchat-btn-primary{ 
+        background:#2563eb; 
+        color:#fff;
+      }
+      .fcchat-btn-primary:hover {
+        box-shadow: 0 4px 12px rgba(37,99,235,.3);
+      }
       .fcchat-btn-ghost{
         background: transparent;
         color: #111827;
@@ -479,6 +630,27 @@ export class FcChatPanel {
         font-size: 13px;
         box-shadow: 0 10px 30px rgba(37,99,235,.35);
         cursor: pointer;
+        opacity: 0;
+        transform: scale(0.8) translateY(10px);
+        transition: opacity 0.3s ease-out, transform 0.3s ease-out, box-shadow 0.3s ease-out;
+      }
+      
+      .fcchat-toggle-btn-visible {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+      
+      .fcchat-toggle-btn:active {
+        transform: scale(0.95) translateY(0);
+      }
+      
+      .fcchat-toggle-btn:hover {
+        box-shadow: 0 12px 40px rgba(37,99,235,.45);
+        transform: scale(1.05) translateY(-2px);
+      }
+      
+      .fcchat-toggle-btn.fcchat-toggle-btn-visible:hover {
+        transform: scale(1.05) translateY(-2px);
       }
 
       /* Mobile adaptation */
@@ -495,7 +667,17 @@ export class FcChatPanel {
           min-width: 0 !important;
           min-height: 0 !important;
           box-shadow: 0 -10px 40px rgba(0,0,0,.20);
+          transform: translateY(100%);
         }
+        
+        .fcchat-root.fcchat-showing {
+          transform: translateY(0);
+        }
+        
+        .fcchat-root.fcchat-hiding {
+          transform: translateY(100%);
+        }
+        
         .fcchat-header{
           cursor: default !important;
           padding-top: 10px;
@@ -509,7 +691,18 @@ export class FcChatPanel {
       }
 
       .fcchat-root.is-swiping{
-        transition: none;
+        transition: none !important;
+      }
+      
+      .fcchat-root.fcchat-hiding {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+      
+      @media (max-width: 768px), (pointer: coarse) {
+        .fcchat-root.fcchat-hiding {
+          transform: translateY(100%);
+        }
       }
     `;
     document.head.appendChild(style);

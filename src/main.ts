@@ -39,6 +39,7 @@ import { __VR_DEBUG__ } from './utils/debug';
 import { dumpVRState, resetVRUI } from './utils/debugHelper';
 import { NorthCalibrationPanel } from './ui/NorthCalibrationPanel';
 import { FcChatPanel } from './ui/FcChatPanel';
+import { FcChatClient, type FcChatConfig } from './services/fcChatClient';
 
 /**
  * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：
@@ -865,18 +866,20 @@ class App {
     try {
       const fcChatConfig = this.config?.fcChat;
       if (fcChatConfig?.endpoint && fcChatConfig.endpoint.trim()) {
-        this.fcChatPanel = new FcChatPanel({
+        const clientConfig: FcChatConfig = {
           endpoint: fcChatConfig.endpoint,
           authToken: fcChatConfig.authToken,
-          context: {
-            museumId: museum.id,
-            sceneId: scene.id,
-            sceneTitle: scene.name,
-            museumName: museum.name,
-            url: window.location.href,
-          },
+          timeoutMs: 15000,
+        };
+        const client = new FcChatClient(clientConfig);
+        this.fcChatPanel = new FcChatPanel(client, {
+          museumId: museum.id,
+          sceneId: scene.id,
+          sceneTitle: scene.name,
+          museumName: museum.name,
+          url: window.location.href,
         });
-        this.appElement.appendChild(this.fcChatPanel.getElement());
+        // FcChatPanel 已自动 append 到 body，不需要再 append
       }
     } catch (err) {
       if (__VR_DEBUG__) {

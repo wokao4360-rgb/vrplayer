@@ -1,324 +1,212 @@
-import { FcChatClient, type FcChatConfig, type FcChatContext } from '../services/fcChatClient';
+import { FcChatClient, FcChatContext } from "../services/fcChatClient";
 
 type Message = {
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   text: string;
 };
 
-type FcChatPanelOptions = {
-  endpoint: string;
-  authToken?: string;
-  context?: FcChatContext; // 可选：传 museumId/sceneId 等上下文
-};
-
 export class FcChatPanel {
-  private element: HTMLElement;
-  private isOpen = false;
-  private input: HTMLInputElement | null = null;
-  private messagesContainer: HTMLElement | null = null;
-  private errorEl: HTMLElement | null = null;
-  private messages: Message[] = [
-    { role: 'assistant', text: '我是三馆学伴。你可以问我：展览亮点、参观路线、人物故事等。' },
-  ];
-  private loading = false;
-  private client: FcChatClient;
-  private context: FcChatContext | undefined;
+  private root!: HTMLDivElement;
+  private header!: HTMLDivElement;
+  private body!: HTMLDivElement;
+  private input!: HTMLInputElement;
+  private sendBtn!: HTMLButtonElement;
 
-  constructor(options: FcChatPanelOptions) {
-    const config: FcChatConfig = {
-      endpoint: options.endpoint,
-      authToken: options.authToken,
-      timeoutMs: 15000,
-    };
-    this.client = new FcChatClient(config);
-    this.context = options.context;
-    
-    this.element = document.createElement('div');
-    this.element.className = 'fc-chat-panel-container';
-    this.render();
-    this.applyStyles();
+  private messages: Message[] = [];
+  private client: FcChatClient;
+  private context?: FcChatContext;
+
+  private dragging = false;
+  private dragOffsetX = 0;
+  private dragOffsetY = 0;
+
+  constructor(client: FcChatClient, context?: FcChatContext) {
+    this.client = client;
+    this.context = context;
+    this.createUI();
+    this.bindDrag();
   }
 
-  private render(): void {
-    this.element.innerHTML = `
-      <button class="fc-chat-toggle-btn" style="display: none;">三馆学伴</button>
-      <div class="fc-chat-panel" style="display: none;">
-        <div class="fc-chat-header">
-          <div class="fc-chat-title">三馆学伴</div>
-          <div class="fc-chat-header-actions">
-            <button class="fc-chat-clear-btn">清空</button>
-            <button class="fc-chat-close-btn">✕</button>
-          </div>
-        </div>
-        <div class="fc-chat-messages"></div>
-        <div class="fc-chat-footer">
-          <div class="fc-chat-error"></div>
-          <div class="fc-chat-input-row">
-            <input 
-              class="fc-chat-input" 
-              type="text" 
-              placeholder="输入问题，回车发送"
-            />
-            <button class="fc-chat-send-btn">发送</button>
-          </div>
-        </div>
-      </div>
+  /* ---------------- UI ---------------- */
+
+  private createUI() {
+    // root
+    this.root = document.createElement("div");
+    this.root.style.cssText = `
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: 360px;
+      height: 420px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.18);
+      display: flex;
+      flex-direction: column;
+      z-index: 9999;
+      resize: both;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     `;
 
-    const toggleBtn = this.element.querySelector('.fc-chat-toggle-btn') as HTMLButtonElement;
-    const panel = this.element.querySelector('.fc-chat-panel') as HTMLElement;
-    const closeBtn = this.element.querySelector('.fc-chat-close-btn') as HTMLButtonElement;
-    const clearBtn = this.element.querySelector('.fc-chat-clear-btn') as HTMLButtonElement;
-    const sendBtn = this.element.querySelector('.fc-chat-send-btn') as HTMLButtonElement;
-    this.input = this.element.querySelector('.fc-chat-input') as HTMLInputElement;
-    this.messagesContainer = this.element.querySelector('.fc-chat-messages') as HTMLElement;
-    this.errorEl = this.element.querySelector('.fc-chat-error') as HTMLElement;
+    /* ---------- header ---------- */
+    this.header = document.createElement("div");
+    this.header.innerText = "三馆学伴";
+    this.header.style.cssText = `
+      height: 40px;
+      line-height: 40px;
+      padding: 0 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #111;
+      background: #f5f7fa;
+      cursor: move;
+      user-select: none;
+      border-bottom: 1px solid #e5e7eb;
+      flex-shrink: 0;
+    `;
+    this.root.appendChild(this.header);
 
-    toggleBtn?.addEventListener('click', () => this.open());
-    closeBtn?.addEventListener('click', () => this.close());
-    clearBtn?.addEventListener('click', () => this.clearMessages());
-    sendBtn?.addEventListener('click', () => this.handleSend());
-    this.input?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        this.handleSend();
-      }
+    /* ---------- body ---------- */
+    this.body = document.createElement("div");
+    this.body.style.cssText = `
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      background: #fafafa;
+    `;
+    this.root.appendChild(this.body);
+
+    /* ---------- footer ---------- */
+    const footer = document.createElement("div");
+    footer.style.cssText = `
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      border-top: 1px solid #e5e7eb;
+      background: #fff;
+      flex-shrink: 0;
+    `;
+
+    this.input = document.createElement("input");
+    this.input.placeholder = "输入问题，回车发送";
+    this.input.style.cssText = `
+      flex: 1;
+      height: 32px;
+      font-size: 13px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      outline: none;
+    `;
+
+    this.sendBtn = document.createElement("button");
+    this.sendBtn.innerText = "发送";
+    this.sendBtn.style.cssText = `
+      height: 32px;
+      padding: 0 14px;
+      font-size: 13px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #2563eb;
+      color: #fff;
+    `;
+
+    footer.appendChild(this.input);
+    footer.appendChild(this.sendBtn);
+    this.root.appendChild(footer);
+
+    document.body.appendChild(this.root);
+
+    this.sendBtn.onclick = () => this.send();
+    this.input.onkeydown = (e) => {
+      if (e.key === "Enter") this.send();
+    };
+
+    // greeting
+    this.addMessage("assistant", "我是三馆学伴，可以为你介绍展览亮点、参观路线和人物故事。");
+  }
+
+  /* ---------------- Drag ---------------- */
+
+  private bindDrag() {
+    this.header.addEventListener("mousedown", (e) => {
+      this.dragging = true;
+      const rect = this.root.getBoundingClientRect();
+      this.dragOffsetX = e.clientX - rect.left;
+      this.dragOffsetY = e.clientY - rect.top;
+      document.body.style.userSelect = "none";
     });
 
-    this.updateMessagesDisplay();
-    this.updateToggleButton();
+    document.addEventListener("mousemove", (e) => {
+      if (!this.dragging) return;
+      this.root.style.left = `${e.clientX - this.dragOffsetX}px`;
+      this.root.style.top = `${e.clientY - this.dragOffsetY}px`;
+      this.root.style.right = "auto";
+      this.root.style.bottom = "auto";
+    });
+
+    document.addEventListener("mouseup", () => {
+      this.dragging = false;
+      document.body.style.userSelect = "";
+    });
   }
 
-  private updateToggleButton(): void {
-    const toggleBtn = this.element.querySelector('.fc-chat-toggle-btn') as HTMLButtonElement;
-    const panel = this.element.querySelector('.fc-chat-panel') as HTMLElement;
-    if (this.isOpen) {
-      toggleBtn.style.display = 'none';
-      panel.style.display = 'flex';
+  /* ---------------- Messages ---------------- */
+
+  private addMessage(role: Message["role"], text: string) {
+    const msg = document.createElement("div");
+    msg.style.cssText = `
+      max-width: 80%;
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    `;
+
+    if (role === "user") {
+      msg.style.marginLeft = "auto";
+      msg.style.background = "#2563eb";
+      msg.style.color = "#fff";
     } else {
-      toggleBtn.style.display = 'block';
-      panel.style.display = 'none';
+      msg.style.marginRight = "auto";
+      msg.style.background = "#e5e7eb";
+      msg.style.color = "#111";
     }
+
+    // 去掉首字符异常空白
+    msg.textContent = text.trimStart();
+
+    this.body.appendChild(msg);
+    this.body.scrollTop = this.body.scrollHeight;
   }
 
-  private updateMessagesDisplay(): void {
-    if (!this.messagesContainer) return;
-    
-    this.messagesContainer.innerHTML = this.messages.map((msg) => {
-      const align = msg.role === 'user' ? 'flex-end' : 'flex-start';
-      const bg = msg.role === 'user' ? 'rgba(0,0,0,.08)' : 'rgba(33,150,243,.10)';
-      
-      return `
-        <div style="margin-bottom: 10px; display: flex; justify-content: ${align};">
-          <div style="max-width: 85%; padding: 8px 10px; border-radius: 10px; background: ${bg}; white-space: pre-wrap; line-height: 1.45;">
-            ${this.escapeHtml(msg.text)}
-          </div>
-        </div>
-      `;
-    }).join('');
-    
-    // 滚动到底部
-    this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
-  }
+  /* ---------------- Send ---------------- */
 
-  private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+  private async send() {
+    const q = this.input.value.trim();
+    if (!q) return;
 
-  private clearMessages(): void {
-    this.messages = [
-      { role: 'assistant', text: '我是三馆学伴。你可以问我：展览亮点、参观路线、人物故事等。' },
-    ];
-    this.updateMessagesDisplay();
-  }
-
-  private async handleSend(): Promise<void> {
-    if (!this.input || this.loading) return;
-    
-    const question = this.input.value.trim();
-    if (!question) return;
-
-    this.input.value = '';
-    this.setError('');
-    this.setLoading(true);
-
-    this.messages.push({ role: 'user', text: question });
-    this.updateMessagesDisplay();
+    this.input.value = "";
+    this.addMessage("user", q);
 
     try {
-      const res = await this.client.ask(question, this.context);
-      this.messages.push({ role: 'assistant', text: res.answer });
-      this.updateMessagesDisplay();
+      const res = await this.client.ask(q, this.context);
+      this.addMessage("assistant", res.answer);
     } catch (e: any) {
-      const msg = String(e?.message ?? e ?? 'unknown error');
-      this.setError(msg);
-      this.messages.push({ role: 'assistant', text: `请求失败：${msg}` });
-      this.updateMessagesDisplay();
-    } finally {
-      this.setLoading(false);
+      this.addMessage("assistant", `请求失败：${e.message || "unknown error"}`);
     }
-  }
-
-  private setLoading(loading: boolean): void {
-    this.loading = loading;
-    if (this.input) {
-      this.input.disabled = loading;
-      this.input.placeholder = loading ? '发送中...' : '输入问题，回车发送';
-    }
-    const sendBtn = this.element.querySelector('.fc-chat-send-btn') as HTMLButtonElement;
-    if (sendBtn) {
-      sendBtn.disabled = loading;
-      sendBtn.style.opacity = loading ? '0.5' : '1';
-      sendBtn.style.cursor = loading ? 'not-allowed' : 'pointer';
-    }
-  }
-
-  private setError(error: string): void {
-    if (this.errorEl) {
-      this.errorEl.textContent = error || '';
-      this.errorEl.style.display = error ? 'block' : 'none';
-    }
-  }
-
-  open(): void {
-    this.isOpen = true;
-    this.updateToggleButton();
-  }
-
-  close(): void {
-    this.isOpen = false;
-    this.updateToggleButton();
   }
 
   getElement(): HTMLElement {
-    return this.element;
+    return this.root;
   }
 
   remove(): void {
-    this.element.remove();
-  }
-
-  private applyStyles(): void {
-    const style = document.createElement('style');
-    style.textContent = `
-      .fc-chat-panel-container {
-        position: fixed;
-        right: 16px;
-        bottom: 16px;
-        z-index: 99999;
-        font-family: system-ui, -apple-system, sans-serif;
-      }
-      
-      .fc-chat-toggle-btn {
-        padding: 10px 12px;
-        border-radius: 10px;
-        border: 1px solid rgba(0,0,0,.15);
-        background: white;
-        cursor: pointer;
-        box-shadow: 0 6px 24px rgba(0,0,0,.12);
-        font-size: 14px;
-        font-weight: 500;
-      }
-      
-      .fc-chat-panel {
-        width: 360px;
-        height: 420px;
-        border-radius: 12px;
-        border: 1px solid rgba(0,0,0,.15);
-        background: white;
-        box-shadow: 0 12px 40px rgba(0,0,0,.18);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      
-      .fc-chat-header {
-        padding: 10px;
-        border-bottom: 1px solid rgba(0,0,0,.08);
-        display: flex;
-        align-items: center;
-      }
-      
-      .fc-chat-title {
-        font-weight: 600;
-        font-size: 14px;
-      }
-      
-      .fc-chat-header-actions {
-        margin-left: auto;
-        display: flex;
-        gap: 8px;
-      }
-      
-      .fc-chat-clear-btn,
-      .fc-chat-close-btn {
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        color: #555;
-        font-size: 14px;
-        padding: 4px 8px;
-      }
-      
-      .fc-chat-close-btn {
-        font-size: 16px;
-        padding: 0;
-        width: 24px;
-        height: 24px;
-      }
-      
-      .fc-chat-messages {
-        flex: 1;
-        padding: 10px;
-        overflow: auto;
-      }
-      
-      .fc-chat-footer {
-        padding: 10px;
-        border-top: 1px solid rgba(0,0,0,.08);
-      }
-      
-      .fc-chat-error {
-        color: #c00;
-        font-size: 12px;
-        margin-bottom: 6px;
-        display: none;
-      }
-      
-      .fc-chat-input-row {
-        display: flex;
-        gap: 8px;
-      }
-      
-      .fc-chat-input {
-        flex: 1;
-        padding: 8px 10px;
-        border-radius: 10px;
-        border: 1px solid rgba(0,0,0,.2);
-        font-size: 14px;
-      }
-      
-      .fc-chat-input:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-      
-      .fc-chat-send-btn {
-        padding: 8px 12px;
-        border-radius: 10px;
-        border: 1px solid rgba(0,0,0,.15);
-        background: white;
-        cursor: pointer;
-        font-size: 14px;
-      }
-      
-      .fc-chat-send-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    `;
-    document.head.appendChild(style);
+    this.root.remove();
   }
 }
-

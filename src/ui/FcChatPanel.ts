@@ -1,4 +1,4 @@
-import { createFcChatClient, type FcChatClientOptions } from '../services/fcChatClient';
+import { FcChatClient, type FcChatConfig, type FcChatContext } from '../services/fcChatClient';
 
 type Message = {
   role: 'user' | 'assistant' | 'system';
@@ -8,7 +8,7 @@ type Message = {
 type FcChatPanelOptions = {
   endpoint: string;
   authToken?: string;
-  context?: Record<string, any>; // 可选：传 museumId/sceneId 等上下文
+  context?: FcChatContext; // 可选：传 museumId/sceneId 等上下文
 };
 
 export class FcChatPanel {
@@ -21,16 +21,17 @@ export class FcChatPanel {
     { role: 'assistant', text: '我是三馆学伴。你可以问我：展览亮点、参观路线、人物故事等。' },
   ];
   private loading = false;
-  private client: ReturnType<typeof createFcChatClient>;
-  private options: FcChatPanelOptions;
+  private client: FcChatClient;
+  private context: FcChatContext | undefined;
 
   constructor(options: FcChatPanelOptions) {
-    this.options = options;
-    this.client = createFcChatClient({
+    const config: FcChatConfig = {
       endpoint: options.endpoint,
       authToken: options.authToken,
       timeoutMs: 15000,
-    });
+    };
+    this.client = new FcChatClient(config);
+    this.context = options.context;
     
     this.element = document.createElement('div');
     this.element.className = 'fc-chat-panel-container';
@@ -146,7 +147,7 @@ export class FcChatPanel {
     this.updateMessagesDisplay();
 
     try {
-      const res = await this.client.ask(question, this.options.context);
+      const res = await this.client.ask(question, this.context);
       this.messages.push({ role: 'assistant', text: res.answer });
       this.updateMessagesDisplay();
     } catch (e: any) {

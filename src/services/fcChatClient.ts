@@ -1,105 +1,164 @@
-export type FcChatSuccess = {
-  answer: string;
-  model?: string;
+// src/services/fcChatClient.ts
+// FC Chat client - robust response parsing (supports {answer} and {code,msg,data:{answer}})
+
+export type FcChatContext = {
+  museumId?: string;
+  museumName?: string;
+  sceneId?: string;
+  sceneTitle?: string;
+  url?: string;
 };
 
-export type FcChatUnauthorized = {
-  code: number; // e.g. 40101
-  msg: string;  // "unauthorized"
-  data?: any;
+export type FcChatConfig = {
+  endpoint: string;      // e.g. https://xxx.fcapp.run/
+  authToken?: string;    // optional
+  timeoutMs?: number;    // optional, default 15000
 };
 
-export type FcChatAny = FcChatSuccess | FcChatUnauthorized | any;
+type AnyObj = Record<string, any>;
 
-export type FcChatClientOptions = {
-  endpoint: string;          // 例如 https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/
-  authToken?: string;        // 可选：如果你后端需要鉴权（你截图里出现 unauthorized 就用这个）
-  timeoutMs?: number;        // 默认 15000
-};
-
-function withTimeout<T>(p: Promise<T>, ms: number, label = "timeout") {
-  return new Promise<T>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(label)), ms);
-    p.then((v) => { clearTimeout(t); resolve(v); })
-     .catch((e) => { clearTimeout(t); reject(e); });
-  });
+function safeJsonParse(text: string): any | null {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
-function normalizeEndpoint(url: string) {
-  // 保证末尾有 /
-  if (!url) return "";
-  return url.endsWith("/") ? url : url + "/";
+function pickString(x: any): string {
+  return typeof x === "string" ? x : "";
 }
 
-export function createFcChatClient(opts: FcChatClientOptions) {
-  const endpoint = normalizeEndpoint(opts.endpoint);
-  const timeoutMs = typeof opts.timeoutMs === "number" ? opts.timeoutMs : 15000;
+function normalizeEndpoint(endpoint: string): string {
+  // keep trailing slash behavior consistent
+  return endpoint.endsWith("/") ? endpoint : endpoint + "/";
+}
 
-  async function ask(question: string, extra?: Record<string, any>): Promise<FcChatSuccess> {
-    if (!endpoint) throw new Error("FC chat endpoint not set");
-    const q = (question ?? "").trim();
-    if (!q) throw new Error("empty question");
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      // 不要加任何 Access-Control-Allow-*（那是响应头，不是请求头）
+function buildPayload(question: string, ctx?: FcChatContext): AnyObj {
+  const payload: AnyObj = { question };
+  if (ctx && typeof ctx === "object") {
+    payload.context = {
+      museumId: ctx.museumId || "",
+      museumName: ctx.museumName || "",
+      sceneId: ctx.sceneId || "",
+      sceneTitle: ctx.sceneTitle || "",
+      url: ctx.url || "",
     };
+  }
+  return payload;
+}
 
-    // 可选鉴权（如果后端要求）
-    if (opts.authToken && String(opts.authToken).trim()) {
-      headers["Authorization"] = `Bearer ${String(opts.authToken).trim()}`;
-    }
-
-    const body = JSON.stringify({
-      question: q,
-      ...((extra && typeof extra === "object") ? extra : {}),
-    });
-
-    const res = await withTimeout(
-      fetch(endpoint, {
-        method: "POST",
-        mode: "cors",
-        headers,
-        body,
-      }),
-      timeoutMs
-    );
-
-    // 先读 text，再尝试 json（避免一些网关返回非 JSON 导致直接 throw）
-    const text = await res.text();
-    let data: any = null;
-    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-
-    // 你现在后端会返回 statusCode=200 + body里有 {"code":40101,...} 这种
-    // 这里统一识别并抛出可读错误
-    if (data && typeof data === "object" && typeof data.code === "number" && data.code === 40101) {
-      throw new Error(`unauthorized (code=${data.code})`);
-    }
-
-    // 也可能直接是 {answer:"..."}
-    const answer = data?.answer;
-    if (typeof answer === "string" && answer.trim()) {
-      return { answer: answer.trim(), model: data?.model };
-    }
-
-    // 有些实现可能返回 { body:"{...}" }
-    if (data?.body && typeof data.body === "string") {
-      try {
-        const inner = JSON.parse(data.body);
-        const a2 = inner?.answer;
-        if (typeof a2 === "string" && a2.trim()) return { answer: a2.trim(), model: inner?.model };
-        if (inner?.code === 40101) throw new Error(`unauthorized (code=${inner.code})`);
-      } catch {}
-    }
-
-    // HTTP 层非 2xx 也给出信息
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${typeof data === "string" ? data : JSON.stringify(data)}`);
-    }
-
-    throw new Error(`bad response: ${typeof data === "string" ? data : JSON.stringify(data)}`);
+// Accept these response shapes:
+//
+// A) { answer: "..." , model?: "..." }
+// B) { code: 0, msg: "ok", data: { answer: "...", model?: "..." } }
+// C) { code: 40101, msg: "unauthorized", data?: null }
+// D) other => error
+function extractAnswerOrError(json: any): { ok: true; answer: string; model?: string } | { ok: false; code?: number; msg: string } {
+  // A) direct answer
+  if (json && typeof json === "object" && typeof json.answer === "string" && json.answer.trim()) {
+    return { ok: true, answer: json.answer.trim(), model: pickString(json.model) || undefined };
   }
 
-  return { ask };
+  // B/C) envelope
+  if (json && typeof json === "object" && ("code" in json || "msg" in json || "data" in json)) {
+    const code = typeof json.code === "number" ? json.code : undefined;
+    const msg = pickString(json.msg) || "";
+
+    // B) success envelope
+    const data = json.data;
+    if ((code === 0 || code === undefined) && data && typeof data === "object") {
+      const ans = typeof data.answer === "string" ? data.answer.trim() : "";
+      if (ans) return { ok: true, answer: ans, model: pickString(data.model) || undefined };
+    }
+
+    // C) unauthorized or other business error
+    if (code === 40101 || msg.toLowerCase() === "unauthorized") {
+      return { ok: false, code: 40101, msg: "unauthorized" };
+    }
+
+    // other business error
+    if (code !== undefined && code !== 0) {
+      return { ok: false, code, msg: msg || `error code=${code}` };
+    }
+    if (msg && msg.toLowerCase() !== "ok") {
+      return { ok: false, code, msg };
+    }
+  }
+
+  return { ok: false, msg: "bad response" };
 }
 
+export class FcChatClient {
+  private endpoint: string;
+  private authToken: string;
+  private timeoutMs: number;
+
+  constructor(cfg: FcChatConfig) {
+    if (!cfg?.endpoint) throw new Error("fcChat endpoint is empty");
+    this.endpoint = normalizeEndpoint(cfg.endpoint);
+    this.authToken = cfg.authToken || "";
+    this.timeoutMs = typeof cfg.timeoutMs === "number" && cfg.timeoutMs > 0 ? cfg.timeoutMs : 15000;
+  }
+
+  async ask(question: string, ctx?: FcChatContext): Promise<{ answer: string; model?: string }> {
+    const q = (question || "").trim();
+    if (!q) throw new Error("empty question");
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      // If you later enable trigger auth, keep this:
+      // - many gateways accept "Authorization: Bearer <token>"
+      // - if not, you can also add "x-fc-authorization" etc. (but only when needed)
+      if (this.authToken) {
+        headers["Authorization"] = this.authToken.startsWith("Bearer ") ? this.authToken : `Bearer ${this.authToken}`;
+      }
+
+      const resp = await fetch(this.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(buildPayload(q, ctx)),
+        signal: controller.signal,
+      });
+
+      const text = await resp.text();
+      const json = safeJsonParse(text);
+
+      // If server returns non-JSON, treat as error text
+      if (!json) {
+        // HTTP status hint
+        const msg = text ? `bad response: ${text}` : `http ${resp.status}`;
+        throw new Error(msg);
+      }
+
+      const parsed = extractAnswerOrError(json);
+
+      if (parsed.ok) {
+        return { answer: parsed.answer, model: parsed.model };
+      }
+
+      // business unauthorized
+      if (parsed.code === 40101) {
+        const e: any = new Error("unauthorized (code=40101)");
+        e.code = 40101;
+        throw e;
+      }
+
+      // other business errors
+      const detail = parsed.code ? `${parsed.msg} (code=${parsed.code})` : parsed.msg;
+      throw new Error(detail || "request failed");
+    } catch (e: any) {
+      // AbortError
+      if (e?.name === "AbortError") throw new Error(`timeout (${this.timeoutMs}ms)`);
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}

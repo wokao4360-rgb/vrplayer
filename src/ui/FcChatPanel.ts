@@ -290,6 +290,23 @@ export class FcChatPanel {
     this.scrollToBottom();
   }
 
+  // create assistant bubble with loading dots
+  private addAssistantBubbleLoading() {
+    const row = document.createElement("div");
+    row.className = "fcchat-row is-assistant";
+    row.dataset.loading = "1";
+
+    const bubble = document.createElement("div");
+    bubble.className = "fcchat-bubble bubble-assistant";
+    bubble.innerHTML = '<span class="fcchat-typing"><span></span><span></span><span></span></span>';
+
+    row.appendChild(bubble);
+    this.list.appendChild(row);
+    this.scrollToBottom();
+
+    return { row, bubble };
+  }
+
   // create assistant bubble but return the bubble element for incremental rendering
   private addAssistantBubbleEmpty() {
     const row = document.createElement("div");
@@ -303,6 +320,17 @@ export class FcChatPanel {
     this.list.appendChild(row);
     this.scrollToBottom();
 
+    return bubble;
+  }
+
+  // replace loading bubble with empty bubble for typewriter
+  private replaceLoadingWithEmpty(loadingRow: HTMLElement): HTMLElement {
+    loadingRow.removeAttribute("data-loading");
+    const bubble = loadingRow.querySelector(".fcchat-bubble") as HTMLElement;
+    if (bubble) {
+      bubble.innerHTML = "";
+      bubble.textContent = "";
+    }
     return bubble;
   }
 
@@ -395,12 +423,15 @@ export class FcChatPanel {
     this.input.value = "";
     this.addMessage("user", q);
 
+    // immediately show loading bubble (three dots animation)
+    const { row: loadingRow, bubble: loadingBubble } = this.addAssistantBubbleLoading();
+    this.setBusy(true, "");
+
     try {
-      this.setBusy(true, "思考中…");
       const res = await this.client.ask(q, this.context);
 
-      // typing effect: create empty bubble then fill gradually
-      const bubble = this.addAssistantBubbleEmpty();
+      // replace loading bubble with empty bubble for typewriter
+      const bubble = this.replaceLoadingWithEmpty(loadingRow);
       this.setBusy(true, "输出中…");
       await this.typewriterRender(bubble, res.answer);
 
@@ -411,10 +442,20 @@ export class FcChatPanel {
 
       this.setBusy(false, "");
     } catch (e: any) {
-      const msg = typeof e?.message === "string" ? e.message : String(e);
-      this.addMessage("assistant", `请求失败：${msg}`);
+      // replace loading bubble with error message
+      const bubble = loadingRow.querySelector(".fcchat-bubble") as HTMLElement;
+      if (bubble) {
+        loadingRow.removeAttribute("data-loading");
+        const msg = typeof e?.message === "string" ? e.message : String(e);
+        bubble.textContent = `请求失败：${msg}`;
+        // update messages array
+        if (this.messages.length > 0 && this.messages[this.messages.length - 1].role === "assistant") {
+          this.messages[this.messages.length - 1].text = `请求失败：${msg}`;
+        }
+      }
       this.setBusy(false, "");
     }
+    this.scrollToBottom();
   }
 
   private injectStyles() {
@@ -606,6 +647,28 @@ export class FcChatPanel {
 
       .fcchat-root.is-swiping{
         transition: none;
+      }
+
+      /* 思考中动画 */
+      .fcchat-typing{
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 0;
+      }
+      .fcchat-typing span{
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: fcchat-typing-bounce 1.4s infinite ease-in-out;
+      }
+      .fcchat-typing span:nth-child(1){ animation-delay: -0.32s; }
+      .fcchat-typing span:nth-child(2){ animation-delay: -0.16s; }
+      .fcchat-typing span:nth-child(3){ animation-delay: 0; }
+      @keyframes fcchat-typing-bounce{
+        0%, 80%, 100%{ transform: scale(0.8); opacity: 0.5; }
+        40%{ transform: scale(1); opacity: 1; }
       }
     `;
     document.head.appendChild(style);

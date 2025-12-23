@@ -38,6 +38,7 @@ import { interactionBus } from './ui/interactionBus';
 import { __VR_DEBUG__ } from './utils/debug';
 import { dumpVRState, resetVRUI } from './utils/debugHelper';
 import { NorthCalibrationPanel } from './ui/NorthCalibrationPanel';
+import { FcChatPanel } from './ui/FcChatPanel';
 
 /**
  * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：
@@ -139,6 +140,7 @@ class App {
   private modeIndicatorEl: HTMLElement | null = null;
   private structureView2D: StructureView2D | null = null;
   private structureView3D: StructureView3D | null = null;
+  private fcChatPanel: FcChatPanel | null = null;
 
   constructor() {
     const appElement = document.getElementById('app');
@@ -858,6 +860,30 @@ class App {
     
     // 设置场景数据（用于 GroundNavDots）
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
+
+    // 创建聊天面板（学伴/问答）- 降级保护
+    try {
+      const fcChatConfig = this.config?.fcChat;
+      if (fcChatConfig?.endpoint && fcChatConfig.endpoint.trim()) {
+        this.fcChatPanel = new FcChatPanel({
+          endpoint: fcChatConfig.endpoint,
+          authToken: fcChatConfig.authToken,
+          context: {
+            museumId: museum.id,
+            sceneId: scene.id,
+            sceneTitle: scene.name,
+            museumName: museum.name,
+            url: window.location.href,
+          },
+        });
+        this.appElement.appendChild(this.fcChatPanel.getElement());
+      }
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] FcChatPanel 创建失败，跳过:', err);
+      }
+      this.fcChatPanel = null;
+    }
   }
 
   /**
@@ -991,6 +1017,11 @@ class App {
     if (this.structureView3D) {
       this.structureView3D.remove();
       this.structureView3D = null;
+    }
+
+    if (this.fcChatPanel) {
+      this.fcChatPanel.remove();
+      this.fcChatPanel = null;
     }
 
     // 重置 mode（刷新后回到 tour）

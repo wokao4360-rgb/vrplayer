@@ -68,8 +68,14 @@ export interface Museum {
   scenes: Scene[];
 }
 
+export interface FcChatConfig {
+  endpoint?: string;
+  authToken?: string;
+}
+
 export interface AppConfig {
   appName: string;
   museums: Museum[];
+  fcChat?: FcChatConfig;
 }
 

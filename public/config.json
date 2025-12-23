@@ -1,5 +1,9 @@
 {
   "appName": "王鼎纪念馆",
+  "fcChat": {
+    "endpoint": "https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/",
+    "authToken": ""
+  },
   "museums": [
     {
       "id": "wangding",

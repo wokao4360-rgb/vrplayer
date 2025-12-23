@@ -49,7 +49,7 @@
           "name": "前院与故居外景",
           "panoLow": "1",
           "pano": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
-          "thumb": "1",
+          "thumb": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
           "initialView": { "yaw": 27, "pitch": 0, "fov": 75 },
           "northYaw": -27.0,
           "mapPoint": { "x": 420, "y": 310 },

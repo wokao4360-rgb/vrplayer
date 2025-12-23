@@ -9,9 +9,9 @@
       "id": "wangding",
       "name": "王鼎纪念馆",
       "description": "王鼎纪念馆以清末名臣王鼎的生平事迹为主线，展示其禁烟、保疆卫国的历史贡献，面向师生开展红色研学与爱国主义教育。",
-      "cover": "https://assets.xn--48s508d.xyz/demo.jpg",
+      "cover": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
       "map": {
-        "image": "https://assets.xn--48s508d.xyz/demo.jpg",
+        "image": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
         "width": 1000,
         "height": 600
       },
@@ -19,9 +19,9 @@
         {
           "id": "gate",
           "name": "正门与序厅",
-          "panoLow": "https://assets.xn--48s508d.xyz/demo.jpg",
-          "pano": "https://assets.xn--48s508d.xyz/demo.jpg",
-          "thumb": "https://assets.xn--48s508d.xyz/demo.jpg",
+          "panoLow": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "pano": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "thumb": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
           "initialView": { "yaw": 27.0, "pitch": 27.0, "fov": 75 },
           "northYaw": -27.0,
           "mapPoint": { "x": 180, "y": 320 },
@@ -47,9 +47,9 @@
         {
           "id": "front_yard",
           "name": "前院与故居外景",
-          "panoLow": "https://assets.xn--48s508d.xyz/demo.jpg",
-          "pano": "https://assets.xn--48s508d.xyz/demo.jpg",
-          "thumb": "https://assets.xn--48s508d.xyz/demo.jpg",
+          "panoLow": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "pano": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "thumb": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
           "initialView": { "yaw": 27, "pitch": 0, "fov": 75 },
           "northYaw": -27.0,
           "mapPoint": { "x": 420, "y": 310 },
@@ -83,9 +83,9 @@
         {
           "id": "exhibit_hall",
           "name": "生平展厅",
-          "panoLow": "https://assets.xn--48s508d.xyz/demo.jpg",
-          "pano": "https://assets.xn--48s508d.xyz/demo.jpg",
-          "thumb": "https://assets.xn--48s508d.xyz/demo.jpg",
+          "panoLow": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "pano": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "thumb": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
           "initialView": { "yaw": 90, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 620, "y": 260 },
           "hotspots": [
@@ -118,9 +118,9 @@
         {
           "id": "memorial_wall",
           "name": "家国记忆墙（总结）",
-          "panoLow": "https://assets.xn--48s508d.xyz/demo.jpg",
-          "pano": "https://assets.xn--48s508d.xyz/demo.jpg",
-          "thumb": "https://assets.xn--48s508d.xyz/demo.jpg",
+          "panoLow": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "pano": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "thumb": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
           "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 780, "y": 240 },
           "hotspots": [

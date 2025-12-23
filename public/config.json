@@ -20,7 +20,7 @@
           "id": "gate",
           "name": "正门与序厅",
           "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
-          "pano": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "pano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
           "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
           "initialView": { "yaw": 27.0, "pitch": 27.0, "fov": 75 },
           "northYaw": -27.0,
@@ -47,9 +47,9 @@
         {
           "id": "front_yard",
           "name": "前院与故居外景",
-          "panoLow": "1",
+          "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
           "pano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
-          "thumb": "王腾2",
+          "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
           "initialView": { "yaw": 27, "pitch": 0, "fov": 75 },
           "northYaw": -27.0,
           "mapPoint": { "x": 420, "y": 310 },
@@ -83,9 +83,9 @@
         {
           "id": "exhibit_hall",
           "name": "生平展厅",
-          "panoLow": "王腾2",
-          "pano": "https://youke2.picui.cn/s1/2025/12/23/694a6cc034718.png",
-          "thumb": "王腾2",
+          "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
+          "pano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
+          "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
           "initialView": { "yaw": 90, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 620, "y": 260 },
           "hotspots": [
@@ -118,9 +118,9 @@
         {
           "id": "memorial_wall",
           "name": "家国记忆墙（总结）",
-          "panoLow": "王腾2",
-          "pano": "王腾2",
-          "thumb": "王腾2",
+          "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
+          "pano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
+          "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
           "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 780, "y": 240 },
           "hotspots": [

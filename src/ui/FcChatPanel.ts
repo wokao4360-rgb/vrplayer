@@ -22,12 +22,15 @@ export class FcChatPanel {
   private dragOffsetX = 0;
   private dragOffsetY = 0;
 
-  // mobile swipe-to-close
   private isMobile = false;
   private swipeStartY = 0;
   private swipeActive = false;
 
   private messages: ChatMsg[] = [];
+
+  // typing effect controls
+  private typingTimer: number | null = null;
+  private typingAbortToken = 0;
 
   constructor(client: FcChatClient, context: FcChatContext) {
     this.client = client;
@@ -40,6 +43,7 @@ export class FcChatPanel {
   }
 
   public destroy() {
+    this.stopTyping(true);
     this.root?.remove();
     document.getElementById("fcchat-toggle-btn")?.remove();
   }
@@ -48,7 +52,6 @@ export class FcChatPanel {
     const mq1 = window.matchMedia?.("(max-width: 768px)").matches ?? false;
     const mq2 = window.matchMedia?.("(pointer: coarse)").matches ?? false;
     this.isMobile = mq1 || mq2;
-
     this.root.dataset.mobile = this.isMobile ? "1" : "0";
   }
 
@@ -84,16 +87,10 @@ export class FcChatPanel {
     headerRight.appendChild(this.clearBtn);
     headerRight.appendChild(this.closeBtn);
 
-    // mobile handle
-    const handle = document.createElement("div");
-    handle.className = "fcchat-handle";
-    this.header.appendChild(handle);
-
     const headerRow = document.createElement("div");
     headerRow.className = "fcchat-header-row";
     headerRow.appendChild(left);
     headerRow.appendChild(headerRight);
-
     this.header.appendChild(headerRow);
 
     this.body = document.createElement("div");
@@ -134,26 +131,23 @@ export class FcChatPanel {
 
     document.body.appendChild(this.root);
 
-    // default position (desktop)
     this.root.style.right = "18px";
     this.root.style.bottom = "18px";
 
-    // desktop drag
     this.header.addEventListener("mousedown", (e) => this.onDragStart(e));
     window.addEventListener("mousemove", (e) => this.onDragMove(e));
     window.addEventListener("mouseup", () => this.onDragEnd());
 
-    // mobile swipe-to-close (pointer events)
     this.header.addEventListener("pointerdown", (e) => this.onSwipeStart(e), { passive: false });
     this.header.addEventListener("pointermove", (e) => this.onSwipeMove(e), { passive: false });
     this.header.addEventListener("pointerup", (e) => this.onSwipeEnd(e));
     this.header.addEventListener("pointercancel", (e) => this.onSwipeEnd(e));
 
-    // on resize re-detect
     window.addEventListener("resize", () => this.detectMobile());
   }
 
   private hide() {
+    this.stopTyping(true);
     this.root.style.display = "none";
     this.ensureToggleButton();
   }
@@ -234,7 +228,6 @@ export class FcChatPanel {
       this.root.style.transform = "";
       return;
     }
-    // translate down a bit (visual feedback)
     this.root.style.transform = `translateY(${Math.min(dy, 200)}px)`;
   }
 
@@ -259,6 +252,7 @@ export class FcChatPanel {
   }
 
   private clear() {
+    this.stopTyping(true);
     this.messages = [];
     this.list.innerHTML = "";
     this.statusLine.textContent = "";
@@ -280,74 +274,147 @@ export class FcChatPanel {
     return (s ?? "").replace(/^\s+/, "");
   }
 
-  private addMessage(role: Role, text: string, isLoading = false) {
-    const msg: ChatMsg = { role, text: isLoading ? "" : this.normalizeText(text) };
+  private addMessage(role: Role, text: string) {
+    const msg: ChatMsg = { role, text: this.normalizeText(text) };
     this.messages.push(msg);
 
     const row = document.createElement("div");
     row.className = `fcchat-row ${role === "user" ? "is-user" : "is-assistant"}`;
-    if (isLoading) {
-      row.dataset.loading = "1";
-    }
 
     const bubble = document.createElement("div");
     bubble.className = `fcchat-bubble ${role === "user" ? "bubble-user" : "bubble-assistant"}`;
-    
-    if (isLoading) {
-      bubble.innerHTML = '<span class="fcchat-typing"><span></span><span></span><span></span></span>';
-    } else {
-      bubble.textContent = msg.text;
-    }
+    bubble.textContent = msg.text;
 
     row.appendChild(bubble);
     this.list.appendChild(row);
     this.scrollToBottom();
-    return row;
   }
 
-  private updateLastMessage(text: string) {
-    const rows = this.list.querySelectorAll('.fcchat-row[data-loading="1"]');
-    if (rows.length > 0) {
-      const lastRow = rows[rows.length - 1];
-      const bubble = lastRow.querySelector('.fcchat-bubble');
-      if (bubble) {
-        lastRow.removeAttribute('data-loading');
-        bubble.textContent = this.normalizeText(text);
-        // 更新消息数组中的最后一条
-        if (this.messages.length > 0) {
-          this.messages[this.messages.length - 1].text = this.normalizeText(text);
-        }
-      }
-    }
+  // create assistant bubble but return the bubble element for incremental rendering
+  private addAssistantBubbleEmpty() {
+    const row = document.createElement("div");
+    row.className = "fcchat-row is-assistant";
+
+    const bubble = document.createElement("div");
+    bubble.className = "fcchat-bubble bubble-assistant";
+    bubble.textContent = "";
+
+    row.appendChild(bubble);
+    this.list.appendChild(row);
+    this.scrollToBottom();
+
+    return bubble;
   }
 
   private scrollToBottom() {
     this.list.scrollTop = this.list.scrollHeight;
   }
 
+  private stopTyping(flush: boolean) {
+    this.typingAbortToken++;
+    if (this.typingTimer != null) {
+      window.clearTimeout(this.typingTimer);
+      this.typingTimer = null;
+    }
+    // flush behavior is handled by token logic in typewriter
+    // nothing else needed here
+  }
+
+  private async typewriterRender(targetEl: HTMLElement, fullText: string) {
+    const token = ++this.typingAbortToken; // new session token
+    const text = this.normalizeText(fullText);
+
+    // time budget by length
+    const len = text.length;
+    let budgetMs = 1200;
+    if (len <= 120) budgetMs = 900 + Math.floor(Math.random() * 400);
+    else if (len <= 400) budgetMs = 1800 + Math.floor(Math.random() * 800);
+    else budgetMs = 3000 + Math.floor(Math.random() * 1000);
+
+    // chunking: sometimes 1 char, sometimes 2-5 chars
+    let i = 0;
+    const start = performance.now();
+
+    return await new Promise<void>((resolve) => {
+      const step = () => {
+        // aborted (new send / close / clear)
+        if (token !== this.typingAbortToken) {
+          // flush instantly to avoid half message
+          targetEl.textContent = text;
+          this.scrollToBottom();
+          resolve();
+          return;
+        }
+
+        const elapsed = performance.now() - start;
+        const remaining = len - i;
+
+        // if time budget nearly exceeded, flush remaining
+        if (elapsed >= budgetMs || remaining <= 0) {
+          targetEl.textContent = text;
+          this.scrollToBottom();
+          resolve();
+          return;
+        }
+
+        // progress ratio and dynamic chunk size
+        const progress = i / Math.max(1, len);
+        let chunk = 1;
+
+        // Random-ish: early slower, mid faster, end medium
+        const r = Math.random();
+        if (progress < 0.15) chunk = r < 0.75 ? 1 : 2;
+        else if (progress < 0.7) chunk = r < 0.35 ? 2 : r < 0.75 ? 3 : 4;
+        else chunk = r < 0.5 ? 2 : 3;
+
+        chunk = Math.min(chunk, remaining);
+
+        const nextText = text.slice(0, i + chunk);
+        i += chunk;
+        targetEl.textContent = nextText;
+        this.scrollToBottom();
+
+        // interval jitter: 18~55ms with randomness; also occasional small pause
+        let delay = 18 + Math.floor(Math.random() * 38);
+        if (Math.random() < 0.06) delay += 60 + Math.floor(Math.random() * 90);
+
+        this.typingTimer = window.setTimeout(step, delay) as unknown as number;
+      };
+
+      step();
+    });
+  }
+
   private async onSend() {
     const q = this.input.value.trim();
     if (!q) return;
 
+    // if currently typing, force flush and stop before next request
+    this.stopTyping(true);
+
     this.input.value = "";
     this.addMessage("user", q);
-    
-    // 先添加"思考中"消息
-    this.addMessage("assistant", "", true);
-    this.setBusy(true, "");
 
     try {
+      this.setBusy(true, "思考中…");
       const res = await this.client.ask(q, this.context);
-      // 更新最后一条消息（替换"思考中"）
-      this.updateLastMessage(res.answer);
+
+      // typing effect: create empty bubble then fill gradually
+      const bubble = this.addAssistantBubbleEmpty();
+      this.setBusy(true, "输出中…");
+      await this.typewriterRender(bubble, res.answer);
+
+      // update messages array with final text
+      if (this.messages.length > 0 && this.messages[this.messages.length - 1].role === "assistant") {
+        this.messages[this.messages.length - 1].text = res.answer;
+      }
+
       this.setBusy(false, "");
     } catch (e: any) {
       const msg = typeof e?.message === "string" ? e.message : String(e);
-      // 更新最后一条消息（替换"思考中"为错误信息）
-      this.updateLastMessage(`请求失败：${msg}`);
+      this.addMessage("assistant", `请求失败：${msg}`);
       this.setBusy(false, "");
     }
-    this.scrollToBottom();
   }
 
   private injectStyles() {
@@ -378,20 +445,11 @@ export class FcChatPanel {
         display:flex;
         flex-direction: column;
         justify-content:center;
-        padding: 8px 10px 8px 10px;
+        padding: 10px 12px;
         border-bottom: 1px solid rgba(0,0,0,.06);
         background: #f8fafc;
         cursor: move;
         user-select: none;
-        gap: 6px;
-      }
-      .fcchat-handle{
-        display:none;
-        width: 44px;
-        height: 4px;
-        border-radius: 999px;
-        background: rgba(0,0,0,.18);
-        margin: 0 auto;
       }
       .fcchat-header-row{
         display:flex;
@@ -522,7 +580,6 @@ export class FcChatPanel {
         cursor: pointer;
       }
 
-      /* Mobile adaptation */
       @media (max-width: 768px), (pointer: coarse){
         .fcchat-root{
           left: 0 !important;
@@ -539,9 +596,7 @@ export class FcChatPanel {
         }
         .fcchat-header{
           cursor: default !important;
-          padding-top: 10px;
         }
-        .fcchat-handle{ display:block; }
         .fcchat-bubble{ max-width: 84%; }
         .fcchat-toggle-btn{
           right: 14px;
@@ -551,28 +606,6 @@ export class FcChatPanel {
 
       .fcchat-root.is-swiping{
         transition: none;
-      }
-
-      /* 思考中动画 */
-      .fcchat-typing{
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 2px 0;
-      }
-      .fcchat-typing span{
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: currentColor;
-        animation: fcchat-typing-bounce 1.4s infinite ease-in-out;
-      }
-      .fcchat-typing span:nth-child(1){ animation-delay: -0.32s; }
-      .fcchat-typing span:nth-child(2){ animation-delay: -0.16s; }
-      .fcchat-typing span:nth-child(3){ animation-delay: 0; }
-      @keyframes fcchat-typing-bounce{
-        0%, 80%, 100%{ transform: scale(0.8); opacity: 0.5; }
-        40%{ transform: scale(1); opacity: 1; }
       }
     `;
     document.head.appendChild(style);

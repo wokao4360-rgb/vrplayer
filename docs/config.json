@@ -19,8 +19,8 @@
         {
           "id": "gate",
           "name": "正门与序厅",
-          "panoLow": "王腾2",
-          "pano": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "panoLow": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
+          "pano": "王腾2",
           "thumb": "王腾2",
           "initialView": { "yaw": 27.0, "pitch": 27.0, "fov": 75 },
           "northYaw": -27.0,

@@ -19,9 +19,9 @@
         {
           "id": "gate",
           "name": "正门与序厅",
-          "panoLow": "1",
+          "panoLow": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
           "pano": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
-          "thumb": "1",
+          "thumb": "https://assets.xn--48s508d.xyz/demo%20(1).jpg",
           "initialView": { "yaw": 27.0, "pitch": 27.0, "fov": 75 },
           "northYaw": -27.0,
           "mapPoint": { "x": 180, "y": 320 },

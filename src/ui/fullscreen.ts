@@ -1,3 +1,5 @@
+import { isMouseDevice } from '../utils/deviceDetect';
+import { showToast } from './toast';
 
 type AnyDocument = Document & {
   webkitFullscreenElement?: Element | null;
@@ -47,8 +49,15 @@ export async function exitFullscreen(): Promise<void> {
  */
 export async function requestFullscreenBestEffort(el?: HTMLElement): Promise<void> {
   const target = el || document.body;
+  
+  // 鼠标端：在进入全屏前显示短暂提示（700ms）
+  // 注意：必须在 requestFullscreen 之前调用，进入全屏后会被 gating + clear 清掉
+  if (!isFullscreen() && isMouseDevice()) {
+    showToast('鼠标滑至最上方可退出全屏', 700);
+  }
+  
   await requestFullscreen(target);
-  // 全屏后不显示任何提示
+  // 全屏后不显示任何提示（toast.ts 中的 gating 会阻止）
 }
 
 /**

@@ -137,17 +137,17 @@ export class QualityIndicator {
     style.textContent = `
       .quality-indicator {
         position: fixed;
-        bottom: 20px;
-        right: 20px;
+        left: 50%;
+        top: calc(16px + env(safe-area-inset-top, 0px));
         z-index: 1000;
         pointer-events: none;
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateX(-50%) translateY(10px);
         transition: opacity 0.3s, transform 0.3s;
       }
       .quality-indicator.show {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(-50%) translateY(0);
       }
       .quality-indicator-content {
         display: flex;
@@ -180,16 +180,6 @@ export class QualityIndicator {
         border-left: 3px solid #e74c3c;
       }
       @media (max-width: 480px), ((max-width: 520px) and (pointer: coarse)) {
-        .quality-indicator {
-          left: 50%;
-          right: auto;
-          bottom: auto;
-          top: calc(12px + env(safe-area-inset-top, 0px));
-          transform: translateX(-50%) translateY(10px);
-        }
-        .quality-indicator.show {
-          transform: translateX(-50%) translateY(0);
-        }
         .quality-indicator-content {
           padding: 6px 12px;
           font-size: 12px;

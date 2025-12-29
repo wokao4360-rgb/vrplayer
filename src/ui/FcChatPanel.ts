@@ -131,8 +131,13 @@ export class FcChatPanel {
 
     document.body.appendChild(this.root);
 
+    // 默认隐藏，只显示右下角按钮
+    this.root.style.display = "none";
     this.root.style.right = "18px";
     this.root.style.bottom = "18px";
+    
+    // 确保显示右下角切换按钮
+    this.ensureToggleButton();
 
     this.header.addEventListener("mousedown", (e) => this.onDragStart(e));
     window.addEventListener("mousemove", (e) => this.onDragMove(e));

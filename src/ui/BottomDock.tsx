@@ -2,10 +2,13 @@ import type { DockTabKey } from './DockPanels';
 import { DockPanels } from './DockPanels';
 import type { Museum, Scene } from '../types/config';
 import { interactionBus } from './interactionBus';
+import { mountModal } from './Modal';
 
 type BottomDockOptions = {
   initialTab?: DockTabKey;
   onGuideClick?: () => void;
+  onOpenInfo?: () => void;
+  onOpenSettings?: () => void;
   sceneId?: string;
   sceneName?: string;
   museum?: Museum;
@@ -26,12 +29,16 @@ export class BottomDock {
   private dockEl: HTMLElement;
   private panels: DockPanels;
   private activeTab: DockTabKey;
+  private onOpenInfo?: () => void;
+  private onOpenSettings?: () => void;
   private unsubscribeInteracting: (() => void) | null = null;
   private unsubscribeIdle: (() => void) | null = null;
   private unsubscribeUIEngaged: (() => void) | null = null;
 
   constructor(options: BottomDockOptions = {}) {
     this.activeTab = options.initialTab || 'guide';
+    this.onOpenInfo = options.onOpenInfo;
+    this.onOpenSettings = options.onOpenSettings;
 
     this.element = document.createElement('div');
     this.element.className = 'vr-dock-wrap';
@@ -106,6 +113,21 @@ export class BottomDock {
     window.dispatchEvent(new CustomEvent('vr:bottom-dock-tab-change', {
       detail: { tab },
     }));
+
+    // 额外行为：信息 / 设置 打开弹窗
+    if (tab === 'info') {
+      if (this.onOpenInfo) {
+        this.onOpenInfo();
+      } else {
+        this.openFallbackInfoModal();
+      }
+    } else if (tab === 'settings') {
+      if (this.onOpenSettings) {
+        this.onOpenSettings();
+      } else {
+        this.openFallbackSettingsModal();
+      }
+    }
   }
 
   getActiveTab(): DockTabKey {
@@ -122,6 +144,36 @@ export class BottomDock {
 
   getElement(): HTMLElement {
     return this.element;
+  }
+
+  /**
+   * 没有传入上层回调时的兜底信息弹窗
+   */
+  private openFallbackInfoModal(): void {
+    mountModal({
+      title: '信息',
+      contentHtml: `
+        <div class="vr-modal-info-list">
+          <div><span class="vr-modal-info-row-label">馆：</span><span>-</span></div>
+          <div><span class="vr-modal-info-row-label">场景：</span><span>-</span></div>
+          <div><span class="vr-modal-info-row-label">采集于</span><span> 2025-12-27</span></div>
+        </div>
+      `,
+    });
+  }
+
+  /**
+   * 没有传入上层回调时的兜底设置弹窗
+   */
+  private openFallbackSettingsModal(): void {
+    mountModal({
+      title: '设置',
+      contentHtml: `
+        <div class="vr-modal-settings-list">
+          <div>此版本暂未接入设置功能。</div>
+        </div>
+      `,
+    });
   }
 
   remove(): void {

@@ -44,6 +44,9 @@ import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
 import { initVrMode, enableVrMode, disableVrMode, isVrModeEnabled, setInteractingCallback } from './utils/vrMode';
 import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/fullscreen';
+import { mountModal } from './ui/Modal';
+import { getPreferredQuality, setPreferredQuality, type QualityLevel } from './utils/qualityPreference';
+import { isTouchDevice, isMouseDevice } from './utils/deviceDetect';
 
 /**
  * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：
@@ -615,65 +618,7 @@ class App {
         } : undefined,
         showNorthCalibration: devMode, // 仅开发者模式显示
         onToggleVrMode: async () => {
-          // VR模式切换回调
-          if (!this.panoViewer) {
-            return false;
-          }
-
-          const currentlyEnabled = isVrModeEnabled();
-          
-          if (currentlyEnabled) {
-            // 当前已启用，关闭VR模式
-            disableVrMode();
-            this.panoViewer.setVrModeEnabled(false);
-            // 更新按钮状态
-            if (this.topRightControls) {
-              this.topRightControls.updateVrModeState(false);
-            }
-            // 退出全屏（推荐）
-            await exitFullscreenBestEffort();
-            return false;
-          } else {
-            // 当前未启用，启用VR模式
-            // 先进入全屏
-            try {
-              await requestFullscreenBestEffort(viewerContainer);
-            } catch (err) {
-              if (__VR_DEBUG__) {
-                console.debug('[VRMode] fullscreen request failed', err);
-              }
-              return false;
-            }
-
-            // 启用VR模式（陀螺仪控制）
-            // 记录初始视角作为基准
-            const initialView = this.panoViewer.getCurrentView();
-            
-            // 设置交互检查回调（拖拽时暂停陀螺仪更新）
-            setInteractingCallback(() => {
-              return this.panoViewer?.isInteracting() ?? false;
-            });
-            
-            const success = await enableVrMode((yawDelta, pitchDelta) => {
-              // 陀螺仪更新回调：更新视角
-              // yawDelta/pitchDelta是相对于初始设备方向的偏移
-              // 需要叠加到初始视角上
-              if (this.panoViewer) {
-                const newYaw = initialView.yaw + yawDelta;
-                const newPitch = Math.max(-90, Math.min(90, initialView.pitch + pitchDelta));
-                this.panoViewer.setView(newYaw, newPitch);
-              }
-            });
-
-            if (success) {
-              this.panoViewer.setVrModeEnabled(true);
-              return true;
-            } else {
-              // 权限失败，退出全屏
-              await exitFullscreenBestEffort();
-              return false;
-            }
-          }
+          return this.toggleVrModeFromUI(viewerContainer);
         },
       });
       this.appElement.appendChild(this.topRightControls.getElement());
@@ -861,6 +806,8 @@ class App {
             this.guideTray.setVisible(true);
           }
         },
+        onOpenInfo: () => this.openInfoModal(),
+        onOpenSettings: () => this.openSettingsModal(),
         sceneId: scene.id,
         sceneName: scene.name,
         museum: museum,
@@ -1370,6 +1317,219 @@ class App {
     setTimeout(() => {
       this.hideUIError();
     }, 3000);
+  }
+
+  /**
+   * 底部「信息」弹窗
+   */
+  private openInfoModal(): void {
+    const museumName = this.currentMuseum?.name || '-';
+    const sceneName = this.currentScene?.name || '-';
+
+    const content = document.createElement('div');
+    content.className = 'vr-modal-info-list';
+    content.innerHTML = `
+      <div><span class="vr-modal-info-row-label">馆：</span><span>${museumName}</span></div>
+      <div><span class="vr-modal-info-row-label">场景：</span><span>${sceneName}</span></div>
+      <div><span class="vr-modal-info-row-label">采集于</span><span> 2025-12-27</span></div>
+    `;
+
+    mountModal({
+      title: '信息',
+      contentEl: content,
+    });
+  }
+
+  /**
+   * 统一 VR 模式开关逻辑，供右上角按钮与设置弹窗共用
+   */
+  private async toggleVrModeFromUI(viewerContainer: HTMLElement): Promise<boolean> {
+    if (!this.panoViewer) {
+      return false;
+    }
+
+    const currentlyEnabled = isVrModeEnabled();
+
+    if (currentlyEnabled) {
+      // 当前已启用，关闭VR模式
+      disableVrMode();
+      this.panoViewer.setVrModeEnabled(false);
+      // 更新右上角按钮状态
+      if (this.topRightControls) {
+        this.topRightControls.updateVrModeState(false);
+      }
+      // 退出全屏（推荐）
+      await exitFullscreenBestEffort();
+      return false;
+    } else {
+      // 当前未启用，启用VR模式
+      try {
+        await requestFullscreenBestEffort(viewerContainer);
+      } catch (err) {
+        if (__VR_DEBUG__) {
+          console.debug('[VRMode] fullscreen request failed', err);
+        }
+        return false;
+      }
+
+      // 启用VR模式（陀螺仪控制）
+      const initialView = this.panoViewer.getCurrentView();
+
+      // 设置交互检查回调（拖拽时暂停陀螺仪更新）
+      setInteractingCallback(() => {
+        return this.panoViewer?.isInteracting() ?? false;
+      });
+
+      const success = await enableVrMode((yawDelta, pitchDelta) => {
+        if (this.panoViewer) {
+          const newYaw = initialView.yaw + yawDelta;
+          const newPitch = Math.max(-90, Math.min(90, initialView.pitch + pitchDelta));
+          this.panoViewer.setView(newYaw, newPitch);
+        }
+      });
+
+      if (success) {
+        this.panoViewer.setVrModeEnabled(true);
+        if (this.topRightControls) {
+          this.topRightControls.updateVrModeState(true);
+        }
+        return true;
+      } else {
+        await exitFullscreenBestEffort();
+        return false;
+      }
+    }
+  }
+
+  /**
+   * 底部「设置」弹窗
+   */
+  private openSettingsModal(): void {
+    const isTouch = isTouchDevice();
+    const isMouse = isMouseDevice();
+    const currentQuality = getPreferredQuality();
+
+    const container = document.createElement('div');
+    container.className = 'vr-modal-settings-list';
+
+    // 画质切换
+    const qualityLabel = document.createElement('div');
+    qualityLabel.className = 'vr-modal-settings-item-label';
+    qualityLabel.textContent = '画质';
+
+    const qualityGroup = document.createElement('div');
+    qualityGroup.className = 'vr-modal-settings-quality';
+
+    const highBtn = document.createElement('button');
+    highBtn.className = 'vr-modal-settings-quality-btn';
+    highBtn.textContent = '高清';
+    highBtn.dataset.level = 'high';
+
+    const lowBtn = document.createElement('button');
+    lowBtn.className = 'vr-modal-settings-quality-btn';
+    lowBtn.textContent = '省流';
+    lowBtn.dataset.level = 'low';
+
+    const applyQualityActive = (level: QualityLevel) => {
+      highBtn.classList.toggle('is-active', level === 'high');
+      lowBtn.classList.toggle('is-active', level === 'low');
+    };
+
+    applyQualityActive(currentQuality);
+
+    const handleQualityClick = (level: QualityLevel) => {
+      if (!this.currentScene || !this.panoViewer) return;
+      const prev = getPreferredQuality();
+      if (prev === level) return;
+      setPreferredQuality(level);
+      applyQualityActive(level);
+      // 使用 preserveView 重新加载当前场景资源
+      this.panoViewer.loadScene(this.currentScene, { preserveView: true });
+    };
+
+    highBtn.addEventListener('click', () => handleQualityClick('high'));
+    lowBtn.addEventListener('click', () => handleQualityClick('low'));
+
+    qualityGroup.appendChild(highBtn);
+    qualityGroup.appendChild(lowBtn);
+
+    const qualityRow = document.createElement('div');
+    qualityRow.appendChild(qualityLabel);
+    qualityRow.appendChild(qualityGroup);
+
+    // 重置视角
+    const resetLabel = document.createElement('div');
+    resetLabel.className = 'vr-modal-settings-item-label';
+    resetLabel.textContent = '重置视角';
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'vr-modal-settings-row-btn';
+    resetBtn.type = 'button';
+    resetBtn.textContent = '重置视角';
+    resetBtn.addEventListener('click', () => {
+      if (!this.currentScene || !this.panoViewer) return;
+      const iv = this.currentScene.initialView || { yaw: 0, pitch: 0, fov: 75 };
+      const worldYaw = iv.yaw || 0;
+      const internalYaw = -worldYaw;
+      const pitch = iv.pitch || 0;
+      const fov = iv.fov ?? 75;
+      this.panoViewer.setView(internalYaw, pitch, fov);
+    });
+
+    const resetRow = document.createElement('div');
+    resetRow.appendChild(resetLabel);
+    resetRow.appendChild(resetBtn);
+
+    // VR 眼镜
+    const vrLabel = document.createElement('div');
+    vrLabel.className = 'vr-modal-settings-item-label';
+    vrLabel.textContent = 'VR 眼镜';
+
+    const vrBtn = document.createElement('button');
+    vrBtn.className = 'vr-modal-settings-row-btn';
+    vrBtn.type = 'button';
+    vrBtn.textContent = 'VR 眼镜';
+
+    const syncVrBtnState = () => {
+      const active = isVrModeEnabled();
+      vrBtn.classList.toggle('is-on', active);
+    };
+
+    if (isTouch) {
+      syncVrBtnState();
+      vrBtn.addEventListener('click', async () => {
+        if (!this.panoViewer) return;
+        const viewerContainer = this.panoViewer.getDomElement();
+        const enabled = await this.toggleVrModeFromUI(viewerContainer);
+        if (enabled !== isVrModeEnabled()) {
+          // 兜底同步
+          syncVrBtnState();
+        } else {
+          syncVrBtnState();
+        }
+      });
+    } else if (isMouse) {
+      vrBtn.classList.add('is-disabled');
+      const handler = () => {
+        showToast('移动端访问可体验该功能', 1500);
+      };
+      vrBtn.addEventListener('mouseenter', handler);
+      vrBtn.addEventListener('click', handler);
+    }
+
+    const vrRow = document.createElement('div');
+    vrRow.appendChild(vrLabel);
+    vrRow.appendChild(vrBtn);
+
+    container.appendChild(qualityRow);
+    container.appendChild(resetRow);
+    container.appendChild(vrRow);
+
+    mountModal({
+      title: '设置',
+      contentEl: container,
+      panelClassName: 'vr-modal-settings',
+    });
   }
 }
 

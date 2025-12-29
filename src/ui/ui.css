@@ -518,6 +518,168 @@ body{
   background: rgba(255,255,255,0.18);
 }
 
+/* 通用信息/设置弹窗（右侧/居中卡片，不遮挡底部 Dock） */
+.vr-modal-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 4050; /* 高于 BottomDock(2500)、结构图(3000)，略低于 toast(5200) */
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.45), rgba(0,0,0,0.75));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.vr-modal-panel{
+  margin-right: 12px;
+  margin-left: 12px;
+  max-width: 360px;
+  width: min(86vw, 360px);
+  max-height: calc(100vh - 96px);
+  border-radius: 18px;
+  background: rgba(18,18,20,0.96);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+  color: var(--text);
+  padding: 14px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 768px), (pointer: coarse){
+  .vr-modal-overlay{
+    justify-content: center;
+    align-items: flex-end;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); /* 预留底部按钮组空间 */
+  }
+  .vr-modal-panel{
+    width: min(96vw, 420px);
+    max-height: calc(70vh);
+  }
+}
+
+.vr-modal-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.vr-modal-header-title{
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.vr-modal-header-close{
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  border: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.94);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vr-modal-header-close:active{
+  transform: scale(0.96);
+  background: rgba(255,255,255,0.18);
+}
+
+.vr-modal-body{
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 4px;
+}
+
+.vr-modal-info-list{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.86);
+}
+
+.vr-modal-info-row-label{
+  display: inline-block;
+  min-width: 3em;
+  color: rgba(255,255,255,0.65);
+}
+
+.vr-modal-settings-list{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+}
+
+.vr-modal-settings-item-label{
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+}
+
+.vr-modal-settings-quality{
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.06);
+  gap: 4px;
+}
+
+.vr-modal-settings-quality-btn{
+  min-width: 60px;
+  padding: 6px 10px;
+  border-radius: 9999px;
+  border: 0;
+  font-size: 12px;
+  color: rgba(255,255,255,0.78);
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vr-modal-settings-quality-btn.is-active{
+  background: rgba(255,255,255,0.94);
+  color: #111;
+}
+
+.vr-modal-settings-row-btn{
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: 0;
+  font-size: 13px;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.94);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vr-modal-settings-row-btn:active{
+  transform: scale(0.97);
+  background: rgba(255,255,255,0.18);
+}
+
+.vr-modal-settings-row-btn.is-on{
+  background: rgba(76,175,80,0.85);
+  color: #fff;
+}
+
+.vr-modal-settings-row-btn.is-disabled{
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* SceneStrip 场景导览条 */
 .vr-scenestrip{
   position: fixed;

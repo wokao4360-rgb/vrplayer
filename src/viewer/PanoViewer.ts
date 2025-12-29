@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Scene, InitialView } from '../types/config';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { LoadStatus } from '../ui/QualityIndicator';
+import { getPreferredQuality } from '../utils/qualityPreference';
 import { NadirPatch } from './NadirPatch';
 import { getYawPitchFromNDC, screenToNDC } from './picking';
 import { CompassDisk } from '../ui/CompassDisk';
@@ -410,7 +411,7 @@ export class PanoViewer {
    * 
    * 支持渐进式加载：先加载低清图（panoLow），再无缝替换为高清图（pano）
    */
-  loadScene(sceneData: Scene): void {
+  loadScene(sceneData: Scene, options?: { preserveView?: boolean }): void {
     // 重置状态
     this.isDegradedMode = false;
     this.updateLoadStatus(LoadStatus.LOADING_LOW);
@@ -428,22 +429,26 @@ export class PanoViewer {
 
     // 【最终铁律】所有来自 config.json 的 yaw（northYaw、initialView.yaw）都是【现实世界角度】
     // 进入渲染/罗盘系统前，必须统一取反一次：internalYaw = -worldYaw
-    
-    // 设置初始视角（world yaw → internal yaw）
-    // 注意：如果 this.yaw 已经被 setView 设置过（例如来自 URL 参数），则不再覆盖
-    const iv = sceneData.initialView;
-    const worldInitialYaw = iv.yaw || 0;
-    // 只有在 yaw 为初始值（0）或未设置时才使用 initialView.yaw
-    // 这样可以保留 URL 参数或 setView 设置的值
-    if (this.yaw === 0 && worldInitialYaw !== 0) {
-      this.yaw = -worldInitialYaw; // 统一取反：现实世界 → 内部坐标系
+    //
+    // preserveView = true 时，切换清晰度时保持当前视角，不重置 yaw/pitch/fov
+    const preserveView = options?.preserveView === true;
+    if (!preserveView) {
+      // 设置初始视角（world yaw → internal yaw）
+      // 注意：如果 this.yaw 已经被 setView 设置过（例如来自 URL 参数），则不再覆盖
+      const iv = sceneData.initialView;
+      const worldInitialYaw = iv.yaw || 0;
+      // 只有在 yaw 为初始值（0）或未设置时才使用 initialView.yaw
+      // 这样可以保留 URL 参数或 setView 设置的值
+      if (this.yaw === 0 && worldInitialYaw !== 0) {
+        this.yaw = -worldInitialYaw; // 统一取反：现实世界 → 内部坐标系
+      }
+      this.pitch = iv.pitch || 0;
+      const preset = RENDER_PRESETS[this.renderProfile];
+      this.fov = iv.fov !== undefined ? iv.fov : preset.camera.defaultFov;
+      this.camera.fov = this.fov;
+      this.camera.updateProjectionMatrix();
+      this.updateCamera();
     }
-    this.pitch = iv.pitch || 0;
-    const preset = RENDER_PRESETS[this.renderProfile];
-    this.fov = iv.fov !== undefined ? iv.fov : preset.camera.defaultFov;
-    this.camera.fov = this.fov;
-    this.camera.updateProjectionMatrix();
-    this.updateCamera();
     
     // 初始化视角检测状态
     this.lastYaw = this.yaw;
@@ -484,23 +489,39 @@ export class PanoViewer {
     // 解析资源 URL（统一处理）
     const panoLowUrl = resolveAssetUrl(sceneData.panoLow, AssetType.PANO_LOW);
     const panoUrl = resolveAssetUrl(sceneData.pano, AssetType.PANO);
+
+    const quality = getPreferredQuality();
     
-    // 如果只提供了 pano，直接加载（作为高清图）
-    if (!panoLowUrl && panoUrl) {
-      this.loadSingleTexture(loader, geometry, panoUrl, false);
-      return;
-    }
-    
-    // 如果只提供了 panoLow，直接加载（作为低清图）
-    if (panoLowUrl && !panoUrl) {
-      this.loadSingleTexture(loader, geometry, panoLowUrl, true);
-      return;
-    }
-    
-    // 如果两者都提供了，先加载低清，再替换高清
-    if (panoLowUrl && panoUrl) {
-      this.loadProgressiveTextures(loader, geometry, panoLowUrl, panoUrl);
-      return;
+    // 画质偏好：
+    // - low：优先只加载低清图；如果没有低清则退回高清
+    // - high：沿用现有渐进式加载逻辑
+    if (quality === 'low') {
+      if (panoLowUrl) {
+        this.loadSingleTexture(loader, geometry, panoLowUrl, true);
+        return;
+      }
+      if (panoUrl) {
+        this.loadSingleTexture(loader, geometry, panoUrl, false);
+        return;
+      }
+    } else {
+      // 如果只提供了 pano，直接加载（作为高清图）
+      if (!panoLowUrl && panoUrl) {
+        this.loadSingleTexture(loader, geometry, panoUrl, false);
+        return;
+      }
+      
+      // 如果只提供了 panoLow，直接加载（作为低清图）
+      if (panoLowUrl && !panoUrl) {
+        this.loadSingleTexture(loader, geometry, panoLowUrl, true);
+        return;
+      }
+      
+      // 如果两者都提供了，先加载低清，再替换高清
+      if (panoLowUrl && panoUrl) {
+        this.loadProgressiveTextures(loader, geometry, panoLowUrl, panoUrl);
+        return;
+      }
     }
     
     // 如果都没有提供，报错

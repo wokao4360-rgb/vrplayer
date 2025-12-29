@@ -160,6 +160,15 @@ export async function enableVrMode(
 
   updateCallback = onUpdate;
 
+  // 先尝试锁定屏幕方向（部分浏览器支持）
+  try {
+    if (screen.orientation?.lock) {
+      await screen.orientation.lock('landscape');
+    }
+  } catch {
+    // 忽略失败（如 iOS Safari 不支持）
+  }
+
   // 监听设备方向事件
   orientationHandler = (e: DeviceOrientationEvent) => {
     if (!vrModeEnabled || !updateCallback) {
@@ -258,6 +267,14 @@ export function disableVrMode(): void {
   smoothedPitchDelta = 0;
   isFirstFrame = true;
   isInteractingCallback = null;
+
+  try {
+    if (screen.orientation?.unlock) {
+      screen.orientation.unlock();
+    }
+  } catch {
+    // ignore
+  }
 }
 
 /**

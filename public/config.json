@@ -18,7 +18,7 @@
       "scenes": [
         {
           "id": "gate",
-          "name": "正门与序厅",
+          "name": "正门与序厅1",
           "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
           "pano": "https://i.ibb.co/Q3mVmjwD/0-4-0.png",
           "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
@@ -29,7 +29,7 @@
             {
               "id": "gate_to_yard",
               "type": "scene",
-              "label": "步入前院",
+              "label": "步入西屋2",
               "yaw": 20,
               "pitch": -4,
               "target": { "museumId": "wangding", "sceneId": "front_yard", "yaw": 15, "pitch": 0 }
@@ -46,10 +46,10 @@
         },
         {
           "id": "front_yard",
-          "name": "前院与故居外景",
-          "panoLow": "https://pic1.imgdb.cn/item/694baab1b4105c208abfb8d5.jpg",
-          "pano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
-          "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
+          "name": "西屋2",
+          "panoLow": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
+          "pano": "https://i.ibb.co/vCs3h5Y4/AGC-20251227-093746924-PHOTOSPHERE.jpg",
+          "thumb": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
           "initialView": { "yaw": 27, "pitch": 0, "fov": 75 },
           "northYaw": -27.0,
           "mapPoint": { "x": 420, "y": 310 },
@@ -57,7 +57,7 @@
             {
               "id": "yard_to_gate",
               "type": "scene",
-              "label": "返回正门",
+              "label": "返回正门1",
               "yaw": -160,
               "pitch": 0,
               "target": { "museumId": "wangding", "sceneId": "gate", "yaw": -10, "pitch": 0 }
@@ -65,7 +65,7 @@
             {
               "id": "yard_to_hall",
               "type": "scene",
-              "label": "进入生平展厅",
+              "label": "进入东屋3",
               "yaw": 35,
               "pitch": -5,
               "target": { "museumId": "wangding", "sceneId": "exhibit_hall", "yaw": 90, "pitch": 0 }
@@ -82,7 +82,7 @@
         },
         {
           "id": "exhibit_hall",
-          "name": "生平展厅",
+          "name": "东屋3",
           "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
           "pano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
           "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
@@ -92,7 +92,7 @@
             {
               "id": "hall_to_yard",
               "type": "scene",
-              "label": "回到前院",
+              "label": "回到西屋2",
               "yaw": -150,
               "pitch": 0,
               "target": { "museumId": "wangding", "sceneId": "front_yard", "yaw": -20, "pitch": 0 }
@@ -100,7 +100,7 @@
             {
               "id": "hall_to_memorial",
               "type": "scene",
-              "label": "前往家国记忆墙",
+              "label": "前往北屋4",
               "yaw": 40,
               "pitch": 0,
               "target": { "museumId": "wangding", "sceneId": "memorial_wall", "yaw": 60, "pitch": 0 }
@@ -117,10 +117,10 @@
         },
         {
           "id": "memorial_wall",
-          "name": "家国记忆墙（总结）",
-          "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
-          "pano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
-          "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
+          "name": "北屋4",
+          "panoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
+          "pano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg",
+          "thumb": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
           "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },
           "mapPoint": { "x": 780, "y": 240 },
           "hotspots": [

@@ -63,16 +63,26 @@ export function createCompassTexture(size = 512): THREE.CanvasTexture {
   }
   ctx.restore();
 
-  // N/E/S/W（如视风格：浅色、低透明度）
+  // N/E/S/W（如视风格：发光白色字体，文字始终保持正向）
   const drawDir = (text: string, deg: number) => {
     const rad = (deg * Math.PI) / 180;
     const tx = cx + Math.sin(rad) * (r * 0.56);
     const ty = cy - Math.cos(rad) * (r * 0.56);
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    
+    // 如视风格：发光白色字体
+    ctx.save();
+    // 文字阴影（发光效果）
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    // 文字颜色（白色，较高透明度）
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.font = `600 ${Math.round(size * 0.06)}px system-ui, -apple-system, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, tx, ty);
+    ctx.restore();
   };
   drawDir('北', 0);
   drawDir('东', 90);

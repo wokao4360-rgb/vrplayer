@@ -71,6 +71,9 @@
   line-height: 1;
   transition: background 150ms ease-out, transform 150ms ease-out;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
 }
 .vr-community-close:hover{
   background: rgba(255,255,255,0.18);

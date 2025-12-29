@@ -55,9 +55,13 @@ export class CommunityPanel {
     closeBtn.className = 'vr-community-close';
     closeBtn.innerHTML = '×';
     closeBtn.setAttribute('aria-label', '关闭');
+    closeBtn.style.pointerEvents = 'auto';
+    closeBtn.style.zIndex = '10';
     closeBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
+      // 直接触发关闭逻辑
       window.dispatchEvent(new CustomEvent('vr:close-panels'));
     });
 

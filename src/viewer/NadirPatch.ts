@@ -150,7 +150,8 @@ export class NadirPatch {
     const meshRotationY = THREE.MathUtils.degToRad(-northYawDeg);
     this.mesh.rotation.y = meshRotationY;
     
-    // 纹理反向旋转，抵消 mesh 旋转，确保文字始终保持正向
+    // 纹理反向旋转，抵消 mesh 旋转，确保文字始终保持正向（如视风格）
+    // 这样无论盘面如何旋转，文字都保持正向可读
     this.texture.rotation = -meshRotationY;
     this.texture.center.set(0.5, 0.5);
     

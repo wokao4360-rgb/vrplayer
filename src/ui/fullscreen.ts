@@ -51,11 +51,9 @@ export async function requestFullscreenBestEffort(el?: HTMLElement): Promise<voi
   const target = el || document.body;
   await requestFullscreen(target);
   
-  // 显示全屏提示（根据设备类型）
-  if (isTouchDevice()) {
-    showToast('设备返回键可退出全屏', 2000);
-  } else if (isMouseDevice()) {
-    showToast('鼠标滑至最上方可退出全屏', 2000);
+  // 仅鼠标端显示全屏提示，触控设备不提示
+  if (isMouseDevice()) {
+    showToast('鼠标滑至最上方可退出全屏', 3000);
   }
 }
 
@@ -113,11 +111,9 @@ export async function toggleFullscreen(targetEl: HTMLElement): Promise<void> {
   await requestFullscreen(targetEl);
   await lockLandscapeBestEffort();
   
-  // 显示全屏提示（根据设备类型）
-  if (isTouchDevice()) {
-    showToast('设备返回键可退出全屏', 2000);
-  } else if (isMouseDevice()) {
-    showToast('鼠标滑至最上方可退出全屏', 2000);
+  // 仅鼠标端显示全屏提示，触控设备不提示
+  if (isMouseDevice()) {
+    showToast('鼠标滑至最上方可退出全屏', 3000);
   }
 }
 

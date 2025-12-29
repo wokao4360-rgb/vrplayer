@@ -223,9 +223,9 @@ export class NadirPatch {
   private createLabelSprites(scene: THREE.Scene, patchRadius: number, sphereRadius: number): void {
     const labels = [
       { text: '北', baseAngle: 0 },
-      { text: '东', baseAngle: 90 },
+      { text: '东', baseAngle: 270 }, // 东（右）
       { text: '南', baseAngle: 180 },
-      { text: '西', baseAngle: 270 },
+      { text: '西', baseAngle: 90 },  // 西（左）
     ];
 
     labels.forEach(({ text }) => {
@@ -287,9 +287,9 @@ export class NadirPatch {
   private updateLabelSprites(diskYaw: number): void {
     const labels = [
       { text: '北', baseAngle: 0 },
-      { text: '东', baseAngle: 90 },
+      { text: '东', baseAngle: 270 }, // 东（右）
       { text: '南', baseAngle: 180 },
-      { text: '西', baseAngle: 270 },
+      { text: '西', baseAngle: 90 },  // 西（左）
     ];
 
     labels.forEach(({ text, baseAngle }) => {

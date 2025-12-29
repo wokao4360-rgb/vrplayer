@@ -161,6 +161,19 @@ body{
   transition: opacity 300ms cubic-bezier(.2,.8,.2,1), 
               transform 300ms cubic-bezier(.2,.8,.2,1);
 }
+
+/* 手机端小屏：防止左下角水印与底部按钮叠压 */
+@media (max-width: 480px), ((max-width: 520px) and (pointer: coarse)) {
+  .vr-watermark{
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+  .vr-watermark__text{
+    font-size: 11px;
+    padding: 5px 8px;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+}
 /* 半透明让位：水印 */
 .vr-watermark.vr-ui-interacting{
   opacity: 0.35;
@@ -645,6 +658,22 @@ body{
   pointer-events: none; /* 让 viewer 可拖拽，交互交给内部 */
   transition: opacity 300ms cubic-bezier(.2,.8,.2,1), 
               transform 300ms cubic-bezier(.2,.8,.2,1);
+}
+
+/* 手机端小屏：底部按钮组增加安全区，防止叠压 */
+@media (max-width: 480px), ((max-width: 520px) and (pointer: coarse)) {
+  .vr-dock-wrap{
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* 右下角"三馆学伴"按钮上移，避免与底部"信息"按钮叠压 */
+  .fcchat-toggle-btn{
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    font-size: 11px !important;
+  }
 }
 /* 半透明让位：底部 Dock */
 .vr-dock-wrap.vr-ui-interacting{

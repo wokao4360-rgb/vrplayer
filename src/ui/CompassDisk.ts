@@ -249,9 +249,9 @@ export class CompassDisk {
       };
       
       updateLabel(this.northLabel, 0);   // 北
-      updateLabel(this.eastLabel, 90);   // 东
+      updateLabel(this.eastLabel, 270);  // 东（右）
       updateLabel(this.southLabel, 180); // 南
-      updateLabel(this.westLabel, 270);  // 西
+      updateLabel(this.westLabel, 90);    // 西（左）
       
       // 更新可视化验收点（显示 northYaw 和当前 yaw）
       this.updateYawLabel(yawDeg);

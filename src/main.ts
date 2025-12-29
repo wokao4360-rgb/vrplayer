@@ -42,7 +42,7 @@ import { FcChatPanel } from './ui/FcChatPanel';
 import { FcChatClient, type FcChatConfig } from './services/fcChatClient';
 import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
-import { initVrMode, enableVrMode, disableVrMode, isVrModeEnabled } from './utils/vrMode';
+import { initVrMode, enableVrMode, disableVrMode, isVrModeEnabled, setInteractingCallback } from './utils/vrMode';
 import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/fullscreen';
 
 /**
@@ -648,6 +648,12 @@ class App {
             // 启用VR模式（陀螺仪控制）
             // 记录初始视角作为基准
             const initialView = this.panoViewer.getCurrentView();
+            
+            // 设置交互检查回调（拖拽时暂停陀螺仪更新）
+            setInteractingCallback(() => {
+              return this.panoViewer?.isInteracting() ?? false;
+            });
+            
             const success = await enableVrMode((yawDelta, pitchDelta) => {
               // 陀螺仪更新回调：更新视角
               // yawDelta/pitchDelta是相对于初始设备方向的偏移

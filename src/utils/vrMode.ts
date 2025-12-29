@@ -37,6 +37,10 @@ const q0 = new Quaternion();
 const q1 = new Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -PI/2 around X
 const qCurrent = new Quaternion();
 const forward = new Vector3(0, 0, -1); // 基准前向向量
+const up = new Vector3(0, 1, 0); // 基准上向量（用于pitch计算）
+
+// 交互检查回调（由外部设置）
+let isInteractingCallback: (() => boolean) | null = null;
 
 /**
  * 获取屏幕方向角度（弧度）
@@ -124,6 +128,13 @@ async function requestIOSPermission(): Promise<boolean> {
 }
 
 /**
+ * 设置交互检查回调（用于拖拽时暂停陀螺仪更新）
+ */
+export function setInteractingCallback(callback: (() => boolean) | null): void {
+  isInteractingCallback = callback;
+}
+
+/**
  * 启用VR模式
  */
 export async function enableVrMode(
@@ -169,18 +180,36 @@ export async function enableVrMode(
       return; // 第一次不更新视角
     }
 
+    // 检查是否正在交互（拖拽），如果是则暂停陀螺仪更新
+    if (isInteractingCallback && isInteractingCallback()) {
+      return;
+    }
+
     // 计算相对旋转：qRel = qNow * qBaseline.invert()
     const qBaselineInv = qBaseline.clone().invert();
     const qRel = qNow.clone().multiply(qBaselineInv);
 
-    // 用相对旋转旋转基准前向向量
+    // 用相对旋转旋转基准向量
     const fwd = forward.clone().applyQuaternion(qRel);
+    const u = up.clone().applyQuaternion(qRel);
 
-    // 从前向向量解算yaw/pitch（弧度）
+    // yawDelta（左右转身）从forward向量推导
     // yaw = atan2(fwd.x, -fwd.z)
-    // pitch = asin(clamp(fwd.y, -1, 1))
-    const yawDeltaRad = Math.atan2(fwd.x, -fwd.z);
-    const pitchDeltaRad = Math.asin(Math.max(-1, Math.min(1, fwd.y)));
+    // 修正方向：手机向左转 => yawDelta应为负（视角向左）
+    let yawDeltaRad = Math.atan2(fwd.x, -fwd.z);
+    yawDeltaRad = -yawDeltaRad; // 取反修正方向
+
+    // pitchDelta（抬头/低头）从up向量推导
+    // 当手机前后倾斜时，u会在z方向产生变化，比fwd.y更稳
+    // pitch = atan2(u.z, u.y)
+    let pitchDeltaRad = Math.atan2(u.z, u.y);
+    // 根据viewer的pitch正方向决定符号：如果抬头变成视角向下，需要取反
+    // 这里先测试，如果方向反了再取反
+    pitchDeltaRad = -pitchDeltaRad; // 取反：抬头 => pitch增加（视角向上）
+
+    // clamp pitch到[-85°, 85°]（弧度）
+    const maxPitchRad = MathUtils.degToRad(85);
+    pitchDeltaRad = Math.max(-maxPitchRad, Math.min(maxPitchRad, pitchDeltaRad));
 
     // 平滑滤波（防止抖动）
     if (isFirstFrame) {
@@ -190,7 +219,7 @@ export async function enableVrMode(
     } else {
       // yaw使用角度lerp（处理跨-PI/PI边界）
       smoothedYawDelta = lerpAngleRad(smoothedYawDelta, yawDeltaRad, 0.15);
-      // pitch使用线性lerp
+      // pitch使用线性lerp（系数0.2）
       smoothedPitchDelta = smoothedPitchDelta + (pitchDeltaRad - smoothedPitchDelta) * 0.2;
     }
 
@@ -228,6 +257,7 @@ export function disableVrMode(): void {
   smoothedYawDelta = 0;
   smoothedPitchDelta = 0;
   isFirstFrame = true;
+  isInteractingCallback = null;
 }
 
 /**

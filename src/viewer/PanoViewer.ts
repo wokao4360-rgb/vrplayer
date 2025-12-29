@@ -726,6 +726,14 @@ export class PanoViewer {
     return this.vrModeEnabled;
   }
 
+  /**
+   * 检查是否正在交互（拖拽中）
+   * 用于VR模式下暂停陀螺仪更新
+   */
+  isInteracting(): boolean {
+    return this.isDragging || this.isPinching;
+  }
+
   private handleResize(): void {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;

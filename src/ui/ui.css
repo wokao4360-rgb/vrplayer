@@ -1804,11 +1804,11 @@ body{
   max-width: 80px;
 }
 
-/* Toast */
+/* Toast - 统一位置：顶部居中 */
 .vr-toast{
   position: fixed;
-  right: 12px;
-  bottom: calc(78px + env(safe-area-inset-bottom, 0px)); /* 避开 Dock */
+  left: 50%;
+  top: calc(16px + env(safe-area-inset-top, 0px));
   z-index: 5200;
   padding: 8px 10px;
   border-radius: 9999px;
@@ -1820,27 +1820,13 @@ body{
   letter-spacing: 0.02em;
   box-shadow: 0 10px 26px rgba(0,0,0,0.35);
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateX(-50%) translateY(6px);
   pointer-events: none;
   transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
 }
 .vr-toast.show{
   opacity: 1;
-  transform: translateY(0);
-}
-
-/* 手机端小屏：Toast 居中显示，避免与右上角按钮叠压 */
-@media (max-width: 480px), ((max-width: 520px) and (pointer: coarse)) {
-  .vr-toast{
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%) translateY(6px);
-    top: calc(12px + env(safe-area-inset-top, 0px));
-    bottom: auto;
-  }
-  .vr-toast.show{
-    transform: translateX(-50%) translateY(0);
-  }
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Hotspots */

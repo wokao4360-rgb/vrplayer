@@ -42,6 +42,8 @@ import { FcChatPanel } from './ui/FcChatPanel';
 import { FcChatClient, type FcChatConfig } from './services/fcChatClient';
 import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
+import { initVrMode, enableVrMode, disableVrMode, isVrModeEnabled } from './utils/vrMode';
+import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/fullscreen';
 
 /**
  * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：
@@ -115,6 +117,9 @@ initYieldClassManager();
 
 // 初始化全屏状态管理器
 initFullscreenState();
+
+// 初始化VR模式管理器（监听全屏状态变化）
+const setVrModeChangeCallback = initVrMode();
 
 // 监听全屏状态变化，清除所有提示
 const handleFullscreenChange = () => {
@@ -191,8 +196,15 @@ class App {
     const handler = () => {
       // 同步 TopRightControls 图标/aria
       this.topRightControls?.syncFullscreenState();
-      // 退出全屏后：尽量恢复方向锁定
+      // 同步VR模式状态（如果VR模式因退出全屏而关闭）
       if (!isFullscreen()) {
+        if (this.topRightControls && !isVrModeEnabled()) {
+          this.topRightControls.updateVrModeState(false);
+        }
+        // 重置PanoViewer的VR模式标志
+        if (this.panoViewer && this.panoViewer.isVrModeEnabled()) {
+          this.panoViewer.setVrModeEnabled(false);
+        }
         unlockOrientationBestEffort();
       }
     };
@@ -602,6 +614,61 @@ class App {
           this.openNorthCalibration(scene.id);
         } : undefined,
         showNorthCalibration: devMode, // 仅开发者模式显示
+        onToggleVrMode: async () => {
+          // VR模式切换回调
+          if (!this.panoViewer) {
+            return false;
+          }
+
+          const currentlyEnabled = isVrModeEnabled();
+          
+          if (currentlyEnabled) {
+            // 当前已启用，关闭VR模式
+            disableVrMode();
+            this.panoViewer.setVrModeEnabled(false);
+            // 更新按钮状态
+            if (this.topRightControls) {
+              this.topRightControls.updateVrModeState(false);
+            }
+            // 退出全屏（推荐）
+            await exitFullscreenBestEffort();
+            return false;
+          } else {
+            // 当前未启用，启用VR模式
+            // 先进入全屏
+            try {
+              await requestFullscreenBestEffort(viewerContainer);
+            } catch (err) {
+              if (__VR_DEBUG__) {
+                console.debug('[VRMode] fullscreen request failed', err);
+              }
+              return false;
+            }
+
+            // 启用VR模式（陀螺仪控制）
+            // 记录初始视角作为基准
+            const initialView = this.panoViewer.getCurrentView();
+            const success = await enableVrMode((yawDelta, pitchDelta) => {
+              // 陀螺仪更新回调：更新视角
+              // yawDelta/pitchDelta是相对于初始设备方向的偏移
+              // 需要叠加到初始视角上
+              if (this.panoViewer) {
+                const newYaw = initialView.yaw + yawDelta;
+                const newPitch = Math.max(-90, Math.min(90, initialView.pitch + pitchDelta));
+                this.panoViewer.setView(newYaw, newPitch);
+              }
+            });
+
+            if (success) {
+              this.panoViewer.setVrModeEnabled(true);
+              return true;
+            } else {
+              // 权限失败，退出全屏
+              await exitFullscreenBestEffort();
+              return false;
+            }
+          }
+        },
       });
       this.appElement.appendChild(this.topRightControls.getElement());
     } catch (err) {

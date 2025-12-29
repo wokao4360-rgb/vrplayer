@@ -139,6 +139,9 @@ export class PanoViewer {
   private isViewChanging: boolean = false;
   private viewChangeThreshold: number = 0.5; // 视角变化阈值（度）
 
+  // VR模式标志（禁用拖拽控制）
+  private vrModeEnabled = false;
+
   constructor(container: HTMLElement, debugMode = false) {
     this.container = container;
     this.debugMode = debugMode;
@@ -277,6 +280,8 @@ export class PanoViewer {
 
   private onPointerMove(e: MouseEvent): void {
     if (!this.isDragging) return;
+    // VR模式下禁用拖拽控制
+    if (this.vrModeEnabled) return;
     
     const deltaX = e.clientX - this.lastMouseX;
     const deltaY = e.clientY - this.lastMouseY;
@@ -335,7 +340,12 @@ export class PanoViewer {
       this.longPressTimer = null;
     }
     
+    // VR模式下禁用拖拽控制（但保留双指缩放）
     if (e.touches.length === 1 && this.isDragging) {
+      if (this.vrModeEnabled) {
+        // VR模式下禁用单指拖拽
+        return;
+      }
       const deltaX = e.touches[0].clientX - this.lastMouseX;
       const deltaY = e.touches[0].clientY - this.lastMouseY;
       
@@ -702,6 +712,24 @@ export class PanoViewer {
       this.camera.updateProjectionMatrix();
     }
     this.updateCamera();
+  }
+
+  /**
+   * 设置VR模式状态（启用/禁用拖拽控制）
+   */
+  setVrModeEnabled(enabled: boolean): void {
+    this.vrModeEnabled = enabled;
+    // 如果禁用VR模式，同时停止拖拽状态
+    if (!enabled) {
+      this.isDragging = false;
+    }
+  }
+
+  /**
+   * 获取VR模式状态
+   */
+  isVrModeEnabled(): boolean {
+    return this.vrModeEnabled;
   }
 
   private handleResize(): void {

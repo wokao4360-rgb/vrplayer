@@ -5,12 +5,14 @@
 
 import { isFullscreen, requestFullscreenBestEffort, exitFullscreenBestEffort } from './fullscreen';
 import { __VR_DEBUG__ } from '../utils/debug';
+import { isTouchDevice } from '../utils/deviceDetect';
 
 type TopRightControlsOptions = {
   viewerRootEl?: HTMLElement;
   onTogglePickMode?: () => boolean;
   onOpenNorthCalibration?: () => void;
   showNorthCalibration?: boolean; // 是否显示校准北向按钮（默认仅在 debug 模式）
+  onToggleVrMode?: () => Promise<boolean>; // VR模式切换回调，返回是否成功启用
 };
 
 function createFullscreenIcon(): string {
@@ -43,15 +45,19 @@ export class TopRightControls {
   private fullscreenBtn: HTMLButtonElement;
   private pickModeBtn: HTMLButtonElement | null = null;
   private northCalibrationBtn: HTMLButtonElement | null = null;
+  private vrModeBtn: HTMLButtonElement | null = null;
   private viewerRootEl?: HTMLElement;
   private onTogglePickMode?: () => boolean;
   private onOpenNorthCalibration?: () => void;
+  private onToggleVrMode?: () => Promise<boolean>;
   private isPickModeActive = false;
+  private isVrModeActive = false;
 
   constructor(options: TopRightControlsOptions = {}) {
     this.viewerRootEl = options.viewerRootEl;
     this.onTogglePickMode = options.onTogglePickMode;
     this.onOpenNorthCalibration = options.onOpenNorthCalibration;
+    this.onToggleVrMode = options.onToggleVrMode;
 
     this.element = document.createElement('div');
     this.element.className = 'vr-topright-controls';
@@ -126,7 +132,7 @@ export class TopRightControls {
 
     // 校准北向按钮（如果提供了回调，或显示标志为 true）
     const shouldShowNorthCalibration = options.showNorthCalibration !== false && 
-                                       (options.onOpenNorthCalibration || __VR_DEBUG__);
+                                     (options.onOpenNorthCalibration || __VR_DEBUG__);
     if (shouldShowNorthCalibration && this.onOpenNorthCalibration) {
       this.northCalibrationBtn = document.createElement('button');
       this.northCalibrationBtn.className = 'vr-topright-btn';
@@ -144,6 +150,31 @@ export class TopRightControls {
       this.element.appendChild(this.northCalibrationBtn);
     }
 
+    // VR眼镜按钮（仅移动端显示）
+    if (isTouchDevice() && this.onToggleVrMode) {
+      this.vrModeBtn = document.createElement('button');
+      this.vrModeBtn.className = 'vr-topright-btn';
+      this.vrModeBtn.setAttribute('aria-label', 'VR眼镜');
+      this.vrModeBtn.title = 'VR眼镜：转动设备控制视角';
+      this.vrModeBtn.textContent = '🥽';
+      this.vrModeBtn.style.fontSize = '18px';
+      this.vrModeBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.onToggleVrMode) {
+          try {
+            const isEnabled = await this.onToggleVrMode();
+            this.updateVrModeState(isEnabled);
+          } catch (err) {
+            if (__VR_DEBUG__) {
+              console.debug('[TopRightControls] VR mode toggle failed', err);
+            }
+          }
+        }
+      });
+      this.element.appendChild(this.vrModeBtn);
+    }
+
     this.element.appendChild(this.fullscreenBtn);
   }
 
@@ -156,6 +187,19 @@ export class TopRightControls {
         this.pickModeBtn.style.background = 'rgba(255,255,255,0.18)';
       } else {
         this.pickModeBtn.style.background = '';
+      }
+    }
+  }
+
+  updateVrModeState(isActive: boolean): void {
+    this.isVrModeActive = isActive;
+    if (this.vrModeBtn) {
+      this.vrModeBtn.setAttribute('aria-label', isActive ? '退出VR模式' : '进入VR模式');
+      this.vrModeBtn.title = isActive ? '退出VR模式' : 'VR眼镜：转动设备控制视角';
+      if (isActive) {
+        this.vrModeBtn.style.background = 'rgba(255,255,255,0.18)';
+      } else {
+        this.vrModeBtn.style.background = '';
       }
     }
   }

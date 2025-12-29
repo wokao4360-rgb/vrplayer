@@ -668,7 +668,13 @@ class App {
           appName: this.config?.appName,
           brandText: '鼎虎清源',
         });
-        this.appElement.appendChild(this.brandMark.getElement());
+        const el = this.brandMark.getElement();
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.openDingHuQingYuan();
+        });
+        this.appElement.appendChild(el);
       } else {
         // 如果已存在，复用现有元素
         if (__VR_DEBUG__) {
@@ -1320,6 +1326,21 @@ class App {
   }
 
   /**
+   * 统一打开“鼎虎清源”团队介绍弹窗
+   */
+  private openDingHuQingYuan(): void {
+    if (!this.brandMark) return;
+    try {
+      const modal = this.brandMark.getAboutModal();
+      modal.open();
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[openDingHuQingYuan] 打开团队介绍失败:', err);
+      }
+    }
+  }
+
+  /**
    * 底部「信息」弹窗
    */
   private openInfoModal(): void {
@@ -1334,9 +1355,24 @@ class App {
       <div><span class="vr-modal-info-row-label">采集于</span><span> 2025-12-27</span></div>
     `;
 
+    // 底部“鼎虎清源”链接
+    const link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'vr-modal-info-link';
+    link.textContent = '鼎虎清源';
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.openDingHuQingYuan();
+    });
+    content.appendChild(link);
+
     mountModal({
       title: '信息',
       contentEl: content,
+      onClose: () => {
+        this.bottomDock?.clearActive();
+      },
     });
   }
 
@@ -1526,9 +1562,12 @@ class App {
     container.appendChild(vrRow);
 
     mountModal({
-      title: '设置',
+      title: '更多',
       contentEl: container,
       panelClassName: 'vr-modal-settings',
+      onClose: () => {
+        this.bottomDock?.clearActive();
+      },
     });
   }
 }

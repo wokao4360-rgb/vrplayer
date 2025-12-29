@@ -70,6 +70,8 @@ export function mountModal(options: MountModalOptions): MountedModal {
   // 统一插入到 body 底部，确保层级最高且不干扰其它容器
   document.body.appendChild(overlay);
 
+  let closed = false;
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.stopPropagation();
@@ -96,6 +98,9 @@ export function mountModal(options: MountModalOptions): MountedModal {
 
   const api: MountedModal = {
     close: () => {
+      if (closed) return;
+      closed = true;
+
       // 清理事件监听
       window.removeEventListener('keydown', handleKeyDown);
       overlay.removeEventListener('click', handleOverlayClick);

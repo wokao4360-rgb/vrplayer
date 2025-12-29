@@ -20,8 +20,8 @@ const TAB_LABELS: Array<{ key: DockTabKey; label: string }> = [
   { key: 'guide', label: '导览' },
   // 移除 map 和 dollhouse，它们已移到顶部Tab
   { key: 'community', label: '社区' },
-  { key: 'settings', label: '设置' },
   { key: 'info', label: '信息' },
+  { key: 'settings', label: '更多' },
 ];
 
 export class BottomDock {
@@ -70,6 +70,8 @@ export class BottomDock {
         if (tab.key === 'guide' && options.onGuideClick) {
           options.onGuideClick();
         }
+        // 按钮只是触发动作，不保留选中态
+        this.clearActive();
       });
       this.dockEl.appendChild(btn);
     }
@@ -97,15 +99,16 @@ export class BottomDock {
   }
 
   private syncActiveClass(): void {
-    this.dockEl.querySelectorAll('.vr-dock-tab').forEach((el) => {
-      const key = el.getAttribute('data-tab') as DockTabKey | null;
-      if (!key) return;
-      el.classList.toggle('active', key === this.activeTab);
-    });
+    // 底部按钮不再有“激活”高亮状态，统一清除
+    this.clearActive();
   }
 
   setActiveTab(tab: DockTabKey): void {
-    if (this.activeTab === tab) return;
+    if (this.activeTab === tab) {
+      // 仍然确保清除高亮
+      this.syncActiveClass();
+      return;
+    }
     this.activeTab = tab;
     this.syncActiveClass();
     this.panels.setTab(tab);
@@ -144,6 +147,15 @@ export class BottomDock {
 
   getElement(): HTMLElement {
     return this.element;
+  }
+
+  /**
+   * 清除所有按钮的激活态（UI 上不保留高亮）
+   */
+  clearActive(): void {
+    this.dockEl.querySelectorAll('.vr-dock-tab').forEach((el) => {
+      el.classList.remove('active');
+    });
   }
 
   /**

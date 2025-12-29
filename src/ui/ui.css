@@ -614,6 +614,19 @@ body{
   color: rgba(255,255,255,0.65);
 }
 
+.vr-modal-info-link{
+  display: block;
+  width: 100%;
+  text-align: center;
+  text-decoration: underline;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 12px 0 4px;
+  color: inherit;
+  font-size: 13px;
+}
+
 .vr-modal-settings-list{
   display: flex;
   flex-direction: column;

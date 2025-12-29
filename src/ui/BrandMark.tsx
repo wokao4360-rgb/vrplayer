@@ -15,12 +15,6 @@ export class BrandMark {
     this.element = document.createElement('div');
     this.element.className = 'vr-brandmark';
     this.element.textContent = options.brandText || '鼎虎清源';
-
-    this.element.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.teamIntroModal.open();
-    });
   }
 
   getElement(): HTMLElement {

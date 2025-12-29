@@ -911,8 +911,8 @@ body{
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 盘面永远不旋转，固定在屏幕上 */
-  transform: none !important;
+  /* 盘面可以旋转，通过 --compass-disk-rot 控制 */
+  transform-origin: center center;
   transition: none !important;
 }
 
@@ -974,6 +974,7 @@ body{
   z-index: 1; /* 确保在 mask 上方 */
   /* 标签永远不旋转，固定在四个方向 */
   transition: none !important;
+  transform-origin: center center; /* 确保旋转中心在标签中心 */
 }
 
 /* 指针元素（指示当前朝向） */
@@ -1008,30 +1009,22 @@ body{
 .vr-compass__label--north{
   top: 8px;
   left: 50%;
-  /* 标签永远不旋转，固定在四个方向 */
-  transform: translateX(-50%) !important;
   color: var(--vr-accent);
 }
 
 .vr-compass__label--east{
   right: 8px;
   top: 50%;
-  /* 标签永远不旋转，固定在四个方向 */
-  transform: translateY(-50%) !important;
 }
 
 .vr-compass__label--south{
   bottom: 8px;
   left: 50%;
-  /* 标签永远不旋转，固定在四个方向 */
-  transform: translateX(-50%) !important;
 }
 
 .vr-compass__label--west{
   left: 8px;
   top: 50%;
-  /* 标签永远不旋转，固定在四个方向 */
-  transform: translateY(-50%) !important;
 }
 
 /* 外圈刻度（可选，很淡） */
@@ -2266,17 +2259,22 @@ body{
   transition: none !important; /* 标签永远不旋转 */
 }
 /* 标签应用反向旋转以抵消盘面旋转，确保文字始终保持正向 */
+/* 注意：旋转必须在 translate 之后，且旋转中心必须是标签中心 */
 .vr-compass__label--north {
   transform: translateX(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
+  transform-origin: center center !important;
 }
 .vr-compass__label--east {
   transform: translateY(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
+  transform-origin: center center !important;
 }
 .vr-compass__label--south {
   transform: translateX(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
+  transform-origin: center center !important;
 }
 .vr-compass__label--west {
   transform: translateY(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
+  transform-origin: center center !important;
 }
 .vr-compass__needle {
   transition: none !important; /* 指针旋转必须每帧立即更新，无延迟 */

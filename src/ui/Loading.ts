@@ -1,3 +1,5 @@
+import { isFullscreen } from '../utils/fullscreenState';
+
 export class Loading {
   private element: HTMLElement;
 
@@ -6,6 +8,15 @@ export class Loading {
     this.element.className = 'loading-overlay';
     this.render();
     this.applyStyles();
+    
+    // 监听全屏状态变化
+    const handleFullscreenChange = () => {
+      if (isFullscreen()) {
+        this.hide();
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
   }
 
   private render(): void {
@@ -66,6 +77,10 @@ export class Loading {
   }
 
   show(): void {
+    // 全屏状态下不显示加载提示
+    if (isFullscreen()) {
+      return;
+    }
     this.element.classList.add('show');
   }
 

@@ -40,6 +40,8 @@ import { dumpVRState, resetVRUI } from './utils/debugHelper';
 import { NorthCalibrationPanel } from './ui/NorthCalibrationPanel';
 import { FcChatPanel } from './ui/FcChatPanel';
 import { FcChatClient, type FcChatConfig } from './services/fcChatClient';
+import { initFullscreenState } from './utils/fullscreenState';
+import { clearAllToasts } from './ui/toast';
 
 /**
  * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：
@@ -110,6 +112,29 @@ normalizePathname();
 // 初始化 UI 让位策略
 initYieldPolicy();
 initYieldClassManager();
+
+// 初始化全屏状态管理器
+initFullscreenState();
+
+// 监听全屏状态变化，清除所有提示
+const handleFullscreenChange = () => {
+  const d = document as any;
+  const isFullscreenNow = Boolean(document.fullscreenElement || d.webkitFullscreenElement);
+  if (isFullscreenNow) {
+    clearAllToasts();
+  }
+};
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
+
+/**
+ * 检测是否为开发者模式
+ * URL 参数：?development=1 或 ?dev=1 或 #development
+ */
+function isDevMode(): boolean {
+  const params = new URLSearchParams(location.search);
+  return params.has('development') || params.get('dev') === '1' || location.hash.includes('development');
+}
 
 class App {
   private appElement: HTMLElement;
@@ -557,10 +582,12 @@ class App {
     this.panoViewer = new PanoViewer(viewerContainer, debugMode);
 
     // 新 UI：右上角控制按钮（全屏 + 坐标拾取 + 校准北向）- 降级保护
+    // 开发者模式：仅当 URL 带 development 参数时才显示坐标拾取和校准北向
+    const devMode = isDevMode();
     try {
       this.topRightControls = new TopRightControls({
         viewerRootEl: viewerContainer,
-        onTogglePickMode: () => {
+        onTogglePickMode: devMode ? () => {
           if (this.panoViewer) {
             if (this.panoViewer.isPickModeEnabled()) {
               this.panoViewer.disablePickMode();
@@ -570,11 +597,11 @@ class App {
             return this.panoViewer.isPickModeEnabled();
           }
           return false;
-        },
-        onOpenNorthCalibration: () => {
+        } : undefined,
+        onOpenNorthCalibration: devMode ? () => {
           this.openNorthCalibration(scene.id);
-        },
-        showNorthCalibration: true, // 常驻显示（也可以在 debug 模式才显示）
+        } : undefined,
+        showNorthCalibration: devMode, // 仅开发者模式显示
       });
       this.appElement.appendChild(this.topRightControls.getElement());
     } catch (err) {

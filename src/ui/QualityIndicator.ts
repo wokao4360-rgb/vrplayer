@@ -4,6 +4,8 @@
  * 不遮挡视野，不影响沉浸体验
  */
 
+import { isFullscreen } from '../utils/fullscreenState';
+
 export enum LoadStatus {
   LOADING_LOW = 'loadingLow',    // 正在加载低清图
   LOW_READY = 'lowReady',        // 低清图已加载完成
@@ -29,6 +31,12 @@ export class QualityIndicator {
    * 更新加载状态
    */
   updateStatus(status: LoadStatus): void {
+    // 全屏状态下不显示任何提示
+    if (isFullscreen()) {
+      this.hide();
+      return;
+    }
+
     this.currentStatus = status;
     this.render();
     

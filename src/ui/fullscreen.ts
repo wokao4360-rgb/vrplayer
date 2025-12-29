@@ -1,5 +1,3 @@
-import { showToast } from './toast';
-import { isTouchDevice, isMouseDevice } from '../utils/deviceDetect';
 
 type AnyDocument = Document & {
   webkitFullscreenElement?: Element | null;
@@ -50,11 +48,7 @@ export async function exitFullscreen(): Promise<void> {
 export async function requestFullscreenBestEffort(el?: HTMLElement): Promise<void> {
   const target = el || document.body;
   await requestFullscreen(target);
-  
-  // 仅鼠标端显示全屏提示，触控设备不提示
-  if (isMouseDevice()) {
-    showToast('鼠标滑至最上方可退出全屏', 3000);
-  }
+  // 全屏后不显示任何提示
 }
 
 /**
@@ -87,9 +81,7 @@ export async function lockLandscapeBestEffort(): Promise<void> {
     // 旧 webkit/ios：大概率没有 lock 能力
     throw new Error('screen.orientation.lock not available');
   } catch {
-    if (isMobileLike()) {
-      showToast('建议横屏观看');
-    }
+    // 全屏后不显示任何提示
   }
 }
 
@@ -110,11 +102,7 @@ export async function toggleFullscreen(targetEl: HTMLElement): Promise<void> {
 
   await requestFullscreen(targetEl);
   await lockLandscapeBestEffort();
-  
-  // 仅鼠标端显示全屏提示，触控设备不提示
-  if (isMouseDevice()) {
-    showToast('鼠标滑至最上方可退出全屏', 3000);
-  }
+  // 全屏后不显示任何提示
 }
 
 

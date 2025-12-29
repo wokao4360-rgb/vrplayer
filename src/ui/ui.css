@@ -2235,18 +2235,18 @@ body{
   /* 使用 !important 覆盖任何可能的 rotate */
   transition: none !important; /* 标签永远不旋转 */
 }
-/* 确保标签的 transform 不包含 rotate */
+/* 标签应用反向旋转以抵消盘面旋转，确保文字始终保持正向 */
 .vr-compass__label--north {
-  transform: translateX(-50%) !important;
+  transform: translateX(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
 }
 .vr-compass__label--east {
-  transform: translateY(-50%) !important;
+  transform: translateY(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
 }
 .vr-compass__label--south {
-  transform: translateX(-50%) !important;
+  transform: translateX(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
 }
 .vr-compass__label--west {
-  transform: translateY(-50%) !important;
+  transform: translateY(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
 }
 .vr-compass__needle {
   transition: none !important; /* 指针旋转必须每帧立即更新，无延迟 */

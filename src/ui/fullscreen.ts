@@ -1,4 +1,5 @@
 import { showToast } from './toast';
+import { isTouchDevice, isMouseDevice } from '../utils/deviceDetect';
 
 type AnyDocument = Document & {
   webkitFullscreenElement?: Element | null;
@@ -47,11 +48,15 @@ export async function exitFullscreen(): Promise<void> {
  * 请求全屏（best-effort，包含错误处理）
  */
 export async function requestFullscreenBestEffort(el?: HTMLElement): Promise<void> {
-  if (!el) {
-    const el = document.body;
-    return requestFullscreen(el);
+  const target = el || document.body;
+  await requestFullscreen(target);
+  
+  // 显示全屏提示（根据设备类型）
+  if (isTouchDevice()) {
+    showToast('设备返回键可退出全屏', 2000);
+  } else if (isMouseDevice()) {
+    showToast('鼠标滑至最上方可退出全屏', 2000);
   }
-  return requestFullscreen(el);
 }
 
 /**
@@ -107,6 +112,13 @@ export async function toggleFullscreen(targetEl: HTMLElement): Promise<void> {
 
   await requestFullscreen(targetEl);
   await lockLandscapeBestEffort();
+  
+  // 显示全屏提示（根据设备类型）
+  if (isTouchDevice()) {
+    showToast('设备返回键可退出全屏', 2000);
+  } else if (isMouseDevice()) {
+    showToast('鼠标滑至最上方可退出全屏', 2000);
+  }
 }
 
 

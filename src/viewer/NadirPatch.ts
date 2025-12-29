@@ -164,7 +164,7 @@ export class NadirPatch {
             frame: this.debugFrameCount,
             cameraYaw: cameraYawDeg.toFixed(2),
             northYaw: northYawDeg.toFixed(2),
-            needleYaw: needleYawDeg.toFixed(2),
+            needleYaw: cameraYawDeg.toFixed(2),
             diskRotationY: this.mesh.rotation.y,
             needleRotationY: this.needleMesh?.rotation.y,
             diskPosition: this.mesh.position,

@@ -89,6 +89,10 @@ export function createCompassTexture(size = 512): THREE.CanvasTexture {
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace as any;
+  // 设置纹理中心点和旋转，确保文字方向正确
+  texture.center.set(0.5, 0.5);
+  texture.rotation = 0;
+  texture.flipY = false; // 防止纹理上下翻转导致文字镜像
   texture.needsUpdate = true;
   return texture;
 }

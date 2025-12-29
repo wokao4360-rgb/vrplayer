@@ -107,6 +107,7 @@ export class CompassDisk {
     // 初始化旋转 CSS 变量
     this.root.style.setProperty('--compass-disk-rot', '0deg');
     this.root.style.setProperty('--compass-needle-rot', '0deg');
+    this.root.style.setProperty('--compass-label-counter-rot', '0deg');
 
     this.setupInteractionListeners();
   }
@@ -233,6 +234,8 @@ export class CompassDisk {
       // 设置盘面和指针旋转
       this.root.style.setProperty('--compass-disk-rot', `${diskDeg}deg`);
       this.root.style.setProperty('--compass-needle-rot', `${needleDeg}deg`);
+      // 标签应用反向旋转以抵消盘面旋转，确保文字始终保持正向
+      this.root.style.setProperty('--compass-label-counter-rot', `${-diskDeg}deg`);
       
       // 更新可视化验收点（显示 northYaw 和当前 yaw）
       this.updateYawLabel(yawDeg);
@@ -246,6 +249,8 @@ export class CompassDisk {
         this.root.style.opacity = '0';
         this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
         this.root.style.setProperty('--vr-ground-base-blur', '0px');
+        // 重置旋转变量
+        this.root.style.setProperty('--compass-label-counter-rot', '0deg');
         this.isVisible = false;
         this.baseOpacity = 0;
       }

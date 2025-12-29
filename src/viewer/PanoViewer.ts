@@ -280,8 +280,6 @@ export class PanoViewer {
 
   private onPointerMove(e: MouseEvent): void {
     if (!this.isDragging) return;
-    // VR模式下禁用拖拽控制
-    if (this.vrModeEnabled) return;
     
     const deltaX = e.clientX - this.lastMouseX;
     const deltaY = e.clientY - this.lastMouseY;
@@ -340,12 +338,8 @@ export class PanoViewer {
       this.longPressTimer = null;
     }
     
-    // VR模式下禁用拖拽控制（但保留双指缩放）
+    // 单指拖拽控制（VR模式下也允许）
     if (e.touches.length === 1 && this.isDragging) {
-      if (this.vrModeEnabled) {
-        // VR模式下禁用单指拖拽
-        return;
-      }
       const deltaX = e.touches[0].clientX - this.lastMouseX;
       const deltaY = e.touches[0].clientY - this.lastMouseY;
       

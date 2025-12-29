@@ -56,19 +56,19 @@ export class CompassDisk {
     // 方向标签
     this.northLabel = document.createElement('div');
     this.northLabel.className = 'vr-compass__label vr-compass__label--north';
-    this.northLabel.textContent = 'N';
+    this.northLabel.textContent = '北';
 
     this.eastLabel = document.createElement('div');
     this.eastLabel.className = 'vr-compass__label vr-compass__label--east';
-    this.eastLabel.textContent = 'E';
+    this.eastLabel.textContent = '东';
 
     this.southLabel = document.createElement('div');
     this.southLabel.className = 'vr-compass__label vr-compass__label--south';
-    this.southLabel.textContent = 'S';
+    this.southLabel.textContent = '南';
 
     this.westLabel = document.createElement('div');
     this.westLabel.className = 'vr-compass__label vr-compass__label--west';
-    this.westLabel.textContent = 'W';
+    this.westLabel.textContent = '西';
 
     // 指针元素（指示当前朝向）
     this.needle = document.createElement('div');

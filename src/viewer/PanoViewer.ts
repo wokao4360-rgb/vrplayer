@@ -285,7 +285,7 @@ export class PanoViewer {
     const deltaX = e.clientX - this.lastMouseX;
     const deltaY = e.clientY - this.lastMouseY;
     
-    this.yaw -= deltaX * 0.5;
+    this.yaw += deltaX * 0.5;
     this.pitch += deltaY * 0.5;
     this.pitch = Math.max(-90, Math.min(90, this.pitch));
     
@@ -343,7 +343,7 @@ export class PanoViewer {
       const deltaX = e.touches[0].clientX - this.lastMouseX;
       const deltaY = e.touches[0].clientY - this.lastMouseY;
       
-      this.yaw -= deltaX * 0.5;
+      this.yaw += deltaX * 0.5;
       this.pitch += deltaY * 0.5;
       this.pitch = Math.max(-90, Math.min(90, this.pitch));
       

@@ -74,10 +74,10 @@ export function createCompassTexture(size = 512): THREE.CanvasTexture {
     ctx.textBaseline = 'middle';
     ctx.fillText(text, tx, ty);
   };
-  drawDir('N', 0);
-  drawDir('E', 90);
-  drawDir('S', 180);
-  drawDir('W', 270);
+  drawDir('北', 0);
+  drawDir('东', 90);
+  drawDir('南', 180);
+  drawDir('西', 270);
 
   // 外圈边缘再压一点（让 patch 更“贴地”）
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';

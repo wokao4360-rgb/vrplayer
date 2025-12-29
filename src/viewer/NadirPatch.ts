@@ -147,7 +147,12 @@ export class NadirPatch {
     const northYawDeg = this.northYaw ?? 0;
     
     // 盘面基准：让贴图的 N 对齐世界北
-    this.mesh.rotation.y = THREE.MathUtils.degToRad(-northYawDeg);
+    const meshRotationY = THREE.MathUtils.degToRad(-northYawDeg);
+    this.mesh.rotation.y = meshRotationY;
+    
+    // 纹理反向旋转，抵消 mesh 旋转，确保文字始终保持正向
+    this.texture.rotation = -meshRotationY;
+    this.texture.center.set(0.5, 0.5);
     
     // 指针表示相机朝向（相对纹理 0 的 yaw）
     if (this.needleMesh) {

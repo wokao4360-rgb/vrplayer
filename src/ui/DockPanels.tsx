@@ -54,9 +54,16 @@ export class DockPanels {
     }, true); // 使用捕获阶段确保所有子元素点击都能捕获
 
     // 监听关闭面板事件
-    const handleClosePanels = () => {
+    const handleClosePanels = (e: Event) => {
+      e.stopPropagation();
       // 关闭社区面板时，切换到 guide tab（guide tab 面板是隐藏的）
       if (this.currentTab === 'community') {
+        // 先清理社区面板（从DOM移除）
+        if (this.communityPanel) {
+          this.communityPanel.remove();
+          this.communityPanel = null;
+        }
+        // 切换到 guide tab
         this.setTab('guide');
         // 派发事件通知 BottomDock 同步 tab 状态
         window.dispatchEvent(new CustomEvent('vr:bottom-dock-tab-change', {

@@ -1408,7 +1408,7 @@ body{
 }
 
 .vr-topmodes__btn{
-  font-size: 14px;
+  font-size: 16px;
   color: rgba(255,255,255,0.70);
   background: none;
   border: 0;
@@ -1441,26 +1441,26 @@ body{
   transform-origin: center;
 }
 
-/* 移动端：强制按钮文字单行，减小字体和间距 */
+/* 移动端：强制按钮文字单行，适当减小字体和间距 */
 @media (max-width: 768px), (pointer: coarse) {
   .vr-topmodes {
-    gap: 12px;
+    gap: 10px;
   }
   
   .vr-topmodes__btn {
-    font-size: 12px;
+    font-size: 15px;
     padding: 6px 1px;
   }
 }
 
-/* 超小屏：进一步减小 */
+/* 超小屏：进一步减小，但不低于13px */
 @media (max-width: 360px) {
   .vr-topmodes {
     gap: 8px;
   }
   
   .vr-topmodes__btn {
-    font-size: 11px;
+    font-size: 13px;
     padding: 5px 1px;
   }
 }

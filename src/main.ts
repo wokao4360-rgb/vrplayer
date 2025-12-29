@@ -138,6 +138,7 @@ class App {
   private currentScene: Scene | null = null;
   private hasBoundFullscreenEvents = false;
   private mode: AppViewMode = 'tour';
+  private isStructureOverlayOpen = false; // 结构图/三维模型overlay是否打开
   private structureView2D: StructureView2D | null = null;
   private structureView3D: StructureView3D | null = null;
   private fcChatPanel: FcChatPanel | null = null;
@@ -1002,15 +1003,22 @@ class App {
     }
 
 
+    // 清理结构图/三维模型overlay
     if (this.structureView2D) {
-      this.structureView2D.remove();
+      const element = this.structureView2D.getElement();
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
       this.structureView2D = null;
     }
-
     if (this.structureView3D) {
-      this.structureView3D.remove();
+      const element = this.structureView3D.getElement();
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
       this.structureView3D = null;
     }
+    this.isStructureOverlayOpen = false;
 
     if (this.fcChatPanel) {
       this.fcChatPanel.remove();
@@ -1047,114 +1055,154 @@ class App {
       this.topModeTabs.setMode(mode);
     }
     
+    // 如果切换到tour模式，且当前有overlay打开，先关闭overlay
+    if (mode === 'tour' && this.isStructureOverlayOpen) {
+      this.closeStructureOverlay({ toTour: false });
+    }
+    
     // 处理 structure2d overlay
     if (mode === 'structure2d') {
-      if (!this.currentMuseum || !this.currentScene) return;
-      
-      // 关闭 structure3d overlay
-      if (this.structureView3D) {
-        this.structureView3D.close();
-      }
-      
-      const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
-      
-      if (!this.structureView2D) {
-        this.structureView2D = new StructureView2D({
-          museum: this.currentMuseum,
-          graph,
-          currentSceneId: this.currentScene.id,
-          onClose: () => {
-            // 关闭时自动切回漫游模式并恢复交互
-            this.exitStructureViewToTour();
-          },
-          onNodeClick: (museumId, sceneId) => {
-            // 先切回 tour mode（关闭 overlay）
-            this.setMode('tour');
-            // 再跳转场景（确保视觉上切回漫游）
-            navigateToScene(museumId, sceneId);
-          },
-        });
-        this.appElement.appendChild(this.structureView2D.getElement());
-      } else {
-        this.structureView2D.updateContext({
-          museum: this.currentMuseum,
-          graph,
-          currentSceneId: this.currentScene.id,
-        });
-      }
-      
-      this.enterStructureView();
-      this.structureView2D.open();
+      this.openStructure2D();
     } else if (mode === 'structure3d') {
-      if (!this.currentMuseum || !this.currentScene) return;
-      
-      // 关闭 structure2d overlay
-      if (this.structureView2D) {
-        this.structureView2D.close();
-      }
-      
-      const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
-      
-      if (!this.structureView3D) {
-        this.structureView3D = new StructureView3D({
-          museum: this.currentMuseum,
-          graph,
-          currentSceneId: this.currentScene.id,
-          onClose: () => {
-            // 关闭时自动切回漫游模式并恢复交互
-            this.exitStructureViewToTour();
-          },
-          onNodeClick: (museumId, sceneId) => {
-            // 先切回 tour mode（关闭 overlay）
-            this.setMode('tour');
-            // 再跳转场景（确保视觉上切回漫游）
-            navigateToScene(museumId, sceneId);
-          },
-        });
-        this.appElement.appendChild(this.structureView3D.getElement());
-      } else {
-        this.structureView3D.updateContext({
-          museum: this.currentMuseum,
-          graph,
-          currentSceneId: this.currentScene.id,
-        });
-      }
-      
-      this.enterStructureView();
-      this.structureView3D.open();
+      this.openStructure3D();
+    }
+  }
+
+  /**
+   * 打开结构图2D overlay
+   */
+  private openStructure2D(): void {
+    if (!this.currentMuseum || !this.currentScene) return;
+    
+    // 如果已有overlay打开，先清场
+    if (this.isStructureOverlayOpen) {
+      this.closeStructureOverlay({ toTour: false });
+    }
+    
+    const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
+    
+    // 创建或更新 structure2d overlay
+    if (!this.structureView2D) {
+      this.structureView2D = new StructureView2D({
+        museum: this.currentMuseum,
+        graph,
+        currentSceneId: this.currentScene.id,
+        onClose: () => {
+          // 点击×关闭时，关闭overlay并切回tour
+          this.closeStructureOverlay({ toTour: true });
+        },
+        onNodeClick: (museumId, sceneId) => {
+          // 点击节点时，先关闭overlay，再跳转场景
+          this.closeStructureOverlay({ toTour: false });
+          navigateToScene(museumId, sceneId);
+        },
+      });
+      this.appElement.appendChild(this.structureView2D.getElement());
     } else {
-      // 关闭所有 structure overlays 并恢复交互
-      this.exitStructureViewToTour();
+      this.structureView2D.updateContext({
+        museum: this.currentMuseum,
+        graph,
+        currentSceneId: this.currentScene.id,
+      });
     }
-  }
-
-  /**
-   * 进入结构图/三维模型视图时的操作（禁用viewer交互，设置body overflow）
-   */
-  private enterStructureView(): void {
-    // 设置 body overflow 为 hidden（防止背景滚动）
+    
+    // 标记overlay已打开
+    this.isStructureOverlayOpen = true;
+    
+    // 设置body overflow
     document.body.style.overflow = 'hidden';
+    
+    // 打开overlay
+    this.structureView2D.open();
   }
 
   /**
-   * 退出结构图/三维模型视图，回到漫游模式（恢复所有交互）
+   * 打开三维模型3D overlay
    */
-  private exitStructureViewToTour(): void {
-    // 关闭所有 structure overlays
+  private openStructure3D(): void {
+    if (!this.currentMuseum || !this.currentScene) return;
+    
+    // 如果已有overlay打开，先清场
+    if (this.isStructureOverlayOpen) {
+      this.closeStructureOverlay({ toTour: false });
+    }
+    
+    const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
+    
+    // 创建或更新 structure3d overlay
+    if (!this.structureView3D) {
+      this.structureView3D = new StructureView3D({
+        museum: this.currentMuseum,
+        graph,
+        currentSceneId: this.currentScene.id,
+        onClose: () => {
+          // 点击×关闭时，关闭overlay并切回tour
+          this.closeStructureOverlay({ toTour: true });
+        },
+        onNodeClick: (museumId, sceneId) => {
+          // 点击节点时，先关闭overlay，再跳转场景
+          this.closeStructureOverlay({ toTour: false });
+          navigateToScene(museumId, sceneId);
+        },
+      });
+      this.appElement.appendChild(this.structureView3D.getElement());
+    } else {
+      this.structureView3D.updateContext({
+        museum: this.currentMuseum,
+        graph,
+        currentSceneId: this.currentScene.id,
+      });
+    }
+    
+    // 标记overlay已打开
+    this.isStructureOverlayOpen = true;
+    
+    // 设置body overflow
+    document.body.style.overflow = 'hidden';
+    
+    // 打开overlay
+    this.structureView3D.open();
+  }
+
+  /**
+   * 关闭结构图/三维模型overlay（唯一关闭入口）
+   * @param toTour 是否切换到tour模式
+   */
+  private closeStructureOverlay(options: { toTour: boolean }): void {
+    // 如果overlay未打开，直接返回
+    if (!this.isStructureOverlayOpen) return;
+    
+    // 标记overlay已关闭
+    this.isStructureOverlayOpen = false;
+    
+    // 从DOM中彻底移除overlay元素（而不是只隐藏）
     if (this.structureView2D) {
-      this.structureView2D.close();
+      const element = this.structureView2D.getElement();
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+      this.structureView2D = null;
     }
+    
     if (this.structureView3D) {
-      this.structureView3D.close();
+      const element = this.structureView3D.getElement();
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+      this.structureView3D = null;
     }
     
-    // 恢复 body overflow
+    // 恢复body样式（清除所有可能添加的样式）
     document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    document.body.style.overscrollBehavior = '';
     
-    // 确保模式切换到 tour（更新内部状态和UI）
-    this.mode = 'tour';
-    if (this.topModeTabs) {
-      this.topModeTabs.setMode('tour');
+    // 如果要求切换到tour模式，更新状态和UI
+    if (options.toTour) {
+      this.mode = 'tour';
+      if (this.topModeTabs) {
+        this.topModeTabs.setMode('tour');
+      }
     }
   }
 

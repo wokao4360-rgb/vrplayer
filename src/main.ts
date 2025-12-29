@@ -614,13 +614,22 @@ class App {
     };
     window.addEventListener('vr:pickmode', handlePickModeChange);
 
-    // 新 UI：左下角水印 + About 弹窗 - 降级保护
+    // 新 UI：左下角水印 + About 弹窗 - 降级保护 + 幂等保护
     try {
-      this.brandMark = new BrandMark({
-        appName: this.config?.appName,
-        brandText: '鼎虎清源',
-      });
-      this.appElement.appendChild(this.brandMark.getElement());
+      // 幂等保护：如果已存在，不再重复创建
+      const existingBrandMark = this.appElement.querySelector('.vr-brandmark');
+      if (!existingBrandMark) {
+        this.brandMark = new BrandMark({
+          appName: this.config?.appName,
+          brandText: '鼎虎清源',
+        });
+        this.appElement.appendChild(this.brandMark.getElement());
+      } else {
+        // 如果已存在，复用现有元素
+        if (__VR_DEBUG__) {
+          console.debug('[showScene] BrandMark 已存在，跳过重复创建');
+        }
+      }
       // TeamIntroModal 不再直接挂载，只在 open() 时挂载到 #vr-modal-root
     } catch (err) {
       if (__VR_DEBUG__) {

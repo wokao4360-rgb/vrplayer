@@ -1813,6 +1813,20 @@ body{
   transform: translateY(0);
 }
 
+/* 手机端小屏：Toast 居中显示，避免与右上角按钮叠压 */
+@media (max-width: 480px), ((max-width: 520px) and (pointer: coarse)) {
+  .vr-toast{
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(6px);
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+  }
+  .vr-toast.show{
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* Hotspots */
 .hotspots-container{
   position: absolute;

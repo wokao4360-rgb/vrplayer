@@ -619,6 +619,9 @@ export class FcChatPanel {
         font-size: 13px;
         box-shadow: 0 10px 30px rgba(37,99,235,.35);
         cursor: pointer;
+        white-space: nowrap;
+        line-height: 1;
+        min-width: 88px;
       }
 
       @media (max-width: 768px), (pointer: coarse){
@@ -641,7 +644,12 @@ export class FcChatPanel {
         .fcchat-bubble{ max-width: 84%; }
         .fcchat-toggle-btn{
           right: 14px;
-          bottom: 14px;
+          bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+          white-space: nowrap !important;
+          line-height: 1 !important;
+          min-width: 88px !important;
+          font-size: 12px !important;
+          padding: 0 12px !important;
         }
       }
 

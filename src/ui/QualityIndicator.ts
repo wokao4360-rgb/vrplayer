@@ -171,14 +171,20 @@ export class QualityIndicator {
       .status-error {
         border-left: 3px solid #e74c3c;
       }
-      @media (max-width: 600px) {
+      @media (max-width: 480px), ((max-width: 520px) and (pointer: coarse)) {
         .quality-indicator {
-          bottom: 80px;
-          right: 10px;
-          font-size: 12px;
+          left: 50%;
+          right: auto;
+          bottom: auto;
+          top: calc(12px + env(safe-area-inset-top, 0px));
+          transform: translateX(-50%) translateY(10px);
+        }
+        .quality-indicator.show {
+          transform: translateX(-50%) translateY(0);
         }
         .quality-indicator-content {
           padding: 6px 12px;
+          font-size: 12px;
         }
       }
     `;

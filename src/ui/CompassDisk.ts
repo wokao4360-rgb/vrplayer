@@ -228,14 +228,30 @@ export class CompassDisk {
       // 向右转视角（yaw 增加）时，指针向右转（方向一致）
       const cameraYawDeg = yawDeg;
       const northYawDeg = this.northYaw ?? 0;
-      const diskDeg = -northYawDeg;  // 盘面旋转：让盘面 N 对齐世界北
+      const diskYaw = -northYawDeg;  // 盘面旋转：让盘面 N 对齐世界北
       const needleDeg = cameraYawDeg; // 指针旋转：表示当前相机朝向
       
       // 设置盘面和指针旋转
-      this.root.style.setProperty('--compass-disk-rot', `${diskDeg}deg`);
+      this.root.style.setProperty('--compass-disk-rot', `${diskYaw}deg`);
       this.root.style.setProperty('--compass-needle-rot', `${needleDeg}deg`);
-      // 标签应用反向旋转以抵消盘面旋转，确保文字始终保持正向
-      this.root.style.setProperty('--compass-label-counter-rot', `${-diskDeg}deg`);
+      
+      // 如视模型：每个文字独立计算角度，朝向圆心
+      // baseAngle: 北=0, 东=90, 南=180, 西=270
+      // labelAngle = baseAngle + diskYaw (文字在圆周上的角度)
+      // labelRotation = labelAngle + 180 (文字自身旋转，朝向圆心)
+      const labelRadius = 42; // 文字距离圆心的距离（百分比，相对于盘面半径）
+      
+      const updateLabel = (label: HTMLElement, baseAngle: number) => {
+        const labelAngle = baseAngle + diskYaw;
+        const labelRotation = labelAngle + 180; // 朝向圆心
+        // transform: rotate(labelAngle) translateY(-radius%) rotate(labelRotation)
+        label.style.transform = `rotate(${labelAngle}deg) translateY(-${labelRadius}%) rotate(${labelRotation}deg)`;
+      };
+      
+      updateLabel(this.northLabel, 0);   // 北
+      updateLabel(this.eastLabel, 90);   // 东
+      updateLabel(this.southLabel, 180); // 南
+      updateLabel(this.westLabel, 270);  // 西
       
       // 更新可视化验收点（显示 northYaw 和当前 yaw）
       this.updateYawLabel(yawDeg);
@@ -249,8 +265,11 @@ export class CompassDisk {
         this.root.style.opacity = '0';
         this.root.style.transform = 'translateX(-50%) translateY(0px) scaleY(1)';
         this.root.style.setProperty('--vr-ground-base-blur', '0px');
-        // 重置旋转变量
-        this.root.style.setProperty('--compass-label-counter-rot', '0deg');
+        // 重置文字位置
+        this.northLabel.style.transform = '';
+        this.eastLabel.style.transform = '';
+        this.southLabel.style.transform = '';
+        this.westLabel.style.transform = '';
         this.isVisible = false;
         this.baseOpacity = 0;
       }

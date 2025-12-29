@@ -962,9 +962,11 @@ body{
   z-index: 0; /* 必须 <= mask/labels 的体系里，不要盖住 label */
 }
 
-/* 方向标签 */
+/* 方向标签 - 如视模型：每个文字从圆心出发，朝向圆心 */
 .vr-compass__label{
   position: absolute;
+  left: 50%;
+  top: 50%;
   font-size: clamp(12px, 2.5vw, 13px);
   font-weight: 600;
   color: var(--vr-muted);
@@ -972,9 +974,9 @@ body{
   pointer-events: none;
   user-select: none;
   z-index: 1; /* 确保在 mask 上方 */
-  /* 标签永远不旋转，固定在四个方向 */
   transition: none !important;
-  transform-origin: center center; /* 确保旋转中心在标签中心 */
+  transform-origin: center center; /* 旋转中心在标签中心 */
+  white-space: nowrap; /* 防止文字换行 */
 }
 
 /* 指针元素（指示当前朝向） */
@@ -1006,25 +1008,9 @@ body{
   border-bottom: 8px solid rgba(255, 255, 255, 0.95);
 }
 
+/* 如视模型：文字位置和旋转由JS动态计算，CSS只定义基础样式 */
 .vr-compass__label--north{
-  top: 8px;
-  left: 50%;
   color: var(--vr-accent);
-}
-
-.vr-compass__label--east{
-  right: 8px;
-  top: 50%;
-}
-
-.vr-compass__label--south{
-  bottom: 8px;
-  left: 50%;
-}
-
-.vr-compass__label--west{
-  left: 8px;
-  top: 50%;
 }
 
 /* 外圈刻度（可选，很淡） */
@@ -2249,33 +2235,7 @@ body{
   transform: rotate(var(--compass-disk-rot, 0deg));
   transition: none !important;
 }
-.vr-compass__label,
-.vr-compass__label--north,
-.vr-compass__label--east,
-.vr-compass__label--south,
-.vr-compass__label--west {
-  /* 标签的 transform 已经在上面定义（translateX/Y），但确保不包含 rotate */
-  /* 使用 !important 覆盖任何可能的 rotate */
-  transition: none !important; /* 标签永远不旋转 */
-}
-/* 标签应用反向旋转以抵消盘面旋转，确保文字始终保持正向 */
-/* 注意：旋转必须在 translate 之后，且旋转中心必须是标签中心 */
-.vr-compass__label--north {
-  transform: translateX(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
-  transform-origin: center center !important;
-}
-.vr-compass__label--east {
-  transform: translateY(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
-  transform-origin: center center !important;
-}
-.vr-compass__label--south {
-  transform: translateX(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
-  transform-origin: center center !important;
-}
-.vr-compass__label--west {
-  transform: translateY(-50%) rotate(var(--compass-label-counter-rot, 0deg)) !important;
-  transform-origin: center center !important;
-}
+/* 如视模型：文字位置和旋转完全由JS控制，CSS不定义transform */
 .vr-compass__needle {
   transition: none !important; /* 指针旋转必须每帧立即更新，无延迟 */
 }

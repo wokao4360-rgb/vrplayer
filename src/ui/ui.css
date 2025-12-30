@@ -917,14 +917,6 @@ body{
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   
-  /* 右下角"三馆学伴"按钮上移，避免与底部"信息"按钮叠压 */
-  .fcchat-toggle-btn{
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
-    width: 36px !important;
-    height: 36px !important;
-    padding: 0 !important;
-    font-size: 11px !important;
-  }
 }
 /* 半透明让位：底部 Dock */
 .vr-dock-wrap.vr-ui-interacting{

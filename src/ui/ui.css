@@ -557,6 +557,21 @@ body{
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* 默认状态 */
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+/* 更多弹窗：初始状态（淡入前） */
+.vr-modal-panel.vr-modal-settings {
+  opacity: 0;
+  transform: translateY(16px);
+}
+/* 更多弹窗：打开状态（淡入后） */
+.vr-modal-overlay:has(.vr-modal-settings) .vr-modal-panel.vr-modal-settings,
+.vr-modal-overlay .vr-modal-panel.vr-modal-settings.vr-modal-settings-open {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @media (max-width: 768px), (pointer: coarse){
@@ -918,6 +933,13 @@ body{
   transition: opacity var(--vr-yield-restore-ms) var(--ease-out),
               transform var(--vr-yield-restore-ms) var(--ease-out);
 }
+/* 更多打开时，Dock 向下淡出 */
+.vr-dock-wrap.dock--more-open {
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
 .vr-dock{
   pointer-events: auto;
   display: grid;
@@ -941,8 +963,8 @@ body{
   align-items: center;
   justify-content: center;
   gap: 2px;
-  color: rgba(255,255,255,0.75);
-  opacity: 0.65;
+  color: rgba(255,255,255,0.82);
+  opacity: 0.85;
   transition: opacity 150ms ease, transform 150ms ease, color 150ms ease;
   background: transparent;
 }
@@ -955,6 +977,9 @@ body{
   color: rgba(255,255,255,0.95);
   background: transparent;
 }
+.vr-dock-tab.active .vr-dock-tab-icon {
+  opacity: 1;
+}
 .vr-dock-tab:active{ transform: scale(0.98); }
 .vr-dock-tab-icon {
   width: 18px;
@@ -963,7 +988,7 @@ body{
   align-items: center;
   justify-content: center;
   color: inherit;
-  opacity: inherit;
+  opacity: 0.85;
 }
 .vr-dock-tab-icon svg {
   width: 100%;

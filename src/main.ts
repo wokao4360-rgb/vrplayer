@@ -1607,11 +1607,20 @@ class App {
     container.appendChild(resetRow);
     container.appendChild(vrRow);
 
+    // 打开"更多"时，让 Dock 淡出
+    if (this.bottomDock) {
+      this.bottomDock.setMoreOpen(true);
+    }
+
     this.settingsModalMounted = mountModal({
       title: '更多',
       contentEl: container,
       panelClassName: 'vr-modal-settings',
       onClose: () => {
+        // 关闭"更多"时，恢复 Dock
+        if (this.bottomDock) {
+          this.bottomDock.setMoreOpen(false);
+        }
         this.settingsModalMounted = null;
         window.dispatchEvent(
           new CustomEvent('vr:dock-tab-close', {

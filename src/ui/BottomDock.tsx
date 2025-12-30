@@ -198,6 +198,17 @@ export class BottomDock {
   }
 
   /**
+   * 设置"更多"打开状态（用于 Dock 淡出动效）
+   */
+  setMoreOpen(isOpen: boolean): void {
+    if (isOpen) {
+      this.element.classList.add('dock--more-open');
+    } else {
+      this.element.classList.remove('dock--more-open');
+    }
+  }
+
+  /**
    * 没有传入上层回调时的兜底信息弹窗
    */
   private openFallbackInfoModal(): void {

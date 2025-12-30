@@ -37,6 +37,15 @@ export function mountModal(options: MountModalOptions): MountedModal {
   panel.className = 'vr-modal-panel';
   if (panelClassName) {
     panel.classList.add(panelClassName);
+    // 如果是"更多"弹窗，添加初始状态 class，然后触发淡入
+    if (panelClassName === 'vr-modal-settings') {
+      // 使用 requestAnimationFrame 确保初始状态先应用，然后触发过渡
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          panel.classList.add('vr-modal-settings-open');
+        });
+      });
+    }
   }
 
   const header = document.createElement('div');

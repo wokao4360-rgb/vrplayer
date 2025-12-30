@@ -115,10 +115,11 @@ export class PreloadManager {
           return; // token 过期，忽略
         }
         
-        // 使用 Image 预取
+        // 使用 Image 预取（原生加载，不用 fetch）
         await new Promise<void>((resolve, reject) => {
           const img = new Image();
           img.referrerPolicy = 'no-referrer';
+          img.crossOrigin = 'anonymous';
           img.decoding = 'async';
           img.loading = 'lazy';
           img.onload = () => {

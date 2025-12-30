@@ -70,9 +70,10 @@ export function preloadAsset(url: string, type: AssetType): Promise<void> {
       video.onerror = () => reject(new Error(`视频加载失败: ${resolvedUrl}`));
       video.src = resolvedUrl;
     } else {
-      // 图片预加载：创建 Image 元素
+      // 图片预加载：创建 Image 元素（原生加载，不用 fetch）
       const img = new Image();
       img.referrerPolicy = 'no-referrer';
+      img.crossOrigin = 'anonymous';
       (img as any).loading = 'lazy';
       img.decoding = 'async';
       img.onload = () => resolve();

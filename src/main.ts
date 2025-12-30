@@ -230,6 +230,9 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       
+      // DNS 预热：如果配置中有 i.ibb.co 的图片，添加 preconnect
+      this.warmupExternalImageHosts();
+      
       // 设置应用标题
       if (this.titleBar) {
         this.titleBar.setTitle(this.config.appName);
@@ -264,6 +267,9 @@ class App {
     try {
       // 加载配置
       this.config = await loadConfig();
+      
+      // DNS 预热：如果配置中有 i.ibb.co 的图片，添加 preconnect
+      this.warmupExternalImageHosts();
       
       // 清空当前视图
       this.appElement.innerHTML = '';
@@ -962,6 +968,7 @@ class App {
         if (resolvedUrl) {
           const img = new Image();
           img.referrerPolicy = 'no-referrer';
+          img.crossOrigin = 'anonymous';
           (img as any).loading = 'lazy';
           img.decoding = 'async';
           img.src = resolvedUrl;

@@ -548,10 +548,14 @@ export class PanoViewer {
 
     try {
       // 使用外链图片加载器（带并发限制、超时、重试）
+      // 优先使用 Image() 原生加载，不使用 fetch 兜底
       const imageBitmap = await loadExternalImageBitmap(url, {
-        imageType: 'pano',
         timeoutMs: 15000,
         retries: 2,
+        retryBaseDelayMs: 300,
+        referrerPolicy: 'no-referrer',
+        crossOrigin: 'anonymous',
+        allowFetchFallback: false,
       });
 
       // 将 ImageBitmap 转换为 THREE.Texture
@@ -603,11 +607,14 @@ export class PanoViewer {
     this.updateLoadStatus(LoadStatus.LOADING_LOW);
     
     try {
-      // 使用外链图片加载器加载低清图
+      // 使用外链图片加载器加载低清图（优先 Image() 原生加载）
       const lowImageBitmap = await loadExternalImageBitmap(panoLowUrl, {
-        imageType: 'pano',
         timeoutMs: 15000,
         retries: 2,
+        retryBaseDelayMs: 300,
+        referrerPolicy: 'no-referrer',
+        crossOrigin: 'anonymous',
+        allowFetchFallback: false,
       });
 
       // 将 ImageBitmap 转换为 THREE.Texture
@@ -631,11 +638,14 @@ export class PanoViewer {
       this.updateLoadStatus(LoadStatus.LOADING_HIGH);
       
       try {
-        // 使用外链图片加载器加载高清图
+        // 使用外链图片加载器加载高清图（优先 Image() 原生加载）
         const highImageBitmap = await loadExternalImageBitmap(panoUrl, {
-          imageType: 'pano',
           timeoutMs: 15000,
           retries: 2,
+          retryBaseDelayMs: 300,
+          referrerPolicy: 'no-referrer',
+          crossOrigin: 'anonymous',
+          allowFetchFallback: false,
         });
 
         // 将 ImageBitmap 转换为 THREE.Texture

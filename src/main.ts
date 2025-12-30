@@ -144,6 +144,67 @@ function isDevMode(): boolean {
   return params.has('development') || params.get('dev') === '1' || location.hash.includes('development');
 }
 
+/**
+ * DNS 预热：扫描配置中的外链图片 URL，为需要预热的域名添加 preconnect
+ * 纯函数，不依赖 this 上下文
+ */
+function warmupExternalImageHostsFromConfig(config: AppConfig): void {
+  const origins = new Set<string>();
+  
+  // 遍历所有博物馆和场景，收集外链图片的 origin
+  for (const museum of config.museums) {
+    // 检查博物馆封面
+    if (museum.cover) {
+      try {
+        const url = new URL(museum.cover);
+        if (url.origin !== window.location.origin) {
+          origins.add(url.origin);
+        }
+      } catch {
+        // 非法 URL，跳过
+      }
+    }
+    
+    // 检查场景的 pano/panoLow/thumb
+    for (const scene of museum.scenes) {
+      const urlsToCheck = [
+        scene.pano,
+        scene.panoLow,
+        scene.thumb,
+      ];
+      
+      for (const urlStr of urlsToCheck) {
+        if (!urlStr) continue;
+        
+        try {
+          const url = new URL(urlStr);
+          // 只预热外链域名（不是同源）
+          if (url.origin !== window.location.origin) {
+            origins.add(url.origin);
+          }
+        } catch {
+          // 非法 URL，跳过
+        }
+      }
+    }
+  }
+  
+  // 为每个需要预热的 origin 添加 preconnect
+  for (const origin of origins) {
+    // 检查是否已存在相同的 preconnect（避免重复添加）
+    const existing = document.head.querySelector(`link[rel="preconnect"][href="${origin}"]`);
+    if (existing) {
+      continue;
+    }
+    
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = origin;
+    link.crossOrigin = 'anonymous';
+    document.head.appendChild(link);
+  }
+}
+
 class App {
   private appElement: HTMLElement;
   private config: AppConfig | null = null;
@@ -230,8 +291,8 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       
-      // DNS 预热：如果配置中有 i.ibb.co 的图片，添加 preconnect
-      this.warmupExternalImageHosts();
+      // DNS 预热：如果配置中有外链图片，添加 preconnect
+      warmupExternalImageHostsFromConfig(this.config);
       
       // 设置应用标题
       if (this.titleBar) {
@@ -268,8 +329,8 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       
-      // DNS 预热：如果配置中有 i.ibb.co 的图片，添加 preconnect
-      this.warmupExternalImageHosts();
+      // DNS 预热：如果配置中有外链图片，添加 preconnect
+      warmupExternalImageHostsFromConfig(this.config);
       
       // 清空当前视图
       this.appElement.innerHTML = '';

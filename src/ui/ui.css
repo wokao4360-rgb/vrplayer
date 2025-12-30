@@ -896,8 +896,8 @@ body{
 /* BottomDock */
 .vr-dock-wrap{
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 2500;
   display: flex;
@@ -907,7 +907,7 @@ body{
   pointer-events: none; /* 让 viewer 可拖拽，交互交给内部 */
   transition: opacity 300ms cubic-bezier(.2,.8,.2,1), 
               transform 300ms cubic-bezier(.2,.8,.2,1);
-  /* 基础态：锁定 transform，只允许垂直方向 */
+  /* 基础态：锁定 transform，只允许垂直方向，不影响居中 */
   transform: translate3d(0, 0, 0);
 }
 
@@ -938,7 +938,7 @@ body{
               transform var(--vr-yield-restore-ms) var(--ease-out);
   transform: translate3d(0, 0, 0);
 }
-/* 更多打开时，Dock 向下淡出（只垂直方向） */
+/* 更多打开时，Dock 向下淡出（只垂直方向，不影响居中） */
 .vr-dock-wrap.dock--more-open {
   opacity: 0;
   transform: translate3d(0, 12px, 0) !important;
@@ -1941,7 +1941,14 @@ body{
 .vr-guide-list{
   flex: 1.1;
   padding: 4px 8px 10px 8px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* 确保可以滚动，不被 pointer-events 阻止 */
+  pointer-events: auto;
 }
 
 .vr-guide-item{
@@ -1952,6 +1959,8 @@ body{
   border-radius: 12px;
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  flex-shrink: 0;
+  min-width: 0;
 }
 .vr-guide-item:hover{
   background: rgba(255,255,255,0.06);

@@ -37,15 +37,6 @@ export function mountModal(options: MountModalOptions): MountedModal {
   panel.className = 'vr-modal-panel';
   if (panelClassName) {
     panel.classList.add(panelClassName);
-    // 如果是"更多"弹窗，添加初始状态 class，然后触发淡入
-    if (panelClassName === 'vr-modal-settings') {
-      // 使用 requestAnimationFrame 确保初始状态先应用，然后触发过渡
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          panel.classList.add('vr-modal-settings-open');
-        });
-      });
-    }
   }
 
   const header = document.createElement('div');
@@ -78,6 +69,15 @@ export function mountModal(options: MountModalOptions): MountedModal {
 
   // 统一插入到 body 底部，确保层级最高且不干扰其它容器
   document.body.appendChild(overlay);
+
+  // 如果是"更多"弹窗，使用两段式 class 确保动效稳定触发
+  if (panelClassName === 'vr-modal-settings') {
+    // 初始状态已通过 CSS 设置（opacity 0 + translateY 16px）
+    // 下一帧添加 is-in class 触发过渡
+    requestAnimationFrame(() => {
+      panel.classList.add('is-in');
+    });
+  }
 
   let closed = false;
 

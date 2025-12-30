@@ -559,19 +559,20 @@ body{
   overflow: hidden;
   /* 默认状态 */
   opacity: 1;
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0);
   transition: opacity 220ms ease, transform 220ms ease;
 }
 /* 更多弹窗：初始状态（淡入前） */
 .vr-modal-panel.vr-modal-settings {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translate3d(0, 16px, 0);
+  transition: opacity 220ms ease, transform 220ms ease;
+  will-change: opacity, transform;
 }
 /* 更多弹窗：打开状态（淡入后） */
-.vr-modal-overlay:has(.vr-modal-settings) .vr-modal-panel.vr-modal-settings,
-.vr-modal-overlay .vr-modal-panel.vr-modal-settings.vr-modal-settings-open {
+.vr-modal-panel.vr-modal-settings.is-in {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0);
 }
 
 @media (max-width: 768px), (pointer: coarse){
@@ -906,6 +907,8 @@ body{
   pointer-events: none; /* 让 viewer 可拖拽，交互交给内部 */
   transition: opacity 300ms cubic-bezier(.2,.8,.2,1), 
               transform 300ms cubic-bezier(.2,.8,.2,1);
+  /* 基础态：锁定 transform，只允许垂直方向 */
+  transform: translate3d(0, 0, 0);
 }
 
 /* 手机端小屏：底部按钮组增加安全区，防止叠压 */
@@ -928,15 +931,17 @@ body{
   opacity: 0.35;
   transition: opacity var(--vr-yield-fade-ms) var(--ease-out),
               transform var(--vr-yield-fade-ms) var(--ease-out);
+  transform: translate3d(0, 0, 0);
 }
 .vr-dock-wrap.vr-ui-restoring{
   transition: opacity var(--vr-yield-restore-ms) var(--ease-out),
               transform var(--vr-yield-restore-ms) var(--ease-out);
+  transform: translate3d(0, 0, 0);
 }
-/* 更多打开时，Dock 向下淡出 */
+/* 更多打开时，Dock 向下淡出（只垂直方向） */
 .vr-dock-wrap.dock--more-open {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translate3d(0, 12px, 0) !important;
   pointer-events: none;
   transition: opacity 200ms ease, transform 200ms ease;
 }

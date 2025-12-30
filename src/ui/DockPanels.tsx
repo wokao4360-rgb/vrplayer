@@ -92,8 +92,8 @@ export class DockPanels {
             scenes: this.scenes,
             currentSceneId: sid,
             onClose: () => {
-              // 关闭 MapPanel 时切换到其他 tab
-              this.setTab('guide');
+              // 关闭 MapPanel 时，仅关闭面板并广播统一关闭事件
+              window.dispatchEvent(new CustomEvent('vr:close-panels'));
             },
           });
         } else {
@@ -131,8 +131,8 @@ export class DockPanels {
             scenes: this.scenes,
             currentSceneId: sid,
             onClose: () => {
-              // 关闭 DollhousePanel 时切换到其他 tab
-              this.setTab('guide');
+              // 关闭 DollhousePanel 时，仅关闭面板并广播统一关闭事件
+              window.dispatchEvent(new CustomEvent('vr:close-panels'));
             },
           });
         } else {

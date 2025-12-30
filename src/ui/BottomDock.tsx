@@ -29,6 +29,7 @@ export class BottomDock {
   private dockEl: HTMLElement;
   private panels: DockPanels;
   private activeTab: DockTabKey | null;
+  private isHandlingExternalTabChange = false;
   private onOpenInfo?: () => void;
   private onOpenSettings?: () => void;
   private unsubscribeInteracting: (() => void) | null = null;
@@ -88,22 +89,15 @@ export class BottomDock {
     // 监听外部 tab 切换事件（用于同步状态）
     const handleTabChange = (e: Event) => {
       const evt = e as CustomEvent<{ tab?: DockTabKey | null }>;
-      const tab = evt.detail?.tab;
-      if (
-        tab === 'guide' ||
-        tab === 'community' ||
-        tab === 'info' ||
-        tab === 'settings' ||
-        tab === 'map' ||
-        tab === 'dollhouse'
-      ) {
+      const tab = evt.detail?.tab ?? null;
+      this.isHandlingExternalTabChange = true;
+      try {
         this.setActiveTab(tab);
-      } else {
-        // 未知 / 缺省 tab 统一视为清空高亮
-        this.setActiveTab(null);
+      } finally {
+        this.isHandlingExternalTabChange = false;
       }
     };
-    window.addEventListener('vr:bottom-dock-tab-change', handleTabChange);
+    window.addEventListener('vr:bottom-dock-tab-change', handleTabChange as EventListener);
 
     // 监听“关闭面板”事件：无条件清空高亮
     const handleClosePanels = () => {
@@ -121,7 +115,7 @@ export class BottomDock {
     const buttons = this.dockEl.querySelectorAll<HTMLButtonElement>('.vr-dock-tab');
     buttons.forEach((btn) => {
       const key = btn.getAttribute('data-tab') as DockTabKey | null;
-      if (this.activeTab && key === this.activeTab) {
+      if (this.activeTab !== null && key === this.activeTab) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -133,22 +127,26 @@ export class BottomDock {
    * 设置当前激活的底部 tab（支持传入 null 表示全部不高亮）
    */
   setActiveTab(tab: DockTabKey | null): void {
+    // 更新本地状态并同步高亮
     this.activeTab = tab;
     this.syncActiveClass();
 
-    // 传入 null 仅影响高亮，不切换面板、不派发事件
-    if (!tab) {
+    // 传入 null：仅影响高亮，不切换面板、不派发事件
+    if (tab === null) {
       return;
     }
 
+    // 同步面板内容
     this.panels.setTab(tab);
 
-    // 派发事件通知其它组件同步状态
-    window.dispatchEvent(
-      new CustomEvent('vr:bottom-dock-tab-change', {
-        detail: { tab },
-      }),
-    );
+    // 若是外部事件驱动的同步，不再反向派发事件，避免递归
+    if (!this.isHandlingExternalTabChange) {
+      window.dispatchEvent(
+        new CustomEvent('vr:bottom-dock-tab-change', {
+          detail: { tab },
+        }),
+      );
+    }
 
     // 额外行为：信息 / 设置 打开弹窗
     if (tab === 'info') {

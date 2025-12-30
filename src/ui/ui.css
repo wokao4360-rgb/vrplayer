@@ -2137,10 +2137,25 @@ body{
   padding: 0 12px 12px;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  box-sizing: border-box;
 }
 .vr-guidetray-scroll::-webkit-scrollbar{
   display: none;
 }
+
+/* 移动端：修复横向列表首项被裁切问题 */
+@media (max-width: 768px), (pointer: coarse) {
+  .vr-guidetray-scroll{
+    justify-content: flex-start;
+    padding-left: 12px;
+    padding-right: 12px;
+    scroll-padding-left: 12px;
+  }
+  .vr-guidetray-item:first-child{
+    margin-left: 0 !important;
+  }
+}
+
 .vr-guidetray-item{
   flex-shrink: 0;
   width: 80px;

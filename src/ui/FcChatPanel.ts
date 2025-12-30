@@ -739,7 +739,7 @@ export class FcChatPanel {
         box-shadow: 0 4px 16px rgba(37,99,235,.4);
         padding: 0;
         transition: opacity 150ms ease, box-shadow 150ms ease, transform 150ms ease;
-        animation: fcchat-idle 9s ease-in-out infinite;
+        animation: fcchat-idle 5.2s ease-in-out infinite;
       }
       .fcchat-handle:hover{
         box-shadow: 0 6px 20px rgba(37,99,235,.5);
@@ -754,20 +754,26 @@ export class FcChatPanel {
         display: block;
       }
       @keyframes fcchat-idle{
-        0%, 85%{
-          transform: translate3d(0, 0, 0) scale(1);
+        0%, 72%{
+          transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
         }
-        88%{
-          transform: translate3d(0, -2px, 0) rotate(2deg) scale(1.02);
+        74%{
+          transform: translate3d(0, -6px, 0) scale(1.08) rotate(4deg);
         }
-        91%{
-          transform: translate3d(0, 1px, 0) rotate(-1deg) scale(1.01);
+        78%{
+          transform: translate3d(0, -2px, 0) scale(1.04) rotate(-2deg);
         }
-        94%{
-          transform: translate3d(0, -1px, 0) rotate(1deg) scale(1.01);
+        82%{
+          transform: translate3d(0, -5px, 0) scale(1.06) rotate(3deg);
         }
-        97%, 100%{
-          transform: translate3d(0, 0, 0) scale(1);
+        86%{
+          transform: translate3d(0, -1px, 0) scale(1.02) rotate(-1deg);
+        }
+        90%{
+          transform: translate3d(0, -3px, 0) scale(1.05) rotate(2deg);
+        }
+        92%, 100%{
+          transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
         }
       }
       .fcchat-collapse-btn{
@@ -834,8 +840,8 @@ export class FcChatPanel {
         }
         .fcchat-bubble{ max-width: 84%; }
         .fcchat-dock{
-          right: 14px;
-          bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+          right: 20px;
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 96px) !important;
         }
         .fcchat-main-btn{
           white-space: nowrap !important;

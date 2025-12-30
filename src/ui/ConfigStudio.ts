@@ -963,7 +963,7 @@ export class ConfigStudio {
             const hint = error.code ? (ERROR_HINTS[error.code] || '请检查配置') : '请检查配置';
             const locationParts: string[] = [];
             if (error.museumName) locationParts.push(`馆：${error.museumName}`);
-            if (error.sceneName) locationParts.push(`场景：${error.sceneName}`);
+            if (error.sceneName) locationParts.push(`点位：${error.sceneName}`);
             const locationText = locationParts.length > 0 ? locationParts.join(' / ') : '全局配置';
             
             return `

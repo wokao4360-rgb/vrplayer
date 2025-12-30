@@ -627,6 +627,23 @@ body{
   font-size: 13px;
 }
 
+.vr-modal-info-copyright{
+  margin-top: 8px;
+  text-align: center;
+}
+
+.vr-modal-info-copyright-btn{
+  display: inline-block;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 8px 0 0;
+  color: rgba(255,255,255,0.86);
+  font-size: 12px;
+  text-decoration: underline;
+  text-align: center;
+}
+
 .vr-modal-settings-list{
   display: flex;
   flex-direction: column;

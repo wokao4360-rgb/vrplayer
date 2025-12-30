@@ -1382,27 +1382,26 @@ class App {
       <div><span class="vr-modal-info-row-label">馆：</span><span>${museumName}</span></div>
       <div><span class="vr-modal-info-row-label">场景：</span><span>${sceneName}</span></div>
       <div><span class="vr-modal-info-row-label">采集于</span><span> 2025-12-27</span></div>
+      <div class="vr-modal-info-copyright">
+        <button type="button" role="button" class="vr-modal-info-copyright-btn">© 2025 鼎虎清源</button>
+      </div>
     `;
 
-    // 底部“鼎虎清源”链接
-    const link = document.createElement('button');
-    link.type = 'button';
-    link.className = 'vr-modal-info-link';
-    link.textContent = '鼎虎清源';
-    content.appendChild(link);
-
-    // 先挂载信息弹窗，再在点击时关闭本弹窗、下一帧打开“鼎虎清源”弹窗
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // 方案 1：先关闭信息弹窗，再打开鼎虎清源，避免层级遮挡
-      if (this.infoModalMounted) {
-        this.infoModalMounted.close();
-      }
-      setTimeout(() => {
-        this.openDingHuQingYuan();
-      }, 0);
-    });
+    // 底部版权文本点击事件：先关闭信息弹窗，再打开“鼎虎清源”弹窗
+    const copyrightBtn = content.querySelector('.vr-modal-info-copyright-btn') as HTMLButtonElement;
+    if (copyrightBtn) {
+      copyrightBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // 先关闭信息弹窗，再打开鼎虎清源，避免层级遮挡
+        if (this.infoModalMounted) {
+          this.infoModalMounted.close();
+        }
+        setTimeout(() => {
+          this.openDingHuQingYuan();
+        }, 0);
+      });
+    }
 
     this.infoModalMounted = mountModal({
       title: '信息',

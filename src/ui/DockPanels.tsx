@@ -89,7 +89,21 @@ export class DockPanels {
       this.element.innerHTML = '';
       const sid = this.sceneId || 'unknown';
       if (!this.communityPanel) {
-        this.communityPanel = new CommunityPanel({ sceneId: sid, sceneName: this.sceneName });
+        this.communityPanel = new CommunityPanel({
+          sceneId: sid,
+          sceneName: this.sceneName,
+          onClose: () => {
+            // 真正关闭社区面板：移除 DOM 并清理引用
+            if (this.communityPanel) {
+              this.communityPanel.remove();
+              this.communityPanel = null;
+            }
+            // 隐藏 DockPanels 容器
+            this.element.classList.add('hidden');
+            this.element.innerHTML = '';
+            // 注意：不设置 currentTab = null，避免影响其他 tab 的状态
+          },
+        });
       } else {
         this.communityPanel.setScene(sid, this.sceneName);
       }

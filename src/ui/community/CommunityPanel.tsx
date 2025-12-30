@@ -6,6 +6,7 @@ import { showToast } from '../toast';
 type CommunityPanelProps = {
   sceneId: string;
   sceneName?: string;
+  onClose?: () => void;
 };
 
 type ToastReason = 'not_logged_in' | 'banned' | 'cooldown' | 'EMPTY';
@@ -14,6 +15,7 @@ export class CommunityPanel {
   private element: HTMLElement;
   private sceneId: string;
   private sceneName?: string;
+  private onClose?: () => void;
 
   private subtitleEl: HTMLElement;
   private loginHintBtn: HTMLButtonElement;
@@ -33,6 +35,7 @@ export class CommunityPanel {
   constructor(props: CommunityPanelProps) {
     this.sceneId = props.sceneId;
     this.sceneName = props.sceneName;
+    this.onClose = props.onClose;
 
     this.element = document.createElement('div');
     this.element.className = 'vr-community';
@@ -61,7 +64,9 @@ export class CommunityPanel {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      // 社区窗口关闭时，仅关闭自身对应的 Dock tab
+      // 1) 先真正关闭面板（DOM 移除/隐藏）
+      this.onClose?.();
+      // 2) 再熄灭 Dock 高亮
       window.dispatchEvent(
         new CustomEvent('vr:dock-tab-close', {
           detail: { tab: 'community' },

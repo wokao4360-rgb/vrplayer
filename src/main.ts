@@ -44,7 +44,7 @@ import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
 import { initVrMode, enableVrMode, disableVrMode, isVrModeEnabled, setInteractingCallback } from './utils/vrMode';
 import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/fullscreen';
-import { mountModal } from './ui/Modal';
+import { mountModal, type MountedModal } from './ui/Modal';
 import { getPreferredQuality, setPreferredQuality, type QualityLevel } from './utils/qualityPreference';
 import { isTouchDevice, isMouseDevice } from './utils/deviceDetect';
 
@@ -817,7 +817,6 @@ class App {
     // 新 UI：底部 Dock（导览 tab 打开抽屉）- 降级保护
     try {
       this.bottomDock = new BottomDock({
-        initialTab: 'guide',
         onGuideClick: () => {
           // 点击"导览"时显示框3（GuideTray）
           if (this.guideTray) {
@@ -1379,14 +1378,24 @@ class App {
     link.type = 'button';
     link.className = 'vr-modal-info-link';
     link.textContent = '鼎虎清源';
+    content.appendChild(link);
+
+    // 先挂载信息弹窗，再在点击时关闭本弹窗、下一帧打开“鼎虎清源”弹窗
+    let mounted: MountedModal | null = null;
+
     link.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      this.openDingHuQingYuan();
+      // 方案 1：先关闭信息弹窗，再打开鼎虎清源，避免层级遮挡
+      if (mounted) {
+        mounted.close();
+      }
+      setTimeout(() => {
+        this.openDingHuQingYuan();
+      }, 0);
     });
-    content.appendChild(link);
 
-    mountModal({
+    mounted = mountModal({
       title: '信息',
       contentEl: content,
       onClose: () => {

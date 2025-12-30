@@ -278,8 +278,11 @@ export async function loadExternalImageBitmap(
       // 优先使用 Image() 原生加载（内部会再次使用代理 URL，但这里传入的是原始 URL 用于错误信息）
       const img = await loadExternalImageElement(finalUrl, opts);
       
-      // 将已加载的 Image 转换为 ImageBitmap
-      const imageBitmap = await createImageBitmap(img);
+      // 将已加载的 Image 转换为 ImageBitmap，并尊重 EXIF 方向
+      const imageBitmap = await (createImageBitmap as any)(img, {
+        imageOrientation: 'from-image',
+        premultiplyAlpha: 'none',
+      });
       return imageBitmap;
     } catch (error) {
       // Image() 加载失败

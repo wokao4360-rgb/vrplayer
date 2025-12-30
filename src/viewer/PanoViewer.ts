@@ -562,6 +562,16 @@ export class PanoViewer {
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
+
+      // --- fix: pano upside-down ---
+      // 统一用 repeat/offset 做一次“竖向翻转”，并关闭 flipY，避免链路差异导致倒置
+      texture.flipY = false;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.repeat.set(1, -1);
+      texture.offset.set(0, 1);
+      texture.needsUpdate = true;
+      // --- end fix ---
       
       const material = new THREE.MeshBasicMaterial({ map: texture });
       this.sphere = new THREE.Mesh(geometry, material);
@@ -621,6 +631,15 @@ export class PanoViewer {
       const lowTexture = new THREE.CanvasTexture(lowImageBitmap);
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
+
+      // --- fix: pano upside-down (low) ---
+      lowTexture.flipY = false;
+      lowTexture.wrapS = THREE.ClampToEdgeWrapping;
+      lowTexture.wrapT = THREE.ClampToEdgeWrapping;
+      lowTexture.repeat.set(1, -1);
+      lowTexture.offset.set(0, 1);
+      lowTexture.needsUpdate = true;
+      // --- end fix ---
       
       const material = new THREE.MeshBasicMaterial({ map: lowTexture });
       this.sphere = new THREE.Mesh(geometry, material);
@@ -652,6 +671,15 @@ export class PanoViewer {
         const highTexture = new THREE.CanvasTexture(highImageBitmap);
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
+
+        // --- fix: pano upside-down (high) ---
+        highTexture.flipY = false;
+        highTexture.wrapS = THREE.ClampToEdgeWrapping;
+        highTexture.wrapT = THREE.ClampToEdgeWrapping;
+        highTexture.repeat.set(1, -1);
+        highTexture.offset.set(0, 1);
+        highTexture.needsUpdate = true;
+        // --- end fix ---
         
         // 保存当前视角（确保替换时视角不变）
         const currentView = this.getCurrentView();

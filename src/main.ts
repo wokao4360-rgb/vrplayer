@@ -473,7 +473,7 @@ class App {
           ${museum.scenes.map(scene => `
             <div class="scene-card" data-scene-id="${scene.id}">
               <div class="scene-cover">
-                <img src="${scene.thumb}" alt="${scene.name}" loading="lazy" referrerpolicy="no-referrer" decoding="async">
+                <img src="${scene.thumb}" alt="${scene.name}" loading="lazy">
                 <div class="scene-overlay">
                   <h2 class="scene-name">${scene.name}</h2>
                 </div>
@@ -743,10 +743,6 @@ class App {
                 scenes: museum.scenes,
                 onClose: () => {
                   // 框4关闭时，框3保持显示
-                  // 清空底部按钮高亮
-                  if (this.bottomDock) {
-                    this.bottomDock.clearActive();
-                  }
                 },
               });
               this.appElement.appendChild(this.sceneGuideDrawer.getElement());
@@ -767,10 +763,6 @@ class App {
           // 关闭框3
           if (this.guideTray) {
             this.guideTray.setVisible(false);
-          }
-          // 清空底部按钮高亮
-          if (this.bottomDock) {
-            this.bottomDock.clearActive();
           }
         },
       });
@@ -1368,28 +1360,20 @@ class App {
     link.type = 'button';
     link.className = 'vr-modal-info-link';
     link.textContent = '鼎虎清源';
-
-    // 保存 modal 实例，用于关闭
-    const mounted = mountModal({
-      title: '信息',
-      contentEl: content,
-      onClose: () => {
-        if (this.bottomDock) {
-          this.bottomDock.clearActive();
-        }
-      },
-    });
-
-    // 点击链接时先关闭信息弹窗，再打开鼎虎清源
     link.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      mounted.close();
-      setTimeout(() => {
-        this.openDingHuQingYuan();
-      }, 0);
+      this.openDingHuQingYuan();
     });
     content.appendChild(link);
+
+    mountModal({
+      title: '信息',
+      contentEl: content,
+      onClose: () => {
+        this.bottomDock?.clearActive();
+      },
+    });
   }
 
   /**

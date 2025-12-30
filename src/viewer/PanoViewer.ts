@@ -10,7 +10,6 @@ import { GroundNavDots } from '../ui/GroundNavDots';
 import { GroundHeadingMarker } from '../ui/GroundHeadingMarker';
 import type { SceneHotspot } from '../types/config';
 import { interactionBus } from '../ui/interactionBus';
-import { loadExternalImageAsImageBitmap } from '../utils/externalImage';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -484,40 +483,43 @@ export class PanoViewer {
     const geometry = new THREE.SphereGeometry(500, 64, 64);
     geometry.scale(-1, 1, 1); // 内表面
 
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin('anonymous');
+    
     // 解析资源 URL（统一处理）
     const panoLowUrl = resolveAssetUrl(sceneData.panoLow, AssetType.PANO_LOW);
     const panoUrl = resolveAssetUrl(sceneData.pano, AssetType.PANO);
 
     const quality = getPreferredQuality();
-
+    
     // 画质偏好：
     // - low：优先只加载低清图；如果没有低清则退回高清
     // - high：沿用现有渐进式加载逻辑
     if (quality === 'low') {
       if (panoLowUrl) {
-        this.loadSingleTexture(geometry, panoLowUrl, true);
+        this.loadSingleTexture(loader, geometry, panoLowUrl, true);
         return;
       }
       if (panoUrl) {
-        this.loadSingleTexture(geometry, panoUrl, false);
+        this.loadSingleTexture(loader, geometry, panoUrl, false);
         return;
       }
     } else {
       // 如果只提供了 pano，直接加载（作为高清图）
       if (!panoLowUrl && panoUrl) {
-        this.loadSingleTexture(geometry, panoUrl, false);
+        this.loadSingleTexture(loader, geometry, panoUrl, false);
         return;
       }
-
+      
       // 如果只提供了 panoLow，直接加载（作为低清图）
       if (panoLowUrl && !panoUrl) {
-        this.loadSingleTexture(geometry, panoLowUrl, true);
+        this.loadSingleTexture(loader, geometry, panoLowUrl, true);
         return;
       }
-
+      
       // 如果两者都提供了，先加载低清，再替换高清
       if (panoLowUrl && panoUrl) {
-        this.loadProgressiveTextures(geometry, panoLowUrl, panoUrl);
+        this.loadProgressiveTextures(loader, geometry, panoLowUrl, panoUrl);
         return;
       }
     }
@@ -536,51 +538,49 @@ export class PanoViewer {
    * @param url 图片 URL
    * @param isLowRes 是否为低清图（用于状态标记）
    */
-  private async loadSingleTexture(
+  private loadSingleTexture(
+    loader: THREE.TextureLoader,
     geometry: THREE.SphereGeometry,
     url: string,
     isLowRes: boolean
-  ): Promise<void> {
+  ): void {
     if (isLowRes) {
       this.updateLoadStatus(LoadStatus.LOADING_LOW);
     } else {
       this.updateLoadStatus(LoadStatus.LOADING_HIGH);
     }
 
-    try {
-      const bitmap = await loadExternalImageAsImageBitmap(url, {
-        timeoutMs: 12000,
-        retries: 2,
-        retryDelayMs: 400
-      });
-
-      const texture = new THREE.Texture(bitmap);
-      texture.needsUpdate = true;
-      this.applyTextureSettings(texture);
-      this.warnIfNotPanoAspect(texture, url);
-
-      const material = new THREE.MeshBasicMaterial({ map: texture });
-      this.sphere = new THREE.Mesh(geometry, material);
-      this.scene.add(this.sphere);
-
-      // 更新状态
-      if (isLowRes) {
-        this.updateLoadStatus(LoadStatus.LOW_READY);
-      } else {
-        this.updateLoadStatus(LoadStatus.HIGH_READY);
+    loader.load(
+      url,
+      (texture) => {
+        this.applyTextureSettings(texture);
+        this.warnIfNotPanoAspect(texture, url);
+        
+        const material = new THREE.MeshBasicMaterial({ map: texture });
+        this.sphere = new THREE.Mesh(geometry, material);
+        this.scene.add(this.sphere);
+        
+        // 更新状态
+        if (isLowRes) {
+          this.updateLoadStatus(LoadStatus.LOW_READY);
+        } else {
+          this.updateLoadStatus(LoadStatus.HIGH_READY);
+        }
+        
+        // 触发加载完成回调
+        if (this.onLoadCallback) {
+          this.onLoadCallback();
+        }
+      },
+      undefined,
+      (error) => {
+        console.error('加载全景图失败:', url, error);
+        this.updateLoadStatus(LoadStatus.ERROR);
+        if (this.onErrorCallback) {
+          this.onErrorCallback(new Error(`加载全景图失败：${url}`));
+        }
       }
-
-      // 触发加载完成回调
-      if (this.onLoadCallback) {
-        this.onLoadCallback();
-      }
-    } catch (error) {
-      console.warn('外链贴图加载失败:', url, error);
-      this.updateLoadStatus(LoadStatus.ERROR);
-      if (this.onErrorCallback) {
-        this.onErrorCallback(new Error(`加载全景图失败：${url} - ${error instanceof Error ? error.message : String(error)}`));
-      }
-    }
+    );
   }
 
   /**
@@ -591,87 +591,82 @@ export class PanoViewer {
    * - 低清图失败：尝试加载高清图
    * - 高清图失败：保留低清图，标记为降级模式
    */
-  private async loadProgressiveTextures(
+  private loadProgressiveTextures(
+    loader: THREE.TextureLoader,
     geometry: THREE.SphereGeometry,
     panoLowUrl: string,
     panoUrl: string
-  ): Promise<void> {
+  ): void {
     // 第一步：加载低清图（首屏快速显示）
     this.updateLoadStatus(LoadStatus.LOADING_LOW);
-
-    try {
-      const lowBitmap = await loadExternalImageAsImageBitmap(panoLowUrl, {
-        timeoutMs: 12000,
-        retries: 2,
-        retryDelayMs: 400
-      });
-
-      const lowTexture = new THREE.Texture(lowBitmap);
-      lowTexture.needsUpdate = true;
-      this.applyTextureSettings(lowTexture);
-      this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
-
-      const material = new THREE.MeshBasicMaterial({ map: lowTexture });
-      this.sphere = new THREE.Mesh(geometry, material);
-      this.scene.add(this.sphere);
-
-      // 低清图加载完成，更新状态
-      this.updateLoadStatus(LoadStatus.LOW_READY);
-
-      // 低清图加载完成，触发加载回调（用户可以开始交互）
-      if (this.onLoadCallback) {
-        this.onLoadCallback();
-      }
-
-      // 第二步：后台加载高清图（无缝替换）
-      this.updateLoadStatus(LoadStatus.LOADING_HIGH);
-
-      try {
-        const highBitmap = await loadExternalImageAsImageBitmap(panoUrl, {
-          timeoutMs: 12000,
-          retries: 2,
-          retryDelayMs: 400
-        });
-
-        // 高清图加载成功，无缝替换
-        const highTexture = new THREE.Texture(highBitmap);
-        highTexture.needsUpdate = true;
-        this.applyTextureSettings(highTexture);
-        this.warnIfNotPanoAspect(highTexture, panoUrl);
-
-        // 保存当前视角（确保替换时视角不变）
-        const currentView = this.getCurrentView();
-
-        // 替换纹理
-        if (this.sphere && this.sphere.material && 'map' in this.sphere.material) {
-          const material = this.sphere.material as THREE.MeshBasicMaterial;
-          // 释放旧纹理
-          if (material.map) {
-            material.map.dispose();
-          }
-          // 设置新纹理
-          material.map = highTexture;
-          material.needsUpdate = true;
+    
+    loader.load(
+      panoLowUrl,
+      (lowTexture) => {
+        this.applyTextureSettings(lowTexture);
+        this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
+        
+        const material = new THREE.MeshBasicMaterial({ map: lowTexture });
+        this.sphere = new THREE.Mesh(geometry, material);
+        this.scene.add(this.sphere);
+        
+        // 低清图加载完成，更新状态
+        this.updateLoadStatus(LoadStatus.LOW_READY);
+        
+        // 低清图加载完成，触发加载回调（用户可以开始交互）
+        if (this.onLoadCallback) {
+          this.onLoadCallback();
         }
-
-        // 确保视角没有被重置
-        this.setView(currentView.yaw, currentView.pitch, currentView.fov);
-
-        // 更新状态：高清图已加载完成
-        this.updateLoadStatus(LoadStatus.HIGH_READY);
-        this.isDegradedMode = false;
-      } catch (error) {
-        // 高清图加载失败，继续使用低清图（降级模式）
-        console.warn('外链贴图加载失败/回退: 高清图加载失败，继续使用低清图:', panoUrl, error);
-        this.isDegradedMode = true;
-        this.updateLoadStatus(LoadStatus.DEGRADED);
-        // 注意：这里不调用 onErrorCallback，因为低清图已经加载成功，用户可以正常使用
+        
+        // 第二步：后台加载高清图（无缝替换）
+        this.updateLoadStatus(LoadStatus.LOADING_HIGH);
+        
+        loader.load(
+          panoUrl,
+          (highTexture) => {
+            // 高清图加载成功，无缝替换
+            this.applyTextureSettings(highTexture);
+            this.warnIfNotPanoAspect(highTexture, panoUrl);
+            
+            // 保存当前视角（确保替换时视角不变）
+            const currentView = this.getCurrentView();
+            
+            // 替换纹理
+            if (this.sphere && this.sphere.material && 'map' in this.sphere.material) {
+              const material = this.sphere.material as THREE.MeshBasicMaterial;
+              // 释放旧纹理
+              if (material.map) {
+                material.map.dispose();
+              }
+              // 设置新纹理
+              material.map = highTexture;
+              material.needsUpdate = true;
+            }
+            
+            // 确保视角没有被重置
+            this.setView(currentView.yaw, currentView.pitch, currentView.fov);
+            
+            // 更新状态：高清图已加载完成
+            this.updateLoadStatus(LoadStatus.HIGH_READY);
+            this.isDegradedMode = false;
+          },
+          undefined,
+          (error) => {
+            // 高清图加载失败，继续使用低清图（降级模式）
+            console.error('高清全景图加载失败，继续使用低清图:', panoUrl, error);
+            this.isDegradedMode = true;
+            this.updateLoadStatus(LoadStatus.DEGRADED);
+            // 注意：这里不调用 onErrorCallback，因为低清图已经加载成功，用户可以正常使用
+          }
+        );
+      },
+      undefined,
+      (error) => {
+        // 低清图加载失败，尝试加载高清图作为兜底
+        console.error('低清全景图加载失败，尝试加载高清图:', panoLowUrl, error);
+        this.loadSingleTexture(loader, geometry, panoUrl, false);
       }
-    } catch (error) {
-      // 低清图加载失败，尝试加载高清图作为兜底
-      console.warn('外链贴图加载失败/回退: 低清图加载失败，尝试加载高清图:', panoLowUrl, error);
-      await this.loadSingleTexture(geometry, panoUrl, false);
-    }
+    );
   }
 
   /**

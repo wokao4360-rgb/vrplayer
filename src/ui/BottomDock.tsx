@@ -136,19 +136,7 @@ export class BottomDock {
       return;
     }
 
-    // 同步面板内容
-    this.panels.setTab(tab);
-
-    // 若是外部事件驱动的同步，不再反向派发事件，避免递归
-    if (!this.isHandlingExternalTabChange) {
-      window.dispatchEvent(
-        new CustomEvent('vr:bottom-dock-tab-change', {
-          detail: { tab },
-        }),
-      );
-    }
-
-    // 额外行为：信息 / 设置 打开弹窗
+    // 额外行为：信息 / 设置 打开弹窗（不切 DockPanels）
     if (tab === 'info') {
       if (this.onOpenInfo) {
         this.onOpenInfo();
@@ -161,6 +149,18 @@ export class BottomDock {
       } else {
         this.openFallbackSettingsModal();
       }
+    } else {
+      // guide / community 才切 DockPanels
+      this.panels.setTab(tab);
+    }
+
+    // 若是外部事件驱动的同步，不再反向派发事件，避免递归
+    if (!this.isHandlingExternalTabChange) {
+      window.dispatchEvent(
+        new CustomEvent('vr:bottom-dock-tab-change', {
+          detail: { tab },
+        }),
+      );
     }
   }
 

@@ -17,7 +17,7 @@ type DockPanelsOptions = {
 
 export class DockPanels {
   private element: HTMLElement;
-  private currentTab: DockTabKey;
+  private currentTab: DockTabKey | null;
   private sceneId?: string;
   private sceneName?: string;
   private museum?: Museum;
@@ -29,6 +29,7 @@ export class DockPanels {
   private unsubscribeInteracting: (() => void) | null = null;
   private unsubscribeIdle: (() => void) | null = null;
   private unsubscribeUIEngaged: (() => void) | null = null;
+  private handleClosePanels?: () => void;
 
   constructor(options: DockPanelsOptions) {
     this.currentTab = options.initialTab;
@@ -41,6 +42,12 @@ export class DockPanels {
     this.element.className = 'vr-panl vr-glass hidden';
     this.render();
     this.setupInteractionListeners();
+
+    // 监听统一关闭事件
+    this.handleClosePanels = () => {
+      this.closeAllPanels();
+    };
+    window.addEventListener('vr:close-panels', this.handleClosePanels);
   }
 
   private setupInteractionListeners(): void {
@@ -57,6 +64,25 @@ export class DockPanels {
   private render(): void {
     // 清理变体类
     this.element.classList.remove('vr-panel--community', 'vr-panel--map', 'vr-panel--dollhouse');
+
+    if (!this.currentTab) {
+      // 关闭所有 panel
+      this.element.classList.add('hidden');
+      this.element.innerHTML = '';
+      if (this.communityPanel) {
+        this.communityPanel.remove();
+        this.communityPanel = null;
+      }
+      if (this.mapPanel) {
+        this.mapPanel.remove();
+        this.mapPanel = null;
+      }
+      if (this.dollhousePanel) {
+        this.dollhousePanel.remove();
+        this.dollhousePanel = null;
+      }
+      return;
+    }
 
     if (this.currentTab === 'community') {
       this.element.classList.add('vr-panel--community');
@@ -222,6 +248,25 @@ export class DockPanels {
     }, 40);
   }
 
+  closeAllPanels(): void {
+    this.currentTab = null;
+    // 清理当前 panel
+    if (this.communityPanel) {
+      this.communityPanel.remove();
+      this.communityPanel = null;
+    }
+    if (this.mapPanel) {
+      this.mapPanel.remove();
+      this.mapPanel = null;
+    }
+    if (this.dollhousePanel) {
+      this.dollhousePanel.remove();
+      this.dollhousePanel = null;
+    }
+    this.element.classList.add('hidden');
+    this.element.innerHTML = '';
+  }
+
   getElement(): HTMLElement {
     return this.element;
   }
@@ -239,6 +284,10 @@ export class DockPanels {
     if (this.unsubscribeUIEngaged) {
       this.unsubscribeUIEngaged();
       this.unsubscribeUIEngaged = null;
+    }
+    if (this.handleClosePanels) {
+      window.removeEventListener('vr:close-panels', this.handleClosePanels);
+      this.handleClosePanels = undefined;
     }
     if (this.communityPanel) {
       this.communityPanel.remove();

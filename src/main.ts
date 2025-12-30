@@ -183,6 +183,8 @@ class App {
   private structureView2D: StructureView2D | null = null;
   private structureView3D: StructureView3D | null = null;
   private fcChatPanel: FcChatPanel | null = null;
+  private infoModalMounted: MountedModal | null = null;
+  private settingsModalMounted: MountedModal | null = null;
 
   constructor() {
     const appElement = document.getElementById('app');
@@ -772,10 +774,11 @@ class App {
           }
         },
         onClose: () => {
-          // 关闭框3
+          // 关闭框3并熄灭导览高亮
           if (this.guideTray) {
             this.guideTray.setVisible(false);
           }
+          this.bottomDock?.clearActive();
         },
       });
       this.guideTray.setVisible(false); // 初始隐藏
@@ -1362,6 +1365,10 @@ class App {
    * 底部「信息」弹窗
    */
   private openInfoModal(): void {
+    // 确保单例：如已存在先关闭
+    this.infoModalMounted?.close();
+    this.infoModalMounted = null;
+
     const museumName = this.currentMuseum?.name || '-';
     const sceneName = this.currentScene?.name || '-';
 
@@ -1381,24 +1388,23 @@ class App {
     content.appendChild(link);
 
     // 先挂载信息弹窗，再在点击时关闭本弹窗、下一帧打开“鼎虎清源”弹窗
-    let mounted: MountedModal | null = null;
-
     link.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       // 方案 1：先关闭信息弹窗，再打开鼎虎清源，避免层级遮挡
-      if (mounted) {
-        mounted.close();
+      if (this.infoModalMounted) {
+        this.infoModalMounted.close();
       }
       setTimeout(() => {
         this.openDingHuQingYuan();
       }, 0);
     });
 
-    mounted = mountModal({
+    this.infoModalMounted = mountModal({
       title: '信息',
       contentEl: content,
       onClose: () => {
+        this.infoModalMounted = null;
         this.bottomDock?.clearActive();
       },
     });
@@ -1469,6 +1475,10 @@ class App {
    * 底部「设置」弹窗
    */
   private openSettingsModal(): void {
+    // 确保单例：如已存在先关闭
+    this.settingsModalMounted?.close();
+    this.settingsModalMounted = null;
+
     const isTouch = isTouchDevice();
     const isMouse = isMouseDevice();
     const currentQuality = getPreferredQuality();
@@ -1589,11 +1599,12 @@ class App {
     container.appendChild(resetRow);
     container.appendChild(vrRow);
 
-    mountModal({
+    this.settingsModalMounted = mountModal({
       title: '更多',
       contentEl: container,
       panelClassName: 'vr-modal-settings',
       onClose: () => {
+        this.settingsModalMounted = null;
         this.bottomDock?.clearActive();
       },
     });

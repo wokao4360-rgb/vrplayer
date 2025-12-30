@@ -116,6 +116,10 @@ export class PreloadManager {
         }
         
         // 使用 Image 预取（原生加载，不用 fetch）
+        // 导入代理 URL 工具
+        const { toProxiedImageUrl } = await import('../utils/externalImage');
+        const proxiedUrl = toProxiedImageUrl(url);
+        
         await new Promise<void>((resolve, reject) => {
           const img = new Image();
           img.referrerPolicy = 'no-referrer';
@@ -135,7 +139,7 @@ export class PreloadManager {
               resolve(); // 即使失败也 resolve，避免阻塞队列
             }
           };
-          img.src = url;
+          img.src = proxiedUrl;
         });
       } catch (error) {
         // 吞掉所有错误，不污染控制台

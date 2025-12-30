@@ -7,6 +7,7 @@ import type { SceneHotspot, Scene } from '../types/config';
 import { emitSceneFocus, onSceneFocus, SceneFocusEvent } from './sceneLinkBus';
 import { interactionBus } from './interactionBus';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
+import { toProxiedImageUrl } from '../utils/externalImage';
 
 type SceneStripOptions = {
   museumId: string;
@@ -142,8 +143,9 @@ export class SceneStrip {
         if (thumbUrl) {
           const img = document.createElement('img');
           img.referrerPolicy = 'no-referrer';
+          img.crossOrigin = 'anonymous';
           img.decoding = 'async';
-          img.src = thumbUrl;
+          img.src = toProxiedImageUrl(thumbUrl);
           img.alt = sceneInfo.name;
           img.loading = 'lazy';
           thumbContainer.appendChild(img);

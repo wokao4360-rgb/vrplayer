@@ -5,6 +5,7 @@
 
 import type { Scene } from '../types/config';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
+import { toProxiedImageUrl } from '../utils/externalImage';
 
 type GuideTrayOptions = {
   museumId: string;
@@ -87,11 +88,12 @@ export class GuideTray {
       const thumb = document.createElement('img');
       thumb.className = 'vr-guidetray-item-thumb';
       thumb.referrerPolicy = 'no-referrer';
+      thumb.crossOrigin = 'anonymous';
       thumb.decoding = 'async';
       thumb.loading = 'lazy';
       const thumbUrl = scene.thumb ? resolveAssetUrl(scene.thumb, AssetType.THUMB) : undefined;
       if (thumbUrl) {
-        thumb.src = thumbUrl;
+        thumb.src = toProxiedImageUrl(thumbUrl);
       }
       thumb.alt = scene.name;
 

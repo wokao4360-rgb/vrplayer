@@ -4,6 +4,24 @@
  * 提供全局并发限制、超时重试、no-referrer 等功能
  */
 
+/**
+ * 将外链图片 URL 转换为同源代理 URL
+ * 目前只代理 i.ibb.co 域名
+ */
+export function toProxiedImageUrl(rawUrl: string): string {
+  try {
+    const url = new URL(rawUrl);
+    // 只代理 i.ibb.co 域名
+    if (url.hostname === 'i.ibb.co') {
+      return `/__img?u=${encodeURIComponent(rawUrl)}`;
+    }
+  } catch {
+    // 非法 URL，直接返回原 URL
+  }
+  // 其他域名或非法 URL，直接返回原 URL
+  return rawUrl;
+}
+
 export type ExternalImageLoadOptions = {
   timeoutMs?: number; // 默认由调用侧传（thumb 8000, pano 15000）
   retries?: number; // 默认 2
@@ -128,6 +146,9 @@ export async function loadExternalImageElement(
     crossOrigin = 'anonymous',
   } = opts;
 
+  // 统一改写为代理 URL（如果是白名单域名）
+  const finalUrl = toProxiedImageUrl(url);
+
   return runWithLimit(async () => {
     return new Promise<HTMLImageElement>((resolve, reject) => {
       let timeoutId: number | null = null;
@@ -167,7 +188,7 @@ export async function loadExternalImageElement(
 
           if (currentAttempt <= retries) {
             const delayMs = retryBaseDelayMs * Math.pow(2, currentAttempt - 1);
-            console.warn(`外链图片加载超时重试 ${currentAttempt}/${retries + 1}: ${url}`);
+            console.warn(`外链图片加载超时重试 ${currentAttempt}/${retries + 1}: ${finalUrl}`);
             setTimeout(attemptLoad, delayMs);
           } else {
             reject(new ExternalImageLoadError(
@@ -212,7 +233,7 @@ export async function loadExternalImageElement(
 
           if (currentAttempt <= retries) {
             const delayMs = retryBaseDelayMs * Math.pow(2, currentAttempt - 1);
-            console.warn(`外链图片加载失败重试 ${currentAttempt}/${retries + 1}: ${url}`, event);
+            console.warn(`外链图片加载失败重试 ${currentAttempt}/${retries + 1}: ${finalUrl}`, event);
             setTimeout(attemptLoad, delayMs);
           } else {
             reject(new ExternalImageLoadError(
@@ -223,8 +244,8 @@ export async function loadExternalImageElement(
           }
         };
 
-        // 开始加载
-        img.src = url;
+        // 开始加载（使用代理 URL）
+        img.src = finalUrl;
       };
 
       attemptLoad();
@@ -247,10 +268,13 @@ export async function loadExternalImageBitmap(
     allowFetchFallback = false,
   } = opts;
 
+  // 统一改写为代理 URL（如果是白名单域名）
+  const finalUrl = toProxiedImageUrl(url);
+
   return runWithLimit(async () => {
     try {
-      // 优先使用 Image() 原生加载
-      const img = await loadExternalImageElement(url, opts);
+      // 优先使用 Image() 原生加载（内部会再次使用代理 URL，但这里传入的是原始 URL 用于错误信息）
+      const img = await loadExternalImageElement(finalUrl, opts);
       
       // 将已加载的 Image 转换为 ImageBitmap
       const imageBitmap = await createImageBitmap(img);
@@ -258,10 +282,10 @@ export async function loadExternalImageBitmap(
     } catch (error) {
       // Image() 加载失败
       if (allowFetchFallback) {
-        // 如果允许 fetch 兜底，尝试 fetch
-        console.warn(`Image() 加载失败，尝试 fetch 兜底: ${url}`, error);
+        // 如果允许 fetch 兜底，尝试 fetch（使用代理 URL）
+        console.warn(`Image() 加载失败，尝试 fetch 兜底: ${finalUrl}`, error);
         try {
-          return await fetchWithRetry(url, timeoutMs, retries, retryBaseDelayMs);
+          return await fetchWithRetry(finalUrl, timeoutMs, retries, retryBaseDelayMs);
         } catch (fetchError) {
           // fetch 也失败了，抛出原始错误（Image() 的错误）
           if (error instanceof ExternalImageLoadError) {

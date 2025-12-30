@@ -71,14 +71,19 @@ export function preloadAsset(url: string, type: AssetType): Promise<void> {
       video.src = resolvedUrl;
     } else {
       // 图片预加载：创建 Image 元素（原生加载，不用 fetch）
-      const img = new Image();
-      img.referrerPolicy = 'no-referrer';
-      img.crossOrigin = 'anonymous';
-      (img as any).loading = 'lazy';
-      img.decoding = 'async';
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error(`图片加载失败: ${resolvedUrl}`));
-      img.src = resolvedUrl;
+      // 导入代理 URL 工具
+      import('./externalImage').then(({ toProxiedImageUrl }) => {
+        const img = new Image();
+        img.referrerPolicy = 'no-referrer';
+        img.crossOrigin = 'anonymous';
+        (img as any).loading = 'lazy';
+        img.decoding = 'async';
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error(`图片加载失败: ${resolvedUrl}`));
+        img.src = toProxiedImageUrl(resolvedUrl);
+      }).catch((error) => {
+        reject(new Error(`导入代理工具失败: ${error}`));
+      });
     }
   });
 }

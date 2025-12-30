@@ -9,6 +9,7 @@ import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { onSceneFocus, SceneFocusEvent } from './sceneLinkBus';
 import { PreloadManager } from './preloadManager';
 import { getNetworkPolicy } from './networkPolicy';
+import { toProxiedImageUrl } from '../utils/externalImage';
 
 type SceneMeta = {
   title: string;
@@ -371,9 +372,13 @@ export class ScenePreviewCard {
         // 创建 img 元素
         const img = document.createElement('img');
         img.referrerPolicy = 'no-referrer';
+        img.crossOrigin = 'anonymous';
         img.loading = 'lazy';
         img.decoding = 'async';
-        img.src = thumbUrl;
+        img.src = toProxiedImageUrl(thumbUrl);
+        img.alt = meta.title;
+        this.thumbEl.appendChild(img);
+        this.thumbImg = img;
         img.alt = meta.title;
         this.thumbEl.appendChild(img);
         this.thumbImg = img;

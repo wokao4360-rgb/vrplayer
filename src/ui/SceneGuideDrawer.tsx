@@ -1,6 +1,7 @@
 import type { Scene } from '../types/config';
 import { navigateToScene } from '../utils/router';
 import { DEFAULT_COVER_DATA_URI } from './placeholders';
+import { toProxiedImageUrl } from '../utils/externalImage';
 
 type SceneGuideDrawerOptions = {
   museumId: string;
@@ -90,6 +91,7 @@ export class SceneGuideDrawer {
     const previewImg = document.createElement('img');
     previewImg.className = 'vr-guide-preview-image';
     previewImg.referrerPolicy = 'no-referrer';
+    previewImg.crossOrigin = 'anonymous';
     previewImg.decoding = 'async';
     previewImg.loading = 'lazy';
     this.previewImgEl = previewImg;
@@ -212,9 +214,11 @@ export class SceneGuideDrawer {
       const img = document.createElement('img');
       img.className = 'vr-guide-thumb';
       img.referrerPolicy = 'no-referrer';
+      img.crossOrigin = 'anonymous';
       img.decoding = 'async';
       img.loading = 'lazy';
-      img.src = scene.thumb || DEFAULT_COVER_DATA_URI;
+      const thumbSrc = scene.thumb ? toProxiedImageUrl(scene.thumb) : DEFAULT_COVER_DATA_URI;
+      img.src = thumbSrc;
       img.alt = scene.name || scene.id;
 
       const meta = document.createElement('div');
@@ -284,7 +288,8 @@ export class SceneGuideDrawer {
     const targetId = this.selectedSceneId || this.hoveredSceneId || this.currentSceneId;
     const scene = this.scenes.find((s) => s.id === targetId) || this.scenes[0];
     if (!scene) return;
-    this.previewImgEl.src = scene.thumb || DEFAULT_COVER_DATA_URI;
+    const thumbSrc = scene.thumb ? toProxiedImageUrl(scene.thumb) : DEFAULT_COVER_DATA_URI;
+    this.previewImgEl.src = thumbSrc;
     this.previewImgEl.alt = scene.name || scene.id;
     this.previewTitleEl.textContent = scene.name || scene.id;
     this.previewIdEl.textContent = scene.id;

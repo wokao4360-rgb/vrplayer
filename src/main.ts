@@ -145,65 +145,12 @@ function isDevMode(): boolean {
 }
 
 /**
- * DNS 预热：扫描配置中的外链图片 URL，为需要预热的域名添加 preconnect
- * 纯函数，不依赖 this 上下文
+ * DNS 预热：已禁用
+ * 由于图片现在通过同源代理 /__img 加载，不再需要 preconnect 到第三方域名
  */
-function warmupExternalImageHostsFromConfig(config: AppConfig): void {
-  const origins = new Set<string>();
-  
-  // 遍历所有博物馆和场景，收集外链图片的 origin
-  for (const museum of config.museums) {
-    // 检查博物馆封面
-    if (museum.cover) {
-      try {
-        const url = new URL(museum.cover);
-        if (url.origin !== window.location.origin) {
-          origins.add(url.origin);
-        }
-      } catch {
-        // 非法 URL，跳过
-      }
-    }
-    
-    // 检查场景的 pano/panoLow/thumb
-    for (const scene of museum.scenes) {
-      const urlsToCheck = [
-        scene.pano,
-        scene.panoLow,
-        scene.thumb,
-      ];
-      
-      for (const urlStr of urlsToCheck) {
-        if (!urlStr) continue;
-        
-        try {
-          const url = new URL(urlStr);
-          // 只预热外链域名（不是同源）
-          if (url.origin !== window.location.origin) {
-            origins.add(url.origin);
-          }
-        } catch {
-          // 非法 URL，跳过
-        }
-      }
-    }
-  }
-  
-  // 为每个需要预热的 origin 添加 preconnect
-  for (const origin of origins) {
-    // 检查是否已存在相同的 preconnect（避免重复添加）
-    const existing = document.head.querySelector(`link[rel="preconnect"][href="${origin}"]`);
-    if (existing) {
-      continue;
-    }
-    
-    const link = document.createElement('link');
-    link.rel = 'preconnect';
-    link.href = origin;
-    link.crossOrigin = 'anonymous';
-    document.head.appendChild(link);
-  }
-}
+// function warmupExternalImageHostsFromConfig(config: AppConfig): void {
+//   // 已禁用：图片通过同源代理加载，不需要 preconnect
+// }
 
 class App {
   private appElement: HTMLElement;
@@ -291,8 +238,7 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       
-      // DNS 预热：如果配置中有外链图片，添加 preconnect
-      warmupExternalImageHostsFromConfig(this.config);
+      // DNS 预热已禁用：图片通过同源代理 /__img 加载
       
       // 设置应用标题
       if (this.titleBar) {
@@ -329,8 +275,7 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       
-      // DNS 预热：如果配置中有外链图片，添加 preconnect
-      warmupExternalImageHostsFromConfig(this.config);
+      // DNS 预热已禁用：图片通过同源代理 /__img 加载
       
       // 清空当前视图
       this.appElement.innerHTML = '';
@@ -1024,7 +969,10 @@ class App {
     
     if (nextScene && nextScene.thumb) {
       // 使用资源解析器统一处理 URL
-      import('./utils/assetResolver').then(({ resolveAssetUrl, AssetType }) => {
+      Promise.all([
+        import('./utils/assetResolver'),
+        import('./utils/externalImage')
+      ]).then(([{ resolveAssetUrl, AssetType }, { toProxiedImageUrl }]) => {
         const resolvedUrl = resolveAssetUrl(nextScene.thumb, AssetType.THUMB);
         if (resolvedUrl) {
           const img = new Image();
@@ -1032,7 +980,7 @@ class App {
           img.crossOrigin = 'anonymous';
           (img as any).loading = 'lazy';
           img.decoding = 'async';
-          img.src = resolvedUrl;
+          img.src = toProxiedImageUrl(resolvedUrl);
         }
       });
     }

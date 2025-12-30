@@ -371,6 +371,9 @@ export class ScenePreviewCard {
         // 创建 img 元素
         const img = document.createElement('img');
         img.referrerPolicy = 'no-referrer';
+        (img as any).loading = 'lazy';
+        (img as any).decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
         img.loading = 'lazy';
         img.decoding = 'async';
         img.src = thumbUrl;

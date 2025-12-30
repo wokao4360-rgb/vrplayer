@@ -1,157 +1,136 @@
-export type LoadExternalImageOptions = {
-  timeoutMs?: number;
+
+import { wait } from './debug'; // Assuming debug.ts has a simple wait function
+
+interface LoadExternalImageOptions {
+  timeout?: number;
   retries?: number;
-  retryDelayMs?: number;
-};
+  isPano?: boolean; // Added to differentiate pano timeouts
+}
 
-// 全局并发控制
-let activeCount = 0;
-const queue: Array<() => void> = [];
+export class ImageLoadError extends Error {
+  constructor(message: string, public url: string, public lastReason: any) {
+    super(`Failed to load image ${url}: ${message}. Last reason: ${lastReason}`);
+    this.name = 'ImageLoadError';
+  }
+}
 
-function runWithLimit<T>(fn: () => Promise<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const execute = async () => {
-      activeCount++;
-      try {
-        const result = await fn();
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      } finally {
-        activeCount--;
-        if (queue.length > 0) {
-          const next = queue.shift()!;
-          next();
-        }
-      }
-    };
+// Global concurrency limit
+const MAX_CONCURRENT_REQUESTS = 2;
+let currentRequests = 0;
+const requestQueue: (() => void)[] = [];
 
-    if (activeCount < 2) {
-      execute();
-    } else {
-      queue.push(execute);
-    }
+async function acquireLock(): Promise<void> {
+  if (currentRequests < MAX_CONCURRENT_REQUESTS) {
+    currentRequests++;
+    return Promise.resolve();
+  }
+  return new Promise(resolve => {
+    requestQueue.push(resolve);
   });
 }
 
-async function fetchWithTimeout(
-  url: string,
-  timeoutMs: number,
-  retries: number,
-  retryDelayMs: number
-): Promise<Response> {
-  let lastError: Error | null = null;
+function releaseLock(): void {
+  currentRequests--;
+  if (requestQueue.length > 0) {
+    const next = requestQueue.shift();
+    if (next) {
+      next();
+    }
+  }
+}
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
+// Exponential backoff
+const RETRY_DELAY_MS = 300;
+
+async function fetchWithRetryAndTimeout(
+  url: string,
+  options: RequestInit,
+  retries: number,
+  timeout: number
+): Promise<Response> {
+  let lastError: any;
+  for (let i = 0; i <= retries; i++) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const id = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const response = await fetch(url, {
-        mode: 'cors',
-        credentials: 'omit',
-        referrerPolicy: 'no-referrer',
-        signal: controller.signal,
-        cache: 'force-cache',
-      });
-
-      clearTimeout(timeoutId);
-
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(id);
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       return response;
     } catch (error) {
-      clearTimeout(timeoutId);
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      if (attempt < retries) {
-        console.warn(`外链图片加载重试 ${attempt + 1}/${retries + 1}: ${url}`, lastError.message);
-        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+      clearTimeout(id);
+      lastError = error;
+      if (i < retries) {
+        await wait(RETRY_DELAY_MS * Math.pow(2, i)); // Exponential backoff
       }
     }
   }
-
-  throw new Error(`Failed to load image after ${retries + 1} attempts: ${url} - ${lastError?.name}: ${lastError?.message}`);
+  throw lastError;
 }
 
-export async function loadExternalImageAsImageBitmap(
-  url: string,
-  opts: LoadExternalImageOptions = {}
-): Promise<ImageBitmap> {
-  const {
-    timeoutMs = 12000,
-    retries = 2,
-    retryDelayMs = 400,
-  } = opts;
+export async function loadExternalImageBitmap(url: string, opts?: LoadExternalImageOptions): Promise<ImageBitmap> {
+  const options: LoadExternalImageOptions = {
+    timeout: opts?.isPano ? 15000 : 8000,
+    retries: 2,
+    ...opts,
+  };
 
-  return runWithLimit(async () => {
-    const response = await fetchWithTimeout(url, timeoutMs, retries, retryDelayMs);
+  const fetchOptions: RequestInit = {
+    referrerPolicy: 'no-referrer',
+    cache: 'force-cache',
+    mode: 'cors',
+  };
+
+  await acquireLock();
+  try {
+    const response = await fetchWithRetryAndTimeout(url, fetchOptions, options.retries!, options.timeout!);
     const blob = await response.blob();
     return await createImageBitmap(blob);
-  });
+  } catch (error) {
+    throw new ImageLoadError('Failed to create ImageBitmap', url, error);
+  } finally {
+    releaseLock();
+  }
 }
 
-export async function loadExternalImageAsHTMLImage(
-  url: string,
-  opts: LoadExternalImageOptions = {}
-): Promise<HTMLImageElement> {
-  const {
-    timeoutMs = 10000,
-    retries = 2,
-    retryDelayMs = 350,
-  } = opts;
+export async function loadExternalImageElement(url: string, opts?: LoadExternalImageOptions): Promise<HTMLImageElement> {
+  const options: LoadExternalImageOptions = {
+    timeout: opts?.isPano ? 15000 : 8000,
+    retries: 2,
+    ...opts,
+  };
 
-  return runWithLimit(async () => {
-    return new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.referrerPolicy = 'no-referrer';
-      img.decoding = 'async';
-      img.loading = 'lazy';
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.referrerPolicy = 'no-referrer';
+    img.crossOrigin = 'anonymous'; // Required for CORS images
+    img.loading = 'lazy'; // Add lazy loading here as well for consistency
+    img.decoding = 'async'; // Add async decoding here
 
-      let timeoutId: number | null = null;
-      let currentAttempt = 0;
+    const timeoutId = setTimeout(() => {
+      // Clean up event listeners to prevent memory leaks
+      img.onload = null;
+      img.onerror = null;
+      reject(new ImageLoadError('Image load timed out', url, 'Timeout'));
+    }, options.timeout);
 
-      const attemptLoad = () => {
-        currentAttempt++;
-        img.src = url;
+    img.onload = () => {
+      clearTimeout(timeoutId);
+      releaseLock(); // Release lock on success
+      resolve(img);
+    };
 
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-        }
-        timeoutId = window.setTimeout(() => {
-          if (currentAttempt <= retries) {
-            console.warn(`外链图片加载超时重试 ${currentAttempt}/${retries + 1}: ${url}`);
-            attemptLoad();
-          } else {
-            reject(new Error(`Image load timeout after ${retries + 1} attempts: ${url}`));
-          }
-        }, timeoutMs);
-      };
+    img.onerror = (event) => {
+      clearTimeout(timeoutId);
+      releaseLock(); // Release lock on error
+      reject(new ImageLoadError('Image load failed', url, event));
+    };
 
-      img.onload = () => {
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-        }
-        resolve(img);
-      };
-
-      img.onerror = (event) => {
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-        }
-
-        if (currentAttempt <= retries) {
-          console.warn(`外链图片加载失败重试 ${currentAttempt}/${retries + 1}: ${url}`, event);
-          setTimeout(attemptLoad, retryDelayMs);
-        } else {
-          reject(new Error(`Image load failed after ${retries + 1} attempts: ${url}`));
-        }
-      };
-
-      attemptLoad();
+    acquireLock().then(() => {
+      img.src = url;
     });
   });
 }

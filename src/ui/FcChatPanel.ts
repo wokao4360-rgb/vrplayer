@@ -45,7 +45,7 @@ export class FcChatPanel {
   public destroy() {
     this.stopTyping(true);
     this.root?.remove();
-    document.getElementById("fcchat-toggle-btn")?.remove();
+    document.getElementById("fcchat-toggle-container")?.remove();
   }
 
   private detectMobile() {
@@ -154,26 +154,92 @@ export class FcChatPanel {
   private hide() {
     this.stopTyping(true);
     this.root.style.display = "none";
-    this.ensureToggleButton();
+    const container = document.getElementById("fcchat-toggle-container");
+    if (container) {
+      container.style.display = "";
+      // 恢复上次的收起/展开状态
+      const savedState = localStorage.getItem("vr_assistant_docked");
+      if (savedState === "hidden") {
+        this.collapseButton(false);
+      } else {
+        this.expandButton(false);
+      }
+    } else {
+      this.ensureToggleButton();
+    }
   }
 
   private show() {
     this.detectMobile();
     this.root.style.display = "flex";
-    document.getElementById("fcchat-toggle-btn")?.remove();
+    const container = document.getElementById("fcchat-toggle-container");
+    if (container) {
+      container.style.display = "none";
+    }
     this.scrollToBottom();
     this.input.focus();
   }
 
   private ensureToggleButton() {
     if (document.getElementById("fcchat-toggle-btn")) return;
+    
+    const container = document.createElement("div");
+    container.id = "fcchat-toggle-container";
+    container.className = "fcchat-toggle-container";
+    
     const btn = document.createElement("button");
     btn.id = "fcchat-toggle-btn";
     btn.className = "fcchat-toggle-btn";
     btn.type = "button";
     btn.textContent = "三馆学伴";
     btn.addEventListener("click", () => this.show());
-    document.body.appendChild(btn);
+    
+    const collapseBtn = document.createElement("button");
+    collapseBtn.className = "fcchat-toggle-collapse";
+    collapseBtn.type = "button";
+    collapseBtn.setAttribute("aria-label", "收起");
+    collapseBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    collapseBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const container = document.getElementById("fcchat-toggle-container");
+      if (container?.classList.contains("is-collapsed")) {
+        // 如果已收起，点击把手展开
+        this.expandButton();
+      } else {
+        // 如果未收起，点击收起
+        this.collapseButton();
+      }
+    });
+    
+    container.appendChild(btn);
+    container.appendChild(collapseBtn);
+    document.body.appendChild(container);
+    
+    // 恢复上次状态
+    const savedState = localStorage.getItem("vr_assistant_docked");
+    if (savedState === "hidden") {
+      this.collapseButton(false); // false 表示不保存状态（因为已经读取了）
+    }
+  }
+  
+  private collapseButton(saveState = true) {
+    const container = document.getElementById("fcchat-toggle-container");
+    if (!container) return;
+    
+    container.classList.add("is-collapsed");
+    if (saveState) {
+      localStorage.setItem("vr_assistant_docked", "hidden");
+    }
+  }
+  
+  private expandButton(saveState = true) {
+    const container = document.getElementById("fcchat-toggle-container");
+    if (!container) return;
+    
+    container.classList.remove("is-collapsed");
+    if (saveState) {
+      localStorage.setItem("vr_assistant_docked", "shown");
+    }
   }
 
   private onDragStart(e: MouseEvent) {
@@ -610,11 +676,17 @@ export class FcChatPanel {
         line-height: 28px;
       }
 
-      .fcchat-toggle-btn{
+      .fcchat-toggle-container{
         position: fixed;
         z-index: 99998;
         right: 18px;
         bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: transform 180ms ease;
+      }
+      .fcchat-toggle-btn{
         height: 40px;
         padding: 0 14px;
         border-radius: 999px;
@@ -627,6 +699,51 @@ export class FcChatPanel {
         white-space: nowrap;
         line-height: 1;
         min-width: 88px;
+        transition: opacity 150ms ease;
+      }
+      .fcchat-toggle-collapse{
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: none;
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 150ms ease, background 150ms ease;
+        padding: 0;
+      }
+      .fcchat-toggle-collapse:hover{
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.25);
+      }
+      .fcchat-toggle-collapse svg{
+        width: 12px;
+        height: 12px;
+        stroke: currentColor;
+        fill: none;
+      }
+      /* 收起状态：按钮缩到右边缘，只露出把手 */
+      .fcchat-toggle-container.is-collapsed{
+        transform: translateX(calc(100% - 12px));
+      }
+      .fcchat-toggle-container.is-collapsed .fcchat-toggle-btn{
+        opacity: 0;
+        pointer-events: none;
+      }
+      .fcchat-toggle-container.is-collapsed .fcchat-toggle-collapse{
+        background: #2563eb;
+        box-shadow: 0 4px 12px rgba(37,99,235,.3);
+        opacity: 1;
+        width: 12px;
+        height: 40px;
+        border-radius: 6px 0 0 6px;
+      }
+      .fcchat-toggle-container.is-collapsed .fcchat-toggle-collapse svg{
+        transform: rotate(180deg);
       }
 
       @media (max-width: 768px), (pointer: coarse){
@@ -647,14 +764,23 @@ export class FcChatPanel {
           cursor: default !important;
         }
         .fcchat-bubble{ max-width: 84%; }
-        .fcchat-toggle-btn{
+        .fcchat-toggle-container{
           right: 14px;
           bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+        }
+        .fcchat-toggle-btn{
           white-space: nowrap !important;
           line-height: 1 !important;
           min-width: 88px !important;
           font-size: 12px !important;
           padding: 0 12px !important;
+        }
+        .fcchat-toggle-container.is-collapsed{
+          transform: translateX(calc(100% - 10px));
+        }
+        .fcchat-toggle-container.is-collapsed .fcchat-toggle-collapse{
+          width: 10px;
+          height: 36px;
         }
       }
 

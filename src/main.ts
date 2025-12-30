@@ -960,7 +960,10 @@ class App {
       import('./utils/assetResolver').then(({ resolveAssetUrl, AssetType }) => {
         const resolvedUrl = resolveAssetUrl(nextScene.thumb, AssetType.THUMB);
         if (resolvedUrl) {
-      const img = new Image();
+          const img = new Image();
+          img.referrerPolicy = 'no-referrer';
+          (img as any).loading = 'lazy';
+          img.decoding = 'async';
           img.src = resolvedUrl;
         }
       });

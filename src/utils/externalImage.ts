@@ -1,14 +1,36 @@
+/**
+ * 外链图片加载器
+ * 提供全局并发限制、超时重试、no-referrer 等功能
+ */
+
 export type LoadExternalImageOptions = {
   timeoutMs?: number;
   retries?: number;
-  retryDelayMs?: number;
+  imageType?: 'thumb' | 'pano';
 };
 
-// 全局并发控制
+/**
+ * 外链图片加载错误
+ */
+export class ExternalImageLoadError extends Error {
+  constructor(
+    public url: string,
+    message: string,
+    public originalError?: Error
+  ) {
+    super(message);
+    this.name = 'ExternalImageLoadError';
+  }
+}
+
+// 全局并发限制：最多同时 2 个外链图片请求
 let activeCount = 0;
 const queue: Array<() => void> = [];
 
-function runWithLimit<T>(fn: () => Promise<T>): Promise<T> {
+/**
+ * 使用并发限制执行异步任务
+ */
+function runWithConcurrencyLimit<T>(fn: () => Promise<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     const execute = async () => {
       activeCount++;
@@ -19,6 +41,7 @@ function runWithLimit<T>(fn: () => Promise<T>): Promise<T> {
         reject(error);
       } finally {
         activeCount--;
+        // 处理队列中的下一个任务
         if (queue.length > 0) {
           const next = queue.shift()!;
           next();
@@ -34,11 +57,14 @@ function runWithLimit<T>(fn: () => Promise<T>): Promise<T> {
   });
 }
 
-async function fetchWithTimeout(
+/**
+ * 带超时和重试的 fetch
+ * 使用指数退避：300ms、600ms
+ */
+async function fetchWithRetry(
   url: string,
   timeoutMs: number,
-  retries: number,
-  retryDelayMs: number
+  retries: number
 ): Promise<Response> {
   let lastError: Error | null = null;
 
@@ -49,10 +75,9 @@ async function fetchWithTimeout(
     try {
       const response = await fetch(url, {
         mode: 'cors',
-        credentials: 'omit',
         referrerPolicy: 'no-referrer',
-        signal: controller.signal,
         cache: 'force-cache',
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -66,53 +91,94 @@ async function fetchWithTimeout(
       clearTimeout(timeoutId);
       lastError = error instanceof Error ? error : new Error(String(error));
 
+      // 如果还有重试机会，进行指数退避
       if (attempt < retries) {
+        const delayMs = 300 * Math.pow(2, attempt); // 300ms, 600ms
         console.warn(`外链图片加载重试 ${attempt + 1}/${retries + 1}: ${url}`, lastError.message);
-        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
   }
 
-  throw new Error(`Failed to load image after ${retries + 1} attempts: ${url} - ${lastError?.name}: ${lastError?.message}`);
+  // 所有重试都失败
+  throw new ExternalImageLoadError(
+    url,
+    `加载失败（${retries + 1} 次尝试）: ${lastError?.message || '未知错误'}`,
+    lastError || undefined
+  );
 }
 
-export async function loadExternalImageAsImageBitmap(
+/**
+ * 加载外链图片为 ImageBitmap（优先方法）
+ * 
+ * @param url 图片 URL
+ * @param options 加载选项
+ * @returns Promise<ImageBitmap>
+ */
+export async function loadExternalImageBitmap(
   url: string,
-  opts: LoadExternalImageOptions = {}
+  options: LoadExternalImageOptions = {}
 ): Promise<ImageBitmap> {
   const {
-    timeoutMs = 12000,
+    timeoutMs,
     retries = 2,
-    retryDelayMs = 400,
-  } = opts;
+    imageType = 'pano',
+  } = options;
 
-  return runWithLimit(async () => {
-    const response = await fetchWithTimeout(url, timeoutMs, retries, retryDelayMs);
-    const blob = await response.blob();
-    return await createImageBitmap(blob);
+  // 根据图片类型设置默认超时时间
+  const defaultTimeout = imageType === 'thumb' ? 8000 : 15000;
+  const finalTimeout = timeoutMs ?? defaultTimeout;
+
+  return runWithConcurrencyLimit(async () => {
+    try {
+      const response = await fetchWithRetry(url, finalTimeout, retries);
+      const blob = await response.blob();
+      const imageBitmap = await createImageBitmap(blob);
+      return imageBitmap;
+    } catch (error) {
+      if (error instanceof ExternalImageLoadError) {
+        throw error;
+      }
+      throw new ExternalImageLoadError(
+        url,
+        `createImageBitmap 失败: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error : undefined
+      );
+    }
   });
 }
 
-export async function loadExternalImageAsHTMLImage(
+/**
+ * 加载外链图片为 HTMLImageElement（兜底方法）
+ * 
+ * @param url 图片 URL
+ * @param options 加载选项
+ * @returns Promise<HTMLImageElement>
+ */
+export async function loadExternalImageElement(
   url: string,
-  opts: LoadExternalImageOptions = {}
+  options: LoadExternalImageOptions = {}
 ): Promise<HTMLImageElement> {
   const {
-    timeoutMs = 10000,
+    timeoutMs,
     retries = 2,
-    retryDelayMs = 350,
-  } = opts;
+    imageType = 'pano',
+  } = options;
 
-  return runWithLimit(async () => {
+  // 根据图片类型设置默认超时时间
+  const defaultTimeout = imageType === 'thumb' ? 8000 : 15000;
+  const finalTimeout = timeoutMs ?? defaultTimeout;
+
+  return runWithConcurrencyLimit(async () => {
     return new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
-      img.crossOrigin = 'anonymous';
       img.referrerPolicy = 'no-referrer';
-      img.decoding = 'async';
-      img.loading = 'lazy';
+      img.crossOrigin = 'anonymous';
+      // 注意：loading 和 decoding 属性在动态创建的 img 上可能不支持，这里不加
 
       let timeoutId: number | null = null;
       let currentAttempt = 0;
+      let lastError: Error | null = null;
 
       const attemptLoad = () => {
         currentAttempt++;
@@ -121,19 +187,28 @@ export async function loadExternalImageAsHTMLImage(
         if (timeoutId !== null) {
           clearTimeout(timeoutId);
         }
+
         timeoutId = window.setTimeout(() => {
+          timeoutId = null;
+          lastError = new Error('加载超时');
           if (currentAttempt <= retries) {
+            const delayMs = 300 * Math.pow(2, currentAttempt - 1); // 300ms, 600ms
             console.warn(`外链图片加载超时重试 ${currentAttempt}/${retries + 1}: ${url}`);
-            attemptLoad();
+            setTimeout(attemptLoad, delayMs);
           } else {
-            reject(new Error(`Image load timeout after ${retries + 1} attempts: ${url}`));
+            reject(new ExternalImageLoadError(
+              url,
+              `加载超时（${retries + 1} 次尝试）`,
+              lastError
+            ));
           }
-        }, timeoutMs);
+        }, finalTimeout);
       };
 
       img.onload = () => {
         if (timeoutId !== null) {
           clearTimeout(timeoutId);
+          timeoutId = null;
         }
         resolve(img);
       };
@@ -141,13 +216,20 @@ export async function loadExternalImageAsHTMLImage(
       img.onerror = (event) => {
         if (timeoutId !== null) {
           clearTimeout(timeoutId);
+          timeoutId = null;
         }
 
+        lastError = new Error('图片加载失败');
         if (currentAttempt <= retries) {
+          const delayMs = 300 * Math.pow(2, currentAttempt - 1); // 300ms, 600ms
           console.warn(`外链图片加载失败重试 ${currentAttempt}/${retries + 1}: ${url}`, event);
-          setTimeout(attemptLoad, retryDelayMs);
+          setTimeout(attemptLoad, delayMs);
         } else {
-          reject(new Error(`Image load failed after ${retries + 1} attempts: ${url}`));
+          reject(new ExternalImageLoadError(
+            url,
+            `图片加载失败（${retries + 1} 次尝试）`,
+            lastError
+          ));
         }
       };
 
@@ -155,6 +237,3 @@ export async function loadExternalImageAsHTMLImage(
     });
   });
 }
-
-
-

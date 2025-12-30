@@ -47,7 +47,7 @@ export function mountModal(options: MountModalOptions): MountedModal {
   titleEl.textContent = title;
 
   const closeBtn = document.createElement('button');
-  closeBtn.className = 'vr-modal-header-close';
+  closeBtn.className = 'vr-modal-header-close vr-icon-btn';
   closeBtn.type = 'button';
   closeBtn.setAttribute('aria-label', '关闭弹窗');
   closeBtn.innerHTML = '×';

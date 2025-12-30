@@ -1,0 +1,96 @@
+/**
+ * UI 焕新样式 - 如视风格
+ * 简约高级、弱存在感、半透明磨砂、线性 icon、去重装饰
+ */
+
+:root {
+  /* 设计 tokens */
+  --vr-glass-bg: rgba(255, 255, 255, 0.08);
+  --vr-glass-bg-strong: rgba(255, 255, 255, 0.12);
+  --vr-modal-bg: rgba(20, 20, 20, 0.55);
+  --vr-border: rgba(255, 255, 255, 0.08);
+  --vr-text: rgba(255, 255, 255, 0.92);
+  --vr-text-dim: rgba(255, 255, 255, 0.7);
+  --vr-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+}
+
+/* 通用玻璃磨砂效果 */
+.vr-glass {
+  background: var(--vr-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--vr-border);
+}
+
+/* 弹窗玻璃磨砂效果 */
+.vr-modal-glass {
+  background: var(--vr-modal-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--vr-border);
+  border-radius: 16px;
+  box-shadow: var(--vr-shadow);
+}
+
+/* Icon 按钮（透明背景，hover 才出现轻微半透明底） */
+.vr-icon-btn {
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms ease-out, opacity 150ms ease-out;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.vr-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
+}
+
+.vr-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* 下划线链接样式 */
+.vr-link-underlined {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  color: var(--vr-text-dim);
+  transition: color 150ms ease-out;
+}
+
+.vr-link-underlined:hover {
+  color: var(--vr-text);
+}
+
+/* 字体层级 */
+.vr-title {
+  font-size: 16px;
+  font-weight: 500; /* Medium */
+  line-height: 1.5;
+}
+
+.vr-body {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.vr-body-large {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.vr-caption {
+  font-size: 12px;
+  opacity: 0.7;
+  line-height: 1.5;
+}
+

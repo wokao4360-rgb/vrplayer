@@ -47,6 +47,7 @@ import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/full
 import { mountModal, type MountedModal } from './ui/Modal';
 import { getPreferredQuality, setPreferredQuality, type QualityLevel } from './utils/qualityPreference';
 import { isTouchDevice, isMouseDevice } from './utils/deviceDetect';
+import './ui/uiRefresh.css';
 
 /**
  * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：

@@ -171,7 +171,10 @@ export class FcChatPanel {
       dock.style.display = "none";
     }
     this.scrollToBottom();
-    this.input.focus();
+    // 移动端不自动 focus，避免弹出键盘；桌面端保留自动 focus
+    if (!this.isMobile) {
+      this.input.focus();
+    }
   }
 
   private ensureToggleButton() {

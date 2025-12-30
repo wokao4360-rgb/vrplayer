@@ -167,6 +167,13 @@ body{
 .vr-brandmark:hover{ opacity: 0.75; }
 .vr-brandmark:active{ opacity: 0.9; background: rgba(255,255,255,0.08); }
 
+/* 移动端：防止左下角品牌标记被底部 Dock 挡住 */
+@media (max-width: 768px), (pointer: coarse) {
+  .vr-brandmark{
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  }
+}
+
 /* BrandWatermark 左下角水印 */
 .vr-watermark{
   position: absolute;

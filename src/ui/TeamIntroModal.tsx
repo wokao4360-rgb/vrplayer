@@ -105,34 +105,6 @@ export class TeamIntroModal {
     });
     supportContainer.appendChild(wechatRow);
 
-    // QQ号（可点击复制）
-    const qqRow = document.createElement('div');
-    qqRow.className = 'copyable';
-    qqRow.setAttribute('data-copy', '3386453830');
-    qqRow.textContent = 'QQ：3386453830(点此复制)';
-    qqRow.style.cursor = 'pointer';
-    qqRow.addEventListener('click', async () => {
-      const copyValue = qqRow.getAttribute('data-copy');
-      if (copyValue) {
-        const success = await copyText(copyValue);
-        if (success) {
-          showToast('QQ号已复制');
-          if (__VR_DEBUG__) {
-            console.debug('[TeamIntroModal] QQ号已复制:', copyValue);
-          }
-        }
-      }
-    });
-    supportContainer.appendChild(qqRow);
-
-    // QQ链接（可点击跳转）
-    const qqLink = document.createElement('a');
-    qqLink.href = 'https://qm.qq.com/q/sNWlsarvtS';
-    qqLink.target = '_blank';
-    qqLink.rel = 'noreferrer noopener';
-    qqLink.textContent = '点此唤起QQ';
-    supportContainer.appendChild(qqLink);
-
     // 版权/联系方式
     const footer = document.createElement('div');
     footer.className = 'vr-teammodal-footer';

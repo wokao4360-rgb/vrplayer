@@ -1656,7 +1656,7 @@ body{
 }
 .vr-guide-drawer.open .vr-guide-panel{
   opacity: 1;
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0);
 }
 
 /* Mobile: bottom drawer */
@@ -1665,7 +1665,15 @@ body{
   right: 12px;
   bottom: calc(78px + env(safe-area-inset-bottom, 0px));
   height: 60vh;
+  max-height: calc(100dvh - 120px);
+  max-height: calc(100vh - 120px); /* fallback */
   border-radius: 16px 16px 16px 16px;
+  padding-top: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 @media (min-width: 900px){
@@ -1936,6 +1944,7 @@ body{
   flex: 1;
   display: flex;
   min-height: 0;
+  overflow: hidden;
 }
 
 .vr-guide-list{
@@ -1949,6 +1958,8 @@ body{
   gap: 4px;
   /* 确保可以滚动，不被 pointer-events 阻止 */
   pointer-events: auto;
+  /* 确保首个点位完整可见 */
+  scroll-padding-top: 12px;
 }
 
 .vr-guide-item{

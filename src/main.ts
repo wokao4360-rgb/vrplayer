@@ -778,7 +778,11 @@ class App {
           if (this.guideTray) {
             this.guideTray.setVisible(false);
           }
-          this.bottomDock?.clearActive();
+          window.dispatchEvent(
+            new CustomEvent('vr:dock-tab-close', {
+              detail: { tab: 'guide' },
+            }),
+          );
         },
       });
       this.guideTray.setVisible(false); // 初始隐藏
@@ -1405,7 +1409,11 @@ class App {
       contentEl: content,
       onClose: () => {
         this.infoModalMounted = null;
-        this.bottomDock?.clearActive();
+        window.dispatchEvent(
+          new CustomEvent('vr:dock-tab-close', {
+            detail: { tab: 'info' },
+          }),
+        );
       },
     });
   }
@@ -1605,7 +1613,11 @@ class App {
       panelClassName: 'vr-modal-settings',
       onClose: () => {
         this.settingsModalMounted = null;
-        this.bottomDock?.clearActive();
+        window.dispatchEvent(
+          new CustomEvent('vr:dock-tab-close', {
+            detail: { tab: 'settings' },
+          }),
+        );
       },
     });
   }

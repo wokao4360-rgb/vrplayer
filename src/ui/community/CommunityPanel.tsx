@@ -61,8 +61,12 @@ export class CommunityPanel {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
-      // 直接触发关闭逻辑
-      window.dispatchEvent(new CustomEvent('vr:close-panels'));
+      // 社区窗口关闭时，仅关闭自身对应的 Dock tab
+      window.dispatchEvent(
+        new CustomEvent('vr:dock-tab-close', {
+          detail: { tab: 'community' },
+        }),
+      );
     });
 
     header.appendChild(title);

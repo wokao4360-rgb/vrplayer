@@ -28,17 +28,19 @@ export class BottomDock {
   private element: HTMLElement;
   private dockEl: HTMLElement;
   private panels: DockPanels;
-  private activeTab: DockTabKey | null;
-  private isHandlingExternalTabChange = false;
+  private activeTabs: Set<DockTabKey>;
   private onOpenInfo?: () => void;
   private onOpenSettings?: () => void;
   private unsubscribeInteracting: (() => void) | null = null;
   private unsubscribeIdle: (() => void) | null = null;
   private unsubscribeUIEngaged: (() => void) | null = null;
+  private handleDockTabOpen?: (e: Event) => void;
+  private handleDockTabClose?: (e: Event) => void;
+  private handleClosePanels?: () => void;
 
   constructor(options: BottomDockOptions = {}) {
-    // 默认不高亮任何按钮
-    this.activeTab = null;
+    // 默认不高亮任何按钮（支持多选高亮）
+    this.activeTabs = new Set<DockTabKey>();
     this.onOpenInfo = options.onOpenInfo;
     this.onOpenSettings = options.onOpenSettings;
 
@@ -69,12 +71,33 @@ export class BottomDock {
         e.stopPropagation();
         // UI 被点击，立即恢复
         interactionBus.emitUIEngaged();
-
-        // 点击按钮：先设置 activeTab（高亮），再触发对应动作
-        this.setActiveTab(tab.key);
-
-        if (tab.key === 'guide' && options.onGuideClick) {
-          options.onGuideClick();
+        // 点击按钮：仅切换对应 tab 的激活态/打开对应面板，不影响其他 tab
+        if (tab.key === 'guide') {
+          // 导览：只控制导览窗口
+          this.setTabActive('guide', true);
+          if (options.onGuideClick) {
+            options.onGuideClick();
+          }
+        } else if (tab.key === 'community') {
+          // 社区：打开 DockPanels 内的社区窗口
+          this.setTabActive('community', true);
+          this.panels.setTab('community');
+        } else if (tab.key === 'info') {
+          // 信息：高亮信息 tab，并打开信息弹窗
+          this.setTabActive('info', true);
+          if (this.onOpenInfo) {
+            this.onOpenInfo();
+          } else {
+            this.openFallbackInfoModal();
+          }
+        } else if (tab.key === 'settings') {
+          // 更多：高亮设置 tab，并打开设置弹窗
+          this.setTabActive('settings', true);
+          if (this.onOpenSettings) {
+            this.onOpenSettings();
+          } else {
+            this.openFallbackSettingsModal();
+          }
         }
       });
       this.dockEl.appendChild(btn);
@@ -85,25 +108,7 @@ export class BottomDock {
 
     this.syncActiveClass();
     this.setupInteractionListeners();
-
-    // 监听外部 tab 切换事件（用于同步状态）
-    const handleTabChange = (e: Event) => {
-      const evt = e as CustomEvent<{ tab?: DockTabKey | null }>;
-      const tab = evt.detail?.tab ?? null;
-      this.isHandlingExternalTabChange = true;
-      try {
-        this.setActiveTab(tab);
-      } finally {
-        this.isHandlingExternalTabChange = false;
-      }
-    };
-    window.addEventListener('vr:bottom-dock-tab-change', handleTabChange as EventListener);
-
-    // 监听“关闭面板”事件：无条件清空高亮
-    const handleClosePanels = () => {
-      this.clearActive();
-    };
-    window.addEventListener('vr:close-panels', handleClosePanels);
+    this.setupDockEventListeners();
   }
 
   private setupInteractionListeners(): void {
@@ -111,11 +116,14 @@ export class BottomDock {
     // 这里不需要手动管理 class，保留空实现以避免类型错误
   }
 
-  private syncActiveClass(): void {
+  /**
+   * 根据 activeTabs 状态同步按钮的 .active class
+   */
+  syncActiveClass(): void {
     const buttons = this.dockEl.querySelectorAll<HTMLButtonElement>('.vr-dock-tab');
     buttons.forEach((btn) => {
       const key = btn.getAttribute('data-tab') as DockTabKey | null;
-      if (this.activeTab !== null && key === this.activeTab) {
+      if (key && this.activeTabs.has(key)) {
         btn.classList.add('active');
       } else {
         btn.classList.remove('active');
@@ -124,48 +132,55 @@ export class BottomDock {
   }
 
   /**
-   * 设置当前激活的底部 tab（支持传入 null 表示全部不高亮）
+   * 设置某个 tab 是否激活（只影响该 tab，不影响其它 tab）
    */
-  setActiveTab(tab: DockTabKey | null): void {
-    // 更新本地状态并同步高亮
-    this.activeTab = tab;
+  setTabActive(tab: DockTabKey, active: boolean): void {
+    if (active) {
+      this.activeTabs.add(tab);
+    } else {
+      this.activeTabs.delete(tab);
+    }
     this.syncActiveClass();
 
-    // 传入 null：仅影响高亮，不切换面板、不派发事件
-    if (tab === null) {
-      return;
-    }
-
-    // 额外行为：信息 / 设置 打开弹窗（不切 DockPanels）
-    if (tab === 'info') {
-      if (this.onOpenInfo) {
-        this.onOpenInfo();
-      } else {
-        this.openFallbackInfoModal();
-      }
-    } else if (tab === 'settings') {
-      if (this.onOpenSettings) {
-        this.onOpenSettings();
-      } else {
-        this.openFallbackSettingsModal();
-      }
-    } else {
-      // guide / community 才切 DockPanels
+    // DockPanels 只负责管理自己的子面板（community/map/dollhouse）
+    if (active && (tab === 'community' || tab === 'map' || tab === 'dollhouse')) {
       this.panels.setTab(tab);
-    }
-
-    // 若是外部事件驱动的同步，不再反向派发事件，避免递归
-    if (!this.isHandlingExternalTabChange) {
-      window.dispatchEvent(
-        new CustomEvent('vr:bottom-dock-tab-change', {
-          detail: { tab },
-        }),
-      );
     }
   }
 
-  getActiveTab(): DockTabKey | null {
-    return this.activeTab;
+  /**
+   * 查询某个 tab 当前是否处于激活态
+   */
+  isTabActive(tab: DockTabKey): boolean {
+    return this.activeTabs.has(tab);
+  }
+
+  /**
+   * 监听全局 Dock 相关事件（打开/关闭单个 tab、统一关闭 DockPanels）
+   */
+  private setupDockEventListeners(): void {
+    this.handleDockTabOpen = (e: Event) => {
+      const evt = e as CustomEvent<{ tab: DockTabKey }>;
+      if (!evt.detail?.tab) return;
+      this.setTabActive(evt.detail.tab, true);
+    };
+
+    this.handleDockTabClose = (e: Event) => {
+      const evt = e as CustomEvent<{ tab: DockTabKey }>;
+      if (!evt.detail?.tab) return;
+      this.setTabActive(evt.detail.tab, false);
+    };
+
+    // 统一关闭 DockPanels 所属的 tab（不影响导览/信息/更多）
+    this.handleClosePanels = () => {
+      this.setTabActive('community', false);
+      this.setTabActive('map', false);
+      this.setTabActive('dollhouse', false);
+    };
+
+    window.addEventListener('vr:dock-tab-open', this.handleDockTabOpen as EventListener);
+    window.addEventListener('vr:dock-tab-close', this.handleDockTabClose as EventListener);
+    window.addEventListener('vr:close-panels', this.handleClosePanels);
   }
 
   setSceneContext(sceneId: string, sceneName?: string): void {
@@ -178,13 +193,6 @@ export class BottomDock {
 
   getElement(): HTMLElement {
     return this.element;
-  }
-
-  /**
-   * 清除所有按钮的激活态（UI 上不保留高亮）
-   */
-  clearActive(): void {
-    this.setActiveTab(null);
   }
 
   /**
@@ -230,6 +238,18 @@ export class BottomDock {
     if (this.unsubscribeUIEngaged) {
       this.unsubscribeUIEngaged();
       this.unsubscribeUIEngaged = null;
+    }
+    if (this.handleDockTabOpen) {
+      window.removeEventListener('vr:dock-tab-open', this.handleDockTabOpen as EventListener);
+      this.handleDockTabOpen = undefined;
+    }
+    if (this.handleDockTabClose) {
+      window.removeEventListener('vr:dock-tab-close', this.handleDockTabClose as EventListener);
+      this.handleDockTabClose = undefined;
+    }
+    if (this.handleClosePanels) {
+      window.removeEventListener('vr:close-panels', this.handleClosePanels);
+      this.handleClosePanels = undefined;
     }
     this.panels.remove();
     this.element.remove();

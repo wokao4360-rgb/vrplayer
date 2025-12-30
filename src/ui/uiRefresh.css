@@ -5,12 +5,12 @@
 
 :root {
   /* 设计 tokens */
-  --vr-glass-bg: rgba(255, 255, 255, 0.08);
+  --vr-glass-bg: rgba(255, 255, 255, 0.06); /* Dock 背景再轻一点 */
   --vr-glass-bg-strong: rgba(255, 255, 255, 0.12);
-  --vr-modal-bg: rgba(20, 20, 20, 0.55);
+  --vr-modal-bg: rgba(20, 20, 20, 0.62); /* Modal 背景更暗一档，明确浮在画面上 */
   --vr-border: rgba(255, 255, 255, 0.08);
   --vr-text: rgba(255, 255, 255, 0.92);
-  --vr-text-dim: rgba(255, 255, 255, 0.7);
+  --vr-text-dim: rgba(255, 255, 255, 0.6); /* 次级文本对比度降低 */
   --vr-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
 }
 
@@ -28,7 +28,7 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--vr-border);
-  border-radius: 16px;
+  border-radius: 14px; /* Modal 主体圆角微调 */
   box-shadow: var(--vr-shadow);
 }
 
@@ -38,8 +38,8 @@
   height: 36px;
   background: transparent;
   border: none;
-  border-radius: 8px;
-  opacity: 0.85;
+  border-radius: 6px; /* 小控件圆角收紧，更利落 */
+  opacity: 0.7; /* 默认状态更轻，不抢眼 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,7 +51,7 @@
 
 .vr-icon-btn:hover {
   background: rgba(255, 255, 255, 0.12);
-  opacity: 1;
+  opacity: 1; /* hover 才显现 */
 }
 
 .vr-icon-btn:active {

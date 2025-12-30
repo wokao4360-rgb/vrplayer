@@ -1603,8 +1603,52 @@ class App {
     vrRow.appendChild(vrLabel);
     vrRow.appendChild(vrBtn);
 
+    // 缩放控制
+    const zoomLabel = document.createElement('div');
+    zoomLabel.className = 'vr-modal-settings-item-label';
+    zoomLabel.textContent = '缩放';
+
+    const zoomGroup = document.createElement('div');
+    zoomGroup.className = 'vr-modal-settings-quality';
+    zoomGroup.style.gap = '8px';
+
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.className = 'vr-modal-settings-quality-btn';
+    zoomOutBtn.textContent = '缩小';
+    zoomOutBtn.style.minWidth = '70px';
+
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.className = 'vr-modal-settings-quality-btn';
+    zoomInBtn.textContent = '放大';
+    zoomInBtn.style.minWidth = '70px';
+
+    const handleZoomOut = () => {
+      if (!this.panoViewer) return;
+      const currentView = this.panoViewer.getCurrentView();
+      const newFov = Math.min(120, currentView.fov * 1.12);
+      this.panoViewer.setFov(newFov);
+    };
+
+    const handleZoomIn = () => {
+      if (!this.panoViewer) return;
+      const currentView = this.panoViewer.getCurrentView();
+      const newFov = Math.max(30, currentView.fov / 1.12);
+      this.panoViewer.setFov(newFov);
+    };
+
+    zoomOutBtn.addEventListener('click', handleZoomOut);
+    zoomInBtn.addEventListener('click', handleZoomIn);
+
+    zoomGroup.appendChild(zoomOutBtn);
+    zoomGroup.appendChild(zoomInBtn);
+
+    const zoomRow = document.createElement('div');
+    zoomRow.appendChild(zoomLabel);
+    zoomRow.appendChild(zoomGroup);
+
     container.appendChild(qualityRow);
     container.appendChild(resetRow);
+    container.appendChild(zoomRow);
     container.appendChild(vrRow);
 
     // 打开"更多"时，让 Dock 淡出

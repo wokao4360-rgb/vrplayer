@@ -11,6 +11,7 @@ import { GroundHeadingMarker } from '../ui/GroundHeadingMarker';
 import type { SceneHotspot } from '../types/config';
 import { interactionBus } from '../ui/interactionBus';
 import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/externalImage';
+import { ZoomHud } from '../ui/ZoomHud';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -359,10 +360,8 @@ export class PanoViewer {
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       const delta = this.lastTouchDistance - distance;
-      this.fov += delta * 0.5;
-      this.fov = Math.max(30, Math.min(120, this.fov));
-      this.camera.fov = this.fov;
-      this.camera.updateProjectionMatrix();
+      const newFov = this.fov + delta * 0.5;
+      this.setFovInternal(newFov);
       
       this.lastTouchDistance = distance;
     }
@@ -375,10 +374,8 @@ export class PanoViewer {
 
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
-    this.fov += e.deltaY * 0.1;
-    this.fov = Math.max(30, Math.min(120, this.fov));
-    this.camera.fov = this.fov;
-    this.camera.updateProjectionMatrix();
+    const newFov = this.fov + e.deltaY * 0.1;
+    this.setFovInternal(newFov);
     
     // 缩放时发出交互信号
     interactionBus.emitInteracting();
@@ -449,6 +446,7 @@ export class PanoViewer {
       this.camera.fov = this.fov;
       this.camera.updateProjectionMatrix();
       this.updateCamera();
+      // 注意：loadScene 初始化时不显示 HUD，避免启动时闪烁
     }
     
     // 初始化视角检测状态
@@ -769,11 +767,36 @@ export class PanoViewer {
     this.yaw = yaw;
     this.pitch = Math.max(-90, Math.min(90, pitch));
     if (fov !== undefined) {
-      this.fov = Math.max(30, Math.min(120, fov));
-      this.camera.fov = this.fov;
-      this.camera.updateProjectionMatrix();
+      this.setFovInternal(fov, false); // setView 时不需要显示 HUD（避免初始化时显示）
     }
     this.updateCamera();
+  }
+
+  /**
+   * 统一的 FOV 设置方法（内部使用）
+   * @param fov 新的 FOV 值
+   * @param showHud 是否显示缩放 HUD（默认 true）
+   */
+  private setFovInternal(fov: number, showHud: boolean = true): void {
+    this.fov = Math.max(30, Math.min(120, fov));
+    this.camera.fov = this.fov;
+    this.camera.updateProjectionMatrix();
+    
+    // 显示缩放 HUD
+    if (showHud) {
+      const defaultFov = RENDER_PRESETS[this.renderProfile].camera.defaultFov;
+      const percent = Math.round((defaultFov / this.fov) * 100);
+      const clamped = Math.max(50, Math.min(250, percent));
+      ZoomHud.show(clamped);
+    }
+  }
+
+  /**
+   * 设置 FOV（公开方法，用于外部控制缩放）
+   * @param fov 新的 FOV 值
+   */
+  setFov(fov: number): void {
+    this.setFovInternal(fov, true);
   }
 
   /**

@@ -810,8 +810,8 @@ export class FcChatPanel {
         }
         .fcchat-bubble{ max-width: 84%; }
         .fcchat-fab{
-          right: 14px !important;
-          top: 40% !important;
+          right: 12px !important;
+          top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
           bottom: auto !important;
           width: 40px;
           height: 40px;
@@ -822,14 +822,14 @@ export class FcChatPanel {
         }
         /* 移动端打开时移到右上角 */
         body.fcchat-open .fcchat-fab{
-          right: 14px !important;
+          right: 12px !important;
           top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
           bottom: auto !important;
         }
         /* 移动端悬挂隐藏 */
         .fcchat-fab.fcchat-docked{
-          right: 14px !important;
-          top: 40% !important;
+          right: 12px !important;
+          top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
           bottom: auto !important;
           transform: translateX(20px);
         }

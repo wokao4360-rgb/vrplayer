@@ -156,7 +156,7 @@ export class FcChatPanel {
     this.root.style.display = "none";
     const dock = document.getElementById("fcchat-dock");
     if (dock) {
-      // 恢复显示，但保持收起/展开状态
+      // 确保头像按钮始终显示
       dock.style.display = "flex";
     } else {
       this.ensureToggleButton();
@@ -192,20 +192,12 @@ export class FcChatPanel {
     dock.id = "fcchat-dock";
     dock.className = "fcchat-dock";
     
-    // 主按钮
-    const mainBtn = document.createElement("button");
-    mainBtn.id = "fcchat-main-btn";
-    mainBtn.className = "fcchat-main-btn";
-    mainBtn.type = "button";
-    mainBtn.textContent = "三馆学伴";
-    mainBtn.addEventListener("click", () => this.show());
-    
-    // 把手按钮（始终存在，收起时显示）- 圆形头像式
+    // 头像按钮（唯一入口，直接打开对话框）
     const handleBtn = document.createElement("button");
     handleBtn.id = "fcchat-handle";
     handleBtn.className = "fcchat-handle";
     handleBtn.type = "button";
-    handleBtn.setAttribute("aria-label", "展开三馆学伴");
+    handleBtn.setAttribute("aria-label", "打开三馆学伴");
     // 卡通助手头像 SVG（圆形底+脸+眼睛）
     handleBtn.innerHTML = `<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="22" cy="22" r="22" fill="url(#fcchat-avatar-gradient)"/>
@@ -224,45 +216,11 @@ export class FcChatPanel {
       <!-- 嘴巴（微笑） -->
       <path d="M 18 28 Q 22 31 26 28" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round" fill="none"/>
     </svg>`;
-    handleBtn.addEventListener("click", () => this.setCollapsed(false));
+    // 点击头像直接打开对话框
+    handleBtn.addEventListener("click", () => this.show());
     
-    // 收起按钮（展开时显示）
-    const collapseBtn = document.createElement("button");
-    collapseBtn.id = "fcchat-collapse-btn";
-    collapseBtn.className = "fcchat-collapse-btn";
-    collapseBtn.type = "button";
-    collapseBtn.setAttribute("aria-label", "收起");
-    collapseBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    collapseBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.setCollapsed(true);
-    });
-    
-    dock.appendChild(mainBtn);
     dock.appendChild(handleBtn);
-    dock.appendChild(collapseBtn);
     document.body.appendChild(dock);
-    
-    // 恢复上次状态
-    const savedState = localStorage.getItem("vr_fcchat_dock_state");
-    if (savedState === "collapsed") {
-      dock.classList.add("fcchat--collapsed");
-    } else {
-      dock.classList.remove("fcchat--collapsed");
-    }
-  }
-  
-  private setCollapsed(collapsed: boolean) {
-    const dock = document.getElementById("fcchat-dock");
-    if (!dock) return;
-    
-    if (collapsed) {
-      dock.classList.add("fcchat--collapsed");
-      localStorage.setItem("vr_fcchat_dock_state", "collapsed");
-    } else {
-      dock.classList.remove("fcchat--collapsed");
-      localStorage.setItem("vr_fcchat_dock_state", "shown");
-    }
   }
 
   private onDragStart(e: MouseEvent) {
@@ -708,21 +666,6 @@ export class FcChatPanel {
         align-items: center;
         gap: 8px;
       }
-      .fcchat-main-btn{
-        height: 40px;
-        padding: 0 14px;
-        border-radius: 999px;
-        border: none;
-        background: #2563eb;
-        color: #fff;
-        font-size: 13px;
-        box-shadow: 0 10px 30px rgba(37,99,235,.35);
-        cursor: pointer;
-        white-space: nowrap;
-        line-height: 1;
-        min-width: 88px;
-        transition: opacity 150ms ease, transform 150ms ease;
-      }
       .fcchat-handle{
         width: 44px;
         height: 44px;
@@ -734,8 +677,8 @@ export class FcChatPanel {
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        opacity: 0;
-        pointer-events: none;
+        opacity: 1;
+        pointer-events: auto;
         box-shadow: 0 4px 16px rgba(37,99,235,.4);
         padding: 0;
         transition: opacity 150ms ease, box-shadow 150ms ease, transform 150ms ease;
@@ -776,50 +719,6 @@ export class FcChatPanel {
           transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
         }
       }
-      .fcchat-collapse-btn{
-        width: 24px;
-        height: 24px;
-        border-radius: 6px;
-        border: none;
-        background: rgba(255, 255, 255, 0.15);
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        opacity: 0.7;
-        transition: opacity 150ms ease, background 150ms ease;
-        padding: 0;
-      }
-      .fcchat-collapse-btn:hover{
-        opacity: 1;
-        background: rgba(255, 255, 255, 0.25);
-      }
-      .fcchat-collapse-btn svg{
-        width: 12px;
-        height: 12px;
-        stroke: currentColor;
-        fill: none;
-      }
-      /* 收起状态：主按钮和收起按钮隐藏，把手显示 */
-      .fcchat-dock.fcchat--collapsed .fcchat-main-btn{
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(4px);
-      }
-      .fcchat-dock.fcchat--collapsed .fcchat-collapse-btn{
-        opacity: 0;
-        pointer-events: none;
-      }
-      .fcchat-dock.fcchat--collapsed .fcchat-handle{
-        opacity: 1;
-        pointer-events: auto;
-      }
-      /* 展开状态：把手隐藏，主按钮和收起按钮显示 */
-      .fcchat-dock:not(.fcchat--collapsed) .fcchat-handle{
-        opacity: 0;
-        pointer-events: none;
-      }
 
       @media (max-width: 768px), (pointer: coarse){
         .fcchat-root{
@@ -840,15 +739,9 @@ export class FcChatPanel {
         }
         .fcchat-bubble{ max-width: 84%; }
         .fcchat-dock{
-          right: 20px;
-          bottom: calc(env(safe-area-inset-bottom, 0px) + 96px) !important;
-        }
-        .fcchat-main-btn{
-          white-space: nowrap !important;
-          line-height: 1 !important;
-          min-width: 88px !important;
-          font-size: 12px !important;
-          padding: 0 12px !important;
+          right: 14px !important;
+          top: calc(env(safe-area-inset-top, 0px) + 96px) !important;
+          bottom: auto !important;
         }
         .fcchat-handle{
           width: 40px;

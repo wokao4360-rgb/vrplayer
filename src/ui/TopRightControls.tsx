@@ -78,7 +78,7 @@ export class TopRightControls {
 
     // 全屏按钮
     this.fullscreenBtn = document.createElement('button');
-    this.fullscreenBtn.className = 'vr-topright-btn';
+    this.fullscreenBtn.className = 'vr-topright-btn vr-top-icon-only';
     this.fullscreenBtn.setAttribute('aria-label', '进入全屏');
     this.fullscreenBtn.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -153,7 +153,7 @@ export class TopRightControls {
     // VR眼镜按钮（仅移动端显示）
     if (isTouchDevice() && this.onToggleVrMode) {
       this.vrModeBtn = document.createElement('button');
-      this.vrModeBtn.className = 'vr-topright-btn';
+      this.vrModeBtn.className = 'vr-topright-btn vr-top-icon-only';
       this.vrModeBtn.setAttribute('aria-label', 'VR眼镜');
       this.vrModeBtn.title = 'VR眼镜：转动设备控制视角';
       this.vrModeBtn.textContent = '🥽';

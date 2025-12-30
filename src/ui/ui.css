@@ -1709,6 +1709,38 @@ body{
   line-height: 0;
 }
 
+/* 右上角：VR 眼镜 + 全屏按钮去黑圈，只保留图标 */
+.vr-top-icon-only {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+
+  /* 关键：别再是圆按钮 */
+  border-radius: 0 !important;
+
+  /* 保留点击热区，但不可见 */
+  padding: 10px !important;
+}
+
+.vr-top-icon-only:hover,
+.vr-top-icon-only:active,
+.vr-top-icon-only:focus,
+.vr-top-icon-only:focus-visible {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 如果图标是 img/svg，避免它本身再套圆角背景 */
+.vr-top-icon-only img,
+.vr-top-icon-only svg {
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 .vr-topright-btn:active{
   transform: scale(0.95);
   background: rgba(0, 0, 0, 0.48);

@@ -15,7 +15,7 @@ export function toProxiedImageUrl(rawUrl: string): string {
     const url = new URL(rawUrl);
     const host = url.hostname;
     if (host === 'i.ibb.co' || host === 's41.ax1x.com') {
-      return `/__img?u=${encodeURIComponent(rawUrl)}`;
+      return `/_img?u=${encodeURIComponent(rawUrl)}`;
     }
   } catch {
     // 非法 URL，直接返回原 URL

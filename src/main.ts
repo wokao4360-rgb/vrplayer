@@ -146,7 +146,7 @@ function isDevMode(): boolean {
 
 /**
  * DNS 预热：已禁用
- * 由于图片现在通过同源代理 /__img 加载，不再需要 preconnect 到第三方域名
+ * 由于图片现在通过同源代理 /_img 加载，不再需要 preconnect 到第三方域名
  */
 // function warmupExternalImageHostsFromConfig(config: AppConfig): void {
 //   // 已禁用：图片通过同源代理加载，不需要 preconnect
@@ -238,7 +238,7 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       
-      // DNS 预热已禁用：图片通过同源代理 /__img 加载
+      // DNS 预热已禁用：图片通过同源代理 /_img 加载
       
       // 设置应用标题
       if (this.titleBar) {
@@ -275,7 +275,7 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       
-      // DNS 预热已禁用：图片通过同源代理 /__img 加载
+      // DNS 预热已禁用：图片通过同源代理 /_img 加载
       
       // 清空当前视图
       this.appElement.innerHTML = '';

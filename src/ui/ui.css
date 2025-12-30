@@ -153,7 +153,7 @@ body{
   position: fixed;
   left: 14px;
   bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-  z-index: 2400;
+  z-index: 20;
   color: rgba(255,255,255,0.78);
   opacity: 0.6;
   font-size: 12px;
@@ -163,26 +163,25 @@ body{
   padding: 6px 10px;
   border-radius: 9999px;
   transition: opacity var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  pointer-events: none; /* 纯展示，不参与交互 */
 }
 .vr-brandmark:hover{ opacity: 0.75; }
 .vr-brandmark:active{ opacity: 0.9; background: rgba(255,255,255,0.08); }
 
 /* 移动端：防止左下角品牌标记被底部 Dock 挡住 */
 @media (max-width: 768px), (pointer: coarse) {
-  :root{
-    /* Dock 占位高度：Dock 本体高度(58px) + 上下阴影/留白(18px) + 与品牌间距(56px) + 安全余量(16px) */
-    --vr-mobile-dock-stack: 148px;
-  }
-  
   .vr-brandmark{
-    bottom: max(
-      calc(env(safe-area-inset-bottom, 0px) + var(--vr-mobile-dock-stack)),
-      calc(env(safe-area-inset-bottom, 0px) + 140px)
-    );
-    left: 16px;
-    z-index: 99999; /* 防止被其它蒙层盖掉 */
-    pointer-events: none; /* 纯展示，避免误触 */
+    left: 14px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+    max-width: 60vw;
+    opacity: 0.9;
   }
+}
+
+/* 弹窗打开时隐藏品牌标记 */
+.vr-overlay-open .vr-brandmark{
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* BrandWatermark 左下角水印 */

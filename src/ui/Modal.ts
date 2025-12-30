@@ -20,6 +20,29 @@ export type MountedModal = {
 };
 
 /**
+ * 检查是否有任何弹窗/抽屉/面板处于打开状态
+ */
+function hasAnyOverlayOpen(): boolean {
+  return !!(
+    document.querySelector('.vr-modal-overlay') ||
+    document.querySelector('.vr-guide-drawer.open') ||
+    (document.querySelector('.fcchat-root') && 
+     document.querySelector('.fcchat-root')?.style.display === 'flex')
+  );
+}
+
+/**
+ * 更新 overlay 打开状态（在 document.documentElement 上添加/移除 vr-overlay-open class）
+ */
+function updateOverlayState(): void {
+  if (hasAnyOverlayOpen()) {
+    document.documentElement.classList.add('vr-overlay-open');
+  } else {
+    document.documentElement.classList.remove('vr-overlay-open');
+  }
+}
+
+/**
  * 轻量级全局弹窗挂载工具
  * - overlay：全屏遮罩
  * - panel：白色/浅色卡片，包含标题与右上角 ×
@@ -69,6 +92,9 @@ export function mountModal(options: MountModalOptions): MountedModal {
 
   // 统一插入到 body 底部，确保层级最高且不干扰其它容器
   document.body.appendChild(overlay);
+  
+  // 更新 overlay 状态
+  updateOverlayState();
 
   // 如果是"更多"弹窗，使用两段式 class 确保动效稳定触发
   if (panelClassName === 'vr-modal-settings') {
@@ -119,6 +145,9 @@ export function mountModal(options: MountModalOptions): MountedModal {
       if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
       }
+      
+      // 更新 overlay 状态
+      updateOverlayState();
 
       if (onClose) {
         try {

@@ -161,6 +161,8 @@ export class FcChatPanel {
     } else {
       this.ensureToggleButton();
     }
+    // 更新 overlay 状态
+    this.updateOverlayState();
   }
 
   private show() {
@@ -174,6 +176,21 @@ export class FcChatPanel {
     // 移动端不自动 focus，避免弹出键盘；桌面端保留自动 focus
     if (!this.isMobile) {
       this.input.focus();
+    }
+    // 更新 overlay 状态
+    this.updateOverlayState();
+  }
+
+  private updateOverlayState(): void {
+    const hasAnyOverlay = !!(
+      document.querySelector('.vr-modal-overlay') ||
+      document.querySelector('.vr-guide-drawer.open') ||
+      (this.root && this.root.style.display === 'flex')
+    );
+    if (hasAnyOverlay) {
+      document.documentElement.classList.add('vr-overlay-open');
+    } else {
+      document.documentElement.classList.remove('vr-overlay-open');
     }
   }
 

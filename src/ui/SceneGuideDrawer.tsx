@@ -153,6 +153,8 @@ export class SceneGuideDrawer {
     if (this.isOpen) return;
     this.isOpen = true;
     this.element.classList.add('open');
+    // 更新 overlay 状态
+    this.updateOverlayState();
     // 打开时初始化选中状态为当前场景
     if (!this.selectedSceneId) {
       this.selectedSceneId = this.currentSceneId;
@@ -165,7 +167,23 @@ export class SceneGuideDrawer {
     if (!this.isOpen) return;
     this.isOpen = false;
     this.element.classList.remove('open');
+    // 更新 overlay 状态
+    this.updateOverlayState();
     this.onClose?.();
+  }
+
+  private updateOverlayState(): void {
+    const hasAnyOverlay = !!(
+      document.querySelector('.vr-modal-overlay') ||
+      (document.querySelector('.vr-guide-drawer.open') && this.isOpen) ||
+      (document.querySelector('.fcchat-root') && 
+       document.querySelector('.fcchat-root')?.style.display === 'flex')
+    );
+    if (hasAnyOverlay) {
+      document.documentElement.classList.add('vr-overlay-open');
+    } else {
+      document.documentElement.classList.remove('vr-overlay-open');
+    }
   }
 
   toggle(): void {

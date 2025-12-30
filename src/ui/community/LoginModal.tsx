@@ -45,7 +45,7 @@ export class LoginModal {
 
     const desc = document.createElement('div');
     desc.className = 'vr-modal-desc';
-    desc.textContent = '输入用户名后，可点赞与留言（本地存储）。';
+    desc.textContent = '输入用户名即可参与互动';
 
     const form = document.createElement('div');
     form.className = 'vr-login-form';

@@ -74,7 +74,7 @@ export class SceneGuideDrawer {
     const searchInput = document.createElement('input');
     searchInput.className = 'vr-guide-search-input';
     searchInput.type = 'search';
-    searchInput.placeholder = '搜索场景';
+    searchInput.placeholder = '查找场景';
     searchWrap.appendChild(searchInput);
     this.searchInputEl = searchInput;
 
@@ -106,7 +106,7 @@ export class SceneGuideDrawer {
 
     const enterBtn = document.createElement('button');
     enterBtn.className = 'vr-btn vr-guide-preview-enter';
-    enterBtn.textContent = '进入';
+    enterBtn.textContent = '前往';
     enterBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();

@@ -47,7 +47,7 @@ export class CommunityPanel {
     // 左侧：标题
     const title = document.createElement('div');
     title.className = 'vr-community-title';
-    title.textContent = '微社区';
+    title.textContent = '社区';
 
     // 中间：场景名（可选）
     this.subtitleEl = document.createElement('div');
@@ -88,7 +88,7 @@ export class CommunityPanel {
 
     this.loginHintBtn = document.createElement('button');
     this.loginHintBtn.className = 'vr-btn vr-community-login-hint';
-    this.loginHintBtn.textContent = '登录后可点赞/留言';
+    this.loginHintBtn.textContent = '登录后可参与互动';
 
     this.userLineEl = document.createElement('div');
     this.userLineEl.className = 'vr-community-userline';
@@ -117,7 +117,7 @@ export class CommunityPanel {
 
     this.likeBtn = document.createElement('button');
     this.likeBtn.className = 'vr-btn vr-community-likebtn';
-    this.likeBtn.textContent = 'Like';
+    this.likeBtn.textContent = '点赞';
 
     this.likeCountEl = document.createElement('div');
     this.likeCountEl.className = 'vr-community-likecount';
@@ -189,7 +189,7 @@ export class CommunityPanel {
   setScene(sceneId: string, sceneName?: string): void {
     this.sceneId = sceneId;
     this.sceneName = sceneName;
-    this.subtitleEl.textContent = this.sceneName ? `当前：${this.sceneName}` : `当前场景：${this.sceneId}`;
+    this.subtitleEl.textContent = this.sceneName ? this.sceneName : sceneId;
     this.refresh();
   }
 
@@ -197,7 +197,7 @@ export class CommunityPanel {
     if (reason === 'not_logged_in') showToast('请先登录');
     else if (reason === 'banned') showToast('内容包含敏感词，已拦截');
     else if (reason === 'cooldown') showToast('评论过于频繁，请稍后再试');
-    else if (reason === 'EMPTY') showToast('请输入内容');
+    else if (reason === 'EMPTY') showToast('内容不能为空');
   }
 
   private formatRelativeTime(ts: number): string {
@@ -224,13 +224,13 @@ export class CommunityPanel {
 
     const tip = document.createElement('div');
     tip.className = 'vr-community-tip';
-    tip.textContent = '仅显示本场景的最近 50 条留言';
+    tip.textContent = '本场景最近 50 条留言';
     this.commentsEl.appendChild(tip);
 
     if (!list.length) {
       const empty = document.createElement('div');
       empty.className = 'vr-community-empty';
-      empty.textContent = '还没有留言，来做第一个发言的人吧。';
+      empty.textContent = '此场景暂未有留言';
       this.commentsEl.appendChild(empty);
       return;
     }

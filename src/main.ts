@@ -1380,9 +1380,9 @@ class App {
     const content = document.createElement('div');
     content.className = 'vr-modal-info-list';
     content.innerHTML = `
-      <div><span class="vr-modal-info-row-label">馆：</span><span>${museumName}</span></div>
-      <div><span class="vr-modal-info-row-label">场景：</span><span>${sceneName}</span></div>
-      <div><span class="vr-modal-info-row-label">采集于</span><span> 2025-12-27</span></div>
+      <div><span class="vr-modal-info-row-label">展馆</span><span>${museumName}</span></div>
+      <div><span class="vr-modal-info-row-label">场景</span><span>${sceneName}</span></div>
+      <div><span class="vr-modal-info-row-label">采集时间</span><span> 2025-12-27</span></div>
       <div class="vr-modal-info-copyright">
         <button type="button" role="button" class="vr-modal-info-copyright-btn">© 2025 鼎虎清源</button>
       </div>
@@ -1542,12 +1542,12 @@ class App {
     // 重置视角
     const resetLabel = document.createElement('div');
     resetLabel.className = 'vr-modal-settings-item-label';
-    resetLabel.textContent = '重置视角';
+    resetLabel.textContent = '视角';
 
     const resetBtn = document.createElement('button');
     resetBtn.className = 'vr-modal-settings-row-btn';
     resetBtn.type = 'button';
-    resetBtn.textContent = '重置视角';
+    resetBtn.textContent = '恢复初始视角';
     resetBtn.addEventListener('click', () => {
       if (!this.currentScene || !this.panoViewer) return;
       const iv = this.currentScene.initialView || { yaw: 0, pitch: 0, fov: 75 };
@@ -1593,7 +1593,7 @@ class App {
     } else if (isMouse) {
       vrBtn.classList.add('is-disabled');
       const handler = () => {
-        showToast('移动端访问可体验该功能', 1500);
+        showToast('移动端可体验此功能', 1500);
       };
       vrBtn.addEventListener('mouseenter', handler);
       vrBtn.addEventListener('click', handler);

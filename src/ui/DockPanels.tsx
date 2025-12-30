@@ -144,7 +144,7 @@ export class DockPanels {
         // 如果没有数据，显示提示
         this.element.innerHTML = `
           <div class="vr-panel-title">平面图</div>
-          <div class="vr-panel-body">暂无平面图数据</div>
+          <div class="vr-panel-body">此展馆暂无平面图</div>
         `;
       }
       return;
@@ -183,7 +183,7 @@ export class DockPanels {
         // 如果没有数据，显示提示
         this.element.innerHTML = `
           <div class="vr-panel-title">三维图</div>
-          <div class="vr-panel-body">暂无场景数据</div>
+          <div class="vr-panel-body">此展馆暂无三维图</div>
         `;
       }
       return;

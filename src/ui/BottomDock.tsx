@@ -28,7 +28,7 @@ export class BottomDock {
   private element: HTMLElement;
   private dockEl: HTMLElement;
   private panels: DockPanels;
-  private activeTab: DockTabKey;
+  private activeTab: DockTabKey | null;
   private onOpenInfo?: () => void;
   private onOpenSettings?: () => void;
   private unsubscribeInteracting: (() => void) | null = null;
@@ -36,7 +36,7 @@ export class BottomDock {
   private unsubscribeUIEngaged: (() => void) | null = null;
 
   constructor(options: BottomDockOptions = {}) {
-    this.activeTab = options.initialTab || 'guide';
+    this.activeTab = null;
     this.onOpenInfo = options.onOpenInfo;
     this.onOpenSettings = options.onOpenSettings;
 
@@ -44,7 +44,7 @@ export class BottomDock {
     this.element.className = 'vr-dock-wrap';
 
     this.panels = new DockPanels({
-      initialTab: this.activeTab,
+      initialTab: this.activeTab || 'guide',
       sceneId: options.sceneId,
       sceneName: options.sceneName,
       museum: options.museum,
@@ -66,12 +66,12 @@ export class BottomDock {
         e.stopPropagation();
         // UI 被点击，立即恢复
         interactionBus.emitUIEngaged();
+        // 先设置高亮
         this.setActiveTab(tab.key);
+        // 然后触发对应动作
         if (tab.key === 'guide' && options.onGuideClick) {
           options.onGuideClick();
         }
-        // 按钮只是触发动作，不保留选中态
-        this.clearActive();
       });
       this.dockEl.appendChild(btn);
     }
@@ -84,13 +84,18 @@ export class BottomDock {
     
     // 监听外部 tab 切换事件（用于同步状态，例如从 DockPanels 内部关闭面板时）
     const handleTabChange = (e: Event) => {
-      const evt = e as CustomEvent<{ tab: DockTabKey }>;
-      if (evt.detail.tab && evt.detail.tab !== this.activeTab) {
-        this.activeTab = evt.detail.tab;
-        this.syncActiveClass();
+      const evt = e as CustomEvent<{ tab: DockTabKey | null }>;
+      if (evt.detail.tab !== undefined) {
+        this.setActiveTab(evt.detail.tab);
       }
     };
     window.addEventListener('vr:bottom-dock-tab-change', handleTabChange);
+
+    // 监听关闭面板事件（优先级最高，必须清空高亮）
+    const handleClosePanels = () => {
+      this.clearActive();
+    };
+    window.addEventListener('vr:close-panels', handleClosePanels);
   }
 
   private setupInteractionListeners(): void {
@@ -99,41 +104,42 @@ export class BottomDock {
   }
 
   private syncActiveClass(): void {
-    // 底部按钮不再有“激活”高亮状态，统一清除
-    this.clearActive();
+    this.dockEl.querySelectorAll('.vr-dock-tab').forEach((el) => {
+      const key = el.getAttribute('data-tab') as DockTabKey | null;
+      if (!key) return;
+      el.classList.toggle('active', key === this.activeTab);
+    });
   }
 
-  setActiveTab(tab: DockTabKey): void {
-    if (this.activeTab === tab) {
-      // 仍然确保清除高亮
-      this.syncActiveClass();
-      return;
-    }
+  setActiveTab(tab: DockTabKey | null): void {
     this.activeTab = tab;
     this.syncActiveClass();
-    this.panels.setTab(tab);
-    // 派发事件通知TopModeTabs同步状态
-    window.dispatchEvent(new CustomEvent('vr:bottom-dock-tab-change', {
-      detail: { tab },
-    }));
+    
+    if (tab !== null) {
+      this.panels.setTab(tab);
+      // 派发事件通知TopModeTabs同步状态
+      window.dispatchEvent(new CustomEvent('vr:bottom-dock-tab-change', {
+        detail: { tab },
+      }));
 
-    // 额外行为：信息 / 设置 打开弹窗
-    if (tab === 'info') {
-      if (this.onOpenInfo) {
-        this.onOpenInfo();
-      } else {
-        this.openFallbackInfoModal();
-      }
-    } else if (tab === 'settings') {
-      if (this.onOpenSettings) {
-        this.onOpenSettings();
-      } else {
-        this.openFallbackSettingsModal();
+      // 额外行为：信息 / 设置 打开弹窗
+      if (tab === 'info') {
+        if (this.onOpenInfo) {
+          this.onOpenInfo();
+        } else {
+          this.openFallbackInfoModal();
+        }
+      } else if (tab === 'settings') {
+        if (this.onOpenSettings) {
+          this.onOpenSettings();
+        } else {
+          this.openFallbackSettingsModal();
+        }
       }
     }
   }
 
-  getActiveTab(): DockTabKey {
+  getActiveTab(): DockTabKey | null {
     return this.activeTab;
   }
 

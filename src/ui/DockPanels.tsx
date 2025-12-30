@@ -55,7 +55,7 @@ export class DockPanels {
 
     // 监听关闭面板事件
     const handleClosePanels = () => {
-      // 关闭社区面板时，切换到 guide tab（guide tab 面板是隐藏的）
+      // 关闭社区面板时，清空高亮（不切换到 guide）
       if (this.currentTab === 'community') {
         // 先清理社区面板（从DOM移除）
         if (this.communityPanel) {
@@ -64,9 +64,9 @@ export class DockPanels {
         }
         // 使用 setTab 方法切换，确保动画和状态正确
         this.setTab('guide');
-        // 派发事件通知 BottomDock 同步 tab 状态
+        // 派发事件通知 BottomDock 清空高亮（传 null）
         window.dispatchEvent(new CustomEvent('vr:bottom-dock-tab-change', {
-          detail: { tab: 'guide' },
+          detail: { tab: null },
         }));
       }
     };

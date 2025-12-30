@@ -141,6 +141,8 @@ export class SceneStrip {
         const thumbUrl = resolveAssetUrl(sceneInfo.thumb, AssetType.THUMB);
         if (thumbUrl) {
           const img = document.createElement('img');
+          img.referrerPolicy = 'no-referrer';
+          img.decoding = 'async';
           img.src = thumbUrl;
           img.alt = sceneInfo.name;
           img.loading = 'lazy';

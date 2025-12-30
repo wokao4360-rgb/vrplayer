@@ -118,6 +118,9 @@ export class PreloadManager {
         // 使用 Image 预取
         await new Promise<void>((resolve, reject) => {
           const img = new Image();
+          img.referrerPolicy = 'no-referrer';
+          img.decoding = 'async';
+          img.loading = 'lazy';
           img.onload = () => {
             // 再次检查 token
             if (token === this.currentToken) {

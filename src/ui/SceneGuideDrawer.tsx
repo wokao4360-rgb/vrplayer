@@ -89,6 +89,9 @@ export class SceneGuideDrawer {
 
     const previewImg = document.createElement('img');
     previewImg.className = 'vr-guide-preview-image';
+    previewImg.referrerPolicy = 'no-referrer';
+    previewImg.decoding = 'async';
+    previewImg.loading = 'lazy';
     this.previewImgEl = previewImg;
 
     const previewTitle = document.createElement('div');
@@ -208,6 +211,8 @@ export class SceneGuideDrawer {
 
       const img = document.createElement('img');
       img.className = 'vr-guide-thumb';
+      img.referrerPolicy = 'no-referrer';
+      img.decoding = 'async';
       img.loading = 'lazy';
       img.src = scene.thumb || DEFAULT_COVER_DATA_URI;
       img.alt = scene.name || scene.id;

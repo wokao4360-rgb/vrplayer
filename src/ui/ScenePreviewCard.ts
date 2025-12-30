@@ -370,6 +370,9 @@ export class ScenePreviewCard {
       if (thumbUrl) {
         // 创建 img 元素
         const img = document.createElement('img');
+        img.referrerPolicy = 'no-referrer';
+        img.loading = 'lazy';
+        img.decoding = 'async';
         img.src = thumbUrl;
         img.alt = meta.title;
         this.thumbEl.appendChild(img);

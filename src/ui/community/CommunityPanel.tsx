@@ -230,7 +230,7 @@ export class CommunityPanel {
     if (!list.length) {
       const empty = document.createElement('div');
       empty.className = 'vr-community-empty';
-      empty.textContent = '此场景暂未有留言';
+      empty.textContent = '此场景暂无留言';
       this.commentsEl.appendChild(empty);
       return;
     }

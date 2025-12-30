@@ -3,6 +3,7 @@ import { DockPanels } from './DockPanels';
 import type { Museum, Scene } from '../types/config';
 import { interactionBus } from './interactionBus';
 import { mountModal } from './Modal';
+import { getIcon } from './icons';
 
 type BottomDockOptions = {
   initialTab?: DockTabKey;
@@ -65,7 +66,8 @@ export class BottomDock {
       const btn = document.createElement('button');
       btn.className = 'vr-btn vr-dock-tab';
       btn.setAttribute('data-tab', tab.key);
-      btn.innerHTML = `<div class="vr-dock-tab-label">${tab.label}</div>`;
+      const iconName = tab.key === 'guide' ? 'guide' : tab.key === 'community' ? 'community' : tab.key === 'info' ? 'info' : 'more';
+      btn.innerHTML = `<span class="vr-dock-tab-icon">${getIcon(iconName)}</span><div class="vr-dock-tab-label">${tab.label}</div>`;
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();

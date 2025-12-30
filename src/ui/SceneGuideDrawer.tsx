@@ -2,6 +2,7 @@ import type { Scene } from '../types/config';
 import { navigateToScene } from '../utils/router';
 import { DEFAULT_COVER_DATA_URI } from './placeholders';
 import { toProxiedImageUrl } from '../utils/externalImage';
+import { getIcon } from './icons';
 
 type SceneGuideDrawerOptions = {
   museumId: string;
@@ -71,10 +72,14 @@ export class SceneGuideDrawer {
 
     const searchWrap = document.createElement('div');
     searchWrap.className = 'vr-guide-search';
+    const searchIcon = document.createElement('span');
+    searchIcon.className = 'vr-guide-search-icon';
+    searchIcon.innerHTML = getIcon('search');
     const searchInput = document.createElement('input');
     searchInput.className = 'vr-guide-search-input';
     searchInput.type = 'search';
     searchInput.placeholder = '查找场景';
+    searchWrap.appendChild(searchIcon);
     searchWrap.appendChild(searchInput);
     this.searchInputEl = searchInput;
 
@@ -106,7 +111,7 @@ export class SceneGuideDrawer {
 
     const enterBtn = document.createElement('button');
     enterBtn.className = 'vr-btn vr-guide-preview-enter';
-    enterBtn.textContent = '前往';
+    enterBtn.innerHTML = `<span class="vr-guide-enter-icon">${getIcon('arrow-right')}</span><span>前往</span>`;
     enterBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();

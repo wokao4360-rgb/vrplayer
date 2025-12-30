@@ -925,8 +925,8 @@ body{
   gap: 2px;
   border-radius: 9999px; /* Dock 保持极圆 */
   padding: 8px;
-  /* 弱背景磨砂效果 - 再轻一点，存在感再弱 5~10% */
-  background: rgba(255, 255, 255, 0.06);
+  /* 背景暗一档，提高可读性 */
+  background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -936,12 +936,19 @@ body{
   width: 64px;
   height: 42px;
   border-radius: 9999px;
-  display: grid;
-  place-items: center;
-  color: rgba(255,255,255,0.8);
-  opacity: 0.6;
-  transition: opacity var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: rgba(255,255,255,0.75);
+  opacity: 0.65;
+  transition: opacity 150ms ease, transform 150ms ease, color 150ms ease;
   background: transparent;
+}
+.vr-dock-tab:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
 }
 .vr-dock-tab.active{
   opacity: 1;
@@ -949,7 +956,28 @@ body{
   background: transparent;
 }
 .vr-dock-tab:active{ transform: scale(0.98); }
-.vr-dock-tab-label{ font-size: 12px; font-weight: 600; }
+.vr-dock-tab-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: inherit;
+}
+.vr-dock-tab-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+}
+.vr-dock-tab-label{ 
+  font-size: 11px; 
+  font-weight: 600; 
+  line-height: 1;
+  opacity: inherit;
+  color: inherit;
+}
 
 /* DockPanels */
 .vr-panel{
@@ -1837,6 +1865,27 @@ body{
 
 .vr-guide-search{
   padding: 0 12px 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.vr-guide-search-icon {
+  position: absolute;
+  left: 20px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.55);
+  pointer-events: none;
+  z-index: 1;
+}
+.vr-guide-search-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
 }
 .vr-guide-search-input{
   width: 100%;
@@ -1845,7 +1894,7 @@ body{
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(0,0,0,0.26);
   color: rgba(255,255,255,0.92);
-  padding: 0 12px;
+  padding: 0 12px 0 40px;
   font-size: 13px;
   outline: none;
 }
@@ -1956,9 +2005,29 @@ body{
   font-size: 13px;
   cursor: pointer;
   border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 150ms ease, background 150ms ease;
+}
+.vr-guide-preview-enter:hover {
+  background: rgba(255,255,255,0.20);
 }
 .vr-guide-preview-enter:active{
   transform: scale(0.97);
+}
+.vr-guide-enter-icon {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vr-guide-enter-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
 }
 
 /* GuideTray - 导览轻量预览条（框3） */

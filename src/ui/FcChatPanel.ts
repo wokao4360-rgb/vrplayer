@@ -27,6 +27,8 @@ export class FcChatPanel {
   private swipeActive = false;
 
   private messages: ChatMsg[] = [];
+  private isOpen = false;
+  private fabButton: HTMLButtonElement | null = null;
 
   // typing effect controls
   private typingTimer: number | null = null;
@@ -45,7 +47,8 @@ export class FcChatPanel {
   public destroy() {
     this.stopTyping(true);
     this.root?.remove();
-    document.getElementById("fcchat-dock")?.remove();
+    this.fabButton?.remove();
+    this.fabButton = null;
   }
 
   private detectMobile() {
@@ -82,7 +85,7 @@ export class FcChatPanel {
     this.closeBtn.type = "button";
     this.closeBtn.setAttribute("aria-label", "关闭");
     this.closeBtn.textContent = "×";
-    this.closeBtn.addEventListener("click", () => this.hide());
+    this.closeBtn.addEventListener("click", () => this.toggle());
 
     headerRight.appendChild(this.clearBtn);
     headerRight.appendChild(this.closeBtn);
@@ -152,26 +155,33 @@ export class FcChatPanel {
   }
 
   private hide() {
+    if (!this.isOpen) return;
+    this.isOpen = false;
     this.stopTyping(true);
     this.root.style.display = "none";
-    const dock = document.getElementById("fcchat-dock");
-    if (dock) {
-      // 确保头像按钮始终显示
-      dock.style.display = "flex";
-    } else {
-      this.ensureToggleButton();
+    this.root.classList.remove('fcchat-open');
+    // 更新 FAB 状态：悬挂隐藏
+    if (this.fabButton) {
+      this.fabButton.classList.add('fcchat-docked');
     }
+    // 从 body 移除 class，以便 CSS 选择器工作
+    document.body.classList.remove('fcchat-open');
     // 更新 overlay 状态
     this.updateOverlayState();
   }
 
   private show() {
+    if (this.isOpen) return;
+    this.isOpen = true;
     this.detectMobile();
     this.root.style.display = "flex";
-    const dock = document.getElementById("fcchat-dock");
-    if (dock) {
-      dock.style.display = "none";
+    this.root.classList.add('fcchat-open');
+    // 更新 FAB 状态：完整显示
+    if (this.fabButton) {
+      this.fabButton.classList.remove('fcchat-docked');
     }
+    // 在 body 添加 class，以便 CSS 选择器工作
+    document.body.classList.add('fcchat-open');
     this.scrollToBottom();
     // 移动端不自动 focus，避免弹出键盘；桌面端保留自动 focus
     if (!this.isMobile) {
@@ -179,6 +189,14 @@ export class FcChatPanel {
     }
     // 更新 overlay 状态
     this.updateOverlayState();
+  }
+
+  private toggle() {
+    if (this.isOpen) {
+      this.hide();
+    } else {
+      this.show();
+    }
   }
 
   private updateOverlayState(): void {
@@ -195,7 +213,7 @@ export class FcChatPanel {
   }
 
   private ensureToggleButton() {
-    if (document.getElementById("fcchat-dock")) return;
+    if (this.fabButton) return;
     
     // 检查 URL 兜底
     const urlParams = new URLSearchParams(location.search);
@@ -207,19 +225,14 @@ export class FcChatPanel {
       history.replaceState({}, "", newUrl);
     }
     
-    // 创建统一容器
-    const dock = document.createElement("div");
-    dock.id = "fcchat-dock";
-    dock.className = "fcchat-dock";
-    
-    // 头像按钮（唯一入口，直接打开对话框）
-    const handleBtn = document.createElement("button");
-    handleBtn.id = "fcchat-handle";
-    handleBtn.className = "fcchat-handle";
-    handleBtn.type = "button";
-    handleBtn.setAttribute("aria-label", "打开三馆学伴");
+    // 创建 FAB 按钮（单一头像按钮）
+    const fabBtn = document.createElement("button");
+    fabBtn.id = "fcchat-fab";
+    fabBtn.className = "fcchat-fab fcchat-docked";
+    fabBtn.type = "button";
+    fabBtn.setAttribute("aria-label", "打开三馆学伴");
     // 卡通助手头像 SVG（圆形底+脸+眼睛）
-    handleBtn.innerHTML = `<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+    fabBtn.innerHTML = `<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="22" cy="22" r="22" fill="url(#fcchat-avatar-gradient)"/>
       <defs>
         <linearGradient id="fcchat-avatar-gradient" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
@@ -236,11 +249,16 @@ export class FcChatPanel {
       <!-- 嘴巴（微笑） -->
       <path d="M 18 28 Q 22 31 26 28" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round" fill="none"/>
     </svg>`;
-    // 点击头像直接打开对话框
-    handleBtn.addEventListener("click", () => this.show());
+    // 点击 FAB 切换打开/关闭
+    fabBtn.addEventListener("click", () => this.toggle());
     
-    dock.appendChild(handleBtn);
-    document.body.appendChild(dock);
+    this.fabButton = fabBtn;
+    document.body.appendChild(fabBtn);
+    
+    // 初始状态：悬挂隐藏
+    if (!this.isOpen) {
+      fabBtn.classList.add('fcchat-docked');
+    }
   }
 
   private onDragStart(e: MouseEvent) {
@@ -677,16 +695,11 @@ export class FcChatPanel {
         line-height: 28px;
       }
 
-      .fcchat-dock{
+      .fcchat-fab{
         position: fixed;
-        z-index: 99998;
+        z-index: 99999;
         right: 16px;
         bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .fcchat-handle{
         width: 44px;
         height: 44px;
         border-radius: 50%;
@@ -701,42 +714,80 @@ export class FcChatPanel {
         pointer-events: auto;
         box-shadow: 0 4px 16px rgba(37,99,235,.4);
         padding: 0;
-        transition: opacity 150ms ease, box-shadow 150ms ease, transform 150ms ease;
-        animation: fcchat-idle 5.2s ease-in-out infinite;
+        transition: opacity 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+        animation: fcchat-idle 3.8s ease-in-out infinite;
       }
-      .fcchat-handle:hover{
+      .fcchat-fab:hover{
         box-shadow: 0 6px 20px rgba(37,99,235,.5);
         transform: scale(1.05);
       }
-      .fcchat-handle:active{
+      .fcchat-fab:active{
         transform: scale(0.98);
       }
-      .fcchat-handle svg{
+      .fcchat-fab svg{
         width: 44px;
         height: 44px;
         display: block;
       }
+      /* 悬挂隐藏状态：半隐藏在屏幕外 */
+      .fcchat-fab.fcchat-docked{
+        transform: translateX(26px);
+      }
+      .fcchat-fab.fcchat-docked:hover{
+        transform: translateX(26px) scale(1.05);
+      }
+      /* 打开状态：降低透明度避免遮挡 */
+      body.fcchat-open .fcchat-fab{
+        opacity: 0.6;
+      }
       @keyframes fcchat-idle{
-        0%, 72%{
+        0%, 75%{
           transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
         }
-        74%{
-          transform: translate3d(0, -6px, 0) scale(1.08) rotate(4deg);
+        77%{
+          transform: translate3d(0, -12px, 0) scale(1.12) rotate(5deg);
         }
-        78%{
+        79%{
+          transform: translate3d(0, -4px, 0) scale(1.06) rotate(-3deg);
+        }
+        81%{
+          transform: translate3d(0, -10px, 0) scale(1.10) rotate(4deg);
+        }
+        83%{
           transform: translate3d(0, -2px, 0) scale(1.04) rotate(-2deg);
         }
-        82%{
-          transform: translate3d(0, -5px, 0) scale(1.06) rotate(3deg);
+        85%{
+          transform: translate3d(0, -8px, 0) scale(1.08) rotate(3deg);
         }
-        86%{
-          transform: translate3d(0, -1px, 0) scale(1.02) rotate(-1deg);
-        }
-        90%{
-          transform: translate3d(0, -3px, 0) scale(1.05) rotate(2deg);
-        }
-        92%, 100%{
+        87%, 100%{
           transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+        }
+      }
+      /* 悬挂隐藏状态下的动画需要叠加 translateX */
+      .fcchat-fab.fcchat-docked{
+        animation: fcchat-idle-docked 3.8s ease-in-out infinite;
+      }
+      @keyframes fcchat-idle-docked{
+        0%, 75%{
+          transform: translateX(26px) translate3d(0, 0, 0) scale(1) rotate(0deg);
+        }
+        77%{
+          transform: translateX(26px) translate3d(0, -12px, 0) scale(1.12) rotate(5deg);
+        }
+        79%{
+          transform: translateX(26px) translate3d(0, -4px, 0) scale(1.06) rotate(-3deg);
+        }
+        81%{
+          transform: translateX(26px) translate3d(0, -10px, 0) scale(1.10) rotate(4deg);
+        }
+        83%{
+          transform: translateX(26px) translate3d(0, -2px, 0) scale(1.04) rotate(-2deg);
+        }
+        85%{
+          transform: translateX(26px) translate3d(0, -8px, 0) scale(1.08) rotate(3deg);
+        }
+        87%, 100%{
+          transform: translateX(26px) translate3d(0, 0, 0) scale(1) rotate(0deg);
         }
       }
 
@@ -758,18 +809,29 @@ export class FcChatPanel {
           cursor: default !important;
         }
         .fcchat-bubble{ max-width: 84%; }
-        .fcchat-dock{
+        .fcchat-fab{
           right: 14px !important;
-          top: calc(env(safe-area-inset-top, 0px) + 96px) !important;
+          top: 40% !important;
+          bottom: auto !important;
+          width: 40px;
+          height: 40px;
+        }
+        .fcchat-fab svg{
+          width: 40px;
+          height: 40px;
+        }
+        /* 移动端打开时移到右上角 */
+        body.fcchat-open .fcchat-fab{
+          right: 14px !important;
+          top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
           bottom: auto !important;
         }
-        .fcchat-handle{
-          width: 40px;
-          height: 40px;
-        }
-        .fcchat-handle svg{
-          width: 40px;
-          height: 40px;
+        /* 移动端悬挂隐藏 */
+        .fcchat-fab.fcchat-docked{
+          right: 14px !important;
+          top: 40% !important;
+          bottom: auto !important;
+          transform: translateX(20px);
         }
       }
 

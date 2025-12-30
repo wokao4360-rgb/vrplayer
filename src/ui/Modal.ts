@@ -95,9 +95,10 @@ export function mountModal(options: MountModalOptions): MountedModal {
   
   // 更新 overlay 状态
   updateOverlayState();
-
-  // 如果是"更多"弹窗，使用两段式 class 确保动效稳定触发
+  
+  // 如果是"更多"弹窗，添加 vr-more-open class
   if (panelClassName === 'vr-modal-settings') {
+    document.documentElement.classList.add('vr-more-open');
     // 初始状态已通过 CSS 设置（opacity 0 + translateY 16px）
     // 下一帧添加 is-in class 触发过渡
     requestAnimationFrame(() => {
@@ -144,6 +145,11 @@ export function mountModal(options: MountModalOptions): MountedModal {
       // 从 DOM 移除，避免遮挡后续交互
       if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
+      }
+      
+      // 如果是"更多"弹窗，移除 vr-more-open class
+      if (panelClassName === 'vr-modal-settings') {
+        document.documentElement.classList.remove('vr-more-open');
       }
       
       // 更新 overlay 状态

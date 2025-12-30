@@ -6,13 +6,15 @@
 
 /**
  * 将外链图片 URL 转换为同源代理 URL
- * 目前只代理 i.ibb.co 域名
+ * 目前只代理以下域名：
+ * - i.ibb.co
+ * - s41.ax1x.com
  */
 export function toProxiedImageUrl(rawUrl: string): string {
   try {
     const url = new URL(rawUrl);
-    // 只代理 i.ibb.co 域名
-    if (url.hostname === 'i.ibb.co') {
+    const host = url.hostname;
+    if (host === 'i.ibb.co' || host === 's41.ax1x.com') {
       return `/__img?u=${encodeURIComponent(rawUrl)}`;
     }
   } catch {

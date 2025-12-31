@@ -163,7 +163,7 @@ body{
   padding: 6px 10px;
   border-radius: 9999px;
   transition: opacity var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
-  pointer-events: none; /* 纯展示，不参与交互 */
+  pointer-events: auto; /* 恢复可点击 */
 }
 .vr-brandmark:hover{ opacity: 0.75; }
 .vr-brandmark:active{ opacity: 0.9; background: rgba(255,255,255,0.08); }
@@ -171,14 +171,15 @@ body{
 /* 移动端：防止左下角品牌标记被底部 Dock 挡住 */
 @media (max-width: 768px), (pointer: coarse) {
   .vr-brandmark{
-    left: 14px;
+    left: 8px; /* 更靠左 */
     bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
     max-width: 60vw;
     opacity: 0.9;
+    transform: translateX(-6px); /* 文字整体向左平移 */
   }
 }
 
-/* 弹窗打开时隐藏品牌标记 */
+/* 弹窗打开时禁用品牌标记点击 */
 .vr-overlay-open .vr-brandmark{
   opacity: 0 !important;
   pointer-events: none !important;

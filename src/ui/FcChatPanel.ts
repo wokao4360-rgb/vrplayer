@@ -31,10 +31,8 @@ export class FcChatPanel {
   private fabButton: HTMLButtonElement | null = null;
 
   // FAB drag state
-  private dragPressTimer: number | null = null;
   private snapTimer: number | null = null;
   private isDragging = false;
-  private dragArmed = false; // 长按已触发
   private startX = 0;
   private startY = 0;
   private startLeft = 0;
@@ -60,10 +58,6 @@ export class FcChatPanel {
 
   public destroy() {
     this.stopTyping(true);
-    if (this.dragPressTimer) {
-      window.clearTimeout(this.dragPressTimer);
-      this.dragPressTimer = null;
-    }
     if (this.snapTimer) {
       window.clearTimeout(this.snapTimer);
       this.snapTimer = null;
@@ -117,6 +111,12 @@ export class FcChatPanel {
     headerRow.appendChild(left);
     headerRow.appendChild(headerRight);
     this.header.appendChild(headerRow);
+
+    // 免责声明
+    const disclaimer = document.createElement("div");
+    disclaimer.className = "fcchat-disclaimer";
+    disclaimer.textContent = "提示：AI 可能会出错，内容仅供参考；请以现场展陈/讲解为准。";
+    this.header.appendChild(disclaimer);
 
     this.body = document.createElement("div");
     this.body.className = "fcchat-body";
@@ -350,11 +350,11 @@ export class FcChatPanel {
       <!-- 嘴巴（微笑） -->
       <path d="M 18 28 Q 22 31 26 28" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round" fill="none"/>
     </svg>`;
-    // Pointer 事件处理（长按拖拽）
-    fabBtn.addEventListener('pointerdown', (e) => this.onFabPointerDown(e));
-    fabBtn.addEventListener('pointermove', (e) => this.onFabPointerMove(e));
-    fabBtn.addEventListener('pointerup', (e) => this.onFabPointerUp(e));
-    fabBtn.addEventListener('pointercancel', (e) => this.onFabPointerUp(e));
+    // Pointer 事件处理（按下即拖）
+    fabBtn.addEventListener('pointerdown', (e) => this.onFabPointerDown(e), { passive: false });
+    fabBtn.addEventListener('pointermove', (e) => this.onFabPointerMove(e), { passive: false });
+    fabBtn.addEventListener('pointerup', (e) => this.onFabPointerUp(e), { passive: false });
+    fabBtn.addEventListener('pointercancel', (e) => this.onFabPointerUp(e), { passive: false });
     
     this.fabButton = fabBtn;
     document.body.appendChild(fabBtn);
@@ -382,113 +382,96 @@ export class FcChatPanel {
   }
 
   private onFabPointerDown(e: PointerEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    
     const fab = this.fabButton;
     if (!fab) return;
-    
-    // 记录起点
+
+    e.preventDefault();
+
+    // 进入"可能拖拽"状态，但不立刻算拖拽（靠 move threshold 判定）
+    this.isDragging = false;
+    this.moved = false;
+
     this.startX = e.clientX;
     this.startY = e.clientY;
+
+    // 取当前定位（优先 inline left/top；没有就从 rect 推）
     const rect = fab.getBoundingClientRect();
-    this.startLeft = rect.left;
-    this.startTop = rect.top;
-    this.moved = false;
-    this.dragArmed = false;
-    
-    // 启动长按计时器（320ms）
-    this.dragPressTimer = window.setTimeout(() => {
-      this.dragArmed = true;
-      this.isDragging = true;
-      fab.classList.add('fcchat-dragging');
-      fab.classList.remove('fcchat-docked'); // 拖拽时移除悬挂状态
+    const left = parseFloat(fab.style.left || '');
+    const top = parseFloat(fab.style.top || '');
+
+    this.startLeft = Number.isFinite(left) ? left : rect.left;
+    this.startTop = Number.isFinite(top) ? top : rect.top;
+
+    // 断触修复：捕获指针
+    try {
       fab.setPointerCapture(e.pointerId);
-    }, 320) as unknown as number;
+    } catch {}
+
+    // 拖拽期间不要受 docked translateX 影响
+    fab.classList.remove('fcchat-docked');
   }
 
   private onFabPointerMove(e: PointerEvent) {
     const fab = this.fabButton;
     if (!fab) return;
-    
-    // 检查是否移动超过阈值（6px）
-    const dx = Math.abs(e.clientX - this.startX);
-    const dy = Math.abs(e.clientY - this.startY);
-    if (dx > 6 || dy > 6) {
-      this.moved = true;
+
+    // 必须 preventDefault，避免浏览器滚动抢走
+    e.preventDefault();
+
+    const dx = e.clientX - this.startX;
+    const dy = e.clientY - this.startY;
+
+    if (!this.isDragging) {
+      if (Math.abs(dx) + Math.abs(dy) < 4) return; // MOVE_THRESHOLD = 4px
+      this.isDragging = true;
+      fab.classList.add('fcchat-dragging');
     }
-    
-    // 如果长按已触发，执行拖拽
-    if (this.dragArmed && this.isDragging) {
-      e.preventDefault();
-      const deltaX = e.clientX - this.startX;
-      const deltaY = e.clientY - this.startY;
-      
-      let newLeft = this.startLeft + deltaX;
-      let newTop = this.startTop + deltaY;
-      
-      // 夹到安全区域
-      const clamped = this.clampPos(newLeft, newTop);
-      newLeft = clamped.left;
-      newTop = clamped.top;
-      
-      // 应用位置（切换到 left/top 定位）
-      fab.style.left = `${newLeft}px`;
-      fab.style.top = `${newTop}px`;
-      fab.style.right = 'auto';
-      fab.style.bottom = 'auto';
-      
-      this.lastLeft = newLeft;
-      this.lastTop = newTop;
-      this.hasUserPlaced = true;
-    }
+
+    const next = this.clampPos(this.startLeft + dx, this.startTop + dy);
+    this.lastLeft = next.left;
+    this.lastTop = next.top;
+
+    // 进入"用户放置模式"：用 left/top 驱动
+    fab.style.left = `${this.lastLeft}px`;
+    fab.style.top = `${this.lastTop}px`;
+    fab.style.right = 'auto';
+    fab.style.bottom = 'auto';
+    this.hasUserPlaced = true;
   }
 
   private onFabPointerUp(e: PointerEvent) {
     const fab = this.fabButton;
     if (!fab) return;
-    
-    // 清除长按计时器
-    if (this.dragPressTimer) {
-      window.clearTimeout(this.dragPressTimer);
-      this.dragPressTimer = null;
-    }
-    
-    // 如果进入了拖拽状态
-    if (this.isDragging) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      fab.classList.remove('fcchat-dragging');
+    e.preventDefault();
+
+    try {
       fab.releasePointerCapture(e.pointerId);
-      this.isDragging = false;
-      this.dragArmed = false;
-      
-      // 固定到松手位置
-      fab.style.left = `${this.lastLeft}px`;
-      fab.style.top = `${this.lastTop}px`;
-      
-      // 清除之前的贴边定时器
-      if (this.snapTimer) {
-        window.clearTimeout(this.snapTimer);
-      }
-      
-      // 5秒后贴边
-      fab.classList.add('fcchat-snapping');
-      this.snapTimer = window.setTimeout(() => {
-        this.snapToEdge();
-        this.snapTimer = null;
-      }, 5000) as unknown as number;
-      
+    } catch {}
+
+    if (!this.isDragging) {
+      // 轻点：走原 toggle（打开/关闭聊天）
+      this.toggle();
       return;
     }
-    
-    // 如果没进入拖拽，且没移动超过阈值，执行 toggle
-    if (!this.moved && !this.dragArmed) {
-      this.toggle();
+
+    // 拖拽结束
+    this.isDragging = false;
+    fab.classList.remove('fcchat-dragging');
+
+    // 持久化当前位置
+    try {
+      localStorage.setItem('fcchat_fab_pos_v1', JSON.stringify({ left: this.lastLeft, top: this.lastTop }));
+    } catch {}
+
+    // 5 秒后贴边（先清理旧 timer）
+    if (this.snapTimer) {
+      window.clearTimeout(this.snapTimer);
     }
-    
-    this.moved = false;
+    fab.classList.add('fcchat-snapping');
+    this.snapTimer = window.setTimeout(() => {
+      this.snapToEdge();
+      this.snapTimer = null;
+    }, 5000) as unknown as number;
   }
 
   private onDragStart(e: MouseEvent) {
@@ -827,6 +810,13 @@ export class FcChatPanel {
         align-items:center;
         gap: 8px;
       }
+      .fcchat-disclaimer{
+        margin-top: 6px;
+        font-size: 12px;
+        line-height: 1.3;
+        opacity: 0.7;
+        color: #6b7280;
+      }
 
       .fcchat-body{
         flex: 1;
@@ -948,6 +938,10 @@ export class FcChatPanel {
         padding: 0;
         transition: opacity 200ms ease, box-shadow 200ms ease, transform 200ms ease;
         animation: fcchat-idle 3.8s ease-in-out infinite;
+        touch-action: none; /* 关键：禁止浏览器把手势当滚动/缩放 */
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
       }
       /* 竖屏手机：靠近全屏按钮 */
       @media (max-width: 768px) and (orientation: portrait){
@@ -972,8 +966,6 @@ export class FcChatPanel {
       /* 拖拽状态 */
       .fcchat-fab.fcchat-dragging{
         transition: none !important;
-        touch-action: none;
-        user-select: none;
         cursor: grabbing;
         animation: none !important; /* 拖拽时停止 idle 动画 */
       }

@@ -32,7 +32,7 @@ if ([string]::IsNullOrWhiteSpace($status)) {
 }
 
 Write-Host "Committing changes..." -ForegroundColor Cyan
-git commit -m "fix: build and sync docs"
+git commit -m "fix: robust drag fab + add ai disclaimer"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Git commit failed!" -ForegroundColor Red
     exit $LASTEXITCODE

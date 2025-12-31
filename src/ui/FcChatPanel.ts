@@ -695,11 +695,13 @@ export class FcChatPanel {
         line-height: 28px;
       }
 
+      /* 默认：横屏 / 桌面 / 平板 */
       .fcchat-fab{
         position: fixed;
         z-index: 99999;
         right: 16px;
-        bottom: 16px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 88px);
+        top: auto;
         width: 44px;
         height: 44px;
         border-radius: 50%;
@@ -716,6 +718,14 @@ export class FcChatPanel {
         padding: 0;
         transition: opacity 200ms ease, box-shadow 200ms ease, transform 200ms ease;
         animation: fcchat-idle 3.8s ease-in-out infinite;
+      }
+      /* 竖屏手机：靠近全屏按钮 */
+      @media (max-width: 768px) and (orientation: portrait){
+        .fcchat-fab{
+          top: calc(env(safe-area-inset-top, 0px) + 88px);
+          right: 12px;
+          bottom: auto;
+        }
       }
       .fcchat-fab:hover{
         box-shadow: 0 6px 20px rgba(37,99,235,.5);
@@ -790,6 +800,35 @@ export class FcChatPanel {
           transform: translateX(26px) translate3d(0, 0, 0) scale(1) rotate(0deg);
         }
       }
+      /* 移动端悬挂隐藏动画 */
+      @media (max-width: 768px), (pointer: coarse){
+        .fcchat-fab.fcchat-docked{
+          animation: fcchat-idle-docked-mobile 3.8s ease-in-out infinite;
+        }
+        @keyframes fcchat-idle-docked-mobile{
+          0%, 75%{
+            transform: translateX(20px) translate3d(0, 0, 0) scale(1) rotate(0deg);
+          }
+          77%{
+            transform: translateX(20px) translate3d(0, -12px, 0) scale(1.12) rotate(5deg);
+          }
+          79%{
+            transform: translateX(20px) translate3d(0, -4px, 0) scale(1.06) rotate(-3deg);
+          }
+          81%{
+            transform: translateX(20px) translate3d(0, -10px, 0) scale(1.10) rotate(4deg);
+          }
+          83%{
+            transform: translateX(20px) translate3d(0, -2px, 0) scale(1.04) rotate(-2deg);
+          }
+          85%{
+            transform: translateX(20px) translate3d(0, -8px, 0) scale(1.08) rotate(3deg);
+          }
+          87%, 100%{
+            transform: translateX(20px) translate3d(0, 0, 0) scale(1) rotate(0deg);
+          }
+        }
+      }
 
       @media (max-width: 768px), (pointer: coarse){
         .fcchat-root{
@@ -810,9 +849,6 @@ export class FcChatPanel {
         }
         .fcchat-bubble{ max-width: 84%; }
         .fcchat-fab{
-          right: 12px !important;
-          top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
-          bottom: auto !important;
           width: 40px;
           height: 40px;
         }
@@ -820,17 +856,8 @@ export class FcChatPanel {
           width: 40px;
           height: 40px;
         }
-        /* 移动端打开时移到右上角 */
-        body.fcchat-open .fcchat-fab{
-          right: 12px !important;
-          top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
-          bottom: auto !important;
-        }
         /* 移动端悬挂隐藏 */
         .fcchat-fab.fcchat-docked{
-          right: 12px !important;
-          top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
-          bottom: auto !important;
           transform: translateX(20px);
         }
       }

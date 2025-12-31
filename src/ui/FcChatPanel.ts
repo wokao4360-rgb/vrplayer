@@ -379,6 +379,48 @@ export class FcChatPanel {
     if (!this.hasUserPlaced && !this.isOpen) {
       fabBtn.classList.add('fcchat-docked');
     }
+    
+    // 显示首屏新手提示（仅一次）
+    this.maybeShowFirstVisitHint();
+  }
+
+  private maybeShowFirstVisitHint() {
+    // 只在当前会话首屏显示一次
+    const KEY = 'fcchat_first_hint_shown';
+
+    if (sessionStorage.getItem(KEY)) return;
+
+    sessionStorage.setItem(KEY, '1');
+
+    const fab = this.fabButton;
+    if (!fab) return;
+
+    const hint = document.createElement('div');
+    hint.className = 'fcchat-first-hint';
+    hint.textContent = '我是三馆学伴，为你解疑答惑😉';
+
+    document.body.appendChild(hint);
+
+    // 定位到 FAB 左侧（自动跟随）
+    const place = () => {
+      const rect = fab.getBoundingClientRect();
+      hint.style.left = `${rect.left - 8}px`;
+      hint.style.top = `${rect.top + rect.height / 2}px`;
+    };
+
+    place();
+
+    // 防止屏幕旋转 / resize 位置错位
+    window.addEventListener('resize', place);
+
+    // 10 秒后淡出并销毁
+    setTimeout(() => {
+      hint.classList.add('is-hide');
+      setTimeout(() => {
+        window.removeEventListener('resize', place);
+        hint.remove();
+      }, 300);
+    }, 10000);
   }
 
   private onFabPointerDown(e: PointerEvent) {

@@ -3015,3 +3015,39 @@ body{
   text-align: center;
   line-height: 1;
 }
+
+/* FAB 首屏新手提示 */
+.fcchat-first-hint{
+  position: fixed;
+  transform: translate(-100%, -50%);
+  max-width: 220px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #111;
+  background: rgba(255,255,255,0.96);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  z-index: 9999;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 小箭头 */
+.fcchat-first-hint::after{
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent transparent rgba(255,255,255,0.96);
+}
+
+.fcchat-first-hint.is-hide{
+  opacity: 0;
+  transform: translate(-100%, -50%) scale(0.96);
+}

@@ -32,6 +32,7 @@ export class TilePanoSphere {
   private group: THREE.Group | null = null;
   private levels: TileLevel[] = [];
   private baseSphere: THREE.Mesh | null = null;
+  private fallbackSphere: THREE.Mesh | null = null;
   private pending: TileEntry[] = [];
   private activeLoads = 0;
   private maxConcurrent = 4;
@@ -226,6 +227,7 @@ export class TilePanoSphere {
       }
     } finally {
       this.activeLoads -= 1;
+      this.processQueue();
     }
   }
 
@@ -248,12 +250,16 @@ export class TilePanoSphere {
   }
 
   private tileDirection(level: TileLevel, row: number, col: number): THREE.Vector3 {
-    const phiCenter = ((col + 0.5) / level.cols) * Math.PI * 2;
-    const thetaCenter = ((row + 0.5) / level.rows) * Math.PI;
-    const x = Math.sin(thetaCenter) * Math.sin(phiCenter);
-    const y = Math.cos(thetaCenter);
-    const z = Math.sin(thetaCenter) * Math.cos(phiCenter);
-    return new THREE.Vector3(x, y, z).normalize();
+    const phiStart = (col / level.cols) * Math.PI * 2;
+    const phiLength = (1 / level.cols) * Math.PI * 2;
+    const thetaStart = (row / level.rows) * Math.PI;
+    const thetaLength = (1 / level.rows) * Math.PI;
+    const phiCenter = phiStart + phiLength * 0.5;
+    const thetaCenter = thetaStart + thetaLength * 0.5;
+    const spherical = new THREE.Spherical(level.radius, thetaCenter, phiCenter);
+    const v = new THREE.Vector3().setFromSpherical(spherical);
+    v.x *= -1; // 几何 scale(-1,1,1) 的补偿，确保方向与纹理一致
+    return v.normalize();
   }
 
   private disposeMesh(mesh: THREE.Mesh): void {

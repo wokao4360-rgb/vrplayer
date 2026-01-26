@@ -1,5 +1,5 @@
 {
-  "appName": "鏉ㄨ檸鍩庣邯蹇甸",
+  "appName": "杨虎城纪念馆",
   "fcChat": {
     "endpoint": "https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/",
     "authToken": ""
@@ -7,9 +7,9 @@
   "museums": [
     {
       "id": "wangding",
-      "name": "鏉ㄨ檸鍩庣邯蹇甸",
-      "description": "鏉ㄨ檸鍩庣邯蹇甸浠嬬粛锛屽緟琛ュ厖",
-      "cover": "鐜嬭吘2",
+      "name": "杨虎城纪念馆",
+      "description": "杨虎城纪念馆介绍，待补充",
+      "cover": "王腾2",
       "map": {
         "image": "1",
         "width": 1000,
@@ -18,16 +18,16 @@
       "scenes": [
         {
           "id": "gate",
-          "name": "姝ｉ棬涓庡簭鍘?",
+          "name": "正门与序厅1",
           "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
           "pano": "https://i.ibb.co/Q3mVmjwD/0-4-0.png",
           "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
           "initialView": {
-            "yaw": 27.0,
-            "pitch": 27.0,
+            "yaw": 27,
+            "pitch": 27,
             "fov": 75
           },
-          "northYaw": -27.0,
+          "northYaw": -27,
           "mapPoint": {
             "x": 180,
             "y": 320
@@ -36,7 +36,7 @@
             {
               "id": "gate_to_yard",
               "type": "scene",
-              "label": "姝ュ叆瑗垮眿2",
+              "label": "步入西屋2",
               "yaw": 20,
               "pitch": -4,
               "target": {
@@ -49,7 +49,7 @@
             {
               "id": "gate_intro_video",
               "type": "video",
-              "label": "搴忚█鐭墖",
+              "label": "序言短片",
               "yaw": -25,
               "pitch": -3,
               "target": {
@@ -60,7 +60,7 @@
         },
         {
           "id": "front_yard",
-          "name": "瑗垮眿2",
+          "name": "西屋2",
           "panoLow": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
           "pano": "https://i.ibb.co/vCs3h5Y4/AGC-20251227-093746924-PHOTOSPHERE.jpg",
           "thumb": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
@@ -69,7 +69,7 @@
             "pitch": 0,
             "fov": 75
           },
-          "northYaw": -27.0,
+          "northYaw": -27,
           "mapPoint": {
             "x": 420,
             "y": 310
@@ -78,7 +78,7 @@
             {
               "id": "yard_to_gate",
               "type": "scene",
-              "label": "杩斿洖姝ｉ棬1",
+              "label": "返回正门1",
               "yaw": -160,
               "pitch": 0,
               "target": {
@@ -91,7 +91,7 @@
             {
               "id": "yard_to_hall",
               "type": "scene",
-              "label": "杩涘叆涓滃眿3",
+              "label": "进入东屋3",
               "yaw": 35,
               "pitch": -5,
               "target": {
@@ -104,7 +104,7 @@
             {
               "id": "yard_video",
               "type": "video",
-              "label": "鏁呭眳鏁呬簨",
+              "label": "故居故事",
               "yaw": -20,
               "pitch": -2,
               "target": {
@@ -115,7 +115,7 @@
         },
         {
           "id": "exhibit_hall",
-          "name": "涓滃眿3",
+          "name": "东屋3",
           "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
           "initialView": {
             "yaw": 90,
@@ -130,7 +130,7 @@
             {
               "id": "hall_to_yard",
               "type": "scene",
-              "label": "鍥炲埌瑗垮眿2",
+              "label": "回到西屋2",
               "yaw": -150,
               "pitch": 0,
               "target": {
@@ -143,7 +143,7 @@
             {
               "id": "hall_to_memorial",
               "type": "scene",
-              "label": "鍓嶅線鍖楀眿4",
+              "label": "前往北屋4",
               "yaw": 40,
               "pitch": 0,
               "target": {
@@ -156,7 +156,7 @@
             {
               "id": "hall_story_video",
               "type": "video",
-              "label": "鐐瑰嚮浜嗚В鐜嬮紟涓哄畼浜嬭抗",
+              "label": "点击了解王鼎为官事迹",
               "yaw": 0,
               "pitch": 8,
               "target": {
@@ -172,7 +172,7 @@
         },
         {
           "id": "memorial_wall",
-          "name": "鍖楀眿4",
+          "name": "北屋4",
           "panoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
           "pano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg",
           "thumb": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
@@ -189,7 +189,7 @@
             {
               "id": "memorial_to_hall",
               "type": "scene",
-              "label": "鍥炲埌灞曞巺",
+              "label": "回到展厅",
               "yaw": -140,
               "pitch": 0,
               "target": {

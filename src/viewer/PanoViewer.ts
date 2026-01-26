@@ -100,6 +100,7 @@ export class PanoViewer {
   private renderer: THREE.WebGLRenderer;
   private sphere: THREE.Mesh | null = null;
   private tilePano: TilePanoSphere | null = null;
+  private fallbackSphere: THREE.Mesh | null = null;
   private container: HTMLElement;
   private frameListeners: Array<(dtMs: number) => void> = [];
   private nadirPatch: NadirPatch | null = null;
@@ -421,6 +422,7 @@ export class PanoViewer {
       this.tilePano.dispose();
       this.tilePano = null;
     }
+    this.clearFallback();
     if (this.sphere) {
       this.scene.remove(this.sphere);
       if (this.sphere.geometry) this.sphere.geometry.dispose();
@@ -492,15 +494,24 @@ export class PanoViewer {
     const tilesConfig = (sceneData as any).panoTiles;
     if (tilesConfig?.manifest) {
       const manifestUrl = resolveAssetUrl(tilesConfig.manifest, AssetType.PANO);
+      const fallbackUrlLow = tilesConfig.fallbackPanoLow || sceneData.panoLow;
+      const fallbackUrlHigh = tilesConfig.fallbackPano || sceneData.pano;
+      if (fallbackUrlLow) {
+        this.showFallbackTexture(resolveAssetUrl(fallbackUrlLow, AssetType.PANO_LOW), geometry, true);
+      } else if (fallbackUrlHigh) {
+        this.showFallbackTexture(resolveAssetUrl(fallbackUrlHigh, AssetType.PANO), geometry, false);
+      }
       this.tilePano = new TilePanoSphere(
         this.scene,
         (texture) => this.applyTextureSettings(texture),
         () => {
           this.updateLoadStatus(LoadStatus.LOW_READY);
           if (this.onLoadCallback) this.onLoadCallback();
+          this.clearFallback();
         },
         () => {
           this.updateLoadStatus(LoadStatus.HIGH_READY);
+          this.clearFallback();
         }
       );
       this.tilePano
@@ -1206,6 +1217,7 @@ export class PanoViewer {
       this.tilePano.dispose();
       this.tilePano = null;
     }
+    this.clearFallback();
     if (this.sphere) {
       this.scene.remove(this.sphere);
       if (this.sphere.geometry) this.sphere.geometry.dispose();
@@ -1286,6 +1298,39 @@ export class PanoViewer {
     }
   }
 
+  private async showFallbackTexture(url: string, geometry: THREE.SphereGeometry, isLow: boolean): Promise<void> {
+    try {
+      const imageBitmap = await loadExternalImageBitmap(url, { timeoutMs: 15000, retries: 1, allowFetchFallback: true });
+      const texture = new THREE.CanvasTexture(imageBitmap);
+      this.applyTextureSettings(texture);
+      texture.flipY = false;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.repeat.set(1, -1);
+      texture.offset.set(0, 1);
+      texture.needsUpdate = true;
+
+      const material = new THREE.MeshBasicMaterial({ map: texture });
+      const mesh = new THREE.Mesh(geometry.clone(), material);
+      this.fallbackSphere = mesh;
+      this.scene.add(mesh);
+      this.updateLoadStatus(isLow ? LoadStatus.LOADING_LOW : LoadStatus.LOADING_HIGH);
+    } catch (err) {
+      console.error('fallback 贴图加载失败', err);
+    }
+  }
+
+  private clearFallback(): void {
+    if (this.fallbackSphere) {
+      if (this.fallbackSphere.geometry) this.fallbackSphere.geometry.dispose();
+      const mat = this.fallbackSphere.material as THREE.MeshBasicMaterial;
+      if (mat.map) mat.map.dispose();
+      mat.dispose();
+      this.scene.remove(this.fallbackSphere);
+      this.fallbackSphere = null;
+    }
+  }
+
   private applyTextureSettings(texture: THREE.Texture): void {
     const preset = RENDER_PRESETS[this.renderProfile];
     const maxAniso = (this.renderer.capabilities as any).getMaxAnisotropy
@@ -1316,7 +1361,3 @@ export class PanoViewer {
     }
   }
 }
-
-
-
-

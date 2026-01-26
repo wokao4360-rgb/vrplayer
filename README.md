@@ -190,3 +190,5 @@ internalYaw = -worldYaw（只在一个入口做一次）
 - 不要手动编辑 `docs/`、`dist/`；仅通过 build+robocopy 生成。
 - 杨虎城纪念馆「东屋3」已切换为本地 demo.jpg 瓦片；原外链 URL 记录在 `panoTiles.fallback*` 便于回退。
 - 热点文本标签保留：`src/ui/Hotspots.ts` + `.hotspot-label`，随热点一起移动/显隐。
+- 中文乱码根因：曾用 PowerShell 重定向生成 UTF-16 BOM 文件，浏览器解码错误导致文字异常；已改为 UTF-8 无 BOM 并恢复中文内容。
+- 黑屏根因：瓦片模式移除了整图后等待首瓦片，方向判定偏差仅加载少量瓦片；现新增 panoLow/pano 兜底首屏，修正 tile 中心方向 & 队列持续加载，保证“永不黑屏”。

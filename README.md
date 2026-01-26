@@ -195,3 +195,6 @@ internalYaw = -worldYaw（只在一个入口做一次）
 - 黑屏闪烁二次根因：瓦片 z0 就绪即移除兜底，实际可见瓦片未稳定渲染导致回黑；现改为“可见帧确认”并保留兜底至连续 10 帧 tilesActiveCount>0。
 - 渲染顺序：fallback sphere renderOrder=0 且 depthTest/depthWrite=false；tiles renderOrder=1、opacity 受控，未可见前保持 0，不再遮挡兜底。
 - 状态条：加 `?tilesDebug=1` 可在左上角查看 mode/tilesActiveCount/lastError，无需控制台排查。
+- 放弃多 mesh 瓦片：TilePanoSphere 方案的 UV/几何拆分导致 equirect 瓦片不可见，改用单球 + CanvasTexture 拼瓦片（TileCanvasPano），tile 仅作逻辑分块。
+- Canvas 拼瓦片：按 manifest 读取 z0 首屏，z2/z3 视角驱动加载并绘制到同一 canvas，再驱动 MeshBasicMaterial(map=CanvasTexture)；保留 manifest/生成命令不变，仅影响东屋3。
+- 发布铁律：`npm run build && robocopy dist docs /MIR && git add -A && git commit && git push`，严禁直接修改 docs/dist。

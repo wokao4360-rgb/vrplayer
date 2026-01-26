@@ -13,7 +13,7 @@ import { interactionBus } from '../ui/interactionBus';
 import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/externalImage';
 import { ZoomHud } from '../ui/ZoomHud';
 import { showToast } from '../ui/toast';
-import { TilePanoSphere } from './TilePanoSphere';
+import { TileCanvasPano } from './TileCanvasPano';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -100,7 +100,7 @@ export class PanoViewer {
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
   private sphere: THREE.Mesh | null = null;
-  private tilePano: TilePanoSphere | null = null;
+  private tilePano: TileCanvasPano | null = null;
   private fallbackSphere: THREE.Mesh | null = null;
   private container: HTMLElement;
   private frameListeners: Array<(dtMs: number) => void> = [];
@@ -507,21 +507,14 @@ export class PanoViewer {
       } else if (fallbackUrlHigh) {
         this.showFallbackTexture(resolveAssetUrl(fallbackUrlHigh, AssetType.PANO), geometry, false);
       }
-      this.tilePano = new TilePanoSphere(
-        this.scene,
-        (texture) => this.applyTextureSettings(texture),
-        () => {
-          this.updateLoadStatus(LoadStatus.LOW_READY);
-          if (this.onLoadCallback) this.onLoadCallback();
-          // 保留兜底底图，直到高清瓦片就绪
-        },
-        () => {
-          this.updateLoadStatus(LoadStatus.HIGH_READY);
-          this.clearFallback();
-        }
-      );
+      this.tilePano = new TileCanvasPano(this.scene);
       this.tilePano
         .load(manifestUrl)
+        .then(() => {
+          this.updateLoadStatus(LoadStatus.LOW_READY);
+          if (this.onLoadCallback) this.onLoadCallback();
+          // 不清理兜底，由可见帧逻辑处理
+        })
         .catch((err) => {
           console.error('瓦片加载失败，回退传统全景', err);
           this.tilesLastError = err instanceof Error ? err.message : String(err);
@@ -914,7 +907,8 @@ export class PanoViewer {
     const status = this.tilePano?.getStatus();
     const mode = this.tilePano ? 'tiles' : 'fallback';
     const tilesVisible = status?.tilesVisible ? 'true' : 'false';
-    const tilesCount = status?.tilesActiveCount ?? 0;
+    const tilesCount = status?.tilesLoadedCount ?? 0;
+    const tilesLoading = status?.tilesLoadingCount ?? 0;
     const lastTileUrl = status?.lastTileUrl ?? '';
     const lastError = this.tilesLastError || status?.lastError || '';
     const fallbackVisible = this.fallbackSphere ? 'true' : 'false';
@@ -922,7 +916,8 @@ export class PanoViewer {
       `mode=${mode}\n` +
       `fallbackVisible=${fallbackVisible}\n` +
       `tilesVisible=${tilesVisible}\n` +
-      `tilesActiveCount=${tilesCount}\n` +
+      `tilesLoaded=${tilesCount}\n` +
+      `tilesLoading=${tilesLoading}\n` +
       `lastTileUrl=${lastTileUrl}\n` +
       `lastError=${lastError}`;
   }

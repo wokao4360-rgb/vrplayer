@@ -270,12 +270,16 @@ export function validateConfig(data: any): ValidationError[] {
           });
         }
 
-        // 检查全景图 URL（pano 或 panoLow 至少有一个）
-        if (!scene.pano && !scene.panoLow) {
+        // 检查全景图 URL（pano / panoLow / panoTiles 至少有一个）
+        const hasPano = !!scene.pano;
+        const hasPanoLow = !!scene.panoLow;
+        const hasTiles = !!scene.panoTiles?.manifest;
+
+        if (!hasPano && !hasPanoLow && !hasTiles) {
           errors.push({ 
             code: ErrorCode.MISSING_PANO,
             path: `${scenePath}.pano`, 
-            message: 'pano 或 panoLow 至少需要提供一个',
+            message: 'pano / panoLow / panoTiles 至少需要提供一个',
             museumName,
             sceneName,
             fieldName: '全景图'
@@ -300,6 +304,27 @@ export function validateConfig(data: any): ValidationError[] {
               sceneName,
               fieldName: '低清全景图'
             });
+          }
+          if (scene.panoTiles) {
+            if (typeof scene.panoTiles !== 'object') {
+              errors.push({
+                code: ErrorCode.INVALID_PANO_URL,
+                path: `${scenePath}.panoTiles`,
+                message: 'panoTiles 必须是对象，包含 manifest',
+                museumName,
+                sceneName,
+                fieldName: '瓦片元数据'
+              });
+            } else if (!scene.panoTiles.manifest || typeof scene.panoTiles.manifest !== 'string' || scene.panoTiles.manifest.trim() === '') {
+              errors.push({
+                code: ErrorCode.INVALID_PANO_URL,
+                path: `${scenePath}.panoTiles.manifest`,
+                message: 'panoTiles.manifest 必须是有效的字符串',
+                museumName,
+                sceneName,
+                fieldName: '瓦片 manifest'
+              });
+            }
           }
         }
 
@@ -570,8 +595,6 @@ export function validateConfig(data: any): ValidationError[] {
 
   return errors;
 }
-
-
 
 
 

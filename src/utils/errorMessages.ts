@@ -86,7 +86,7 @@ export const ERROR_HINTS: Record<ErrorCode, string> = {
   [ErrorCode.MISSING_SCENE_ID]: '请为该场景添加 "id" 字段，例如："id": "scene1"',
   [ErrorCode.DUPLICATE_SCENE_ID]: '请确保同一博物馆内每个场景的 "id" 都是唯一的',
   [ErrorCode.MISSING_SCENE_NAME]: '请为该场景添加 "name" 字段，例如："name": "正门"',
-  [ErrorCode.MISSING_PANO]: '请为该场景添加 "pano" 或 "panoLow" 字段，至少提供一个全景图 URL',
+  [ErrorCode.MISSING_PANO]: '请为该场景添加 "pano"、"panoLow" 或 "panoTiles" 字段，至少提供一种全景来源',
   [ErrorCode.INVALID_PANO_URL]: '请确保 "pano" 字段是一个有效的图片 URL 字符串',
   [ErrorCode.INVALID_PANOLOW_URL]: '请确保 "panoLow" 字段是一个有效的图片 URL 字符串',
   [ErrorCode.MISSING_THUMB]: '请为该场景添加 "thumb" 字段，填入缩略图的 URL',

@@ -1,5 +1,5 @@
 {
-  "appName": "杨虎城纪念馆",
+  "appName": "鏉ㄨ檸鍩庣邯蹇甸",
   "fcChat": {
     "endpoint": "https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/",
     "authToken": ""
@@ -7,9 +7,9 @@
   "museums": [
     {
       "id": "wangding",
-      "name": "杨虎城纪念馆",
-      "description": "杨虎城纪念馆介绍，待补充",
-      "cover": "王腾2",
+      "name": "鏉ㄨ檸鍩庣邯蹇甸",
+      "description": "鏉ㄨ檸鍩庣邯蹇甸浠嬬粛锛屽緟琛ュ厖",
+      "cover": "鐜嬭吘2",
       "map": {
         "image": "1",
         "width": 1000,
@@ -18,119 +18,186 @@
       "scenes": [
         {
           "id": "gate",
-          "name": "正门与序厅1",
+          "name": "姝ｉ棬涓庡簭鍘?",
           "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
           "pano": "https://i.ibb.co/Q3mVmjwD/0-4-0.png",
           "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
-          "initialView": { "yaw": 27.0, "pitch": 27.0, "fov": 75 },
+          "initialView": {
+            "yaw": 27.0,
+            "pitch": 27.0,
+            "fov": 75
+          },
           "northYaw": -27.0,
-          "mapPoint": { "x": 180, "y": 320 },
+          "mapPoint": {
+            "x": 180,
+            "y": 320
+          },
           "hotspots": [
             {
               "id": "gate_to_yard",
               "type": "scene",
-              "label": "步入西屋2",
+              "label": "姝ュ叆瑗垮眿2",
               "yaw": 20,
               "pitch": -4,
-              "target": { "museumId": "wangding", "sceneId": "front_yard", "yaw": 15, "pitch": 0 }
+              "target": {
+                "museumId": "wangding",
+                "sceneId": "front_yard",
+                "yaw": 15,
+                "pitch": 0
+              }
             },
             {
               "id": "gate_intro_video",
               "type": "video",
-              "label": "序言短片",
+              "label": "搴忚█鐭墖",
               "yaw": -25,
               "pitch": -3,
-              "target": { "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" }
+              "target": {
+                "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+              }
             }
           ]
         },
         {
           "id": "front_yard",
-          "name": "西屋2",
+          "name": "瑗垮眿2",
           "panoLow": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
           "pano": "https://i.ibb.co/vCs3h5Y4/AGC-20251227-093746924-PHOTOSPHERE.jpg",
           "thumb": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
-          "initialView": { "yaw": 27, "pitch": 0, "fov": 75 },
+          "initialView": {
+            "yaw": 27,
+            "pitch": 0,
+            "fov": 75
+          },
           "northYaw": -27.0,
-          "mapPoint": { "x": 420, "y": 310 },
+          "mapPoint": {
+            "x": 420,
+            "y": 310
+          },
           "hotspots": [
             {
               "id": "yard_to_gate",
               "type": "scene",
-              "label": "返回正门1",
+              "label": "杩斿洖姝ｉ棬1",
               "yaw": -160,
               "pitch": 0,
-              "target": { "museumId": "wangding", "sceneId": "gate", "yaw": -10, "pitch": 0 }
+              "target": {
+                "museumId": "wangding",
+                "sceneId": "gate",
+                "yaw": -10,
+                "pitch": 0
+              }
             },
             {
               "id": "yard_to_hall",
               "type": "scene",
-              "label": "进入东屋3",
+              "label": "杩涘叆涓滃眿3",
               "yaw": 35,
               "pitch": -5,
-              "target": { "museumId": "wangding", "sceneId": "exhibit_hall", "yaw": 90, "pitch": 0 }
+              "target": {
+                "museumId": "wangding",
+                "sceneId": "exhibit_hall",
+                "yaw": 90,
+                "pitch": 0
+              }
             },
             {
               "id": "yard_video",
               "type": "video",
-              "label": "故居故事",
+              "label": "鏁呭眳鏁呬簨",
               "yaw": -20,
               "pitch": -2,
-              "target": { "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" }
+              "target": {
+                "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+              }
             }
           ]
         },
         {
           "id": "exhibit_hall",
-          "name": "东屋3",
-          "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
-          "pano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
+          "name": "涓滃眿3",
           "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
-          "initialView": { "yaw": 90, "pitch": 0, "fov": 75 },
-          "mapPoint": { "x": 620, "y": 260 },
+          "initialView": {
+            "yaw": 90,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 620,
+            "y": 260
+          },
           "hotspots": [
             {
               "id": "hall_to_yard",
               "type": "scene",
-              "label": "回到西屋2",
+              "label": "鍥炲埌瑗垮眿2",
               "yaw": -150,
               "pitch": 0,
-              "target": { "museumId": "wangding", "sceneId": "front_yard", "yaw": -20, "pitch": 0 }
+              "target": {
+                "museumId": "wangding",
+                "sceneId": "front_yard",
+                "yaw": -20,
+                "pitch": 0
+              }
             },
             {
               "id": "hall_to_memorial",
               "type": "scene",
-              "label": "前往北屋4",
+              "label": "鍓嶅線鍖楀眿4",
               "yaw": 40,
               "pitch": 0,
-              "target": { "museumId": "wangding", "sceneId": "memorial_wall", "yaw": 60, "pitch": 0 }
+              "target": {
+                "museumId": "wangding",
+                "sceneId": "memorial_wall",
+                "yaw": 60,
+                "pitch": 0
+              }
             },
             {
               "id": "hall_story_video",
               "type": "video",
-              "label": "点击了解王鼎为官事迹",
+              "label": "鐐瑰嚮浜嗚В鐜嬮紟涓哄畼浜嬭抗",
               "yaw": 0,
               "pitch": 8,
-              "target": { "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" }
+              "target": {
+                "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+              }
             }
-          ]
+          ],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/yhc-dongwu3/manifest.json",
+            "fallbackPano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
+            "fallbackPanoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png"
+          }
         },
         {
           "id": "memorial_wall",
-          "name": "北屋4",
+          "name": "鍖楀眿4",
           "panoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
           "pano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg",
           "thumb": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
-          "initialView": { "yaw": 0, "pitch": 0, "fov": 75 },
-          "mapPoint": { "x": 780, "y": 240 },
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 780,
+            "y": 240
+          },
           "hotspots": [
             {
               "id": "memorial_to_hall",
               "type": "scene",
-              "label": "回到展厅",
+              "label": "鍥炲埌灞曞巺",
               "yaw": -140,
               "pitch": 0,
-              "target": { "museumId": "wangding", "sceneId": "exhibit_hall", "yaw": -60, "pitch": 0 }
+              "target": {
+                "museumId": "wangding",
+                "sceneId": "exhibit_hall",
+                "yaw": -60,
+                "pitch": 0
+              }
             }
           ]
         }
@@ -138,15 +205,3 @@
     }
   ]
 }
-
-
-
-
-
-
-
-
-
-
-
-

@@ -174,4 +174,19 @@ internalYaw = -worldYaw（只在一个入口做一次）
 
 
 ## Working Notes (Codex)
-- 2026-01-26: Hotspot labels now render as DOM overlays inside each hotspot element (`src/ui/Hotspots.ts`), using `hotspot.label` from `public/config.json` and styled via `.hotspot-label` in `src/ui/ui.css` so the text moves/hides with its icon.
+- 2026-01-26: 瓦片加载替换方案落地，`panoTiles.manifest` 优先，失败自动回退到 fallbackPano/panoLow；不再依赖外网 URL。
+- 源图放置：`public/assets/panos/demo.jpg`；瓦片输出固定在 `public/assets/panos/tiles/<scene>/`，生成后需入库。
+- 生成脚本：`npm run tiles:yhc-dongwu3`（封装 `scripts/generate-pano-tiles.mjs`，固定 tileSize=512，z0 1x1 → z1 2x1 → z2 4x2 → z3 8x4），可重复执行。
+- manifest 结构：`type`、`tileSize`、`levels[{z,cols,rows}]`、`baseUrl`；放在输出目录 `manifest.json`。
+- Viewer 判定顺序：若 scene.panoTiles.manifest 存在则走瓦片 → 失败则回退 fallback → 若仍无则按旧 pano/panoLow 流程。
+- 首屏策略：先加载 z0 单张底图，立即出画面；随后按视角优先依次补齐 z2（低清）→ z3（高清）。
+- 视角优先算法：基于相机 forward 向量与 tile 中心方向点积；阈值 `cos(fov/2+20°)`；每 150ms 重新排队，避免抖动。
+- 加载顺序/并发：z2 队列优先，其次 z3；并发 4；同一 tile 状态 empty/loading/ready，不重复请求。
+- LRU：z3 保留 64 张，超出立即释放纹理，防止内存暴涨。
+- 回退保障：manifest 拉取或 tile 失败会自动转用 fallback pano/panoLow；仍缺失则报错，不白屏。
+- 罗盘/拾取/热点无改动；仅渲染管线新增 TilePanoSphere。
+- 路径与同源：所有瓦片与 manifest 均在 `public/` 下，避免跨域与 MIME 问题。
+- 发布链路强制：`npm run tiles:yhc-dongwu3 && npm run build && robocopy dist -> docs /MIR && git add -A && git commit && git push`，禁止直接改 docs/dist。
+- 不要手动编辑 `docs/`、`dist/`；仅通过 build+robocopy 生成。
+- 杨虎城纪念馆「东屋3」已切换为本地 demo.jpg 瓦片；原外链 URL 记录在 `panoTiles.fallback*` 便于回退。
+- 热点文本标签保留：`src/ui/Hotspots.ts` + `.hotspot-label`，随热点一起移动/显隐。

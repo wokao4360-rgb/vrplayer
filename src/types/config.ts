@@ -47,11 +47,18 @@ export interface SceneHotspot {
   poster?: string;
 }
 
+export interface PanoTilesConfig {
+  manifest: string;
+  fallbackPano?: string;
+  fallbackPanoLow?: string;
+}
+
 export interface Scene {
   id: string;
   name: string;
   pano?: string; // 高清全景图（可选，如果提供了 panoLow）
   panoLow?: string; // 低清全景图（可选，优先加载）
+  panoTiles?: PanoTilesConfig; // 瓦片元数据（manifest + 可选回退）
   thumb: string;
   initialView: InitialView;
   mapPoint: MapPoint;

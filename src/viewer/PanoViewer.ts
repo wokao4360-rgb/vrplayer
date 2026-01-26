@@ -12,6 +12,7 @@ import type { SceneHotspot } from '../types/config';
 import { interactionBus } from '../ui/interactionBus';
 import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/externalImage';
 import { ZoomHud } from '../ui/ZoomHud';
+import { TilePanoSphere } from './TilePanoSphere';
 
 /**
  * 渲染配置档位（用于画面对比：原始 vs 研学优化）
@@ -98,6 +99,7 @@ export class PanoViewer {
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
   private sphere: THREE.Mesh | null = null;
+  private tilePano: TilePanoSphere | null = null;
   private container: HTMLElement;
   private frameListeners: Array<(dtMs: number) => void> = [];
   private nadirPatch: NadirPatch | null = null;
@@ -415,6 +417,10 @@ export class PanoViewer {
     this.updateLoadStatus(LoadStatus.LOADING_LOW);
     
     // 移除旧的球体
+    if (this.tilePano) {
+      this.tilePano.dispose();
+      this.tilePano = null;
+    }
     if (this.sphere) {
       this.scene.remove(this.sphere);
       if (this.sphere.geometry) this.sphere.geometry.dispose();
@@ -481,6 +487,30 @@ export class PanoViewer {
     // 创建球体几何
     const geometry = new THREE.SphereGeometry(500, 64, 64);
     geometry.scale(-1, 1, 1); // 内表面
+
+    // 瓦片优先：若配置了 panoTiles，则走瓦片加载，失败时自动回退到传统全图
+    const tilesConfig = (sceneData as any).panoTiles;
+    if (tilesConfig?.manifest) {
+      const manifestUrl = resolveAssetUrl(tilesConfig.manifest, AssetType.PANO);
+      this.tilePano = new TilePanoSphere(
+        this.scene,
+        (texture) => this.applyTextureSettings(texture),
+        () => {
+          this.updateLoadStatus(LoadStatus.LOW_READY);
+          if (this.onLoadCallback) this.onLoadCallback();
+        },
+        () => {
+          this.updateLoadStatus(LoadStatus.HIGH_READY);
+        }
+      );
+      this.tilePano
+        .load(manifestUrl)
+        .catch((err) => {
+          console.error('瓦片加载失败，回退传统全景', err);
+          this.fallbackToLegacy(sceneData, tilesConfig);
+        });
+      return;
+    }
 
     // 解析资源 URL（统一处理）
     const panoLowUrl = resolveAssetUrl(sceneData.panoLow, AssetType.PANO_LOW);
@@ -866,6 +896,9 @@ export class PanoViewer {
 
     // 关键：每帧更新相机，确保热点和罗盘使用最新的相机状态（无延迟）
     this.updateCamera();
+    if (this.tilePano) {
+      this.tilePano.update(this.camera);
+    }
 
     // 更新 nadir patch（低头时渐显 + yaw 罗盘旋转）
     if (this.nadirPatch) {
@@ -1169,6 +1202,10 @@ export class PanoViewer {
   }
 
   dispose(): void {
+    if (this.tilePano) {
+      this.tilePano.dispose();
+      this.tilePano = null;
+    }
     if (this.sphere) {
       this.scene.remove(this.sphere);
       if (this.sphere.geometry) this.sphere.geometry.dispose();
@@ -1232,6 +1269,23 @@ export class PanoViewer {
     return RenderProfile.Enhanced;
   }
 
+  private fallbackToLegacy(sceneData: Scene, tilesConfig?: { fallbackPano?: string; fallbackPanoLow?: string }): void {
+    const fallbackScene: Scene = {
+      ...sceneData,
+      pano: tilesConfig?.fallbackPano ?? sceneData.pano,
+      panoLow: tilesConfig?.fallbackPanoLow ?? sceneData.panoLow,
+      panoTiles: undefined,
+    };
+    if (fallbackScene.pano || fallbackScene.panoLow) {
+      this.loadScene(fallbackScene, { preserveView: true });
+    } else {
+      this.updateLoadStatus(LoadStatus.ERROR);
+      if (this.onErrorCallback) {
+        this.onErrorCallback(new Error('瓦片与全景资源均不可用'));
+      }
+    }
+  }
+
   private applyTextureSettings(texture: THREE.Texture): void {
     const preset = RENDER_PRESETS[this.renderProfile];
     const maxAniso = (this.renderer.capabilities as any).getMaxAnisotropy
@@ -1262,13 +1316,6 @@ export class PanoViewer {
     }
   }
 }
-
-
-
-
-
-
-
 
 
 

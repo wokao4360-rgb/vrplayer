@@ -18,6 +18,7 @@ type HotspotBaseData = {
   type: string;
   yaw: number;
   pitch: number;
+  label?: string;
   tooltip?: string;
 };
 
@@ -26,6 +27,7 @@ abstract class BaseDomHotspot<T extends HotspotBaseData> {
   protected el: HTMLDivElement;
   protected contentEl: HTMLElement;
   protected tooltipEl: HTMLDivElement;
+  protected labelEl: HTMLDivElement | null = null;
   protected worldPos: THREE.Vector3;
   protected radius = 500; // 与 PanoViewer 的 SphereGeometry 半径一致
   private tooltipTimer: number | null = null;
@@ -56,9 +58,19 @@ abstract class BaseDomHotspot<T extends HotspotBaseData> {
 
     this.contentEl = skin.contentEl;
     this.tooltipEl = skin.tooltipEl;
+    if (data.label) {
+      const label = document.createElement('div');
+      label.className = 'hotspot-label';
+      label.textContent = data.label;
+      label.setAttribute('aria-hidden', 'true');
+      this.labelEl = label;
+    }
 
     this.el.appendChild(this.contentEl);
     this.el.appendChild(this.tooltipEl);
+    if (this.labelEl) {
+      this.el.appendChild(this.labelEl);
+    }
 
     // hover tooltip：仅在“支持 hover 的设备”启用
     const canHover = window.matchMedia?.('(hover: hover) and (pointer: fine)')?.matches ?? false;
@@ -290,6 +302,7 @@ export class Hotspots {
           type: 'scene',
           yaw: h.yaw,
           pitch: h.pitch,
+          label: h.label || sceneName || sceneId,
           tooltip,
           targetSceneId: sceneId,
         });
@@ -304,6 +317,7 @@ export class Hotspots {
           type: 'video',
           yaw: h.yaw,
           pitch: h.pitch,
+          label: h.label,
           tooltip: title,
           url: videoUrl,
           poster,
@@ -319,6 +333,7 @@ export class Hotspots {
           type: 'image',
           yaw: h.yaw,
           pitch: h.pitch,
+          label: h.label,
           tooltip: title,
           imageUrl,
           title,
@@ -332,6 +347,7 @@ export class Hotspots {
           type: 'info',
           yaw: h.yaw,
           pitch: h.pitch,
+          label: h.label,
           tooltip: title,
           text,
           title,

@@ -2348,6 +2348,36 @@ body{
   line-height: 1;
 }
 
+.hotspot-label{
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  border-radius: 9999px;
+  background: rgba(0,0,0,0.46);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255,255,255,0.95);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.32);
+  pointer-events: none;
+}
+
+@media (max-width: 480px), (pointer: coarse){
+  .hotspot-label{
+    font-size: 12px;
+    padding: 4px 9px;
+    max-width: 150px;
+  }
+}
+
 .hotspot-tooltip{
   position: absolute;
   left: 50%;

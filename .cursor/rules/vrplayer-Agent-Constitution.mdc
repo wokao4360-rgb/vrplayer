@@ -1,0 +1,172 @@
+---
+alwaysApply: true
+---
+
+# vrplayer Agent Constitution (MUST FOLLOW)
+
+This document is the non-negotiable collaboration contract for the vrplayer project.
+If any instruction here conflicts with other docs, THIS FILE WINS.
+
+---
+
+## 0) Roles (fixed)
+- User only: run Cursor actions + run PowerShell publish commands.
+- Agent only: output ONE-SHOT, executable instructions for Cursor + clear publish steps.
+- Forbidden:
+  - Ask user to edit files manually (especially config files).
+  - Ask user to open DevTools/console to validate logic.
+  - Trial-and-error guidance (“try this”, “maybe”, “if not then…”).
+  - Multiple alternative plans (“3 options, pick one”).
+
+---
+
+## 1) Output format (every response must include)
+Your response MUST contain, in this order:
+
+1) Files to change (exact paths)
+2) Exact edits (what to add/remove/change; reference functions/sections)
+3) Expected visible result (human-eye verification; no DevTools)
+4) Publish commands (PowerShell, exact lines)
+5) Post-publish verification checklist (commit + deploy before user opens site)
+
+If you cannot be certain, STOP and ask for missing INPUT (not “try”).
+
+---
+
+## 2) Source-of-truth & publishing law (highest priority)
+- The ONLY config source is: `public/config.json`
+- `dist/` and `docs/` are build artifacts. NEVER edit them manually.
+- Cloudflare Pages Root directory: `docs`
+- The only valid pipeline:
+
+`public/config.json` (source)
+→ `npm run build` (produces `dist/`)
+→ `robocopy dist → docs`
+→ `git commit`
+→ `git push`
+→ Cloudflare Pages redeploys that commit
+
+When user says “online didn’t change”, first suspect:
+1) wrong file edited (not in public/src)
+2) build not run
+3) robocopy skipped
+4) no new commit
+5) push failed
+6) Pages deployed old commit
+7) cache
+
+---
+
+## 3) Hard gate before ANY online verification
+Before telling user to open the website, you MUST confirm BOTH:
+1) latest changes are committed AND pushed
+2) Pages has redeployed to THAT commit
+
+If not confirmed, DO NOT ask user to verify online.
+
+---
+
+## 4) Environment rules (stability)
+- Use Windows SYSTEM PowerShell for git/publish. NOT VSCode terminal.
+- GitHub SSH must use `ssh.github.com:443` (SSH over 443).
+- If git/rebase/merge gets messy (detached HEAD / rebase-merge leftovers / artifact conflicts):
+  - Artifacts (`docs/assets/*`) are not source.
+  - Preferred recovery: reset to origin/main then rebuild+robocopy.
+  - Do not hand-merge artifact files.
+
+---
+
+## 5) Coordinate system Constitution (compass / yaw)
+### Definitions
+- All yaw/pitch/northYaw values in config and URL are REAL-WORLD angles (world).
+- Viewer/three.js uses INTERNAL coordinates (internal).
+
+### One-and-only-one conversion rule
+- world → internal conversion (e.g., `internalYaw = -worldYaw`) MUST happen in ONE single, explicit entry point.
+- Forbidden:
+  - converting in multiple places
+  - component-level sign flips
+  - “fallback then flip again”
+
+If direction looks wrong, check “double inversion” FIRST.
+
+---
+
+## 6) Compass system facts (3 independent implementations)
+There are THREE separate compass-related systems. Any direction-related change MUST update all 3:
+
+1) DOM CompassDisk: `src/ui/CompassDisk.ts`
+2) DOM GroundHeadingMarker: `src/ui/GroundHeadingMarker.ts`
+3) three.js NadirPatch: `src/viewer/NadirPatch.ts` (most error-prone)
+
+Forbidden: “fix one first and see”.
+
+Must: change 3 places → publish → verify 3 places.
+
+---
+
+## 7) Final product behavior (do not redesign)
+- `initialView.yaw`: initial camera facing direction (world)
+- `northYaw`: where the compass dial’s N points in the real world (world)
+- Pointer: indicates current camera heading
+
+Behavior:
+- Dial DOES NOT rotate with camera
+- Pointer DOES rotate with camera
+This is a product-level decision. Do not propose alternatives.
+
+---
+
+## 8) North calibration button (dev/config tool only)
+- Not an end-user feature.
+- Only responsibility: read current yaw → output northYaw value.
+- Forbidden:
+  - runtime auto-correction
+  - hidden state mutation that “fixes” compass while running
+
+Any calibration must end by editing `public/config.json` via Cursor and publishing.
+
+---
+
+## 9) Picking (freeze plan)
+- Picking yaw/pitch must be derived from Raycaster `ray.direction` inversion.
+- Do not depend on intersection point by default (only when explicitly required).
+
+---
+
+## 10) Hard acceptance invariant (math check)
+When `cameraYaw == northYaw`, ALL must be true:
+- pointer angle == 0
+- pointer points to dial N
+- initial facing == real-world North
+
+If any fails, it is a bug (even if it “looks close”).
+
+---
+
+## 11) The only valid publish SOP (PowerShell)
+Run from repo root `D:\Projects\vrplayer`:
+
+```powershell
+cd D:\Projects\vrplayer
+git checkout main
+git pull --rebase origin main
+npm run build
+robocopy .\dist .\docs /MIR
+git add -A
+git commit -m "chore: publish"
+git push origin main
+If nothing to commit, then nothing changed online.
+
+12) Absolute red lines (summary)
+No console/DevTools validation requests
+
+No manual config edits by user
+
+No trial-and-error
+
+No multi-option “pick one”
+
+Always publish before verify
+
+---

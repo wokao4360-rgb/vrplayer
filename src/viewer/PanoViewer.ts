@@ -12,6 +12,7 @@ import type { SceneHotspot } from '../types/config';
 import { interactionBus } from '../ui/interactionBus';
 import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/externalImage';
 import { ZoomHud } from '../ui/ZoomHud';
+import { showToast } from '../ui/toast';
 import { TilePanoSphere } from './TilePanoSphere';
 
 /**
@@ -121,6 +122,9 @@ export class PanoViewer {
   private debugMode = false;
   private onDebugClick?: (x: number, y: number, yaw: number, pitch: number, fov: number) => void;
   private longPressTimer: number | null = null;
+  private tilesDebugEl: HTMLDivElement | null = null;
+  private tilesVisibleStableFrames = 0;
+  private tilesLastError = '';
   private longPressThreshold = 500; // 长按阈值（毫秒）
   private aspectWarnedUrls = new Set<string>();
   
@@ -496,6 +500,8 @@ export class PanoViewer {
       const manifestUrl = resolveAssetUrl(tilesConfig.manifest, AssetType.PANO);
       const fallbackUrlLow = tilesConfig.fallbackPanoLow || sceneData.panoLow;
       const fallbackUrlHigh = tilesConfig.fallbackPano || sceneData.pano;
+      this.tilesVisibleStableFrames = 0;
+      this.tilesLastError = '';
       if (fallbackUrlLow) {
         this.showFallbackTexture(resolveAssetUrl(fallbackUrlLow, AssetType.PANO_LOW), geometry, true);
       } else if (fallbackUrlHigh) {
@@ -518,6 +524,8 @@ export class PanoViewer {
         .load(manifestUrl)
         .catch((err) => {
           console.error('瓦片加载失败，回退传统全景', err);
+          this.tilesLastError = err instanceof Error ? err.message : String(err);
+          showToast('瓦片加载失败，已回退到全景图', 2000);
           this.fallbackToLegacy(sceneData, tilesConfig);
         });
       return;
@@ -874,6 +882,51 @@ export class PanoViewer {
     this.renderer.setSize(width, height);
   }
 
+  private updateTilesDebug(): void {
+    const params = new URLSearchParams(window.location.search);
+    const enable =
+      params.get('tilesDebug') === '1' ||
+      params.get('tilesDebug') === 'true' ||
+      params.get('tilesDebug') === 'on';
+    if (!enable) {
+      if (this.tilesDebugEl) {
+        this.tilesDebugEl.remove();
+        this.tilesDebugEl = null;
+      }
+      return;
+    }
+    if (!this.tilesDebugEl) {
+      const el = document.createElement('div');
+      el.style.position = 'absolute';
+      el.style.left = '8px';
+      el.style.top = '8px';
+      el.style.padding = '6px 8px';
+      el.style.background = 'rgba(0,0,0,0.55)';
+      el.style.color = '#fff';
+      el.style.fontSize = '12px';
+      el.style.lineHeight = '1.4';
+      el.style.borderRadius = '6px';
+      el.style.zIndex = '9999';
+      el.style.pointerEvents = 'none';
+      this.tilesDebugEl = el;
+      this.container.appendChild(el);
+    }
+    const status = this.tilePano?.getStatus();
+    const mode = this.tilePano ? 'tiles' : 'fallback';
+    const tilesVisible = status?.tilesVisible ? 'true' : 'false';
+    const tilesCount = status?.tilesActiveCount ?? 0;
+    const lastTileUrl = status?.lastTileUrl ?? '';
+    const lastError = this.tilesLastError || status?.lastError || '';
+    const fallbackVisible = this.fallbackSphere ? 'true' : 'false';
+    this.tilesDebugEl.textContent =
+      `mode=${mode}\n` +
+      `fallbackVisible=${fallbackVisible}\n` +
+      `tilesVisible=${tilesVisible}\n` +
+      `tilesActiveCount=${tilesCount}\n` +
+      `lastTileUrl=${lastTileUrl}\n` +
+      `lastError=${lastError}`;
+  }
+
   private animate(): void {
     requestAnimationFrame(() => this.animate());
     const now = performance.now();
@@ -909,7 +962,21 @@ export class PanoViewer {
     this.updateCamera();
     if (this.tilePano) {
       this.tilePano.update(this.camera);
+      const status = this.tilePano.getStatus();
+      if (status.tilesVisible) {
+        this.tilesVisibleStableFrames += 1;
+        if (this.tilesVisibleStableFrames >= 10) {
+          this.clearFallback();
+        }
+      } else {
+        this.tilesVisibleStableFrames = 0;
+      }
+      if (status.lastError) {
+        this.tilesLastError = status.lastError;
+      }
     }
+
+    this.updateTilesDebug();
 
     // 更新 nadir patch（低头时渐显 + yaw 罗盘旋转）
     if (this.nadirPatch) {
@@ -1289,6 +1356,7 @@ export class PanoViewer {
       panoTiles: undefined,
     };
     if (fallbackScene.pano || fallbackScene.panoLow) {
+      showToast('瓦片加载失败，已回退到全景图', 2000);
       this.loadScene(fallbackScene, { preserveView: true });
     } else {
       this.updateLoadStatus(LoadStatus.ERROR);
@@ -1310,8 +1378,13 @@ export class PanoViewer {
       texture.offset.set(0, 1);
       texture.needsUpdate = true;
 
-      const material = new THREE.MeshBasicMaterial({ map: texture });
+      const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        depthWrite: false,
+        depthTest: false,
+      });
       const mesh = new THREE.Mesh(geometry.clone(), material);
+      mesh.renderOrder = 0;
       this.fallbackSphere = mesh;
       this.scene.add(mesh);
       this.updateLoadStatus(isLow ? LoadStatus.LOADING_LOW : LoadStatus.LOADING_HIGH);

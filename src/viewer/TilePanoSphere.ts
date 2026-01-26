@@ -40,6 +40,11 @@ export class TilePanoSphere {
   private highReady = false;
   private lruKeys: string[] = [];
   private lruLimit = 64;
+  private tilesVisible = false;
+  private tilesVisibleFrames = 0;
+  private tilesActiveCount = 0;
+  private lastTileUrl = '';
+  private lastError = '';
 
   constructor(
     private scene: THREE.Scene,
@@ -76,6 +81,16 @@ export class TilePanoSphere {
     this.queueVisibleTiles(this.levels.find((l) => l.z === 2)!, forward, threshold);
     this.queueVisibleTiles(this.levels.find((l) => l.z === 3)!, forward, threshold);
     this.processQueue();
+    this.updateVisibility();
+  }
+
+  getStatus(): { tilesVisible: boolean; tilesActiveCount: number; lastTileUrl: string; lastError: string } {
+    return {
+      tilesVisible: this.tilesVisible,
+      tilesActiveCount: this.tilesActiveCount,
+      lastTileUrl: this.lastTileUrl,
+      lastError: this.lastError,
+    };
   }
 
   dispose(): void {
@@ -102,6 +117,7 @@ export class TilePanoSphere {
     const z0 = this.manifest.levels.find((l) => l.z === 0);
     if (!z0) throw new Error('manifest 缺少 z0');
     const tileUrl = `${this.manifest.baseUrl}/z0/0_0.jpg`;
+    this.lastTileUrl = tileUrl;
     const bitmap = await loadExternalImageBitmap(tileUrl, { timeoutMs: 12000, retries: 1 });
     const texture = new THREE.CanvasTexture(bitmap);
     texture.flipY = false;
@@ -113,8 +129,16 @@ export class TilePanoSphere {
 
     const geometry = new THREE.SphereGeometry(500, 64, 64);
     geometry.scale(-1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide });
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.BackSide,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      depthTest: false,
+    });
     this.baseSphere = new THREE.Mesh(geometry, material);
+    this.baseSphere.renderOrder = 1;
     this.group.add(this.baseSphere);
   }
 
@@ -161,8 +185,12 @@ export class TilePanoSphere {
       opacity: 1,
       side: THREE.BackSide,
       depthWrite: false,
+      depthTest: false,
     });
-    return new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.renderOrder = 1;
+    material.opacity = this.tilesVisible ? 1 : 0;
+    return mesh;
   }
 
   private queueVisibleTiles(level: TileLevel, forward: THREE.Vector3, threshold: number): void {
@@ -192,6 +220,7 @@ export class TilePanoSphere {
       this.loadTile(entry).catch((err) => {
         console.error('[tiles] 加载失败', entry.key, err);
         entry.status = 'empty';
+        this.lastError = err instanceof Error ? err.message : String(err);
       });
     }
   }
@@ -200,6 +229,7 @@ export class TilePanoSphere {
     this.activeLoads += 1;
     if (!this.manifest) throw new Error('manifest 未就绪');
     const url = `${this.manifest.baseUrl}/z${entry.level.z}/${entry.col}_${entry.row}.jpg`;
+    this.lastTileUrl = url;
     try {
       const bitmap = await loadExternalImageBitmap(url, { timeoutMs: 12000, retries: 1 });
       const texture = new THREE.CanvasTexture(bitmap);
@@ -229,6 +259,59 @@ export class TilePanoSphere {
       this.activeLoads -= 1;
       this.processQueue();
     }
+  }
+
+  private updateVisibility(): void {
+    let count = 0;
+    if (this.baseSphere) {
+      const mat = this.baseSphere.material as THREE.MeshBasicMaterial;
+      if (mat.map && this.isTextureReady(mat.map)) {
+        count += 1;
+      }
+    }
+    for (const level of this.levels) {
+      for (const entry of level.entries) {
+        const mat = entry.mesh.material as THREE.MeshBasicMaterial;
+        if (entry.status === 'ready' && mat.map && this.isTextureReady(mat.map)) {
+          count += 1;
+        }
+      }
+    }
+    this.tilesActiveCount = count;
+    if (!this.tilesVisible) {
+      if (count > 0) {
+        this.tilesVisibleFrames += 1;
+        if (this.tilesVisibleFrames >= 10) {
+          this.tilesVisible = true;
+          this.setTilesOpacity(1);
+        }
+      } else {
+        this.tilesVisibleFrames = 0;
+        this.setTilesOpacity(0);
+      }
+    }
+  }
+
+  private setTilesOpacity(value: number): void {
+    if (this.baseSphere) {
+      const mat = this.baseSphere.material as THREE.MeshBasicMaterial;
+      mat.opacity = value;
+      mat.needsUpdate = true;
+    }
+    for (const level of this.levels) {
+      for (const entry of level.entries) {
+        const mat = entry.mesh.material as THREE.MeshBasicMaterial;
+        mat.opacity = value;
+        mat.needsUpdate = true;
+      }
+    }
+  }
+
+  private isTextureReady(texture: THREE.Texture): boolean {
+    const img: any = texture.image;
+    if (!img) return false;
+    if (typeof img.complete === 'boolean') return img.complete;
+    return true;
   }
 
   private shrinkLRU(): void {

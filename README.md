@@ -192,3 +192,6 @@ internalYaw = -worldYaw（只在一个入口做一次）
 - 热点文本标签保留：`src/ui/Hotspots.ts` + `.hotspot-label`，随热点一起移动/显隐。
 - 中文乱码根因：曾用 PowerShell 重定向生成 UTF-16 BOM 文件，浏览器解码错误导致文字异常；已改为 UTF-8 无 BOM 并恢复中文内容。
 - 黑屏根因：瓦片模式移除了整图后等待首瓦片，方向判定偏差仅加载少量瓦片；现新增 panoLow/pano 兜底首屏，修正 tile 中心方向 & 队列持续加载，保证“永不黑屏”。
+- 黑屏闪烁二次根因：瓦片 z0 就绪即移除兜底，实际可见瓦片未稳定渲染导致回黑；现改为“可见帧确认”并保留兜底至连续 10 帧 tilesActiveCount>0。
+- 渲染顺序：fallback sphere renderOrder=0 且 depthTest/depthWrite=false；tiles renderOrder=1、opacity 受控，未可见前保持 0，不再遮挡兜底。
+- 状态条：加 `?tilesDebug=1` 可在左上角查看 mode/tilesActiveCount/lastError，无需控制台排查。

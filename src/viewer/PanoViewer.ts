@@ -507,7 +507,7 @@ export class PanoViewer {
         () => {
           this.updateLoadStatus(LoadStatus.LOW_READY);
           if (this.onLoadCallback) this.onLoadCallback();
-          this.clearFallback();
+          // 保留兜底底图，直到高清瓦片就绪
         },
         () => {
           this.updateLoadStatus(LoadStatus.HIGH_READY);

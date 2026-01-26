@@ -258,7 +258,6 @@ export class TilePanoSphere {
     const thetaCenter = thetaStart + thetaLength * 0.5;
     const spherical = new THREE.Spherical(level.radius, thetaCenter, phiCenter);
     const v = new THREE.Vector3().setFromSpherical(spherical);
-    v.x *= -1; // 几何 scale(-1,1,1) 的补偿，确保方向与纹理一致
     return v.normalize();
   }
 

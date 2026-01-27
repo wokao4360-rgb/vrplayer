@@ -33,12 +33,18 @@ export class TileCanvasPano {
   private ctx: CanvasRenderingContext2D | null = null;
   private texture: THREE.CanvasTexture | null = null;
   private mesh: THREE.Mesh | null = null;
-  private pending: TileInfo[] = [];
+  private pendingLow: TileInfo[] = [];
+  private pendingHigh: TileInfo[] = [];
   private activeLoads = 0;
   private maxConcurrent = 4;
   private lastUpdate = 0;
   private tilesMap: Map<string, TileInfo> = new Map();
   private highestLevel: TileLevel | null = null;
+  private lowLevel: TileLevel | null = null;
+  private lowReadyCount = 0;
+  private lowTotalCount = 0;
+  private lowFullyReady = false;
+  private highSeeded = false;
   private tilesVisible = false;
   private tilesLoadedCount = 0;
   private tilesLoadingCount = 0;
@@ -64,7 +70,15 @@ export class TileCanvasPano {
     const manifest = (await res.json()) as TileManifest;
     this.manifest = manifest;
     this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
-    if (!this.highestLevel) throw new Error('manifest 缺少 level');
+    if (!this.highestLevel) throw new Error('manifest ??? level');
+    const lowCandidates = manifest.levels.filter((l) => l.z < this.highestLevel!.z);
+    this.lowLevel = lowCandidates.length
+      ? lowCandidates.reduce((a, b) => (b.z > a.z ? b : a))
+      : null;
+    this.lowReadyCount = 0;
+    this.lowTotalCount = this.lowLevel ? this.lowLevel.cols * this.lowLevel.rows : 0;
+    this.lowFullyReady = this.lowTotalCount === 0;
+    this.highSeeded = false;
 
     const maxCols = this.highestLevel.cols;
     const maxRows = this.highestLevel.rows;
@@ -124,19 +138,8 @@ export class TileCanvasPano {
     const z0Bitmap = await this.fetchTileBitmap(z0Url);
     await this.drawTile({ z: 0, col: 0, row: 0, bitmap: z0Bitmap });
     z0Bitmap.close?.();
-    const z1 = manifest.levels.find((l) => l.z === 1);
-    if (z1) {
-      const z1Url = `${manifest.baseUrl}/z1/0_0.jpg`;
-      try {
-        const z1Bitmap = await this.fetchTileBitmap(z1Url);
-        z1Bitmap.close?.();
-      } catch (err) {
-        this.lastError = err instanceof Error ? err.message : String(err);
-      }
-    const z2 = manifest.levels.find((l) => l.z === 2);
-    if (z2) {
-      this.enqueueLevel(z2);
-    }
+    if (this.lowLevel) {
+      this.enqueueLevel(this.lowLevel, 'low');
     }
     this.onFirstDraw();
   }
@@ -159,19 +162,18 @@ export class TileCanvasPano {
     if (now - this.lastUpdate < 150) return;
     this.lastUpdate = now;
 
-    const targetLevels = this.manifest.levels.filter((l) => l.z === 2 || l.z === 3);
-    const needed: TileInfo[] = [];
-    for (const lvl of targetLevels) {
-      const indices = this.computeNeededTiles(camera, lvl);
+    const allowHigh = !this.lowLevel || this.lowFullyReady;
+    if (allowHigh && this.highestLevel) {
+      const indices = this.computeNeededTiles(camera, this.highestLevel);
       for (const { col, row } of indices) {
-        const key = `${lvl.z}_${col}_${row}`;
+        const key = `${this.highestLevel.z}_${col}_${row}`;
         let info = this.tilesMap.get(key);
         if (!info) {
           info = {
-            z: lvl.z,
+            z: this.highestLevel.z,
             col,
             row,
-            url: `${this.manifest.baseUrl}/z${lvl.z}/${col}_${row}.jpg`,
+            url: `${this.manifest.baseUrl}/z${this.highestLevel.z}/${col}_${row}.jpg`,
             state: 'empty',
             lastUsed: now,
           };
@@ -180,14 +182,21 @@ export class TileCanvasPano {
         info.lastUsed = now;
         if (info.state === 'empty') {
           info.state = 'loading';
-          this.pending.push(info);
+          this.pendingHigh.push(info);
         }
-        needed.push(info);
       }
     }
     const loadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     const readyCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'ready').length;
-    this.tilesQueuedCount = this.pending.length;
+    if (this.lowLevel && !this.lowFullyReady) {
+      const lowLoading = Array.from(this.tilesMap.values()).filter(
+        (t) => t.z === this.lowLevel!.z && t.state === 'loading'
+      ).length;
+      if (this.pendingLow.length === 0 && lowLoading === 0) {
+        this.lowFullyReady = true;
+      }
+    }
+    this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = loadingCount;
     this.tilesLoadedCount = readyCount;
     this.processQueue();
@@ -198,31 +207,32 @@ export class TileCanvasPano {
     if (!this.manifest || !this.highestLevel || !this.ctx) return;
     camera.updateMatrixWorld(true);
     const now = performance.now();
-    const targetLevels = this.manifest.levels.filter((l) => l.z === 2 || l.z === 3);
-    for (const lvl of targetLevels) {
-      const indices = this.computeNeededTiles(camera, lvl);
-      if (indices.length === 0) continue;
-      const { col, row } = indices[0];
-      const key = `${lvl.z}_${col}_${row}`;
-      let info = this.tilesMap.get(key);
-      if (!info) {
-        info = {
-          z: lvl.z,
-          col,
-          row,
-          url: `${this.manifest.baseUrl}/z${lvl.z}/${col}_${row}.jpg`,
-          state: 'empty',
-          lastUsed: now,
-        };
-        this.tilesMap.set(key, info);
-      }
-      info.lastUsed = now;
-      if (info.state === 'empty') {
-        info.state = 'loading';
-        this.pending.push(info);
+    if (this.highestLevel && !this.highSeeded) {
+      const indices = this.computeNeededTiles(camera, this.highestLevel);
+      if (indices.length > 0) {
+        const { col, row } = indices[0];
+        const key = `${this.highestLevel.z}_${col}_${row}`;
+        let info = this.tilesMap.get(key);
+        if (!info) {
+          info = {
+            z: this.highestLevel.z,
+            col,
+            row,
+            url: `${this.manifest.baseUrl}/z${this.highestLevel.z}/${col}_${row}.jpg`,
+            state: 'empty',
+            lastUsed: now,
+          };
+          this.tilesMap.set(key, info);
+        }
+        info.lastUsed = now;
+        if (info.state === 'empty') {
+          info.state = 'loading';
+          this.pendingHigh.push(info);
+        }
+        this.highSeeded = true;
       }
     }
-    this.tilesQueuedCount = this.pending.length;
+    this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     this.processQueue();
   }
@@ -243,10 +253,12 @@ export class TileCanvasPano {
       highReady: this.highReady,
       zMax: this.highestLevel?.z ?? 0,
       levels: this.manifest ? this.manifest.levels.map((l) => l.z).join(',') : '',
+      lowReady: this.lowFullyReady,
+      lowLevel: this.lowLevel?.z ?? '',
     };
   }
 
-  private enqueueLevel(level: TileLevel): void {
+  private enqueueLevel(level: TileLevel, priority: 'low' | 'high'): void {
     const now = performance.now();
     for (let row = 0; row < level.rows; row++) {
       for (let col = 0; col < level.cols; col++) {
@@ -266,18 +278,22 @@ export class TileCanvasPano {
         info.lastUsed = now;
         if (info.state === 'empty') {
           info.state = 'loading';
-          this.pending.push(info);
+          if (priority === 'low') {
+            this.pendingLow.push(info);
+          } else {
+            this.pendingHigh.push(info);
+          }
         }
       }
     }
-    this.tilesQueuedCount = this.pending.length;
+    this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     this.processQueue();
   }
 
   private processQueue(): void {
-    while (this.activeLoads < this.maxConcurrent && this.pending.length > 0) {
-      const info = this.pending.shift()!;
+    while (this.activeLoads < this.maxConcurrent && (this.pendingLow.length > 0 || this.pendingHigh.length > 0)) {
+      const info = this.pendingLow.length > 0 ? this.pendingLow.shift()! : this.pendingHigh.shift()!;
       this.loadTile(info);
     }
   }
@@ -291,6 +307,12 @@ export class TileCanvasPano {
       info.state = 'ready';
       this.drawTile(info);
       this.tilesLoadedCount += 1;
+      if (this.lowLevel && info.z === this.lowLevel.z) {
+        this.lowReadyCount += 1;
+        if (this.lowReadyCount >= this.lowTotalCount) {
+          this.lowFullyReady = true;
+        }
+      }
     } catch (err) {
       this.lastError = err instanceof Error ? err.message : String(err);
       info.state = 'empty';
@@ -366,7 +388,7 @@ export class TileCanvasPano {
       mat.opacity = 1;
       mat.needsUpdate = true;
     }
-    if (info.z === 3 && !this.highReady) {
+    if (this.highestLevel && info.z === this.highestLevel.z && !this.highReady) {
       this.highReady = true;
       this.onHighReady();
     }
@@ -444,10 +466,13 @@ export class TileCanvasPano {
   }
 
   private runLru(now: number): void {
-    const readyZ3 = Array.from(this.tilesMap.values()).filter((t) => t.z === 3 && t.state === 'ready');
-    if (readyZ3.length <= this.lruLimit) return;
-    readyZ3.sort((a, b) => a.lastUsed - b.lastUsed);
-    const toDrop = readyZ3.slice(0, readyZ3.length - this.lruLimit);
+    if (!this.highestLevel) return;
+    const readyHigh = Array.from(this.tilesMap.values()).filter(
+      (t) => t.z === this.highestLevel!.z && t.state === 'ready'
+    );
+    if (readyHigh.length <= this.lruLimit) return;
+    readyHigh.sort((a, b) => a.lastUsed - b.lastUsed);
+    const toDrop = readyHigh.slice(0, readyHigh.length - this.lruLimit);
     for (const t of toDrop) {
       t.bitmap?.close?.();
       t.bitmap = undefined;

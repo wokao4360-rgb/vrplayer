@@ -64,6 +64,11 @@
           "panoLow": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
           "pano": "https://i.ibb.co/vCs3h5Y4/AGC-20251227-093746924-PHOTOSPHERE.jpg",
           "thumb": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/yhc-xiwu2-v1/manifest.json",
+            "fallbackPanoLow": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
+            "fallbackPano": "https://i.ibb.co/vCs3h5Y4/AGC-20251227-093746924-PHOTOSPHERE.jpg"
+          },
           "initialView": {
             "yaw": 27,
             "pitch": 0,
@@ -173,8 +178,8 @@
         {
           "id": "memorial_wall",
           "name": "北屋4",
-          "panoLow": "",
-          "pano": "",
+          "panoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
+          "pano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg",
           "thumb": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
           "initialView": {
             "yaw": 0,
@@ -202,8 +207,8 @@
           ],
           "panoTiles": {
             "manifest": "/assets/panos/tiles/yhc-beiwu4-v2/manifest.json",
-            "fallbackPanoLow": "",
-            "fallbackPano": ""
+            "fallbackPanoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
+            "fallbackPano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg"
           }
         }
       ]

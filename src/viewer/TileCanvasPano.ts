@@ -294,10 +294,28 @@ export class TileCanvasPano {
     }
   }
 
+  private hasHigherReadyTile(z: number, col: number, row: number): boolean {
+    if (!this.highestLevel) return false;
+    const maxZ = this.highestLevel.z;
+    if (z >= maxZ) return false;
+    const factor = 1 << (maxZ - z);
+    for (let dy = 0; dy < factor; dy++) {
+      for (let dx = 0; dx < factor; dx++) {
+        const key = `${maxZ}_${col * factor + dx}_${row * factor + dy}`;
+        const info = this.tilesMap.get(key);
+        if (info && info.state === 'ready') return true;
+      }
+    }
+    return false;
+  }
+
   private async drawTile(info: { z: number; col: number; row: number; bitmap?: ImageBitmap }): Promise<void> {
     if (!this.manifest || !this.highestLevel || !this.ctx || !this.canvas) return;
     const level = this.manifest.levels.find((l) => l.z === info.z);
     if (!level) return;
+    if (this.hasHigherReadyTile(info.z, info.col, info.row)) {
+      return;
+    }
     const tileW = this.canvas.width / level.cols;
     const tileH = this.canvas.height / level.rows;
     const x = info.col * tileW;

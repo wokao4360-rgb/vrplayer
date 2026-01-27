@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import * as THREE from 'three';
 import type { Scene, InitialView } from '../types/config';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { LoadStatus } from '../ui/QualityIndicator';
@@ -16,8 +16,7 @@ import { showToast } from '../ui/toast';
 import { TileCanvasPano } from './TileCanvasPano';
 
 /**
- * 渲染配置档位（用于画面对比：原始 vs 研学优化）
- */
+ * 娓叉煋閰嶇疆妗ｄ綅锛堢敤浜庣敾闈㈠姣旓細鍘熷 vs 鐮斿浼樺寲锛? */
 enum RenderProfile {
   Original = 'original',
   Enhanced = 'enhanced',
@@ -64,7 +63,7 @@ const RENDER_PRESETS: Record<RenderProfile, RenderPreset> = {
       colorSpace: 'srgb',
     },
   },
-  // 研学优化显示参数
+  // 科技增强显示参数
   [RenderProfile.Enhanced]: {
     renderer: {
       pixelRatio: Math.min(window.devicePixelRatio, 2),
@@ -87,14 +86,10 @@ const RENDER_PRESETS: Record<RenderProfile, RenderPreset> = {
 };
 
 /**
- * PanoViewer - 全景图查看器
+ * PanoViewer - 鍏ㄦ櫙鍥炬煡鐪嬪櫒
  * 
- * 资源加载策略：
- * - thumb: 缩略图，用于列表/预览（不在此处加载）
- * - panoLow: 低清全景图，首屏快速加载（优先）
- * - pano: 高清全景图，后台加载后无缝替换
- * - video: 视频资源，点击热点后才加载（不在此处加载）
- */
+ * 璧勬簮鍔犺浇绛栫暐锛? * - thumb: 缂╃暐鍥撅紝鐢ㄤ簬鍒楄〃/棰勮锛堜笉鍦ㄦ澶勫姞杞斤級
+ * - panoLow: 浣庢竻鍏ㄦ櫙鍥撅紝棣栧睆蹇€熷姞杞斤紙浼樺厛锛? * - pano: 楂樻竻鍏ㄦ櫙鍥撅紝鍚庡彴鍔犺浇鍚庢棤缂濇浛鎹? * - video: 瑙嗛璧勬簮锛岀偣鍑荤儹鐐瑰悗鎵嶅姞杞斤紙涓嶅湪姝ゅ鍔犺浇锛? */
 export class PanoViewer {
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
@@ -108,7 +103,7 @@ export class PanoViewer {
   private compassDisk: CompassDisk | null = null;
   private groundNavDots: GroundNavDots | null = null;
   private groundHeading: GroundHeadingMarker | null = null;
-  // Enhanced 为默认研学展示档，Original 为兜底备用档
+  // Enhanced 为默认科学展示，Original 为保守备用。
   private renderProfile: RenderProfile = RenderProfile.Enhanced;
   private isDragging = false;
   private lastMouseX = 0;
@@ -127,6 +122,9 @@ export class PanoViewer {
   private tilesLastError = '';
   private tilesLowReady = false;
   private longPressThreshold = 500; // 长按阈值（毫秒）
+  private renderSource: 'none' | 'fallback' | 'low' | 'tiles' = 'none';
+  private renderSwitchReason = '';
+  private clearedCount = 0;
   private aspectWarnedUrls = new Set<string>();
   
   // 加载状态管理
@@ -142,22 +140,20 @@ export class PanoViewer {
   private pickHasMoved = false;
   private pickDragThreshold = 8; // 拖动判定阈值（像素）
   private pickTimeThreshold = 250; // 拖动判定阈值（毫秒）
-
-  // 交互检测（用于 UI 自动让位）
+  // 交互检测（用于 UI 自动定位）
   private lastYaw: number = 0;
   private lastPitch: number = 0;
   private lastFov: number = 75;
   private isViewChanging: boolean = false;
-  private viewChangeThreshold: number = 0.5; // 视角变化阈值（度）
+  private viewChangeThreshold: number = 0.5; // 瑙嗚鍙樺寲闃堝€硷紙搴︼級
 
-  // VR模式标志（禁用拖拽控制）
+  // VR 模式标记（需用拖拽控制）
   private vrModeEnabled = false;
 
   constructor(container: HTMLElement, debugMode = false) {
     this.container = container;
     this.debugMode = debugMode;
     this.renderProfile = this.detectRenderProfile();
-    
     // 创建场景
     this.scene = new THREE.Scene();
     
@@ -170,22 +166,21 @@ export class PanoViewer {
     );
     this.camera.position.set(0, 0, 0);
     this.fov = RENDER_PRESETS[this.renderProfile].camera.defaultFov;
-    
     // 创建渲染器
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.applyRendererProfile();
     container.appendChild(this.renderer.domElement);
 
-    // Nadir patch：额外几何体叠加，不影响全景球主材质
+    // Nadir patch：补丁不影响全景主材质
     this.nadirPatch = new NadirPatch(this.scene, 500);
     
-    // 指南针圆盘（DOM overlay）- 强制关闭
+    // 指南针圆盘（DOM overlay，可强制关闭）
     this.compassDisk = new CompassDisk();
     this.compassDisk.mount(container);
     this.compassDisk.getElement().style.display = 'none';
     
-    // 地面导航点（DOM overlay，初始为空，后续通过 setSceneData 设置）- 强制关闭
+    // 地面导航点（DOM overlay，初始为空，后续通过 setSceneData 设置，可强制关闭）
     this.groundNavDots = new GroundNavDots({
       museumId: '',
       currentSceneId: '',
@@ -194,12 +189,11 @@ export class PanoViewer {
     this.groundNavDots.mount(container);
     this.groundNavDots.getElement().style.display = 'none';
     
-    // 地面方向标（DOM overlay）- 强制关闭
+    // 地面方向标（DOM overlay，可强制关闭）
     this.groundHeading = new GroundHeadingMarker(container);
     this.groundHeading.getElement().style.display = 'none';
     
-    // 品牌水印已移至 main.ts 统一管理，避免重复显示
-    
+    // 背景蒙版右移由 main.ts 统一管理，避免重复显示
     // 绑定事件
     this.setupEvents();
     
@@ -212,7 +206,6 @@ export class PanoViewer {
 
   private setupEvents(): void {
     const dom = this.renderer.domElement;
-    
     // 鼠标/触摸拖拽
     dom.addEventListener('mousedown', (e) => this.onPointerDown(e));
     dom.addEventListener('mousemove', (e) => this.onPointerMove(e));
@@ -265,7 +258,7 @@ export class PanoViewer {
   }
   
   /**
-   * 调试模式下的点击处理
+   * 璋冭瘯妯″紡涓嬬殑鐐瑰嚮澶勭悊
    */
   private handleDebugClick(x: number, y: number): void {
     if (this.onDebugClick && this.debugMode) {
@@ -275,7 +268,7 @@ export class PanoViewer {
   }
   
   /**
-   * 设置调试点击回调
+   * 璁剧疆璋冭瘯鐐瑰嚮鍥炶皟
    */
   setOnDebugClick(callback: (x: number, y: number, yaw: number, pitch: number, fov: number) => void): void {
     this.onDebugClick = callback;
@@ -307,7 +300,7 @@ export class PanoViewer {
     // 调试模式：实时更新调试面板
     if (this.debugMode && this.onDebugClick) {
       const view = this.getCurrentView();
-      // 这里不触发显示，只是更新（如果面板已显示）
+      this.onDebugClick(this.lastMouseX, this.lastMouseY, view.yaw, view.pitch, view.fov);
     }
   }
 
@@ -391,7 +384,7 @@ export class PanoViewer {
     // 调试模式：实时更新调试面板
     if (this.debugMode && this.onDebugClick) {
       const view = this.getCurrentView();
-      // 这里不触发显示，只是更新（如果面板已显示）
+      this.onDebugClick(this.lastMouseX, this.lastMouseY, view.yaw, view.pitch, view.fov);
     }
   }
 
@@ -407,22 +400,21 @@ export class PanoViewer {
   }
 
   /**
-   * 加载场景全景图
+   * 鍔犺浇鍦烘櫙鍏ㄦ櫙鍥?   * 
+   * 璧勬簮鍔犺浇绛栫暐锛?   * - thumb: 鍒楄〃/棰勮锛堜笉鍦ㄦ澶勫姞杞斤級
+   * - panoLow: 棣栧睆蹇€熷姞杞斤紙浼樺厛锛?   * - pano: 楂樻竻鏇挎崲锛堝悗鍙板姞杞斤級
+   * - video: 鐐瑰嚮鐑偣鍚庢墠鍔犺浇锛堜笉鍦ㄦ澶勫姞杞斤級
    * 
-   * 资源加载策略：
-   * - thumb: 列表/预览（不在此处加载）
-   * - panoLow: 首屏快速加载（优先）
-   * - pano: 高清替换（后台加载）
-   * - video: 点击热点后才加载（不在此处加载）
-   * 
-   * 支持渐进式加载：先加载低清图（panoLow），再无缝替换为高清图（pano）
-   */
+   * 鏀寔娓愯繘寮忓姞杞斤細鍏堝姞杞戒綆娓呭浘锛坧anoLow锛夛紝鍐嶆棤缂濇浛鎹负楂樻竻鍥撅紙pano锛?   */
   loadScene(sceneData: Scene, options?: { preserveView?: boolean }): void {
     // 重置状态
     this.isDegradedMode = false;
     this.updateLoadStatus(LoadStatus.LOADING_LOW);
+    this.renderSource = 'none';
+    this.clearedCount = 0;
     
-    // 移除旧的球体
+    //
+    // 移除旧的几何体
     if (this.tilePano) {
       this.tilePano.dispose();
       this.tilePano = null;
@@ -438,20 +430,17 @@ export class PanoViewer {
       }
     }
 
-    // 【最终铁律】所有来自 config.json 的 yaw（northYaw、initialView.yaw）都是【现实世界角度】
-    // 进入渲染/罗盘系统前，必须统一取反一次：internalYaw = -worldYaw
-    //
-    // preserveView = true 时，切换清晰度时保持当前视角，不重置 yaw/pitch/fov
+    // 【最终产品定义】所有来自 config.json 的 yaw（northYaw、initialView.yaw）都是世界角
+    // 进入渲染/罗盘系统前统一取反一次：internalYaw = -worldYaw
+    // preserveView = true 时，切换场景保持当前视角，不重置 yaw/pitch/fov
     const preserveView = options?.preserveView === true;
     if (!preserveView) {
-      // 设置初始视角（world yaw → internal yaw）
-      // 注意：如果 this.yaw 已经被 setView 设置过（例如来自 URL 参数），则不再覆盖
+      // 设置初始视角（world yaw -> internal yaw）
+      // 注意：如果 this.yaw 已被 setView/URL 参数设置，则不再覆盖
       const iv = sceneData.initialView;
       const worldInitialYaw = iv.yaw || 0;
-      // 只有在 yaw 为初始值（0）或未设置时才使用 initialView.yaw
-      // 这样可以保留 URL 参数或 setView 设置的值
       if (this.yaw === 0 && worldInitialYaw !== 0) {
-        this.yaw = -worldInitialYaw; // 统一取反：现实世界 → 内部坐标系
+        this.yaw = -worldInitialYaw; // 统一取反：世界 -> 内部
       }
       this.pitch = iv.pitch || 0;
       const preset = RENDER_PRESETS[this.renderProfile];
@@ -459,27 +448,22 @@ export class PanoViewer {
       this.camera.fov = this.fov;
       this.camera.updateProjectionMatrix();
       this.updateCamera();
-      // 注意：loadScene 初始化时不显示 HUD，避免启动时闪烁
+      // 注意：loadScene 初始化时不显示 HUD，避免启动闪屏
     }
-    
-    // 初始化视角检测状态
+    // 初始化视角监测状态
     this.lastYaw = this.yaw;
     this.lastPitch = this.pitch;
     this.lastFov = this.fov;
     this.isViewChanging = false;
 
-    // 统一世界北方向计算（world yaw → internal yaw）
-    // - 若 scene.northYaw 已存在，用它
-    // - 否则，使用 initialView.yaw 作为世界北
+    // 统一 world yaw -> internal yaw（只做一次反转）
     const worldNorthYaw =
       typeof sceneData.northYaw === 'number'
         ? sceneData.northYaw
         : sceneData.initialView?.yaw ?? 0;
     
-    // 统一世界 → 内部 yaw（关键）
     const northYaw = -worldNorthYaw;
     
-    // 只做一次传递（不要再计算，不要在组件里再 fallback 或再取反）
     if (this.nadirPatch) {
       this.nadirPatch.setNorthYaw(northYaw);
     }
@@ -491,11 +475,12 @@ export class PanoViewer {
       this.groundHeading.setNorthYaw(northYaw);
     }
 
-    // 创建球体几何
+    //
+    // 创建几何体
     const geometry = new THREE.SphereGeometry(500, 64, 64);
     geometry.scale(-1, 1, 1); // 内表面
 
-    // 瓦片优先：若配置了 panoTiles，则走瓦片加载，失败时自动回退到传统全图
+    // 瓦片优先：若配置了 panoTiles，则走瓦片加载，失败时自动回退到传统全景
     const tilesConfig = (sceneData as any).panoTiles;
     if (tilesConfig?.manifest) {
       const manifestUrl = resolveAssetUrl(tilesConfig.manifest, AssetType.PANO);
@@ -515,11 +500,13 @@ export class PanoViewer {
           if (!this.tilesLowReady) {
             this.tilesLowReady = true;
             this.updateLoadStatus(LoadStatus.LOW_READY);
+            this.setRenderSource('low', 'tiles z0 棣栧抚鍙');
             if (this.onLoadCallback) this.onLoadCallback();
           }
         },
         () => {
           this.updateLoadStatus(LoadStatus.HIGH_READY);
+          this.setRenderSource('tiles', 'tiles 楂樻竻鍙');
         }
       );
       this.tilePano
@@ -530,23 +517,22 @@ export class PanoViewer {
           // 不清理兜底，由可见帧逻辑处理
         })
         .catch((err) => {
-          console.error('瓦片加载失败，回退传统全景', err);
+          console.error('鐡︾墖鍔犺浇澶辫触锛屽洖閫€浼犵粺鍏ㄦ櫙', err);
           this.tilesLastError = err instanceof Error ? err.message : String(err);
-          showToast('瓦片加载失败，已回退到全景图', 2000);
+          showToast('鐡︾墖鍔犺浇澶辫触锛屽凡鍥為€€鍒板叏鏅浘', 2000);
           this.fallbackToLegacy(sceneData, tilesConfig);
         });
       return;
     }
 
+    //
     // 解析资源 URL（统一处理）
     const panoLowUrl = resolveAssetUrl(sceneData.panoLow, AssetType.PANO_LOW);
     const panoUrl = resolveAssetUrl(sceneData.pano, AssetType.PANO);
 
     const quality = getPreferredQuality();
     
-    // 画质偏好：
-    // - low：优先只加载低清图；如果没有低清则退回高清
-    // - high：沿用现有渐进式加载逻辑
+    // 画质策略：low 仅加载 panoLow；high 按渐进策略加载
     if (quality === 'low') {
       if (panoLowUrl) {
         this.loadSingleTexture(geometry, panoLowUrl, true);
@@ -557,37 +543,36 @@ export class PanoViewer {
         return;
       }
     } else {
-      // 如果只提供了 pano，直接加载（作为高清图）
+      //
+    // 如果只提供 pano，则直接加载（高分辨率）
       if (!panoLowUrl && panoUrl) {
         this.loadSingleTexture(geometry, panoUrl, false);
         return;
       }
       
-      // 如果只提供了 panoLow，直接加载（作为低清图）
+      // 如果只提供 panoLow，则直接加载（低分辨率）
       if (panoLowUrl && !panoUrl) {
         this.loadSingleTexture(geometry, panoLowUrl, true);
         return;
       }
       
-      // 如果两者都提供了，先加载低清，再替换高清
+      // 若两者都提供，先加载低清，再切换高清
       if (panoLowUrl && panoUrl) {
         this.loadProgressiveTextures(geometry, panoLowUrl, panoUrl);
         return;
       }
     }
     
-    // 如果都没有提供，报错
+    // 如果都未提供，抛错
     this.updateLoadStatus(LoadStatus.ERROR);
     if (this.onErrorCallback) {
-      this.onErrorCallback(new Error('场景未提供全景图 URL'));
+      this.onErrorCallback(new Error('鍦烘櫙鏈彁渚涘叏鏅浘 URL'));
     }
   }
 
   /**
-   * 加载单个纹理（使用外链图片加载器）
-   * @param geometry 球体几何体
-   * @param url 图片 URL
-   * @param isLowRes 是否为低清图（用于状态标记）
+   * 鍔犺浇鍗曚釜绾圭悊锛堜娇鐢ㄥ閾惧浘鐗囧姞杞藉櫒锛?   * @param geometry 鐞冧綋鍑犱綍浣?   * @param url 鍥剧墖 URL
+   * @param isLowRes 鏄惁涓轰綆娓呭浘锛堢敤浜庣姸鎬佹爣璁帮級
    */
   private async loadSingleTexture(
     geometry: THREE.SphereGeometry,
@@ -601,8 +586,8 @@ export class PanoViewer {
     }
 
     try {
-      // 使用外链图片加载器（带并发限制、超时、重试）
-      // 优先使用 Image() 原生加载，不使用 fetch 兜底
+      // 使用外链图片加载器（含超时/重试）
+      // 优先使用 Image() 原生加载，不用 fetch 底层
       const imageBitmap = await loadExternalImageBitmap(url, {
         timeoutMs: 15000,
         retries: 2,
@@ -612,13 +597,13 @@ export class PanoViewer {
         allowFetchFallback: false,
       });
 
-      // 将 ImageBitmap 转换为 THREE.Texture
+      // 转为 THREE.Texture
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
       // --- fix: pano upside-down ---
-      // 统一用 repeat/offset 做一次“竖向翻转”，并关闭 flipY，避免链路差异导致倒置
+      // 统一用 repeat/offset 做一次“水平翻转”，并关闭 flipY 防止链接差异导致倒置
       texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -630,6 +615,7 @@ export class PanoViewer {
       const material = new THREE.MeshBasicMaterial({ map: texture });
       this.sphere = new THREE.Mesh(geometry, material);
       this.scene.add(this.sphere);
+      this.setRenderSource(isLowRes ? 'low' : 'tiles', isLowRes ? 'panoLow 可见' : 'pano 可见');
       
       // 更新状态
       if (isLowRes) {
@@ -643,24 +629,21 @@ export class PanoViewer {
         this.onLoadCallback();
       }
     } catch (error) {
-      console.error('加载全景图失败:', url, error);
+      console.error('鍔犺浇鍏ㄦ櫙鍥惧け璐?', url, error);
       this.updateLoadStatus(LoadStatus.ERROR);
       if (this.onErrorCallback) {
         const errorMessage = error instanceof ExternalImageLoadError
-          ? `加载全景图失败：${url} - ${error.message}`
-          : `加载全景图失败：${url}`;
+          ? `鍔犺浇鍏ㄦ櫙鍥惧け璐ワ細${url} - ${error.message}`
+          : `鍔犺浇鍏ㄦ櫙鍥惧け璐ワ細${url}`;
         this.onErrorCallback(new Error(errorMessage));
       }
     }
   }
 
   /**
-   * 渐进式加载：先加载低清图，再无缝替换为高清图
-   * 替换时保持当前视角（yaw/pitch/fov）不变
-   * 
-   * 失败兜底策略：
-   * - 低清图失败：尝试加载高清图
-   * - 高清图失败：保留低清图，标记为降级模式（不触发错误回调，不影响用户体验）
+   * 娓愯繘寮忓姞杞斤細鍏堝姞杞戒綆娓呭浘锛屽啀鏃犵紳鏇挎崲涓洪珮娓呭浘
+   * 鏇挎崲鏃朵繚鎸佸綋鍓嶈瑙掞紙yaw/pitch/fov锛変笉鍙?   * 
+   * 澶辫触鍏滃簳绛栫暐锛?   * - 浣庢竻鍥惧け璐ワ細灏濊瘯鍔犺浇楂樻竻鍥?   * - 楂樻竻鍥惧け璐ワ細淇濈暀浣庢竻鍥撅紝鏍囪涓洪檷绾фā寮忥紙涓嶈Е鍙戦敊璇洖璋冿紝涓嶅奖鍝嶇敤鎴蜂綋楠岋級
    */
   private async loadProgressiveTextures(
     geometry: THREE.SphereGeometry,
@@ -671,7 +654,7 @@ export class PanoViewer {
     this.updateLoadStatus(LoadStatus.LOADING_LOW);
     
     try {
-      // 使用外链图片加载器加载低清图（优先 Image() 原生加载）
+      // 使用外链图片加载器加载低清（优先 Image 原生）
       const lowImageBitmap = await loadExternalImageBitmap(panoLowUrl, {
         timeoutMs: 15000,
         retries: 2,
@@ -681,11 +664,11 @@ export class PanoViewer {
         allowFetchFallback: false,
       });
 
-      // 将 ImageBitmap 转换为 THREE.Texture
+      // 转为 THREE.Texture
       const lowTexture = new THREE.CanvasTexture(lowImageBitmap);
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
-
+      
       // --- fix: pano upside-down (low) ---
       lowTexture.flipY = false;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
@@ -693,25 +676,26 @@ export class PanoViewer {
       lowTexture.repeat.set(1, -1);
       lowTexture.offset.set(0, 1);
       lowTexture.needsUpdate = true;
-      // --- end fix ---
+        // --- end fix ---
       
       const material = new THREE.MeshBasicMaterial({ map: lowTexture });
       this.sphere = new THREE.Mesh(geometry, material);
       this.scene.add(this.sphere);
+      this.setRenderSource('low', 'panoLow 可见');
       
-      // 低清图加载完成，更新状态
+      // 低清加载完成，更新状态
       this.updateLoadStatus(LoadStatus.LOW_READY);
       
-      // 低清图加载完成，触发加载回调（用户可以开始交互）
+      // 低清加载完成，触发回调（用户可开始交互）
       if (this.onLoadCallback) {
         this.onLoadCallback();
       }
       
-      // 第二步：后台加载高清图（无缝替换）
+      // 第二步：后台加载高清（无缝切换）
       this.updateLoadStatus(LoadStatus.LOADING_HIGH);
       
       try {
-        // 使用外链图片加载器加载高清图（优先 Image() 原生加载）
+        // 使用外链图片加载器加载高清（优先 Image 原生）
         const highImageBitmap = await loadExternalImageBitmap(panoUrl, {
           timeoutMs: 15000,
           retries: 2,
@@ -720,22 +704,22 @@ export class PanoViewer {
           crossOrigin: 'anonymous',
           allowFetchFallback: false,
         });
-
-        // 将 ImageBitmap 转换为 THREE.Texture
+        
+        // 转为 THREE.Texture
         const highTexture = new THREE.CanvasTexture(highImageBitmap);
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
-
+        
         // --- fix: pano upside-down (high) ---
         highTexture.flipY = false;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
         highTexture.repeat.set(1, -1);
         highTexture.offset.set(0, 1);
-        highTexture.needsUpdate = true;
-        // --- end fix ---
+          highTexture.needsUpdate = true;
+          // --- end fix ---
         
-        // 保存当前视角（确保替换时视角不变）
+        // 保存当前视角（保证切换时视角不变）
         const currentView = this.getCurrentView();
         
         // 替换纹理
@@ -748,65 +732,61 @@ export class PanoViewer {
           // 设置新纹理
           material.map = highTexture;
           material.needsUpdate = true;
+          this.setRenderSource('tiles', 'pano 高清可见');
         }
         
-        // 确保视角没有被重置
+        // 保持当前视角不被重置
         this.setView(currentView.yaw, currentView.pitch, currentView.fov);
-        
-        // 更新状态：高清图已加载完成
+
+        // 更新状态：高清全景图就绪
         this.updateLoadStatus(LoadStatus.HIGH_READY);
         this.isDegradedMode = false;
       } catch (error) {
-        // 高清图加载失败，继续使用低清图（降级模式）
-        // 注意：这里不调用 onErrorCallback，因为低清图已经加载成功，用户可以正常使用
-        console.error('高清全景图加载失败，继续使用低清图:', panoUrl, error);
+        // 高清加载失败，继续使用低清（降级模式），不再触发 onErrorCallback（低清已可用）
+        console.error('高清全景图加载失败，继续使用低清', panoUrl, error);
         this.isDegradedMode = true;
         this.updateLoadStatus(LoadStatus.DEGRADED);
       }
     } catch (error) {
-      // 低清图加载失败，尝试加载高清图作为兜底
-      console.error('低清全景图加载失败，尝试加载高清图:', panoLowUrl, error);
+      // 低清加载失败，尝试直接加载高清兜底
+      console.error('低清全景图加载失败，尝试加载高清兜底', panoLowUrl, error);
       await this.loadSingleTexture(geometry, panoUrl, false);
     }
   }
 
   /**
-   * 设置加载完成回调（低清图加载完成时触发，用户可以开始交互）
+   * 璁剧疆鍔犺浇瀹屾垚鍥炶皟锛堜綆娓呭浘鍔犺浇瀹屾垚鏃惰Е鍙戯紝鐢ㄦ埛鍙互寮€濮嬩氦浜掞級
    */
   setOnLoad(callback: () => void): void {
     this.onLoadCallback = callback;
   }
 
   /**
-   * 设置错误回调（所有资源加载失败时触发）
-   */
+   * 璁剧疆閿欒鍥炶皟锛堟墍鏈夎祫婧愬姞杞藉け璐ユ椂瑙﹀彂锛?   */
   setOnError(callback: (error: Error) => void): void {
     this.onErrorCallback = callback;
   }
 
   /**
-   * 设置加载状态变化回调（用于 UI 更新）
-   */
+   * 璁剧疆鍔犺浇鐘舵€佸彉鍖栧洖璋冿紙鐢ㄤ簬 UI 鏇存柊锛?   */
   setOnStatusChange(callback: (status: LoadStatus) => void): void {
     this.onStatusChangeCallback = callback;
   }
 
   /**
-   * 获取当前加载状态
-   */
+   * 鑾峰彇褰撳墠鍔犺浇鐘舵€?   */
   getLoadStatus(): LoadStatus {
     return this.loadStatus;
   }
 
   /**
-   * 是否处于降级模式（高清加载失败，使用低清）
-   */
+   * 鏄惁澶勪簬闄嶇骇妯″紡锛堥珮娓呭姞杞藉け璐ワ紝浣跨敤浣庢竻锛?   */
   isInDegradedMode(): boolean {
     return this.isDegradedMode;
   }
 
   /**
-   * 更新加载状态并触发回调
+   * 鏇存柊鍔犺浇鐘舵€佸苟瑙﹀彂鍥炶皟
    */
   private updateLoadStatus(status: LoadStatus): void {
     this.loadStatus = status;
@@ -823,16 +803,14 @@ export class PanoViewer {
     this.yaw = yaw;
     this.pitch = Math.max(-90, Math.min(90, pitch));
     if (fov !== undefined) {
-      this.setFovInternal(fov, false); // setView 时不需要显示 HUD（避免初始化时显示）
+      this.setFovInternal(fov, false); // setView 鏃朵笉闇€瑕佹樉绀?HUD锛堥伩鍏嶅垵濮嬪寲鏃舵樉绀猴級
     }
     this.updateCamera();
   }
 
   /**
-   * 统一的 FOV 设置方法（内部使用）
-   * @param fov 新的 FOV 值
-   * @param showHud 是否显示缩放 HUD（默认 true）
-   */
+   * 缁熶竴鐨?FOV 璁剧疆鏂规硶锛堝唴閮ㄤ娇鐢級
+   * @param fov 鏂扮殑 FOV 鍊?   * @param showHud 鏄惁鏄剧ず缂╂斁 HUD锛堥粯璁?true锛?   */
   private setFovInternal(fov: number, showHud: boolean = true): void {
     this.fov = Math.max(30, Math.min(120, fov));
     this.camera.fov = this.fov;
@@ -848,34 +826,31 @@ export class PanoViewer {
   }
 
   /**
-   * 设置 FOV（公开方法，用于外部控制缩放）
-   * @param fov 新的 FOV 值
-   */
+   * 璁剧疆 FOV锛堝叕寮€鏂规硶锛岀敤浜庡閮ㄦ帶鍒剁缉鏀撅級
+   * @param fov 鏂扮殑 FOV 鍊?   */
   setFov(fov: number): void {
     this.setFovInternal(fov, true);
   }
 
   /**
-   * 设置VR模式状态（启用/禁用拖拽控制）
-   */
+   * 璁剧疆VR妯″紡鐘舵€侊紙鍚敤/绂佺敤鎷栨嫿鎺у埗锛?   */
   setVrModeEnabled(enabled: boolean): void {
     this.vrModeEnabled = enabled;
-    // 如果禁用VR模式，同时停止拖拽状态
+    // 如果禁用 VR 模式，同时停止拖拽状态
     if (!enabled) {
       this.isDragging = false;
     }
   }
 
   /**
-   * 获取VR模式状态
-   */
+   * 鑾峰彇VR妯″紡鐘舵€?   */
   isVrModeEnabled(): boolean {
     return this.vrModeEnabled;
   }
 
   /**
-   * 检查是否正在交互（拖拽中）
-   * 用于VR模式下暂停陀螺仪更新
+   * 妫€鏌ユ槸鍚︽鍦ㄤ氦浜掞紙鎷栨嫿涓級
+   * 鐢ㄤ簬VR妯″紡涓嬫殏鍋滈檧铻轰华鏇存柊
    */
   isInteracting(): boolean {
     return this.isDragging || this.isPinching;
@@ -930,8 +905,15 @@ export class PanoViewer {
     const canvasSize = status?.canvasSize ?? '';
     const maxLevel = status?.maxLevel ?? '';
     const highReady = status?.highReady ? 'true' : 'false';
+    const levels = status?.levels ?? '';
+    const renderSource = this.renderSource;
+    const switchReason = this.renderSwitchReason;
+    const clearedCount = this.clearedCount;
     this.tilesDebugEl.textContent =
       `mode=${mode}\n` +
+      `renderSource=${renderSource}\n` +
+      `switchReason=${switchReason}\n` +
+      `cleared=${clearedCount}\n` +
       `fallbackVisible=${fallbackVisible}\n` +
       `tilesVisible=${tilesVisible}\n` +
       `tilesLoaded=${tilesCount}\n` +
@@ -939,7 +921,7 @@ export class PanoViewer {
       `tilesQueued=${tilesQueued}\n` +
       `lastTileUrl=${lastTileUrl}\n` +
       `lastError=${lastError}\n` +
-      `canvas=${canvasSize} zMax=${maxLevel} highReady=${highReady}\n` +
+      `canvas=${canvasSize} zMax=${maxLevel} levels=${levels} highReady=${highReady}\n` +
       `lowReady=${this.tilesLowReady}`;
   }
 
@@ -948,8 +930,8 @@ export class PanoViewer {
     const now = performance.now();
     const dtMs = this.lastFrameTimeMs ? now - this.lastFrameTimeMs : 16.7;
     this.lastFrameTimeMs = now;
-
-    // 检测视角变化（用于 UI 自动让位）
+    
+    // 检查视角变化（用于 UI 自动定位）
     const view = this.getCurrentView();
     const yawDelta = Math.abs(view.yaw - this.lastYaw);
     const pitchDelta = Math.abs(view.pitch - this.lastPitch);
@@ -973,19 +955,22 @@ export class PanoViewer {
     this.lastYaw = view.yaw;
     this.lastPitch = view.pitch;
     this.lastFov = view.fov;
-
-    // 关键：每帧更新相机，确保热点和罗盘使用最新的相机状态（无延迟）
+    
+    // 每帧更新相机，确保热点与罗盘使用最新状态
     this.updateCamera();
     if (this.tilePano) {
       this.tilePano.update(this.camera);
       const status = this.tilePano.getStatus();
-      if (status.tilesVisible) {
-        this.tilesVisibleStableFrames += 1;
-        if (this.tilesVisibleStableFrames >= 10) {
-          this.clearFallback();
-        }
-      } else {
-        this.tilesVisibleStableFrames = 0;
+      const fallbackVisible = !!this.fallbackSphere;
+      const tilesVisible = status.tilesVisible;
+      if (!fallbackVisible && !tilesVisible) {
+        this.noteCleared('无可见源');
+      }
+      if (tilesVisible && this.renderSource === 'fallback' && this.tilesLowReady) {
+        this.setRenderSource('low', 'tiles 低清覆盖可见');
+      }
+      if (tilesVisible && status.highReady) {
+        this.setRenderSource('tiles', 'tiles 高清可见');
       }
       if (status.lastError) {
         this.tilesLastError = status.lastError;
@@ -1000,28 +985,28 @@ export class PanoViewer {
     }
 
     this.updateTilesDebug();
-
+    
     // 更新 nadir patch（低头时渐显 + yaw 罗盘旋转）
     if (this.nadirPatch) {
       this.nadirPatch.update(this.camera, { yaw: view.yaw, pitch: view.pitch }, dtMs);
     }
-
+    
     // 更新指南针圆盘
     if (this.compassDisk) {
       this.compassDisk.setYawPitch(view.yaw, view.pitch);
     }
-
+    
     // 更新地面导航点
     if (this.groundNavDots) {
       this.groundNavDots.setYawPitch(view.yaw, view.pitch);
     }
-
+    
     // 更新地面方向标
     if (this.groundHeading) {
       this.groundHeading.setYawPitch(view.yaw, view.pitch);
     }
-
-    // 更新热点（必须在相机更新后，使用最新的相机状态）
+    
+    // 更新热点（需在相机更新后，使用最新相机状态）
     for (const listener of this.frameListeners) {
       listener(dtMs);
     }
@@ -1030,8 +1015,7 @@ export class PanoViewer {
   private lastFrameTimeMs: number | null = null;
 
   /**
-   * 每一帧（render 前）触发，用于 DOM Overlay（热点等）更新
-   */
+   * 姣忎竴甯э紙render 鍓嶏級瑙﹀彂锛岀敤浜?DOM Overlay锛堢儹鐐圭瓑锛夋洿鏂?   */
   onFrame(listener: (dtMs: number) => void): () => void {
     this.frameListeners.push(listener);
     return () => {
@@ -1041,22 +1025,19 @@ export class PanoViewer {
   }
 
   /**
-   * 暴露相机：用于将 world position 投影到屏幕（DOM Overlay 热点）
-   */
+   * 鏆撮湶鐩告満锛氱敤浜庡皢 world position 鎶曞奖鍒板睆骞曪紙DOM Overlay 鐑偣锛?   */
   getCamera(): THREE.PerspectiveCamera {
     return this.camera;
   }
 
   /**
-   * 获取 DOM 元素（用于拾取模式等）
-   */
+   * 鑾峰彇 DOM 鍏冪礌锛堢敤浜庢嬀鍙栨ā寮忕瓑锛?   */
   getDomElement(): HTMLElement {
     return this.renderer.domElement;
   }
 
   /**
-   * 设置场景数据（用于 GroundNavDots）
-   */
+   * 璁剧疆鍦烘櫙鏁版嵁锛堢敤浜?GroundNavDots锛?   */
   setSceneData(museumId: string, currentSceneId: string, sceneHotspots: SceneHotspot[]): void {
     if (this.groundNavDots) {
       // 过滤出 type=scene 且 target.sceneId 存在的热点
@@ -1078,21 +1059,21 @@ export class PanoViewer {
   }
 
   /**
-   * 获取球体半径
+   * 鑾峰彇鐞冧綋鍗婂緞
    */
   getSphereRadius(): number {
     return 500;
   }
 
   /**
-   * 当前渲染尺寸（与 canvas 一致）
+   * 褰撳墠娓叉煋灏哄锛堜笌 canvas 涓€鑷达級
    */
   getViewportSize(): { width: number; height: number } {
     return { width: this.container.clientWidth, height: this.container.clientHeight };
   }
 
   /**
-   * 启用拾取模式
+   * 鍚敤鎷惧彇妯″紡
    */
   enablePickMode(): void {
     if (this.pickMode) return;
@@ -1101,7 +1082,7 @@ export class PanoViewer {
   }
 
   /**
-   * 禁用拾取模式
+   * 绂佺敤鎷惧彇妯″紡
    */
   disablePickMode(): void {
     if (!this.pickMode) return;
@@ -1110,8 +1091,8 @@ export class PanoViewer {
   }
 
   /**
-   * 切换拾取模式
-   * @returns 当前是否启用
+   * 鍒囨崲鎷惧彇妯″紡
+   * @returns 褰撳墠鏄惁鍚敤
    */
   togglePickMode(): boolean {
     if (this.pickMode) {
@@ -1123,15 +1104,13 @@ export class PanoViewer {
   }
 
   /**
-   * 获取拾取模式状态
-   */
+   * 鑾峰彇鎷惧彇妯″紡鐘舵€?   */
   isPickModeEnabled(): boolean {
     return this.pickMode;
   }
 
   /**
-   * 设置拾取模式监听器
-   */
+   * 璁剧疆鎷惧彇妯″紡鐩戝惉鍣?   */
   private setupPickModeListeners(): void {
     const dom = this.renderer.domElement;
 
@@ -1200,11 +1179,12 @@ export class PanoViewer {
       const dy = Math.abs(clientY - this.pickStartY);
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      // 判定是否为拖动：移动距离 > 阈值 或 按下时间 > 阈值且发生了移动
+      //
+      // 判断是否为拖动：移动距离 > 阈值 或 按下时间 > 阈值且发生移动
       const isDrag = distance > this.pickDragThreshold || (elapsed > this.pickTimeThreshold && this.pickHasMoved);
 
       if (!isDrag) {
-        // 认为是点击拾取
+        // 视为点击拾取
         this.handlePick(clientX, clientY);
       }
 
@@ -1236,26 +1216,25 @@ export class PanoViewer {
   }
 
   /**
-   * 移除拾取模式监听器
-   */
+   * 绉婚櫎鎷惧彇妯″紡鐩戝惉鍣?   */
   private removePickModeListeners(): void {
     this.pickModeListeners.forEach((remove) => remove());
     this.pickModeListeners = [];
   }
 
   /**
-   * 处理拾取点击
+   * 澶勭悊鎷惧彇鐐瑰嚮
    */
   private handlePick(clientX: number, clientY: number): void {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const ndc = screenToNDC(clientX, clientY, rect);
     const result = getYawPitchFromNDC(ndc.x, ndc.y, this.camera, this.getSphereRadius());
 
-    // 使用 ray.direction 计算，理论上不会返回 null，但做防御性检查
+    // 使用 ray.direction 计算，理论上不会返回 null，但做守护
     if (!result) {
-      // 只在 debug 模式输出，避免生产环境日志污染
+      // 仅在 debug 模式输出，避免生产噪音
       if (typeof __VR_DEBUG__ !== 'undefined' && __VR_DEBUG__) {
-        console.debug('[pick] 未能计算 yaw/pitch（ray.direction 为空）');
+        console.debug('[pick] 无法计算 yaw/pitch（ray.direction 为空）');
       }
       return;
     }
@@ -1273,7 +1252,7 @@ export class PanoViewer {
       });
     }
 
-    // 触发自定义事件，让外部 UI 显示 toast 和标记
+    // 触发自定义事件，供外部 UI 显示 toast 和标注
     window.dispatchEvent(
       new CustomEvent('vr:pick', {
         detail: { x: clientX, y: clientY, yaw, pitch },
@@ -1282,8 +1261,7 @@ export class PanoViewer {
   }
 
   /**
-   * 如果全景图比例不是 2:1，打印警告但不阻塞加载
-   */
+   * 濡傛灉鍏ㄦ櫙鍥炬瘮渚嬩笉鏄?2:1锛屾墦鍗拌鍛婁絾涓嶉樆濉炲姞杞?   */
   private warnIfNotPanoAspect(texture: THREE.Texture, url: string): void {
     if (!texture.image) return;
     const image: any = texture.image;
@@ -1291,12 +1269,12 @@ export class PanoViewer {
     const height = image.height;
     if (!width || !height) return;
     const ratio = width / height;
-    const tolerance = 0.02; // 允许少量浮动
+    const tolerance = 0.02; // 鍏佽灏戦噺娴姩
     if (Math.abs(ratio - 2) > tolerance && !this.aspectWarnedUrls.has(url)) {
       console.warn(
-        `[PanoViewer] 全景图比例不是 2:1，可能出现轻微变形（实际 ${ratio.toFixed(
+        `[PanoViewer] 鍏ㄦ櫙鍥炬瘮渚嬩笉鏄?2:1锛屽彲鑳藉嚭鐜拌交寰彉褰紙瀹為檯 ${ratio.toFixed(
           2
-        )}），来源: ${url}`
+        )}锛夛紝鏉ユ簮: ${url}`
       );
       this.aspectWarnedUrls.add(url);
     }
@@ -1338,8 +1316,7 @@ export class PanoViewer {
   }
 
   /**
-   * 根据预设应用渲染器参数（用于原始/研学优化对比）
-   */
+   * 鏍规嵁棰勮搴旂敤娓叉煋鍣ㄥ弬鏁帮紙鐢ㄤ簬鍘熷/鐮斿浼樺寲瀵规瘮锛?   */
   private applyRendererProfile(): void {
     const preset = RENDER_PRESETS[this.renderProfile];
     this.renderer.setPixelRatio(preset.renderer.pixelRatio);
@@ -1356,8 +1333,7 @@ export class PanoViewer {
   }
 
   /**
-   * 从 URL 参数检测渲染档位（默认 Original，支持 ?render=enhanced）
-   */
+   * 浠?URL 鍙傛暟妫€娴嬫覆鏌撴。浣嶏紙榛樿 Original锛屾敮鎸??render=enhanced锛?   */
   private detectRenderProfile(): RenderProfile {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -1379,7 +1355,8 @@ export class PanoViewer {
       panoTiles: undefined,
     };
     if (fallbackScene.pano || fallbackScene.panoLow) {
-      showToast('瓦片加载失败，已回退到全景图', 2000);
+      showToast('鐡︾墖鍔犺浇澶辫触锛屽凡鍥為€€鍒板叏鏅浘', 2000);
+      this.setRenderSource('fallback', 'tiles 失败自动回退');
       this.loadScene(fallbackScene, { preserveView: true });
     } else {
       this.updateLoadStatus(LoadStatus.ERROR);
@@ -1387,6 +1364,18 @@ export class PanoViewer {
         this.onErrorCallback(new Error('瓦片与全景资源均不可用'));
       }
     }
+  }
+
+  private setRenderSource(source: 'none' | 'fallback' | 'low' | 'tiles', reason: string): void {
+    if (this.renderSource !== source || reason) {
+      this.renderSource = source;
+      this.renderSwitchReason = reason;
+    }
+  }
+
+  private noteCleared(reason: string): void {
+    this.clearedCount += 1;
+    this.renderSwitchReason = reason;
   }
 
   private async showFallbackTexture(url: string, geometry: THREE.SphereGeometry, isLow: boolean): Promise<void> {
@@ -1411,8 +1400,9 @@ export class PanoViewer {
       this.fallbackSphere = mesh;
       this.scene.add(mesh);
       this.updateLoadStatus(isLow ? LoadStatus.LOADING_LOW : LoadStatus.LOADING_HIGH);
+      this.setRenderSource('fallback', isLow ? 'fallback 浣庢竻鍙' : 'fallback 楂樻竻鍙');
     } catch (err) {
-      console.error('fallback 贴图加载失败', err);
+      console.error('fallback 璐村浘鍔犺浇澶辫触', err);
     }
   }
 

@@ -84,7 +84,7 @@ export class TileCanvasPano {
       map: this.texture,
       side: THREE.BackSide,
       transparent: true,
-      opacity: 1,
+      opacity: 0,
       depthWrite: false,
       depthTest: false,
     });
@@ -143,9 +143,11 @@ export class TileCanvasPano {
         needed.push(info);
       }
     }
+    const loadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
+    const readyCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'ready').length;
     this.tilesQueuedCount = this.pending.length;
-    this.tilesLoadingCount = this.pending.length + Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
-    this.tilesLoadedCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'ready').length;
+    this.tilesLoadingCount = loadingCount;
+    this.tilesLoadedCount = readyCount;
     this.processQueue();
     this.runLru(now);
   }
@@ -163,6 +165,7 @@ export class TileCanvasPano {
       maxLevel: this.highestLevel ? `${this.highestLevel.cols}x${this.highestLevel.rows}` : '',
       highReady: this.highReady,
       zMax: this.highestLevel?.z ?? 0,
+      levels: this.manifest ? this.manifest.levels.map((l) => l.z).join(',') : '',
     };
   }
 

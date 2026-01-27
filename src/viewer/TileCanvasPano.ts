@@ -298,10 +298,11 @@ export class TileCanvasPano {
     if (!this.manifest || !this.highestLevel || !this.ctx || !this.canvas) return;
     const level = this.manifest.levels.find((l) => l.z === info.z);
     if (!level) return;
-    const size = this.manifest.tileSize;
-    const x = info.col * size;
-    const y = info.row * size;
-    if (x < 0 || y < 0 || x + size > this.canvas.width || y + size > this.canvas.height) {
+    const tileW = this.canvas.width / level.cols;
+    const tileH = this.canvas.height / level.rows;
+    const x = info.col * tileW;
+    const y = info.row * tileH;
+    if (x < 0 || y < 0 || x + tileW > this.canvas.width || y + tileH > this.canvas.height) {
       this.lastError = `tile out of canvas: z${info.z} ${info.col}_${info.row}`;
       return;
     }
@@ -309,10 +310,10 @@ export class TileCanvasPano {
     if (!bmp) {
       const url = `${this.manifest.baseUrl}/z${info.z}/${info.col}_${info.row}.jpg`;
       const fetched = await loadExternalImageBitmap(url, { timeoutMs: 12000, retries: 1 });
-      this.ctx.drawImage(fetched, x, y, size, size);
+      this.ctx.drawImage(fetched, x, y, tileW, tileH);
       fetched.close?.();
     } else {
-      this.ctx.drawImage(bmp, x, y, size, size);
+      this.ctx.drawImage(bmp, x, y, tileW, tileH);
     }
     if (this.texture) this.texture.needsUpdate = true;
     this.tilesVisible = true;

@@ -1,4 +1,4 @@
-# VR 全景 Web 播放器（vrplayer）
+﻿# VR 全景 Web 播放器（vrplayer）
 
 自研的 VR 全景 Web 播放器，基于 Three.js 实现。支持多馆多场景、热点导航、地图导览等功能。  
 本项目采用 **AI 协作（Codex / Cursor）** 开发，协作铁律见：`AGENTS.md`。
@@ -143,6 +143,7 @@ Pages 已部署到该 commit
 
 Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - ?????chrome-devtools MCP ? Network ?????
+- Cloudflare 可能对 tiles JPG 做强压缩导致发糊；已通过 `public/_headers` 为 `/assets/panos/tiles/*` 与 `/assets/panos/*.jpg` 添加 `Cache-Control: ... no-transform`，必要时用新 tiles 目录名做缓存隔离
 本区是“断上下文恢复区”。当发现新的关键坑或新铁律时，必须补充到这里（保持短、可搜索）。
 
 协作铁律（摘要）

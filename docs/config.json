@@ -201,7 +201,7 @@
             }
           ],
           "panoTiles": {
-            "manifest": "/assets/panos/tiles/yhc-beiwu4/manifest.json",
+            "manifest": "/assets/panos/tiles/yhc-beiwu4-v2/manifest.json",
             "fallbackPanoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
             "fallbackPano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg"
           }

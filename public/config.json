@@ -173,8 +173,8 @@
         {
           "id": "memorial_wall",
           "name": "北屋4",
-          "panoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
-          "pano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg",
+          "panoLow": "",
+          "pano": "",
           "thumb": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
           "initialView": {
             "yaw": 0,
@@ -202,8 +202,8 @@
           ],
           "panoTiles": {
             "manifest": "/assets/panos/tiles/yhc-beiwu4-v2/manifest.json",
-            "fallbackPanoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
-            "fallbackPano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg"
+            "fallbackPanoLow": "",
+            "fallbackPano": ""
           }
         }
       ]

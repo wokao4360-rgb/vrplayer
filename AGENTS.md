@@ -148,7 +148,14 @@ Reason: intersections may be missing/blocked; ray.direction is stable.
 
 ---
 
-## 8) Persistent Knowledge via README (REQUIRED)
+## 8) ?????HARD?
+
+- chrome-devtools MCP ? Network ????????
+- ???????????? Network ?????
+
+---
+
+## 9) Persistent Knowledge via README (REQUIRED)
 
 When important pitfalls, conventions, or SOP updates are discovered:
 - Update `README.md` under “Agent Notes (Persistent)” section
@@ -157,7 +164,7 @@ When important pitfalls, conventions, or SOP updates are discovered:
 
 ---
 
-## ## 9) Output Language
+## ## 10) Output Language
 
 - All outputs, summaries, explanations, and commit messages MUST be written in Simplified Chinese.
 - Do NOT switch to English unless explicitly requested.

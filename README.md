@@ -142,6 +142,7 @@ Pages 已部署到该 commit
 默认策略：关键纹理同源放 Pages
 
 Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
+- ?????chrome-devtools MCP ? Network ?????
 本区是“断上下文恢复区”。当发现新的关键坑或新铁律时，必须补充到这里（保持短、可搜索）。
 
 协作铁律（摘要）

@@ -95,7 +95,20 @@ export class TileCanvasPano {
     // 先画 z0 作为首屏
     const z0 = manifest.levels.find((l) => l.z === 0);
     if (!z0) throw new Error('manifest 缺少 z0');
-    await this.drawTile({ z: 0, col: 0, row: 0 });
+    const z0Url = `${manifest.baseUrl}/z0/0_0.jpg`;
+    const z0Bitmap = await this.fetchTileBitmap(z0Url);
+    await this.drawTile({ z: 0, col: 0, row: 0, bitmap: z0Bitmap });
+    z0Bitmap.close?.();
+    const z1 = manifest.levels.find((l) => l.z === 1);
+    if (z1) {
+      const z1Url = `${manifest.baseUrl}/z1/0_0.jpg`;
+      try {
+        const z1Bitmap = await this.fetchTileBitmap(z1Url);
+        z1Bitmap.close?.();
+      } catch (err) {
+        this.lastError = err instanceof Error ? err.message : String(err);
+      }
+    }
     this.onFirstDraw();
   }
 
@@ -191,6 +204,26 @@ export class TileCanvasPano {
     } finally {
       this.activeLoads -= 1;
       this.processQueue();
+    }
+  }
+
+  private async fetchTileBitmap(url: string, timeoutMs = 12000): Promise<ImageBitmap> {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, {
+        mode: 'cors',
+        cache: 'reload',
+        referrerPolicy: 'no-referrer',
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        throw new Error(`tile HTTP ${response.status}: ${url}`);
+      }
+      const blob = await response.blob();
+      return await createImageBitmap(blob);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

@@ -1,6 +1,6 @@
 {
   "type": "equirect-tiles",
-  "tileSize": 512,
+  "tileSize": 1024,
   "levels": [
     {
       "z": 0,

@@ -11,9 +11,11 @@ import sharp from 'sharp';
 const args = process.argv.slice(2);
 let input = null;
 let output = null;
+let tileSize = 512;
 for (let i = 0; i < args.length; i += 1) {
   if (args[i] === '--in') input = args[i + 1];
   if (args[i] === '--out') output = args[i + 1];
+  if (args[i] === '--tileSize') tileSize = parseInt(args[i + 1], 10);
 }
 
 if (!input || !output) {
@@ -21,7 +23,6 @@ if (!input || !output) {
   process.exit(1);
 }
 
-const tileSize = 512;
 const levels = [
   { z: 0, cols: 1, rows: 1 },
   { z: 1, cols: 2, rows: 1 },

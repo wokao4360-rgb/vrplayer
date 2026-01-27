@@ -76,6 +76,9 @@ export class TileCanvasPano {
     this.texture.wrapT = THREE.ClampToEdgeWrapping;
     this.texture.repeat.set(1, -1);
     this.texture.offset.set(0, 1);
+    this.texture.minFilter = THREE.LinearFilter;
+    this.texture.magFilter = THREE.LinearFilter;
+    this.texture.generateMipmaps = false;
     this.texture.needsUpdate = true;
 
     const geom = new THREE.SphereGeometry(500, 64, 64);

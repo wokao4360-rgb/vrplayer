@@ -514,6 +514,7 @@ export class PanoViewer {
         .then(() => {
           this.updateLoadStatus(LoadStatus.LOW_READY);
           if (this.onLoadCallback) this.onLoadCallback();
+          this.tilePano?.prime(this.camera);
           // 不清理兜底，由可见帧逻辑处理
         })
         .catch((err) => {

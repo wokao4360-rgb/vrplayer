@@ -108,6 +108,10 @@ export class TileCanvasPano {
       } catch (err) {
         this.lastError = err instanceof Error ? err.message : String(err);
       }
+    const z2 = manifest.levels.find((l) => l.z === 2);
+    if (z2) {
+      this.enqueueLevel(z2);
+    }
     }
     this.onFirstDraw();
   }
@@ -165,6 +169,40 @@ export class TileCanvasPano {
     this.runLru(now);
   }
 
+  prime(camera: THREE.PerspectiveCamera): void {
+    if (!this.manifest || !this.highestLevel || !this.ctx) return;
+    camera.updateMatrixWorld(true);
+    const now = performance.now();
+    const targetLevels = this.manifest.levels.filter((l) => l.z === 2 || l.z === 3);
+    for (const lvl of targetLevels) {
+      const indices = this.computeNeededTiles(camera, lvl);
+      if (indices.length === 0) continue;
+      const { col, row } = indices[0];
+      const key = `${lvl.z}_${col}_${row}`;
+      let info = this.tilesMap.get(key);
+      if (!info) {
+        info = {
+          z: lvl.z,
+          col,
+          row,
+          url: `${this.manifest.baseUrl}/z${lvl.z}/${col}_${row}.jpg`,
+          state: 'empty',
+          lastUsed: now,
+        };
+        this.tilesMap.set(key, info);
+      }
+      info.lastUsed = now;
+      if (info.state === 'empty') {
+        info.state = 'loading';
+        this.pending.push(info);
+      }
+    }
+    this.tilesQueuedCount = this.pending.length;
+    this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
+    this.processQueue();
+  }
+
+
   getStatus() {
     return {
       tilesVisible: this.tilesVisible,
@@ -182,6 +220,35 @@ export class TileCanvasPano {
     };
   }
 
+  private enqueueLevel(level: TileLevel): void {
+    const now = performance.now();
+    for (let row = 0; row < level.rows; row++) {
+      for (let col = 0; col < level.cols; col++) {
+        const key = `${level.z}_${col}_${row}`;
+        let info = this.tilesMap.get(key);
+        if (!info) {
+          info = {
+            z: level.z,
+            col,
+            row,
+            url: `${this.manifest!.baseUrl}/z${level.z}/${col}_${row}.jpg`,
+            state: 'empty',
+            lastUsed: now,
+          };
+          this.tilesMap.set(key, info);
+        }
+        info.lastUsed = now;
+        if (info.state === 'empty') {
+          info.state = 'loading';
+          this.pending.push(info);
+        }
+      }
+    }
+    this.tilesQueuedCount = this.pending.length;
+    this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
+    this.processQueue();
+  }
+
   private processQueue(): void {
     while (this.activeLoads < this.maxConcurrent && this.pending.length > 0) {
       const info = this.pending.shift()!;
@@ -193,7 +260,7 @@ export class TileCanvasPano {
     this.activeLoads += 1;
     this.lastTileUrl = info.url;
     try {
-      const bmp = await loadExternalImageBitmap(info.url, { timeoutMs: 12000, retries: 1 });
+      const bmp = await this.fetchTileBitmap(info.url);
       info.bitmap = bmp;
       info.state = 'ready';
       this.drawTile(info);

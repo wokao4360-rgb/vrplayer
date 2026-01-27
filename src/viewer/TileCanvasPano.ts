@@ -27,6 +27,7 @@ export type TileManifest = {
 };
 
 export class TileCanvasPano {
+  private maxTextureSize: number;
   private manifest: TileManifest | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
@@ -46,12 +47,16 @@ export class TileCanvasPano {
   private lastError = '';
   private lruLimit = 64;
   private highReady = false;
+  private canvasScale = 1;
 
   constructor(
     private scene: THREE.Scene,
     private onFirstDraw: () => void,
-    private onHighReady: () => void
-  ) {}
+    private onHighReady: () => void,
+    maxTextureSize = 0
+  ) {
+    this.maxTextureSize = Math.max(0, maxTextureSize);
+  }
 
   async load(manifestUrl: string): Promise<void> {
     const res = await fetch(manifestUrl);
@@ -64,10 +69,21 @@ export class TileCanvasPano {
     const maxCols = this.highestLevel.cols;
     const maxRows = this.highestLevel.rows;
     const tileSize = manifest.tileSize;
+    const rawW = tileSize * maxCols;
+    const rawH = tileSize * maxRows;
+    let canvasW = rawW;
+    let canvasH = rawH;
+    this.canvasScale = 1;
+    if (this.maxTextureSize > 0 && (canvasW > this.maxTextureSize || canvasH > this.maxTextureSize)) {
+      const scale = Math.min(this.maxTextureSize / canvasW, this.maxTextureSize / canvasH);
+      canvasW = Math.max(1, Math.floor(canvasW * scale));
+      canvasH = Math.max(1, Math.floor(canvasH * scale));
+      this.canvasScale = scale;
+    }
 
     this.canvas = document.createElement('canvas');
-    this.canvas.width = tileSize * maxCols;
-    this.canvas.height = tileSize * maxRows;
+    this.canvas.width = canvasW;
+    this.canvas.height = canvasH;
     this.ctx = this.canvas.getContext('2d', { alpha: false })!;
 
     this.texture = new THREE.CanvasTexture(this.canvas);
@@ -216,6 +232,7 @@ export class TileCanvasPano {
       lastTileUrl: this.lastTileUrl,
       lastError: this.lastError,
       canvasSize: this.canvas ? `${this.canvas.width}x${this.canvas.height}` : '0x0',
+      canvasScale: this.canvasScale,
       maxLevel: this.highestLevel ? `${this.highestLevel.cols}x${this.highestLevel.rows}` : '',
       highReady: this.highReady,
       zMax: this.highestLevel?.z ?? 0,

@@ -507,7 +507,8 @@ export class PanoViewer {
         () => {
           this.updateLoadStatus(LoadStatus.HIGH_READY);
           this.setRenderSource('tiles', 'tiles 楂樻竻鍙');
-        }
+        },
+        this.renderer.capabilities.maxTextureSize || 0
       );
       this.tilePano
         .load(manifestUrl)

@@ -144,6 +144,7 @@ Pages 已部署到该 commit
 Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - ?????chrome-devtools MCP ? Network ?????
 - Cloudflare 可能对 tiles JPG 做强压缩导致发糊；已通过 `public/_headers` 为 `/assets/panos/tiles/*` 与 `/assets/panos/*.jpg` 添加 `Cache-Control: ... no-transform`，必要时用新 tiles 目录名做缓存隔离
+- 若“只用瓦片”出现黑屏：优先检查 WebGL `maxTextureSize`；canvas 尺寸超过上限会导致纹理不可用（黑屏）。已在 TileCanvasPano 按 `maxTextureSize` 自动缩放画布以避免黑屏
 本区是“断上下文恢复区”。当发现新的关键坑或新铁律时，必须补充到这里（保持短、可搜索）。
 
 协作铁律（摘要）

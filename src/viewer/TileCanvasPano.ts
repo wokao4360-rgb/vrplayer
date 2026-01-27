@@ -95,6 +95,11 @@ export class TileCanvasPano {
     this.texture.minFilter = THREE.LinearFilter;
     this.texture.magFilter = THREE.LinearFilter;
     this.texture.generateMipmaps = false;
+    if ('colorSpace' in this.texture) {
+      (this.texture as any).colorSpace = THREE.SRGBColorSpace;
+    } else {
+      (this.texture as any).encoding = THREE.sRGBEncoding;
+    }
     this.texture.needsUpdate = true;
 
     const geom = new THREE.SphereGeometry(500, 64, 64);
@@ -106,6 +111,7 @@ export class TileCanvasPano {
       depthWrite: false,
       depthTest: false,
     });
+    mat.toneMapped = false;
     this.mesh = new THREE.Mesh(geom, mat);
     this.mesh.renderOrder = 1;
     this.mesh.frustumCulled = false;

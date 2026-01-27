@@ -145,6 +145,7 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - ?????chrome-devtools MCP ? Network ?????
 - Cloudflare 可能对 tiles JPG 做强压缩导致发糊；已通过 `public/_headers` 为 `/assets/panos/tiles/*` 与 `/assets/panos/*.jpg` 添加 `Cache-Control: ... no-transform`，必要时用新 tiles 目录名做缓存隔离
 - 若“只用瓦片”出现黑屏：优先检查 WebGL `maxTextureSize`；canvas 尺寸超过上限会导致纹理不可用（黑屏）。已在 TileCanvasPano 按 `maxTextureSize` 自动缩放画布以避免黑屏
+- 若线上仍命中旧构建：通常是 `index.html`/CDN/浏览器缓存导致继续引用旧 hash 资源；发布后优先用带版本参数的 URL 校验（例如 `?v=时间戳`）
 本区是“断上下文恢复区”。当发现新的关键坑或新铁律时，必须补充到这里（保持短、可搜索）。
 
 协作铁律（摘要）
@@ -179,7 +180,7 @@ internalYaw = -worldYaw（只在一个入口做一次）
 ## Working Notes (Codex)
 - 2026-01-26: 瓦片加载替换方案落地，`panoTiles.manifest` 优先，失败自动回退到 fallbackPano/panoLow；不再依赖外网 URL。
 - 源图放置：`public/assets/panos/demo.jpg`；瓦片输出固定在 `public/assets/panos/tiles/<scene>/`，生成后需入库。
-- 生成脚本：`npm run tiles:yhc-dongwu3`（封装 `scripts/generate-pano-tiles.mjs`，固定 tileSize=512，z0 1x1 → z1 2x1 → z2 4x2 → z3 8x4），可重复执行。
+- 生成脚本：`npm run tiles:yhc-dongwu3`（封装 `scripts/generate-pano-tiles.mjs`，支持 `--tileSize`，默认 512；z0 1x1 → z1 2x1 → z2 4x2 → z3 8x4），可重复执行。
 - manifest 结构：`type`、`tileSize`、`levels[{z,cols,rows}]`、`baseUrl`；放在输出目录 `manifest.json`。
 - Viewer 判定顺序：若 scene.panoTiles.manifest 存在则走瓦片 → 失败则回退 fallback → 若仍无则按旧 pano/panoLow 流程。
 - 首屏策略：先加载 z0 单张底图，立即出画面；随后按视角优先依次补齐 z2（低清）→ z3（高清）。

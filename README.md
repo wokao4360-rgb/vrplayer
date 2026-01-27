@@ -198,3 +198,4 @@ internalYaw = -worldYaw（只在一个入口做一次）
 - 放弃多 mesh 瓦片：TilePanoSphere 方案的 UV/几何拆分导致 equirect 瓦片不可见，改用单球 + CanvasTexture 拼瓦片（TileCanvasPano），tile 仅作逻辑分块。
 - Canvas 拼瓦片：按 manifest 读取 z0 首屏，z2/z3 视角驱动加载并绘制到同一 canvas，再驱动 MeshBasicMaterial(map=CanvasTexture)；保留 manifest/生成命令不变，仅影响东屋3。
 - 发布铁律：`npm run build && robocopy dist docs /MIR && git add -A && git commit && git push`，严禁直接修改 docs/dist。
+- 2026-01-27: 再次黑屏根因：多 mesh 方案已移除，但 Canvas 模式存在画布尺寸/队列计算不稳，tiles 请求停滞且 WebGL 报 offset 溢出，低清提示不消失。修复：canvas 尺寸固定为 zMax(cols*tileSize, rows*tileSize)，绘制前 clamp 坐标，仅全量 CanvasTexture 更新；视角经纬度→tile 范围映射，始终队列中心+邻近 tiles，保持 z0 首屏、z2/z3 持续请求；tilesDebug 显示 queued/loading/loaded/lastError，低清首帧即标记 ready 隐藏提示，仅东屋3 受影响。

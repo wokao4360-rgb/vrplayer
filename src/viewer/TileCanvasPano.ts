@@ -28,10 +28,10 @@ export type TileManifest = {
 
 export class TileCanvasPano {
   private manifest: TileManifest | null = null;
-  private canvas: HTMLCanvasElement;
-  private ctx: CanvasRenderingContext2D;
-  private texture: THREE.CanvasTexture;
-  private mesh: THREE.Mesh;
+  private canvas: HTMLCanvasElement | null = null;
+  private ctx: CanvasRenderingContext2D | null = null;
+  private texture: THREE.CanvasTexture | null = null;
+  private mesh: THREE.Mesh | null = null;
   private pending: TileInfo[] = [];
   private activeLoads = 0;
   private maxConcurrent = 4;
@@ -39,16 +39,37 @@ export class TileCanvasPano {
   private tilesMap: Map<string, TileInfo> = new Map();
   private highestLevel: TileLevel | null = null;
   private tilesVisible = false;
-  private tilesVisibleFrames = 0;
   private tilesLoadedCount = 0;
   private tilesLoadingCount = 0;
+  private tilesQueuedCount = 0;
   private lastTileUrl = '';
   private lastError = '';
   private lruLimit = 64;
+  private highReady = false;
 
-  constructor(private scene: THREE.Scene) {
+  constructor(
+    private scene: THREE.Scene,
+    private onFirstDraw: () => void,
+    private onHighReady: () => void
+  ) {}
+
+  async load(manifestUrl: string): Promise<void> {
+    const res = await fetch(manifestUrl);
+    if (!res.ok) throw new Error(`manifest 加载失败: ${manifestUrl}`);
+    const manifest = (await res.json()) as TileManifest;
+    this.manifest = manifest;
+    this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
+    if (!this.highestLevel) throw new Error('manifest 缺少 level');
+
+    const maxCols = this.highestLevel.cols;
+    const maxRows = this.highestLevel.rows;
+    const tileSize = manifest.tileSize;
+
     this.canvas = document.createElement('canvas');
+    this.canvas.width = tileSize * maxCols;
+    this.canvas.height = tileSize * maxRows;
     this.ctx = this.canvas.getContext('2d', { alpha: false })!;
+
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.flipY = false;
     this.texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -70,38 +91,28 @@ export class TileCanvasPano {
     this.mesh = new THREE.Mesh(geom, mat);
     this.mesh.renderOrder = 1;
     this.scene.add(this.mesh);
-  }
 
-  async load(manifestUrl: string): Promise<void> {
-    const res = await fetch(manifestUrl);
-    if (!res.ok) throw new Error(`manifest 加载失败: ${manifestUrl}`);
-    const manifest = (await res.json()) as TileManifest;
-    this.manifest = manifest;
-    this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
-    if (!this.highestLevel) throw new Error('manifest 缺少 level');
-    const maxCols = this.highestLevel.cols;
-    const maxRows = this.highestLevel.rows;
-    this.canvas.width = manifest.tileSize * maxCols;
-    this.canvas.height = manifest.tileSize * maxRows;
-    this.texture.needsUpdate = true;
     // 先画 z0 作为首屏
     const z0 = manifest.levels.find((l) => l.z === 0);
     if (!z0) throw new Error('manifest 缺少 z0');
     await this.drawTile({ z: 0, col: 0, row: 0 });
+    this.onFirstDraw();
   }
 
   dispose(): void {
     this.tilesMap.forEach((t) => t.bitmap?.close?.());
     this.tilesMap.clear();
-    if (this.mesh.geometry) this.mesh.geometry.dispose();
-    const mat = this.mesh.material as THREE.MeshBasicMaterial;
-    if (mat.map) (mat.map as THREE.CanvasTexture).dispose();
-    mat.dispose();
-    this.scene.remove(this.mesh);
+    if (this.mesh) {
+      if (this.mesh.geometry) this.mesh.geometry.dispose();
+      const mat = this.mesh.material as THREE.MeshBasicMaterial;
+      if (mat.map) (mat.map as THREE.CanvasTexture).dispose();
+      mat.dispose();
+      this.scene.remove(this.mesh);
+    }
   }
 
   update(camera: THREE.PerspectiveCamera): void {
-    if (!this.manifest || !this.highestLevel) return;
+    if (!this.manifest || !this.highestLevel || !this.ctx) return;
     const now = performance.now();
     if (now - this.lastUpdate < 150) return;
     this.lastUpdate = now;
@@ -132,6 +143,7 @@ export class TileCanvasPano {
         needed.push(info);
       }
     }
+    this.tilesQueuedCount = this.pending.length;
     this.tilesLoadingCount = this.pending.length + Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     this.tilesLoadedCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'ready').length;
     this.processQueue();
@@ -144,8 +156,13 @@ export class TileCanvasPano {
       fallbackVisible: false,
       tilesLoadedCount: this.tilesLoadedCount,
       tilesLoadingCount: this.tilesLoadingCount,
+      tilesQueuedCount: this.tilesQueuedCount,
       lastTileUrl: this.lastTileUrl,
       lastError: this.lastError,
+      canvasSize: this.canvas ? `${this.canvas.width}x${this.canvas.height}` : '0x0',
+      maxLevel: this.highestLevel ? `${this.highestLevel.cols}x${this.highestLevel.rows}` : '',
+      highReady: this.highReady,
+      zMax: this.highestLevel?.z ?? 0,
     };
   }
 
@@ -175,12 +192,16 @@ export class TileCanvasPano {
   }
 
   private async drawTile(info: { z: number; col: number; row: number; bitmap?: ImageBitmap }): Promise<void> {
-    if (!this.manifest || !this.highestLevel) return;
+    if (!this.manifest || !this.highestLevel || !this.ctx || !this.canvas) return;
     const level = this.manifest.levels.find((l) => l.z === info.z);
     if (!level) return;
     const size = this.manifest.tileSize;
     const x = info.col * size;
     const y = info.row * size;
+    if (x < 0 || y < 0 || x + size > this.canvas.width || y + size > this.canvas.height) {
+      this.lastError = `tile out of canvas: z${info.z} ${info.col}_${info.row}`;
+      return;
+    }
     const bmp = info.bitmap;
     if (!bmp) {
       const url = `${this.manifest.baseUrl}/z${info.z}/${info.col}_${info.row}.jpg`;
@@ -190,38 +211,61 @@ export class TileCanvasPano {
     } else {
       this.ctx.drawImage(bmp, x, y, size, size);
     }
-    this.texture.needsUpdate = true;
-    this.tilesVisibleFrames += 1;
-    if (this.tilesVisibleFrames >= 1) {
-      this.tilesVisible = true;
-      const mat = this.mesh.material as THREE.MeshBasicMaterial;
+    if (this.texture) this.texture.needsUpdate = true;
+    this.tilesVisible = true;
+    const mat = this.mesh?.material as THREE.MeshBasicMaterial;
+    if (mat) {
       mat.opacity = 1;
       mat.needsUpdate = true;
+    }
+    if (info.z === 3 && !this.highReady) {
+      this.highReady = true;
+      this.onHighReady();
     }
   }
 
   private computeNeededTiles(camera: THREE.PerspectiveCamera, level: TileLevel): Array<{ col: number; row: number }> {
-    // 基于相机 yaw/pitch/fov 计算可视经纬度范围
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    const yaw = Math.atan2(dir.x, dir.z);
+    const pitch = Math.asin(dir.y);
     const fovRad = THREE.MathUtils.degToRad(camera.fov);
     const margin = THREE.MathUtils.degToRad(20);
-    const yaw = -camera.rotation.y; // internal yaw 已取反，这里还原到世界角度
-    const pitch = camera.rotation.x;
     const halfV = fovRad / 2 + margin;
-    const halfH = fovRad * (camera.aspect) / 2 + margin;
+    const halfH = (fovRad * camera.aspect) / 2 + margin;
     const minYaw = this.normAngle(yaw - halfH);
     const maxYaw = this.normAngle(yaw + halfH);
     const minPitch = THREE.MathUtils.clamp(pitch - halfV, -Math.PI / 2, Math.PI / 2);
     const maxPitch = THREE.MathUtils.clamp(pitch + halfV, -Math.PI / 2, Math.PI / 2);
 
     const colsRange = this.yawToCols(minYaw, maxYaw, level.cols);
+    const centerCol = this.yawToCols(yaw - 1e-6, yaw + 1e-6, level.cols)[0];
+    if (!colsRange.includes(centerCol)) colsRange.push(centerCol);
     const rowMin = Math.max(0, Math.floor(((maxPitch * -1 + Math.PI / 2) / Math.PI) * level.rows));
     const rowMax = Math.min(level.rows - 1, Math.floor(((minPitch * -1 + Math.PI / 2) / Math.PI) * level.rows));
     const rows: number[] = [];
     for (let r = rowMin; r <= rowMax; r++) rows.push(r);
-    const needed: Array<{ col: number; row: number }> = [];
+    const centerRow = Math.floor((( -pitch + Math.PI / 2) / Math.PI) * level.rows);
+    if (!rows.includes(centerRow)) rows.push(centerRow);
+    // 邻近一圈
+    const expandedCols = [...colsRange];
     for (const c of colsRange) {
-      for (const r of rows) {
-        needed.push({ col: c, row: r });
+      expandedCols.push(((c + 1) % level.cols + level.cols) % level.cols);
+      expandedCols.push(((c - 1) % level.cols + level.cols) % level.cols);
+    }
+    const expandedRows = [...rows];
+    for (const r of rows) {
+      if (r + 1 < level.rows) expandedRows.push(r + 1);
+      if (r - 1 >= 0) expandedRows.push(r - 1);
+    }
+
+    const needed: Array<{ col: number; row: number }> = [];
+    for (const c of expandedCols) {
+      for (const r of expandedRows) {
+        const key = `${c}_${r}`;
+        if (!needed.find((n) => n.col === c && n.row === r)) {
+          needed.push({ col: c, row: r });
+        }
       }
     }
     return needed;

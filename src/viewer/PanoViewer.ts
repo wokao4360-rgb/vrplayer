@@ -125,6 +125,7 @@ export class PanoViewer {
   private tilesDebugEl: HTMLDivElement | null = null;
   private tilesVisibleStableFrames = 0;
   private tilesLastError = '';
+  private tilesLowReady = false;
   private longPressThreshold = 500; // 长按阈值（毫秒）
   private aspectWarnedUrls = new Set<string>();
   
@@ -502,12 +503,25 @@ export class PanoViewer {
       const fallbackUrlHigh = tilesConfig.fallbackPano || sceneData.pano;
       this.tilesVisibleStableFrames = 0;
       this.tilesLastError = '';
+      this.tilesLowReady = false;
       if (fallbackUrlLow) {
         this.showFallbackTexture(resolveAssetUrl(fallbackUrlLow, AssetType.PANO_LOW), geometry, true);
       } else if (fallbackUrlHigh) {
         this.showFallbackTexture(resolveAssetUrl(fallbackUrlHigh, AssetType.PANO), geometry, false);
       }
-      this.tilePano = new TileCanvasPano(this.scene);
+      this.tilePano = new TileCanvasPano(
+        this.scene,
+        () => {
+          if (!this.tilesLowReady) {
+            this.tilesLowReady = true;
+            this.updateLoadStatus(LoadStatus.LOW_READY);
+            if (this.onLoadCallback) this.onLoadCallback();
+          }
+        },
+        () => {
+          this.updateLoadStatus(LoadStatus.HIGH_READY);
+        }
+      );
       this.tilePano
         .load(manifestUrl)
         .then(() => {
@@ -909,17 +923,24 @@ export class PanoViewer {
     const tilesVisible = status?.tilesVisible ? 'true' : 'false';
     const tilesCount = status?.tilesLoadedCount ?? 0;
     const tilesLoading = status?.tilesLoadingCount ?? 0;
+    const tilesQueued = status?.tilesQueuedCount ?? 0;
     const lastTileUrl = status?.lastTileUrl ?? '';
     const lastError = this.tilesLastError || status?.lastError || '';
     const fallbackVisible = this.fallbackSphere ? 'true' : 'false';
+    const canvasSize = status?.canvasSize ?? '';
+    const maxLevel = status?.maxLevel ?? '';
+    const highReady = status?.highReady ? 'true' : 'false';
     this.tilesDebugEl.textContent =
       `mode=${mode}\n` +
       `fallbackVisible=${fallbackVisible}\n` +
       `tilesVisible=${tilesVisible}\n` +
       `tilesLoaded=${tilesCount}\n` +
       `tilesLoading=${tilesLoading}\n` +
+      `tilesQueued=${tilesQueued}\n` +
       `lastTileUrl=${lastTileUrl}\n` +
-      `lastError=${lastError}`;
+      `lastError=${lastError}\n` +
+      `canvas=${canvasSize} zMax=${maxLevel} highReady=${highReady}\n` +
+      `lowReady=${this.tilesLowReady}`;
   }
 
   private animate(): void {
@@ -968,6 +989,13 @@ export class PanoViewer {
       }
       if (status.lastError) {
         this.tilesLastError = status.lastError;
+      }
+      if (!this.tilesLowReady && status.tilesLoadedCount > 0) {
+        this.tilesLowReady = true;
+        this.updateLoadStatus(LoadStatus.LOW_READY);
+      }
+      if (status.highReady) {
+        this.updateLoadStatus(LoadStatus.HIGH_READY);
       }
     }
 

@@ -101,7 +101,6 @@ export class TileCanvasPano {
     geom.scale(-1, 1, 1);
     const mat = new THREE.MeshBasicMaterial({
       map: this.texture,
-      side: THREE.BackSide,
       transparent: true,
       opacity: 0,
       depthWrite: false,
@@ -109,6 +108,7 @@ export class TileCanvasPano {
     });
     this.mesh = new THREE.Mesh(geom, mat);
     this.mesh.renderOrder = 1;
+    this.mesh.frustumCulled = false;
     this.scene.add(this.mesh);
 
     // 先画 z0 作为首屏

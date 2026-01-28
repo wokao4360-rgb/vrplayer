@@ -170,6 +170,6 @@ When important pitfalls, conventions, or SOP updates are discovered:
 - Do NOT switch to English unless explicitly requested.
 
 ## 11) MCP
+- Always use the chrome-devtools, github and filesystem MCP server if you need.
 - Always use the OpenAI developer documentation MCP server if you need to work with the OpenAI API, ChatGPT Apps SDK, Codex,… without me having to explicitly ask.
-- Always use the chrome-devtools, github, filesystem MCP server if you need.
-- Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
+- Always use Context7 MCP when library/API documentation, code generation, setup or configuration steps when needed without me having to explicitly ask.

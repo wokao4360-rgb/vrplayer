@@ -121,6 +121,10 @@ export class PanoViewer {
   private tilesVisibleStableFrames = 0;
   private tilesLastError = '';
   private tilesLowReady = false;
+  private tilesLastLoadedCount = 0;
+  private tilesLastProgressAt = 0;
+  private tilesHighStartAt = 0;
+  private tilesDegradedNotified = false;
   private longPressThreshold = 500; // 长按阈值（毫秒）
   private renderSource: 'none' | 'fallback' | 'low' | 'tiles' = 'none';
   private renderSwitchReason = '';
@@ -486,9 +490,14 @@ export class PanoViewer {
       const manifestUrl = resolveAssetUrl(tilesConfig.manifest, AssetType.PANO);
       const fallbackUrlLow = tilesConfig.fallbackPanoLow || sceneData.panoLow;
       const fallbackUrlHigh = tilesConfig.fallbackPano || sceneData.pano;
+      const fallbackPlanned = Boolean(fallbackUrlLow || fallbackUrlHigh);
       this.tilesVisibleStableFrames = 0;
       this.tilesLastError = '';
       this.tilesLowReady = false;
+      this.tilesLastLoadedCount = 0;
+      this.tilesLastProgressAt = performance.now();
+      this.tilesHighStartAt = 0;
+      this.tilesDegradedNotified = false;
       if (fallbackUrlLow) {
         this.showFallbackTexture(resolveAssetUrl(fallbackUrlLow, AssetType.PANO_LOW), geometry, true);
       } else if (fallbackUrlHigh) {
@@ -500,28 +509,35 @@ export class PanoViewer {
           if (!this.tilesLowReady) {
             this.tilesLowReady = true;
             this.updateLoadStatus(LoadStatus.LOW_READY);
-            this.setRenderSource('low', 'tiles z0 棣栧抚鍙');
+            this.setRenderSource('low', 'tiles 首帧可见');
             if (this.onLoadCallback) this.onLoadCallback();
+          }
+          if (this.loadStatus !== LoadStatus.HIGH_READY) {
+            this.updateLoadStatus(LoadStatus.LOADING_HIGH);
           }
         },
         () => {
           this.updateLoadStatus(LoadStatus.HIGH_READY);
-          this.setRenderSource('tiles', 'tiles 楂樻竻鍙');
+          this.setRenderSource('tiles', 'tiles 高清可见');
+          this.isDegradedMode = false;
         },
         this.renderer.capabilities.maxTextureSize || 0
       );
       this.tilePano
-        .load(manifestUrl)
+        .load(manifestUrl, { fallbackVisible: fallbackPlanned })
         .then(() => {
-          this.updateLoadStatus(LoadStatus.LOW_READY);
-          if (this.onLoadCallback) this.onLoadCallback();
+          if (!this.tilesLowReady) {
+            this.tilesLowReady = true;
+            this.updateLoadStatus(LoadStatus.LOW_READY);
+            if (this.onLoadCallback) this.onLoadCallback();
+          }
           this.tilePano?.prime(this.camera);
           // 不清理兜底，由可见帧逻辑处理
         })
         .catch((err) => {
-          console.error('鐡︾墖鍔犺浇澶辫触锛屽洖閫€浼犵粺鍏ㄦ櫙', err);
+          console.error('瓦片加载失败，回退传统全景', err);
           this.tilesLastError = err instanceof Error ? err.message : String(err);
-          showToast('鐡︾墖鍔犺浇澶辫触锛屽凡鍥為€€鍒板叏鏅浘', 2000);
+          showToast('瓦片加载失败，已回退到全景图', 2000);
           this.fallbackToLegacy(sceneData, tilesConfig);
         });
       return;
@@ -568,7 +584,7 @@ export class PanoViewer {
     // 如果都未提供，抛错
     this.updateLoadStatus(LoadStatus.ERROR);
     if (this.onErrorCallback) {
-      this.onErrorCallback(new Error('鍦烘櫙鏈彁渚涘叏鏅浘 URL'));
+      this.onErrorCallback(new Error('场景未提供全景图 URL'));
     }
   }
 
@@ -631,12 +647,12 @@ export class PanoViewer {
         this.onLoadCallback();
       }
     } catch (error) {
-      console.error('鍔犺浇鍏ㄦ櫙鍥惧け璐?', url, error);
+      console.error('加载全景图失败', url, error);
       this.updateLoadStatus(LoadStatus.ERROR);
       if (this.onErrorCallback) {
         const errorMessage = error instanceof ExternalImageLoadError
-          ? `鍔犺浇鍏ㄦ櫙鍥惧け璐ワ細${url} - ${error.message}`
-          : `鍔犺浇鍏ㄦ櫙鍥惧け璐ワ細${url}`;
+          ? `加载全景图失败：${url} - ${error.message}`
+          : `加载全景图失败：${url}`;
         this.onErrorCallback(new Error(errorMessage));
       }
     }
@@ -983,6 +999,35 @@ export class PanoViewer {
       }
       if (status.highReady) {
         this.updateLoadStatus(LoadStatus.HIGH_READY);
+        this.isDegradedMode = false;
+        this.tilesDegradedNotified = false;
+      }
+
+      if (status.tilesLoadedCount > this.tilesLastLoadedCount) {
+        this.tilesLastLoadedCount = status.tilesLoadedCount;
+        this.tilesLastProgressAt = now;
+        if (this.tilesDegradedNotified && !status.highReady) {
+          this.tilesDegradedNotified = false;
+        }
+      }
+
+      if (
+        this.tilesHighStartAt === 0 &&
+        (status.tilesQueuedCount > 0 || status.tilesLoadingCount > 0)
+      ) {
+        this.tilesHighStartAt = now;
+        if (this.tilesLastProgressAt === 0) this.tilesLastProgressAt = now;
+      }
+
+      const stalled =
+        this.tilesHighStartAt > 0 &&
+        now - this.tilesLastProgressAt > 12000 &&
+        !status.highReady;
+
+      if (stalled && !this.tilesDegradedNotified && this.tilesLowReady) {
+        this.isDegradedMode = true;
+        this.updateLoadStatus(LoadStatus.DEGRADED);
+        this.tilesDegradedNotified = true;
       }
     }
 
@@ -1274,9 +1319,9 @@ export class PanoViewer {
     const tolerance = 0.02; // 鍏佽灏戦噺娴姩
     if (Math.abs(ratio - 2) > tolerance && !this.aspectWarnedUrls.has(url)) {
       console.warn(
-        `[PanoViewer] 鍏ㄦ櫙鍥炬瘮渚嬩笉鏄?2:1锛屽彲鑳藉嚭鐜拌交寰彉褰紙瀹為檯 ${ratio.toFixed(
+        `[PanoViewer] 全景图比例不是 2:1，可能出现轻微变形（实际 ${ratio.toFixed(
           2
-        )}锛夛紝鏉ユ簮: ${url}`
+        )}），来源: ${url}`
       );
       this.aspectWarnedUrls.add(url);
     }
@@ -1357,7 +1402,7 @@ export class PanoViewer {
       panoTiles: undefined,
     };
     if (fallbackScene.pano || fallbackScene.panoLow) {
-      showToast('鐡︾墖鍔犺浇澶辫触锛屽凡鍥為€€鍒板叏鏅浘', 2000);
+      showToast('瓦片加载失败，已回退到全景图', 2000);
       this.setRenderSource('fallback', 'tiles 失败自动回退');
       this.loadScene(fallbackScene, { preserveView: true });
     } else {
@@ -1401,10 +1446,16 @@ export class PanoViewer {
       mesh.renderOrder = 0;
       this.fallbackSphere = mesh;
       this.scene.add(mesh);
-      this.updateLoadStatus(isLow ? LoadStatus.LOADING_LOW : LoadStatus.LOADING_HIGH);
-      this.setRenderSource('fallback', isLow ? 'fallback 浣庢竻鍙' : 'fallback 楂樻竻鍙');
+      this.updateLoadStatus(isLow ? LoadStatus.LOW_READY : LoadStatus.HIGH_READY);
+      this.setRenderSource('fallback', isLow ? 'fallback 低清可见' : 'fallback 高清可见');
+      if (isLow) {
+        this.tilesLowReady = true;
+      }
+      if (this.onLoadCallback) {
+        this.onLoadCallback();
+      }
     } catch (err) {
-      console.error('fallback 璐村浘鍔犺浇澶辫触', err);
+      console.error('fallback 贴图加载失败', err);
     }
   }
 

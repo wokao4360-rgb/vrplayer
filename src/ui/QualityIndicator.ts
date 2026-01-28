@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 清晰度状态指示器
  * 显示当前全景图的加载状态和清晰度信息
  * 不遮挡视野，不影响沉浸体验
@@ -7,18 +7,21 @@
 import { isFullscreen } from '../utils/fullscreenState';
 
 export enum LoadStatus {
-  LOADING_LOW = 'loadingLow',    // 正在加载低清图
-  LOW_READY = 'lowReady',        // 低清图已加载完成
-  LOADING_HIGH = 'loadingHigh',  // 正在加载高清图
-  HIGH_READY = 'highReady',      // 高清图已加载完成
-  DEGRADED = 'degraded',         // 降级模式（高清加载失败，使用低清）
-  ERROR = 'error',               // 加载失败
+  LOADING_LOW = 'loadingLow',
+  LOW_READY = 'lowReady',
+  LOADING_HIGH = 'loadingHigh',
+  HIGH_READY = 'highReady',
+  DEGRADED = 'degraded',
+  ERROR = 'error',
 }
 
 export class QualityIndicator {
   private element: HTMLElement;
   private currentStatus: LoadStatus = LoadStatus.LOADING_LOW;
   private autoHideTimer: number | null = null;
+  private maxVisibleTimer: number | null = null;
+  private readonly maxVisibleMs = 10000;
+  private readonly readyHideMs = 2500;
 
   constructor() {
     this.element = document.createElement('div');
@@ -39,25 +42,42 @@ export class QualityIndicator {
 
     this.currentStatus = status;
     this.render();
-    
-    // 根据状态决定是否自动隐藏
+
+    if (this.autoHideTimer) {
+      clearTimeout(this.autoHideTimer);
+      this.autoHideTimer = null;
+    }
+    if (this.maxVisibleTimer) {
+      clearTimeout(this.maxVisibleTimer);
+      this.maxVisibleTimer = null;
+    }
+
+    // 加载中或错误时显示（但最多显示 10 秒）
+    if (
+      status === LoadStatus.LOADING_LOW ||
+      status === LoadStatus.LOADING_HIGH ||
+      status === LoadStatus.ERROR ||
+      status === LoadStatus.DEGRADED
+    ) {
+      this.show();
+      this.maxVisibleTimer = window.setTimeout(() => {
+        this.hide();
+      }, this.maxVisibleMs);
+      return;
+    }
+
+    // 加载完成后短暂显示再隐藏
     if (status === LoadStatus.HIGH_READY || status === LoadStatus.LOW_READY) {
-      // 加载完成后 3 秒自动隐藏
-      if (this.autoHideTimer) {
-        clearTimeout(this.autoHideTimer);
-      }
+      this.show();
       this.autoHideTimer = window.setTimeout(() => {
         this.hide();
-      }, 3000);
-    } else {
-      // 加载中或错误时显示
-      this.show();
+      }, this.readyHideMs);
     }
   }
 
   private render(): void {
     const { text, icon, className } = this.getStatusInfo();
-    
+
     this.element.innerHTML = `
       <div class="quality-indicator-content ${className}">
         <span class="quality-icon">${icon}</span>
@@ -77,7 +97,7 @@ export class QualityIndicator {
       case LoadStatus.LOW_READY:
         return {
           text: '低清图已加载',
-          icon: '✅',
+          icon: '✨',
           className: 'status-ready'
         };
       case LoadStatus.LOADING_HIGH:
@@ -94,7 +114,7 @@ export class QualityIndicator {
         };
       case LoadStatus.DEGRADED:
         return {
-          text: '当前为低清模式（网络较慢）',
+          text: '网络较慢，已先使用低清',
           icon: '⚠️',
           className: 'status-degraded'
         };
@@ -128,6 +148,9 @@ export class QualityIndicator {
   remove(): void {
     if (this.autoHideTimer) {
       clearTimeout(this.autoHideTimer);
+    }
+    if (this.maxVisibleTimer) {
+      clearTimeout(this.maxVisibleTimer);
     }
     this.element.remove();
   }
@@ -189,24 +212,3 @@ export class QualityIndicator {
     document.head.appendChild(style);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

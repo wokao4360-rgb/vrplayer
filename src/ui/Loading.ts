@@ -1,4 +1,4 @@
-import { isFullscreen } from '../utils/fullscreenState';
+﻿import { isFullscreen } from '../utils/fullscreenState';
 
 export class Loading {
   private element: HTMLElement;
@@ -8,7 +8,7 @@ export class Loading {
     this.element.className = 'loading-overlay';
     this.render();
     this.applyStyles();
-    
+
     // 监听全屏状态变化
     const handleFullscreenChange = () => {
       if (isFullscreen()) {
@@ -96,27 +96,3 @@ export class Loading {
     this.element.remove();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

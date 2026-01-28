@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 外链图片加载器
  * 优先使用原生 <img> 加载，fetch 作为可选兜底
  * 提供全局并发限制、超时重试、no-referrer 等功能
@@ -25,7 +25,7 @@ export function toProxiedImageUrl(rawUrl: string): string {
 }
 
 export type ExternalImageLoadOptions = {
-  timeoutMs?: number; // 默认由调用侧传（thumb 8000, pano 15000）
+  timeoutMs?: number; // 默认由调用侧传入（thumb 8000, pano 15000）
   retries?: number; // 默认 2
   retryBaseDelayMs?: number; // 默认 300
   referrerPolicy?: ReferrerPolicy; // 默认 'no-referrer'
@@ -180,7 +180,7 @@ export async function loadExternalImageElement(
         timeoutId = window.setTimeout(() => {
           timeoutId = null;
           lastError = new Error('加载超时');
-          
+
           // 清理当前 img 的事件监听
           if (currentImg) {
             currentImg.onload = null;
@@ -225,7 +225,7 @@ export async function loadExternalImageElement(
           }
 
           lastError = new Error('图片加载失败');
-          
+
           // 清理当前 img 的引用
           if (currentImg === img) {
             currentImg.onload = null;
@@ -277,7 +277,7 @@ export async function loadExternalImageBitmap(
     try {
       // 优先使用 Image() 原生加载（内部会再次使用代理 URL，但这里传入的是原始 URL 用于错误信息）
       const img = await loadExternalImageElement(finalUrl, opts);
-      
+
       // 将已加载的 Image 转换为 ImageBitmap，并尊重 EXIF 方向
       const imageBitmap = await (createImageBitmap as any)(img, {
         imageOrientation: 'from-image',
@@ -298,7 +298,7 @@ export async function loadExternalImageBitmap(
           }
           throw new ExternalImageLoadError(
             url,
-            `Image() 和 fetch 都失败: ${error instanceof Error ? error.message : String(error)}`,
+            `Image() 和 fetch 均失败: ${error instanceof Error ? error.message : String(error)}`,
             error instanceof Error ? error : undefined
           );
         }

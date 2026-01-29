@@ -23,5 +23,6 @@
       "rows": 4
     }
   ],
-  "baseUrl": "/assets/panos/tiles/yhc-xiwu2-v1"
+  "baseUrl": "/assets/panos/tiles/yhc-xiwu2-v1",
+  "tileFormat": "ktx2"
 }

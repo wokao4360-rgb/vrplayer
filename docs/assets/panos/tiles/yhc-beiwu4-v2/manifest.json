@@ -23,5 +23,6 @@
       "rows": 4
     }
   ],
-  "baseUrl": "/assets/panos/tiles/yhc-beiwu4-v2"
+  "baseUrl": "/assets/panos/tiles/yhc-beiwu4-v2",
+  "tileFormat": "ktx2"
 }

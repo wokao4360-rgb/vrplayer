@@ -464,8 +464,38 @@ export class TileMeshPano {
     const thetaStart = row * thetaLength;
     const widthSegments = Math.max(4, Math.round(64 / level.cols));
     const heightSegments = Math.max(4, Math.round(32 / level.rows));
-    const geom = new THREE.SphereGeometry(radius, widthSegments, heightSegments, phiStart, phiLength, thetaStart, thetaLength);
+    const geom = new THREE.SphereGeometry(
+      radius,
+      widthSegments,
+      heightSegments,
+      phiStart,
+      phiLength,
+      thetaStart,
+      thetaLength
+    );
     geom.scale(-1, 1, 1);
+    // 将该分片的 UV 归一化到 0..1，避免“上下两张全景”错位
+    const uvAttr = geom.attributes.uv;
+    let minU = Infinity;
+    let maxU = -Infinity;
+    let minV = Infinity;
+    let maxV = -Infinity;
+    for (let i = 0; i < uvAttr.count; i += 1) {
+      const u = uvAttr.getX(i);
+      const v = uvAttr.getY(i);
+      if (u < minU) minU = u;
+      if (u > maxU) maxU = u;
+      if (v < minV) minV = v;
+      if (v > maxV) maxV = v;
+    }
+    const du = maxU - minU || 1;
+    const dv = maxV - minV || 1;
+    for (let i = 0; i < uvAttr.count; i += 1) {
+      const u = uvAttr.getX(i);
+      const v = uvAttr.getY(i);
+      uvAttr.setXY(i, (u - minU) / du, (v - minV) / dv);
+    }
+    uvAttr.needsUpdate = true;
     return geom;
   }
 

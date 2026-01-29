@@ -493,7 +493,9 @@ export class TileMeshPano {
     for (let i = 0; i < uvAttr.count; i += 1) {
       const u = uvAttr.getX(i);
       const v = uvAttr.getY(i);
-      uvAttr.setXY(i, (u - minU) / du, (v - minV) / dv);
+      const uu = (u - minU) / du;
+      const vv = (v - minV) / dv;
+      uvAttr.setXY(i, uu, 1 - vv);
     }
     uvAttr.needsUpdate = true;
     return geom;

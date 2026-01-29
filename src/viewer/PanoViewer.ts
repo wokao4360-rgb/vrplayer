@@ -526,13 +526,16 @@ export class PanoViewer {
       };
       fetchTileManifest(manifestUrl)
         .then((manifest) => {
-          // 统一改用 Canvas 拼接渲染，避免 Mesh UV 错位导致“上下分割”
-          this.tilePano = new TileCanvasPano(
-            this.scene,
-            onFirstDraw,
-            onHighReady,
-            this.renderer.capabilities.maxTextureSize || 0
-          );
+          // KTX2 走 Mesh 渲染，其它格式走 Canvas 拼接
+          this.tilePano =
+            manifest.tileFormat === 'ktx2'
+              ? new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
+              : new TileCanvasPano(
+                  this.scene,
+                  onFirstDraw,
+                  onHighReady,
+                  this.renderer.capabilities.maxTextureSize || 0
+                );
           if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
             (this.tilePano as any).setPerformanceMode(this.perfMode);
           }

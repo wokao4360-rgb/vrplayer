@@ -23,5 +23,6 @@
       "rows": 4
     }
   ],
-  "baseUrl": "/assets/panos/tiles/yhc-dongwu3"
+  "baseUrl": "/assets/panos/tiles/yhc-dongwu3",
+  "tileFormat": "ktx2"
 }

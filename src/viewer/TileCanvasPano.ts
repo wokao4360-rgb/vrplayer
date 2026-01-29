@@ -1,5 +1,7 @@
 ﻿import * as THREE from 'three';
 import { loadExternalImageBitmap } from '../utils/externalImage';
+import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
+import type { TileManifest, TileLevel } from './tileManifest';
 
 type TileState = 'empty' | 'loading' | 'ready';
 
@@ -16,19 +18,6 @@ type TileInfo = {
   retryTimer?: number;
 };
 
-type TileLevel = {
-  z: number;
-  cols: number;
-  rows: number;
-};
-
-export type TileManifest = {
-  type: 'equirect-tiles';
-  tileSize: number;
-  baseUrl: string;
-  levels: TileLevel[];
-};
-
 export class TileCanvasPano {
   private maxTextureSize: number;
   private manifest: TileManifest | null = null;
@@ -41,8 +30,10 @@ export class TileCanvasPano {
   private activeLoads = 0;
   private activeLowLoads = 0;
   private activeHighLoads = 0;
-  private maxConcurrent = 4;
-  private maxHighWhileLow = 1;
+  private maxConcurrent = 6;
+  private maxHighWhileLow = 2;
+  private defaultMaxConcurrent = 6;
+  private defaultMaxHighWhileLow = 2;
   private lastUpdate = 0;
   private tilesMap: Map<string, TileInfo> = new Map();
   private highestLevel: TileLevel | null = null;
@@ -71,11 +62,8 @@ export class TileCanvasPano {
     this.maxTextureSize = Math.max(0, maxTextureSize);
   }
 
-  async load(manifestUrl: string, options?: { fallbackVisible?: boolean }): Promise<void> {
-    const res = await fetch(manifestUrl);
-    if (!res.ok) throw new Error(`manifest 加载失败: ${manifestUrl}`);
-    const manifest = (await res.json()) as TileManifest;
-    this.manifest = manifest;
+  async load(manifest: TileManifest, options?: { fallbackVisible?: boolean }): Promise<void> {
+this.manifest = manifest;
     this.fallbackVisible = Boolean(options?.fallbackVisible);
     this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
     if (!this.highestLevel) throw new Error('manifest 缺少 level');
@@ -155,7 +143,7 @@ export class TileCanvasPano {
       const z0 = manifest.levels.find((l) => l.z === 0);
       if (!z0) throw new Error('manifest 缺少 z0');
       const z0Url = `${manifest.baseUrl}/z0/0_0.jpg`;
-      const z0Bitmap = await this.fetchTileBitmap(z0Url);
+      const z0Bitmap = await this.fetchTileBitmap(z0Url, 'high');
       const z0Info: TileInfo = {
         z: 0,
         col: 0,
@@ -172,6 +160,16 @@ export class TileCanvasPano {
     }
     if (this.lowLevel) {
       this.enqueueLevel(this.lowLevel, 'low');
+    }
+  }
+
+  setPerformanceMode(mode: 'normal' | 'throttle'): void {
+    if (mode === 'throttle') {
+      this.maxConcurrent = 2;
+      this.maxHighWhileLow = 0;
+    } else {
+      this.maxConcurrent = this.defaultMaxConcurrent;
+      this.maxHighWhileLow = this.defaultMaxHighWhileLow;
     }
   }
 
@@ -244,27 +242,28 @@ export class TileCanvasPano {
     if (this.highestLevel && !this.highSeeded) {
       const indices = this.computeNeededTiles(camera, this.highestLevel);
       if (indices.length > 0) {
-        const { col, row } = indices[0];
-        const key = `${this.highestLevel.z}_${col}_${row}`;
-        let info = this.tilesMap.get(key);
-        if (!info) {
-          info = {
-            z: this.highestLevel.z,
-            col,
-            row,
-            url: `${this.manifest.baseUrl}/z${this.highestLevel.z}/${col}_${row}.jpg`,
-            state: 'empty',
-            priority: 'high',
-            lastUsed: now,
-            failCount: 0,
-          };
-          this.tilesMap.set(key, info);
-        }
-        info.priority = 'high';
-        info.lastUsed = now;
-        if (info.state === 'empty' && !info.retryTimer) {
-          info.state = 'loading';
-          this.pendingHigh.push(info);
+        for (const { col, row } of indices) {
+          const key = `${this.highestLevel.z}_${col}_${row}`;
+          let info = this.tilesMap.get(key);
+          if (!info) {
+            info = {
+              z: this.highestLevel.z,
+              col,
+              row,
+              url: `${this.manifest.baseUrl}/z${this.highestLevel.z}/${col}_${row}.jpg`,
+              state: 'empty',
+              priority: 'high',
+              lastUsed: now,
+              failCount: 0,
+            };
+            this.tilesMap.set(key, info);
+          }
+          info.priority = 'high';
+          info.lastUsed = now;
+          if (info.state === 'empty' && !info.retryTimer) {
+            info.state = 'loading';
+            this.pendingHigh.push(info);
+          }
         }
         this.highSeeded = true;
       }
@@ -353,7 +352,7 @@ export class TileCanvasPano {
     }
     this.lastTileUrl = info.url;
     try {
-      const bmp = await this.fetchTileBitmap(info.url);
+      const bmp = await this.fetchTileBitmap(info.url, info.priority);
       info.bitmap = bmp;
       info.state = 'ready';
       info.failCount = 0;
@@ -401,16 +400,28 @@ export class TileCanvasPano {
     }, delayMs);
   }
 
-  private async fetchTileBitmap(url: string, timeoutMs = 12000): Promise<ImageBitmap> {
+  private async fetchTileBitmap(
+    url: string,
+    priority: 'low' | 'high',
+    timeoutMs = 12000
+  ): Promise<ImageBitmap> {
+    try {
+      const bmp = await decodeImageBitmapInWorker(url, { timeoutMs, priority });
+      if (bmp) return bmp;
+    } catch {
+      // worker ?????????
+    }
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(url, {
+      const init: RequestInit = {
         mode: 'cors',
         cache: 'default',
         referrerPolicy: 'no-referrer',
         signal: controller.signal,
-      });
+      };
+      (init as any).priority = priority === 'high' ? 'high' : 'low';
+      const response = await fetch(url, init);
       if (!response.ok) {
         throw new Error(`tile HTTP ${response.status}: ${url}`);
       }
@@ -479,7 +490,7 @@ export class TileCanvasPano {
   private computeNeededTiles(camera: THREE.PerspectiveCamera, level: TileLevel): Array<{ col: number; row: number }> {
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
-    const yaw = Math.atan2(dir.x, dir.z);
+    const yaw = -Math.atan2(dir.x, dir.z);
     const pitch = Math.asin(dir.y);
     const fovRad = THREE.MathUtils.degToRad(camera.fov);
     const margin = THREE.MathUtils.degToRad(20);

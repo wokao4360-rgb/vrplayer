@@ -14,6 +14,8 @@ import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/extern
 import { ZoomHud } from '../ui/ZoomHud';
 import { showToast } from '../ui/toast';
 import { TileCanvasPano } from './TileCanvasPano';
+import { TileMeshPano } from './TileMeshPano';
+import { fetchTileManifest } from './tileManifest';
 
 /**
  * 娓叉煋閰嶇疆妗ｄ綅锛堢敤浜庣敾闈㈠姣旓細鍘熷 vs 鐮斿浼樺寲锛? */
@@ -95,7 +97,7 @@ export class PanoViewer {
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
   private sphere: THREE.Mesh | null = null;
-  private tilePano: TileCanvasPano | null = null;
+  private tilePano: TileCanvasPano | TileMeshPano | null = null;
   private fallbackSphere: THREE.Mesh | null = null;
   private container: HTMLElement;
   private frameListeners: Array<(dtMs: number) => void> = [];
@@ -127,6 +129,9 @@ export class PanoViewer {
   private tilesDegradedNotified = false;
   private longPressThreshold = 500; // 长按阈值（毫秒）
   private renderSource: 'none' | 'fallback' | 'low' | 'tiles' = 'none';
+  private perfSamples: number[] = [];
+  private perfMode: 'normal' | 'throttle' = 'normal';
+  private perfLastChangeAt = 0;
   private renderSwitchReason = '';
   private clearedCount = 0;
   private aspectWarnedUrls = new Set<string>();
@@ -503,28 +508,38 @@ export class PanoViewer {
       } else if (fallbackUrlHigh) {
         this.showFallbackTexture(resolveAssetUrl(fallbackUrlHigh, AssetType.PANO), geometry, false);
       }
-      this.tilePano = new TileCanvasPano(
-        this.scene,
-        () => {
-          if (!this.tilesLowReady) {
-            this.tilesLowReady = true;
-            this.updateLoadStatus(LoadStatus.LOW_READY);
-            this.setRenderSource('low', 'tiles 首帧可见');
-            if (this.onLoadCallback) this.onLoadCallback();
+      const onFirstDraw = () => {
+        if (!this.tilesLowReady) {
+          this.tilesLowReady = true;
+          this.updateLoadStatus(LoadStatus.LOW_READY);
+          this.setRenderSource('low', 'tiles 首屏可见');
+          if (this.onLoadCallback) this.onLoadCallback();
+        }
+        if (this.loadStatus !== LoadStatus.HIGH_READY) {
+          this.updateLoadStatus(LoadStatus.LOADING_HIGH);
+        }
+      };
+      const onHighReady = () => {
+        this.updateLoadStatus(LoadStatus.HIGH_READY);
+        this.setRenderSource('tiles', 'tiles 高清可见');
+        this.isDegradedMode = false;
+      };
+      fetchTileManifest(manifestUrl)
+        .then((manifest) => {
+          const useKtx2 = manifest.tileFormat === 'ktx2';
+          this.tilePano = useKtx2
+            ? new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
+            : new TileCanvasPano(
+                this.scene,
+                onFirstDraw,
+                onHighReady,
+                this.renderer.capabilities.maxTextureSize || 0
+              );
+          if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
+            (this.tilePano as any).setPerformanceMode(this.perfMode);
           }
-          if (this.loadStatus !== LoadStatus.HIGH_READY) {
-            this.updateLoadStatus(LoadStatus.LOADING_HIGH);
-          }
-        },
-        () => {
-          this.updateLoadStatus(LoadStatus.HIGH_READY);
-          this.setRenderSource('tiles', 'tiles 高清可见');
-          this.isDegradedMode = false;
-        },
-        this.renderer.capabilities.maxTextureSize || 0
-      );
-      this.tilePano
-        .load(manifestUrl, { fallbackVisible: fallbackPlanned })
+          return this.tilePano.load(manifest, { fallbackVisible: fallbackPlanned });
+        })
         .then(() => {
           if (!this.tilesLowReady) {
             this.tilesLowReady = true;
@@ -532,7 +547,6 @@ export class PanoViewer {
             if (this.onLoadCallback) this.onLoadCallback();
           }
           this.tilePano?.prime(this.camera);
-          // 不清理兜底，由可见帧逻辑处理
         })
         .catch((err) => {
           console.error('瓦片加载失败，回退传统全景', err);
@@ -807,6 +821,7 @@ export class PanoViewer {
    * 鏇存柊鍔犺浇鐘舵€佸苟瑙﹀彂鍥炶皟
    */
   private updateLoadStatus(status: LoadStatus): void {
+    if (this.loadStatus === status) return;
     this.loadStatus = status;
     if (this.onStatusChangeCallback) {
       this.onStatusChangeCallback(status);
@@ -882,6 +897,28 @@ export class PanoViewer {
     this.renderer.setSize(width, height);
   }
 
+  private updatePerformanceGuard(dtMs: number): void {
+    const fps = 1000 / Math.max(1, dtMs);
+    this.perfSamples.push(fps);
+    if (this.perfSamples.length > 30) this.perfSamples.shift();
+    const avg = this.perfSamples.reduce((a, b) => a + b, 0) / this.perfSamples.length;
+    const now = performance.now();
+    if (avg < 28 && this.perfMode === 'normal' && now - this.perfLastChangeAt > 2000) {
+      this.perfMode = 'throttle';
+      this.perfLastChangeAt = now;
+      if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
+        (this.tilePano as any).setPerformanceMode('throttle');
+      }
+    }
+    if (avg > 45 && this.perfMode === 'throttle' && now - this.perfLastChangeAt > 3000) {
+      this.perfMode = 'normal';
+      this.perfLastChangeAt = now;
+      if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
+        (this.tilePano as any).setPerformanceMode('normal');
+      }
+    }
+  }
+
   private updateTilesDebug(): void {
     const params = new URLSearchParams(window.location.search);
     const enable =
@@ -947,6 +984,7 @@ export class PanoViewer {
     requestAnimationFrame(() => this.animate());
     const now = performance.now();
     const dtMs = this.lastFrameTimeMs ? now - this.lastFrameTimeMs : 16.7;
+    this.updatePerformanceGuard(dtMs);
     this.lastFrameTimeMs = now;
     
     // 检查视角变化（用于 UI 自动定位）

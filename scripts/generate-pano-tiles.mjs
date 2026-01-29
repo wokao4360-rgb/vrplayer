@@ -73,6 +73,7 @@ async function main() {
     type: 'equirect-tiles',
     tileSize,
     levels,
+    tileFormat: 'jpg',
     baseUrl: normalizePath(path.relative(path.resolve('public'), absOut)).startsWith('.')
       ? `/${normalizePath(path.relative(path.resolve('public'), absOut)).replace(/^\.+/, '')}`
       : `/${normalizePath(path.relative(path.resolve('public'), absOut))}`,

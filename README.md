@@ -142,12 +142,14 @@ Pages 已部署到该 commit
 默认策略：关键纹理同源放 Pages
 
 Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
-- ?????chrome-devtools MCP ? Network ?????
+- chrome-devtools MCP 的 Network 结果是事实来源（用于判断 tile 请求/命中）
+- 本机项目路径：D:\Projects\vrplayer
+- KTX2/Basis：先 `npm run ktx2:setup`，再 `npm run tiles:ktx2 -- --in <tiles_dir>`；manifest 需 `tileFormat=ktx2`，运行时优先 KTX2，失败回退 jpg
 - Cloudflare 可能对 tiles JPG 做强压缩导致发糊；已通过 `public/_headers` 为 `/assets/panos/tiles/*` 与 `/assets/panos/*.jpg` 添加 `Cache-Control: ... no-transform`，必要时用新 tiles 目录名做缓存隔离
 - 若“只用瓦片”出现黑屏：优先检查 WebGL `maxTextureSize`；canvas 尺寸超过上限会导致纹理不可用（黑屏）。已在 TileCanvasPano 按 `maxTextureSize` 自动缩放画布以避免黑屏
 - 若线上仍命中旧构建：通常是 `index.html`/CDN/浏览器缓存导致继续引用旧 hash 资源；发布后优先用带版本参数的 URL 校验（例如 `?v=时间戳`）
 - 瓦片画面泛白：CanvasTexture 需标记 sRGB，材质关闭 toneMapping；否则亮部发灰泛白
-- 低清→高清分块：先完整加载低清层（z2），再按视角加载高清层（zMax），首屏同时种一块高清以加速清晰
+- 低清→高清分块：低清层优先排队，首屏可视高清块同时并发；低清作为底图保留避免黑屏
 本区是“断上下文恢复区”。当发现新的关键坑或新铁律时，必须补充到这里（保持短、可搜索）。
 
 协作铁律（摘要）
@@ -186,7 +188,7 @@ internalYaw = -worldYaw（只在一个入口做一次）
 - manifest 结构：`type`、`tileSize`、`levels[{z,cols,rows}]`、`baseUrl`；放在输出目录 `manifest.json`。
 - Viewer 判定顺序：若 scene.panoTiles.manifest 存在则走瓦片 → 失败则回退 fallback → 若仍无则按旧 pano/panoLow 流程。
 - 首屏策略：先加载 z0 单张底图，立即出画面；随后按视角优先依次补齐 z2（低清）→ z3（高清）。
-- 视角优先算法：基于相机 forward 向量与 tile 中心方向点积；阈值 `cos(fov/2+20°)`；每 150ms 重新排队，避免抖动。
+- 视角优先算法：按相机 yaw/pitch + 余量计算需要的 cols/rows，每 150ms 重新排队，避免抖动。
 - 加载顺序/并发：z2 队列优先，其次 z3；并发 4；同一 tile 状态 empty/loading/ready，不重复请求。
 - LRU：z3 保留 64 张，超出立即释放纹理，防止内存暴涨。
 - 回退保障：manifest 拉取或 tile 失败会自动转用 fallback pano/panoLow；仍缺失则报错，不白屏。
@@ -207,3 +209,5 @@ internalYaw = -worldYaw（只在一个入口做一次）
 - 2026-01-27: 再次黑屏根因：多 mesh 方案已移除，但 Canvas 模式存在画布尺寸/队列计算不稳，tiles 请求停滞且 WebGL 报 offset 溢出，低清提示不消失。修复：canvas 尺寸固定为 zMax(cols*tileSize, rows*tileSize)，绘制前 clamp 坐标，仅全量 CanvasTexture 更新；视角经纬度→tile 范围映射，始终队列中心+邻近 tiles，保持 z0 首屏、z2/z3 持续请求；tilesDebug 显示 queued/loading/loaded/lastError，低清首帧即标记 ready 隐藏提示，仅东屋3 受影响。
 - 2026-01-27（黑屏在缓存开启场景复现）：复现步骤：正常缓存开启刷新东屋3，低清闪现后黑屏；Disable cache 时不会黑。验收口径：缓存开启也必须始终有画面。根因（推测）：兜底/低清球在 tiles 状态更新时被清理或覆盖；渲染源切换缺少保护。修复：永不清理 fallback/低清球体，仅叠加 tiles；新增渲染源状态记录（fallback/low/tiles）、切换原因、清空计数，tilesDebug 可视；首屏低清一旦显示即保持可见，高精/瓦片失败不再影响画面。
 - 2026-01-27 PM: 缓存开启复现：正常刷新进入“杨虎城纪念馆·东屋3”低清 png 短暂出现后黑屏；勾选 Disable cache 则低清常驻。验收口径：即便开启缓存也必须始终有画面（低清/备用/瓦片），不可回黑。推测根因：tile canvas 初始黑底覆盖 fallback 且可能清理/遮挡兜底，缓存命中导致瓦片队列停滞时黑底外泄。修复策略：fallback 常驻背景不清理；tile 材质初始透明，至少一块瓦片绘制且参与渲染后再显示；保留/增强渲染源状态、切换原因与清空计数，任何退化都留存低清/备用；tilesDebug 展示 mode/source/lastReason/clearedCount 便于肉眼排查。
+
+- KTX2/Basis: ??? `npm run ktx2:setup` ?? transcoder ? `public/assets/basis`??? `npm run tiles:ktx2 -- --in <tiles??>` ?? .ktx2?manifest ??? tileFormat=ktx2?????? KTX2 ???? jpg

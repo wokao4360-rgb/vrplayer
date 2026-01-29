@@ -8,7 +8,9 @@
     "preview": "vite preview --host",
     "tiles:demo": "node scripts/generateTiles.mjs demo",
     "tiles": "node scripts/generateTiles.mjs",
-    "tiles:yhc-dongwu3": "node scripts/generate-pano-tiles.mjs --in public/assets/panos/demo.jpg --out public/assets/panos/tiles/yhc-dongwu3"
+    "tiles:yhc-dongwu3": "node scripts/generate-pano-tiles.mjs --in public/assets/panos/demo.jpg --out public/assets/panos/tiles/yhc-dongwu3",
+    "ktx2:setup": "node scripts/setup-ktx2.mjs",
+    "tiles:ktx2": "node scripts/convert-tiles-ktx2.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

@@ -899,6 +899,13 @@ class App {
       if (this.qualityIndicator) {
         this.qualityIndicator.updateStatus(status);
       }
+      if (
+        status === LoadStatus.LOW_READY ||
+        status === LoadStatus.HIGH_READY ||
+        status === LoadStatus.DEGRADED
+      ) {
+        this.loading.hide();
+      }
     });
 
     // 加载场景
@@ -1679,3 +1686,12 @@ class App {
 // 启动应用
 new App();
 
+
+// Service Worker?stale-while-revalidate ?????
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // ????????????
+    });
+  });
+}

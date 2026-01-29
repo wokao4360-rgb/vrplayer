@@ -151,6 +151,7 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - 瓦片画面泛白：CanvasTexture 需标记 sRGB，材质关闭 toneMapping；否则亮部发灰泛白
 - 低清→高清分块：低清层优先排队，首屏可视高清块同时并发；低清作为底图保留避免黑屏
 - 全景/瓦片纹理不要再做 repeat.set(1,-1)/offset.set(0,1) 这类垂直翻转，容易导致“上下两张全景”分割错位
+- CanvasTexture（全景/瓦片）保持 `flipY = true`；强制 `false` 会导致全景上下颠倒
 - TileMeshPano 分片球体必须把 UV 归一化到 0..1（每片贴图是裁剪后的 tile）；否则会出现“上下两张全景”/分片错位
 - 现阶段瓦片统一走 TileCanvasPano（Canvas 拼接）以规避 Mesh UV 错位，KTX2 Mesh 渲染暂缓
 本区是“断上下文恢复区”。当发现新的关键坑或新铁律时，必须补充到这里（保持短、可搜索）。

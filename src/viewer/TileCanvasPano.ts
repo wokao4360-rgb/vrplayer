@@ -111,8 +111,6 @@ this.manifest = manifest;
     this.texture.flipY = false;
     this.texture.wrapS = THREE.ClampToEdgeWrapping;
     this.texture.wrapT = THREE.ClampToEdgeWrapping;
-    this.texture.repeat.set(1, -1);
-    this.texture.offset.set(0, 1);
     this.texture.minFilter = THREE.LinearFilter;
     this.texture.magFilter = THREE.LinearFilter;
     this.texture.generateMipmaps = false;

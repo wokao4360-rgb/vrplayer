@@ -639,8 +639,6 @@ export class PanoViewer {
       texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.repeat.set(1, -1);
-      texture.offset.set(0, 1);
       texture.needsUpdate = true;
       // --- end fix ---
       
@@ -705,8 +703,6 @@ export class PanoViewer {
       lowTexture.flipY = false;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
       lowTexture.wrapT = THREE.ClampToEdgeWrapping;
-      lowTexture.repeat.set(1, -1);
-      lowTexture.offset.set(0, 1);
       lowTexture.needsUpdate = true;
         // --- end fix ---
       
@@ -746,9 +742,7 @@ export class PanoViewer {
         highTexture.flipY = false;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
-        highTexture.repeat.set(1, -1);
-        highTexture.offset.set(0, 1);
-          highTexture.needsUpdate = true;
+        highTexture.needsUpdate = true;
           // --- end fix ---
         
         // 保存当前视角（保证切换时视角不变）
@@ -1471,8 +1465,6 @@ export class PanoViewer {
       texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.repeat.set(1, -1);
-      texture.offset.set(0, 1);
       texture.needsUpdate = true;
 
       const material = new THREE.MeshBasicMaterial({

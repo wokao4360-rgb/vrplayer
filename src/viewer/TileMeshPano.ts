@@ -44,6 +44,8 @@ export class TileMeshPano {
   private tilesLoadedCount = 0;
   private tilesLoadingCount = 0;
   private tilesQueuedCount = 0;
+  private tilesFailedCount = 0;
+  private tilesRetryCount = 0;
   private lastTileUrl = '';
   private lastError = '';
   private lruLimit = 64;
@@ -83,6 +85,8 @@ export class TileMeshPano {
     this.tilesLoadedCount = 0;
     this.tilesLoadingCount = 0;
     this.tilesQueuedCount = 0;
+    this.tilesFailedCount = 0;
+    this.tilesRetryCount = 0;
     this.activeLoads = 0;
     this.activeLowLoads = 0;
     this.activeHighLoads = 0;
@@ -226,6 +230,8 @@ export class TileMeshPano {
       tilesLoadedCount: this.tilesLoadedCount,
       tilesLoadingCount: this.tilesLoadingCount,
       tilesQueuedCount: this.tilesQueuedCount,
+      tilesFailedCount: this.tilesFailedCount,
+      tilesRetryCount: this.tilesRetryCount,
       lastTileUrl: this.lastTileUrl,
       lastError: this.lastError,
       canvasSize: '',
@@ -317,6 +323,7 @@ export class TileMeshPano {
       this.lastError = err instanceof Error ? err.message : String(err);
       info.state = 'empty';
       info.failCount += 1;
+      this.tilesFailedCount += 1;
       const backoffMs = Math.min(1000 * Math.pow(2, Math.max(0, info.failCount - 1)), 15000);
       this.scheduleRetry(info, backoffMs);
     } finally {
@@ -332,6 +339,7 @@ export class TileMeshPano {
 
   private scheduleRetry(info: TileInfo, delayMs: number): void {
     if (info.retryTimer) return;
+    this.tilesRetryCount += 1;
     info.retryTimer = window.setTimeout(() => {
       info.retryTimer = undefined;
       if (info.state !== 'empty') return;

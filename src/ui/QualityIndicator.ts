@@ -22,6 +22,7 @@ export class QualityIndicator {
   private maxVisibleTimer: number | null = null;
   private readonly maxVisibleMs = 10000;
   private readonly readyHideMs = 2500;
+  private metricsText = '';
 
   constructor() {
     this.element = document.createElement('div');
@@ -75,6 +76,35 @@ export class QualityIndicator {
     }
   }
 
+  updateMetrics(metrics: {
+    lowReadyMs?: number;
+    highReadyMs?: number;
+    tileHitRate?: number;
+    tilesFailed?: number;
+    tilesRetries?: number;
+    perfMode?: string;
+    renderSource?: string;
+  }): void {
+    const params = new URLSearchParams(window.location.search);
+    const enable =
+      params.get('metrics') === '1' ||
+      params.get('metrics') === 'true' ||
+      params.get('tilesDebug') === '1';
+    if (!enable) return;
+    const low = metrics.lowReadyMs ?? -1;
+    const high = metrics.highReadyMs ?? -1;
+    const hit = metrics.tileHitRate ?? 0;
+    const failed = metrics.tilesFailed ?? 0;
+    const retries = metrics.tilesRetries ?? 0;
+    const perf = metrics.perfMode ?? '';
+    const source = metrics.renderSource ?? '';
+    this.metricsText =
+      `low:${low}ms high:${high}ms ` +
+      `hit:${hit}% fail:${failed} retry:${retries} ` +
+      `${perf ? `perf:${perf} ` : ''}${source ? `src:${source}` : ''}`.trim();
+    this.render();
+  }
+
   private render(): void {
     const { text, icon, className } = this.getStatusInfo();
 
@@ -82,6 +112,7 @@ export class QualityIndicator {
       <div class="quality-indicator-content ${className}">
         <span class="quality-icon">${icon}</span>
         <span class="quality-text">${text}</span>
+        ${this.metricsText ? `<span class="quality-metrics">${this.metricsText}</span>` : ''}
       </div>
     `;
   }
@@ -188,6 +219,12 @@ export class QualityIndicator {
         font-size: 14px;
       }
       .quality-text {
+        white-space: nowrap;
+      }
+      .quality-metrics {
+        margin-left: 6px;
+        font-size: 11px;
+        opacity: 0.7;
         white-space: nowrap;
       }
       .status-loading {

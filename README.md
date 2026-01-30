@@ -154,6 +154,9 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - CanvasTexture（全景/瓦片）保持 `flipY = true`；强制 `false` 会导致全景上下颠倒
 - TileMeshPano 分片球体必须把 UV 归一化到 0..1，并对 V 做翻转（`v = 1 - v`），否则会出现“上下两张全景”/分片错位/上下颠倒
 - tileFormat=ktx2 走 TileMeshPano（KTX2Loader）；其它格式走 TileCanvasPano（Canvas 拼接）
+- 关键指标打点：PanoViewer 会输出 `window.__VR_METRICS__` 并触发 `vr:metrics` 事件，包含首屏低清/高清耗时、tile 命中率、失败/重试数、当前性能档位；`?metrics=1` 会把这些指标显示在顶部提示中
+- 外链资源本地化脚本：`node scripts/localize-external-assets.mjs`（仅图片，失败会保留原 URL）；`i.ibb.co` 在本机可能不可达，需手动提供源图或替换为站内文件
+- WebGPU 预研记录：`webgpu.md`（非主线，不影响线上）
 本区是“断上下文恢复区”。当发现新的关键坑或新铁律时，必须补充到这里（保持短、可搜索）。
 
 协作铁律（摘要）

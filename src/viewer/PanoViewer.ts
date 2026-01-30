@@ -17,6 +17,20 @@ import { TileCanvasPano } from './TileCanvasPano';
 import { TileMeshPano } from './TileMeshPano';
 import { fetchTileManifest } from './tileManifest';
 
+type LoadMetrics = {
+  sceneId: string;
+  startAt: number;
+  lowReadyAt: number;
+  highReadyAt: number;
+  tilesLoaded: number;
+  tilesFailed: number;
+  tilesRetries: number;
+  tileHitRate: number;
+  perfMode: 'normal' | 'throttle';
+  renderSource: 'none' | 'fallback' | 'low' | 'tiles';
+  lastError: string;
+};
+
 /**
  * 娓叉煋閰嶇疆妗ｄ綅锛堢敤浜庣敾闈㈠姣旓細鍘熷 vs 鐮斿浼樺寲锛? */
 enum RenderProfile {
@@ -135,6 +149,20 @@ export class PanoViewer {
   private renderSwitchReason = '';
   private clearedCount = 0;
   private aspectWarnedUrls = new Set<string>();
+  private metrics: LoadMetrics = {
+    sceneId: '',
+    startAt: 0,
+    lowReadyAt: 0,
+    highReadyAt: 0,
+    tilesLoaded: 0,
+    tilesFailed: 0,
+    tilesRetries: 0,
+    tileHitRate: 0,
+    perfMode: 'normal',
+    renderSource: 'none',
+    lastError: '',
+  };
+  private lastMetricsEmitAt = 0;
   
   // 加载状态管理
   private loadStatus: LoadStatus = LoadStatus.LOADING_LOW;
@@ -418,6 +446,7 @@ export class PanoViewer {
   loadScene(sceneData: Scene, options?: { preserveView?: boolean }): void {
     // 重置状态
     this.isDegradedMode = false;
+    this.resetMetrics(sceneData.id);
     this.updateLoadStatus(LoadStatus.LOADING_LOW);
     this.renderSource = 'none';
     this.clearedCount = 0;
@@ -806,6 +835,58 @@ export class PanoViewer {
     return this.loadStatus;
   }
 
+  private resetMetrics(sceneId: string): void {
+    const now = performance.now();
+    this.metrics = {
+      sceneId,
+      startAt: now,
+      lowReadyAt: 0,
+      highReadyAt: 0,
+      tilesLoaded: 0,
+      tilesFailed: 0,
+      tilesRetries: 0,
+      tileHitRate: 0,
+      perfMode: this.perfMode,
+      renderSource: this.renderSource,
+      lastError: '',
+    };
+    this.emitMetrics('reset', true);
+  }
+
+  private emitMetrics(reason: string, force = false): void {
+    const now = performance.now();
+    if (!force && now - this.lastMetricsEmitAt < 800) return;
+    const status = this.tilePano?.getStatus();
+    const tilesLoaded = status?.tilesLoadedCount ?? 0;
+    const tilesFailed = (status as any)?.tilesFailedCount ?? 0;
+    const tilesRetries = (status as any)?.tilesRetryCount ?? 0;
+    const total = tilesLoaded + tilesFailed;
+    const hitRate = total > 0 ? Number(((tilesLoaded / total) * 100).toFixed(2)) : 0;
+    this.metrics.tilesLoaded = tilesLoaded;
+    this.metrics.tilesFailed = tilesFailed;
+    this.metrics.tilesRetries = tilesRetries;
+    this.metrics.tileHitRate = hitRate;
+    this.metrics.perfMode = this.perfMode;
+    this.metrics.renderSource = this.renderSource;
+    this.metrics.lastError = this.tilesLastError || (status?.lastError ?? '');
+    const lowMs = this.metrics.lowReadyAt
+      ? Math.round(this.metrics.lowReadyAt - this.metrics.startAt)
+      : -1;
+    const highMs = this.metrics.highReadyAt
+      ? Math.round(this.metrics.highReadyAt - this.metrics.startAt)
+      : -1;
+    const payload = {
+      ...this.metrics,
+      lowReadyMs: lowMs,
+      highReadyMs: highMs,
+      reason,
+      at: Math.round(now),
+    };
+    (window as any).__VR_METRICS__ = payload;
+    window.dispatchEvent(new CustomEvent('vr:metrics', { detail: payload }));
+    this.lastMetricsEmitAt = now;
+  }
+
   /**
    * 鏄惁澶勪簬闄嶇骇妯″紡锛堥珮娓呭姞杞藉け璐ワ紝浣跨敤浣庢竻锛?   */
   isInDegradedMode(): boolean {
@@ -818,9 +899,17 @@ export class PanoViewer {
   private updateLoadStatus(status: LoadStatus): void {
     if (this.loadStatus === status) return;
     this.loadStatus = status;
+    const now = performance.now();
+    if (status === LoadStatus.LOW_READY && this.metrics.lowReadyAt === 0) {
+      this.metrics.lowReadyAt = now;
+    }
+    if (status === LoadStatus.HIGH_READY && this.metrics.highReadyAt === 0) {
+      this.metrics.highReadyAt = now;
+    }
     if (this.onStatusChangeCallback) {
       this.onStatusChangeCallback(status);
     }
+    this.emitMetrics(`status:${status}`);
   }
 
   getCurrentView(): { yaw: number; pitch: number; fov: number } {
@@ -904,6 +993,7 @@ export class PanoViewer {
       if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
         (this.tilePano as any).setPerformanceMode('throttle');
       }
+      this.emitMetrics('perf:throttle', true);
     }
     if (avg > 45 && this.perfMode === 'throttle' && now - this.perfLastChangeAt > 3000) {
       this.perfMode = 'normal';
@@ -911,6 +1001,7 @@ export class PanoViewer {
       if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
         (this.tilePano as any).setPerformanceMode('normal');
       }
+      this.emitMetrics('perf:normal', true);
     }
   }
 
@@ -1065,6 +1156,7 @@ export class PanoViewer {
     }
 
     this.updateTilesDebug();
+    this.emitMetrics('frame');
     
     // 更新 nadir patch（低头时渐显 + yaw 罗盘旋转）
     if (this.nadirPatch) {

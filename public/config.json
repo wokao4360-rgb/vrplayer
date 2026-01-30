@@ -19,9 +19,9 @@
         {
           "id": "gate",
           "name": "正门与序厅1",
-          "panoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png",
+          "panoLow": "/assets/external/pic1.imgdb.cn/419616bbde9b.png",
           "pano": "https://i.ibb.co/Q3mVmjwD/0-4-0.png",
-          "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
+          "thumb": "/assets/external/s41.ax1x.com/b5acc0519444.png",
           "initialView": {
             "yaw": 27,
             "pitch": 27,
@@ -61,13 +61,13 @@
         {
           "id": "front_yard",
           "name": "西屋2",
-          "panoLow": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
-          "pano": "https://i.ibb.co/vCs3h5Y4/AGC-20251227-093746924-PHOTOSPHERE.jpg",
-          "thumb": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
+          "panoLow": "/assets/panos/xiwu2-low.jpg",
+          "pano": "/assets/panos/xiwu2.jpg",
+          "thumb": "/assets/panos/xiwu2-low.jpg",
           "panoTiles": {
             "manifest": "/assets/panos/tiles/yhc-xiwu2-v1/manifest.json",
-            "fallbackPanoLow": "https://i.ibb.co/6RYxVxTp/f19a4fdef8974c9fbf52218f6fa1f82a.jpg",
-            "fallbackPano": "https://i.ibb.co/vCs3h5Y4/AGC-20251227-093746924-PHOTOSPHERE.jpg"
+            "fallbackPanoLow": "/assets/panos/xiwu2-low.jpg",
+            "fallbackPano": "/assets/panos/xiwu2.jpg"
           },
           "initialView": {
             "yaw": 27,
@@ -121,7 +121,7 @@
         {
           "id": "exhibit_hall",
           "name": "东屋3",
-          "thumb": "https://s41.ax1x.com/2025/12/23/pZGkJ0S.md.png",
+          "thumb": "/assets/external/s41.ax1x.com/b5acc0519444.png",
           "initialView": {
             "yaw": 90,
             "pitch": 0,
@@ -171,16 +171,16 @@
           ],
           "panoTiles": {
             "manifest": "/assets/panos/tiles/yhc-dongwu3/manifest.json",
-            "fallbackPano": "https://pic1.imgdb.cn/item/694a6c88ba772b0367e2d28d.png",
-            "fallbackPanoLow": "https://pic1.imgdb.cn/item/694a7016ba772b0367e2d617.png"
+            "fallbackPano": "/assets/external/pic1.imgdb.cn/1d65514d4663.png",
+            "fallbackPanoLow": "/assets/external/pic1.imgdb.cn/419616bbde9b.png"
           }
         },
         {
           "id": "memorial_wall",
           "name": "北屋4",
-          "panoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
-          "pano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg",
-          "thumb": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
+          "panoLow": "/assets/panos/beiwu4-low.jpg",
+          "pano": "/assets/panos/beiwu4.jpg",
+          "thumb": "/assets/panos/beiwu4-low.jpg",
           "initialView": {
             "yaw": 0,
             "pitch": 0,
@@ -207,8 +207,8 @@
           ],
           "panoTiles": {
             "manifest": "/assets/panos/tiles/yhc-beiwu4-v2/manifest.json",
-            "fallbackPanoLow": "https://i.ibb.co/DPZq7tRz/AGC-20251227-093407717-PHOTOSPHERE.jpg",
-            "fallbackPano": "https://i.ibb.co/LD3GC8ZY/AGC-20251227-093407717-PHOTOSPHERE.jpg"
+            "fallbackPanoLow": "/assets/panos/beiwu4-low.jpg",
+            "fallbackPano": "/assets/panos/beiwu4.jpg"
           }
         }
       ]

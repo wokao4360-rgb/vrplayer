@@ -3,3 +3,6 @@
 
 /assets/panos/*.jpg
   Cache-Control: public, max-age=31536000, immutable, no-transform
+
+/assets/external/*
+  Cache-Control: public, max-age=31536000, immutable, no-transform

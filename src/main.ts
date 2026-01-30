@@ -893,6 +893,11 @@ class App {
       }
       this.qualityIndicator = null;
     }
+    window.addEventListener('vr:metrics', (event: Event) => {
+      if (!this.qualityIndicator) return;
+      const detail = (event as CustomEvent).detail || {};
+      this.qualityIndicator.updateMetrics(detail);
+    });
 
     // 设置加载状态变化回调
     this.panoViewer.setOnStatusChange((status) => {

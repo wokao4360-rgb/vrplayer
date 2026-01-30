@@ -157,6 +157,7 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - 关键指标打点：PanoViewer 会输出 `window.__VR_METRICS__` 并触发 `vr:metrics` 事件，包含首屏低清/高清耗时、tile 命中率、失败/重试数、当前性能档位；`?metrics=1` 会把这些指标显示在顶部提示中
 - 外链资源本地化脚本：`node scripts/localize-external-assets.mjs`（仅图片，失败会保留原 URL）；`i.ibb.co` 在本机可能不可达，需手动提供源图或替换为站内文件
 - WebGPU 预研记录：`webgpu.md`（非主线，不影响线上）
+- 若 config.json 发生变更且疑似仍在使用旧配置，需提升 `public/sw.js` 的 `CACHE_VERSION` 以清理旧缓存
 本区是“断上下文恢复区”。当发现新的关键坑或新铁律时，必须补充到这里（保持短、可搜索）。
 
 协作铁律（摘要）

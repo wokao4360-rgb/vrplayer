@@ -55,6 +55,7 @@ export class TileCanvasPano {
   private highReady = false;
   private canvasScale = 1;
   private fallbackVisible = false;
+  private prefetchSeeded = false;
 
   constructor(
     private scene: THREE.Scene,
@@ -66,7 +67,7 @@ export class TileCanvasPano {
   }
 
   async load(manifest: TileManifest, options?: { fallbackVisible?: boolean }): Promise<void> {
-this.manifest = manifest;
+    this.manifest = manifest;
     this.fallbackVisible = Boolean(options?.fallbackVisible);
     this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
     if (!this.highestLevel) throw new Error('manifest 缺少 level');
@@ -79,6 +80,7 @@ this.manifest = manifest;
     this.lowTotalCount = this.lowLevel ? this.lowLevel.cols * this.lowLevel.rows : 0;
     this.lowFullyReady = this.lowTotalCount === 0;
     this.highSeeded = false;
+    this.prefetchSeeded = false;
     this.tilesVisible = false;
     this.tilesLoadedCount = 0;
     this.tilesLoadingCount = 0;
@@ -280,6 +282,7 @@ this.manifest = manifest;
       }
     }
     this.reprioritizeLowQueue(camera);
+    this.seedHighPreload(camera);
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     this.processQueue();
@@ -513,10 +516,7 @@ this.manifest = manifest;
     level: TileLevel,
     options: { marginDeg?: number; expandNeighbors?: boolean } = {}
   ): Array<{ col: number; row: number; rank: number }> {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    const yaw = -Math.atan2(dir.x, dir.z);
-    const pitch = Math.asin(dir.y);
+    const { yaw, pitch } = this.getViewAngles(camera);
     const fovRad = THREE.MathUtils.degToRad(camera.fov);
     const margin = THREE.MathUtils.degToRad(options.marginDeg ?? 20);
     const halfV = fovRad / 2 + margin;
@@ -611,6 +611,41 @@ this.manifest = manifest;
     });
   }
 
+  private seedHighPreload(camera: THREE.PerspectiveCamera): void {
+    if (this.prefetchSeeded || !this.manifest || !this.highestLevel) return;
+    this.prefetchSeeded = true;
+    const { yaw: baseYaw, pitch: basePitch } = this.getViewAngles(camera);
+    const level = this.highestLevel;
+    const yawStep = (Math.PI * 2) / level.cols;
+    const pitchStep = Math.PI / level.rows;
+    const now = performance.now();
+    for (let row = 0; row < level.rows; row++) {
+      const pitch = Math.PI / 2 - (row + 0.5) * pitchStep;
+      const pitchDist = Math.abs(pitch - basePitch);
+      for (let col = 0; col < level.cols; col++) {
+        const yaw = -Math.PI + (col + 0.5) * yawStep;
+        const yawDist = this.angularDistance(yaw, baseYaw);
+        const phase = yawDist <= Math.PI / 2 ? 0 : 1;
+        const rank = phase * 1_000_000 + Math.round(yawDist * 1000) + Math.round(pitchDist * 10);
+        const key = `${level.z}_${col}_${row}`;
+        if (this.tilesMap.has(key)) continue;
+        const info: TileInfo = {
+          z: level.z,
+          col,
+          row,
+          url: `${this.manifest.baseUrl}/z${level.z}/${col}_${row}.jpg`,
+          state: 'loading',
+          priority: 'high',
+          priorityRank: rank,
+          lastUsed: now,
+          failCount: 0,
+        };
+        this.tilesMap.set(key, info);
+        this.pendingHigh.push(info);
+      }
+    }
+  }
+
   private yawToCols(minYaw: number, maxYaw: number, cols: number): number[] {
     const wrap = (v: number) => ((v % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
     const shift = Math.PI; // 灏?yaw=0 瀵归綈鍒板浘鍍忎腑绾匡紙閬垮厤鍓嶅悗棰犲€掞級
@@ -634,6 +669,19 @@ this.manifest = manifest;
 
   private normAngle(a: number): number {
     return ((a + Math.PI) % (2 * Math.PI)) - Math.PI;
+  }
+
+  private angularDistance(a: number, b: number): number {
+    return Math.abs(this.normAngle(a - b));
+  }
+
+  private getViewAngles(camera: THREE.PerspectiveCamera): { yaw: number; pitch: number } {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    return {
+      yaw: -Math.atan2(dir.x, dir.z),
+      pitch: Math.asin(dir.y),
+    };
   }
 
   private runLru(now: number): void {

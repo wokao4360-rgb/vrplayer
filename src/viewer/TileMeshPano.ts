@@ -55,6 +55,7 @@ export class TileMeshPano {
   private useKtx2 = false;
   private ktx2Disabled = false;
   private ktx2FailCount = 0;
+  private prefetchSeeded = false;
   private ktx2Loader: KTX2Loader;
 
   constructor(
@@ -74,6 +75,7 @@ export class TileMeshPano {
     this.useKtx2 = manifest.tileFormat === 'ktx2';
     this.ktx2Disabled = false;
     this.ktx2FailCount = 0;
+    this.prefetchSeeded = false;
     this.fallbackVisible = Boolean(options?.fallbackVisible);
     this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
     if (!this.highestLevel) throw new Error('manifest 缺少 level');
@@ -232,6 +234,7 @@ export class TileMeshPano {
       }
     }
     this.reprioritizeLowQueue(camera);
+    this.seedHighPreload(camera);
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     this.processQueue();
@@ -536,10 +539,7 @@ export class TileMeshPano {
     level: TileLevel,
     options: { marginDeg?: number; expandNeighbors?: boolean } = {}
   ): Array<{ col: number; row: number; rank: number }> {
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    const yaw = -Math.atan2(dir.x, dir.z);
-    const pitch = Math.asin(dir.y);
+    const { yaw, pitch } = this.getViewAngles(camera);
     const fovRad = THREE.MathUtils.degToRad(camera.fov);
     const margin = THREE.MathUtils.degToRad(options.marginDeg ?? 20);
     const halfV = fovRad / 2 + margin;
@@ -633,6 +633,41 @@ export class TileMeshPano {
     });
   }
 
+  private seedHighPreload(camera: THREE.PerspectiveCamera): void {
+    if (this.prefetchSeeded || !this.manifest || !this.highestLevel) return;
+    this.prefetchSeeded = true;
+    const { yaw: baseYaw, pitch: basePitch } = this.getViewAngles(camera);
+    const level = this.highestLevel;
+    const yawStep = (Math.PI * 2) / level.cols;
+    const pitchStep = Math.PI / level.rows;
+    const now = performance.now();
+    for (let row = 0; row < level.rows; row++) {
+      const pitch = Math.PI / 2 - (row + 0.5) * pitchStep;
+      const pitchDist = Math.abs(pitch - basePitch);
+      for (let col = 0; col < level.cols; col++) {
+        const yaw = -Math.PI + (col + 0.5) * yawStep;
+        const yawDist = this.angularDistance(yaw, baseYaw);
+        const phase = yawDist <= Math.PI / 2 ? 0 : 1;
+        const rank = phase * 1_000_000 + Math.round(yawDist * 1000) + Math.round(pitchDist * 10);
+        const key = `${level.z}_${col}_${row}`;
+        if (this.tilesMap.has(key)) continue;
+        const info: TileInfo = {
+          z: level.z,
+          col,
+          row,
+          url: this.buildTileUrl(level.z, col, row, this.useKtx2 && !this.ktx2Disabled),
+          state: 'loading',
+          priority: 'high',
+          priorityRank: rank,
+          lastUsed: now,
+          failCount: 0,
+        };
+        this.tilesMap.set(key, info);
+        this.pendingHigh.push(info);
+      }
+    }
+  }
+
   private recordKtx2Failure(err: unknown): void {
     const msg = err instanceof Error ? err.message : String(err);
     this.lastError = msg;
@@ -674,6 +709,19 @@ export class TileMeshPano {
 
   private normAngle(a: number): number {
     return ((a + Math.PI) % (2 * Math.PI)) - Math.PI;
+  }
+
+  private angularDistance(a: number, b: number): number {
+    return Math.abs(this.normAngle(a - b));
+  }
+
+  private getViewAngles(camera: THREE.PerspectiveCamera): { yaw: number; pitch: number } {
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    return {
+      yaw: -Math.atan2(dir.x, dir.z),
+      pitch: Math.asin(dir.y),
+    };
   }
 
   private runLru(now: number): void {

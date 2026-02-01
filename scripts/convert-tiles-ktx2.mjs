@@ -59,7 +59,7 @@ for (const level of manifest.levels) {
       if (!src) continue;
       const dst = path.join(outLevelDir, `${baseName}.ktx2`);
       if (!force && fs.existsSync(dst)) continue;
-      const result = spawnSync(toktx, ['--t2', '--uastc', '--zcmp', '9', dst, src], {
+      const result = spawnSync(toktx, ['--t2', '--zcmp', '9', dst, src], {
         stdio: 'inherit',
       });
       if (result.status !== 0) {

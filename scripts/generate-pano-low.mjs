@@ -11,6 +11,7 @@ function getArg(name, fallback = '') {
 const input = getArg('--in');
 const output = getArg('--out');
 const width = Number(getArg('--width', '2048')) || 2048;
+const quality = Number(getArg('--quality', '82')) || 82;
 
 if (!input || !output) {
   console.error('用法: node scripts/generate-pano-low.mjs --in <input.jpg> --out <output.jpg> [--width 2048]');
@@ -24,7 +25,7 @@ await fs.promises.mkdir(path.dirname(outPath), { recursive: true });
 
 await sharp(inPath)
   .resize({ width, withoutEnlargement: true })
-  .jpeg({ quality: 82, mozjpeg: true })
+  .jpeg({ quality, mozjpeg: true })
   .toFile(outPath);
 
-console.log(`[pano-low] ${path.relative(process.cwd(), inPath)} -> ${path.relative(process.cwd(), outPath)} (w=${width})`);
+console.log(`[pano-low] ${path.relative(process.cwd(), inPath)} -> ${path.relative(process.cwd(), outPath)} (w=${width}, q=${quality})`);

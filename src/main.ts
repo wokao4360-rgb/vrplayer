@@ -801,23 +801,13 @@ class App {
     // SceneStrip 已删除，不再创建常驻缩略图横条
 
     // 新 UI：场景预览卡片（Scene Preview Card）
-    // 构建 sceneIndex Map（sceneId -> { title, thumb, panoUrl }）
+    // 构建 sceneIndex Map（sceneId -> { title, thumb }）
     const sceneIndex = new Map<string, { title: string; thumb?: string; panoUrl?: string }>();
     museum.scenes.forEach((s) => {
-      // 解析 pano URL（优先 panoLow，否则 pano）
-      let panoUrl: string | undefined;
-      if (s.panoLow) {
-        const resolved = resolveAssetUrl(s.panoLow, AssetType.PANO_LOW);
-        if (resolved) panoUrl = resolved;
-      } else if (s.pano) {
-        const resolved = resolveAssetUrl(s.pano, AssetType.PANO);
-        if (resolved) panoUrl = resolved;
-      }
-
       sceneIndex.set(s.id, {
         title: s.name,
         thumb: s.thumb, // 缩略图URL（用于场景索引，可选）
-        panoUrl, // 可选：用于预热
+        panoUrl: undefined, // 禁止预热全景，避免首屏加载无关大图
       });
     });
 

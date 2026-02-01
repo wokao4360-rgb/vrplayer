@@ -21,7 +21,7 @@
           "name": "正门与序厅1",
           "panoLow": "/assets/panos/gate-low.jpg",
           "pano": "/assets/panos/gate.jpg",
-          "thumb": "/assets/panos/gate-low.jpg",
+          "thumb": "/assets/panos/gate-nail.jpg",
           "initialView": {
             "yaw": 27,
             "pitch": 27,
@@ -63,7 +63,7 @@
           "name": "西屋2",
           "panoLow": "/assets/panos/xiwu2-low.jpg",
           "pano": "/assets/panos/xiwu2.jpg",
-          "thumb": "/assets/panos/xiwu2-low.jpg",
+          "thumb": "/assets/panos/xiwu2-nail.jpg",
           "panoTiles": {
             "manifest": "/assets/panos/tiles/yhc-xiwu2-v1/manifest.json",
             "fallbackPanoLow": "/assets/panos/xiwu2-low.jpg",
@@ -121,7 +121,7 @@
         {
           "id": "exhibit_hall",
           "name": "东屋3",
-          "thumb": "/assets/external/s41.ax1x.com/b5acc0519444.png",
+          "thumb": "/assets/panos/dongwu3-nail.jpg",
           "initialView": {
             "yaw": 90,
             "pitch": 0,
@@ -180,7 +180,7 @@
           "name": "北屋4",
           "panoLow": "/assets/panos/beiwu4-low.jpg",
           "pano": "/assets/panos/beiwu4.jpg",
-          "thumb": "/assets/panos/beiwu4-low.jpg",
+          "thumb": "/assets/panos/beiwu4-nail.jpg",
           "initialView": {
             "yaw": 0,
             "pitch": 0,

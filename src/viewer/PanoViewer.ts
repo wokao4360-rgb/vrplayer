@@ -664,9 +664,8 @@ export class PanoViewer {
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
-      // --- fix: pano upside-down ---
-      // 统一用 repeat/offset 做一次“水平翻转”，并关闭 flipY 防止链接差异导致倒置
-      texture.flipY = true;
+      // 统一关闭 flipY，避免全景上下颠倒
+      texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;
@@ -729,8 +728,8 @@ export class PanoViewer {
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
       
-      // --- fix: pano upside-down (low) ---
-      lowTexture.flipY = true;
+      // 统一关闭 flipY，避免全景上下颠倒
+      lowTexture.flipY = false;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
       lowTexture.wrapT = THREE.ClampToEdgeWrapping;
       lowTexture.needsUpdate = true;
@@ -768,8 +767,8 @@ export class PanoViewer {
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
         
-        // --- fix: pano upside-down (high) ---
-        highTexture.flipY = true;
+        // 统一关闭 flipY，避免全景上下颠倒
+        highTexture.flipY = false;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
         highTexture.needsUpdate = true;
@@ -1555,7 +1554,8 @@ export class PanoViewer {
       const imageBitmap = await loadExternalImageBitmap(url, { timeoutMs: 15000, retries: 1, allowFetchFallback: true });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
-      texture.flipY = true;
+      // 统一关闭 flipY，避免全景上下颠倒
+      texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;

@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-const CACHE_VERSION = 'v2-20260130';
+const CACHE_VERSION = 'v3-20260201';
 const RUNTIME_CACHE = `vr-runtime-${CACHE_VERSION}`;
 
 self.addEventListener('install', (event) => {

@@ -59,9 +59,11 @@ for (const level of manifest.levels) {
       if (!src) continue;
       const dst = path.join(outLevelDir, `${baseName}.ktx2`);
       if (!force && fs.existsSync(dst)) continue;
-      const result = spawnSync(toktx, ['--t2', '--zcmp', '9', dst, src], {
-        stdio: 'inherit',
-      });
+      const result = spawnSync(
+        toktx,
+        ['--t2', '--encode', 'etc1s', '--qlevel', '80', '--clevel', '2', dst, src],
+        { stdio: 'inherit' }
+      );
       if (result.status !== 0) {
         console.error(`[ktx2] 转换失败: ${src}`);
         process.exit(result.status || 1);
@@ -103,8 +105,6 @@ function findToktxInPath() {
   const line = String(result.stdout || '').split(/\r?\n/).find(Boolean);
   return line || '';
 }
-
-
 
 function findToktxInInstall(installDir) {
   if (!fs.existsSync(installDir)) return '';
@@ -148,19 +148,15 @@ function walk(dir, cb) {
 async function downloadToktx() {
   const toolsDir = path.resolve('tools/ktx');
   fs.mkdirSync(toolsDir, { recursive: true });
-  const release = await fetch('https://api.github.com/repos/KhronosGroup/KTX-Software/releases/latest', {
-    headers: { 'User-Agent': 'vrplayer-ktx2' },
+  const data = await fetchJson('https://api.github.com/repos/KhronosGroup/KTX-Software/releases/latest', {
+    headers: { 'User-Agent': 'vrplayer-ktx2', Accept: 'application/vnd.github+json' },
   });
-  if (!release.ok) {
-    throw new Error(`GitHub API HTTP ${release.status}`);
-  }
-  const data = await release.json();
   const assets = data.assets || [];
   const zipAsset = assets.find((a) => String(a.name || '').includes('Windows-64bit.zip'));
   const exeAsset = assets.find((a) => String(a.name || '').includes('Windows-x64.exe'));
   const asset = zipAsset || exeAsset;
   if (!asset || !asset.browser_download_url) {
-    throw new Error('??? Windows ????');
+    throw new Error('未找到可用的 Windows 安装包');
   }
   const url = asset.browser_download_url;
   const fileName = String(asset.name || 'ktx-installer');
@@ -175,7 +171,7 @@ async function downloadToktx() {
       `Expand-Archive -Path "${filePath}" -DestinationPath "${toolsDir}" -Force`,
     ]);
     if (ps.status !== 0) {
-      console.error('[ktx2] ????');
+      console.error('[ktx2] 解压失败');
       process.exit(ps.status || 1);
     }
     return;
@@ -198,20 +194,56 @@ async function downloadToktx() {
     }
     const found = findToktxInInstall(installDir);
     if (!ok && !found) {
-      console.error('[ktx2] ????');
+      console.error('[ktx2] 安装失败');
       process.exit(1);
     }
     return;
   }
 }
 
+function fetchJson(url, options = {}) {
+  if (typeof fetch === 'function') {
+    return fetch(url, options).then(async (res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const headers = options.headers || {};
+    const req = https.get(url, { headers }, (res) => {
+      const status = res.statusCode || 0;
+      let raw = '';
+      res.setEncoding('utf-8');
+      res.on('data', (chunk) => {
+        raw += chunk;
+      });
+      res.on('end', () => {
+        if (status < 200 || status >= 300) {
+          reject(new Error(`HTTP ${status}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(raw));
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+    req.on('error', reject);
+  });
+}
+
 function downloadFile(url, outPath, retries = 3) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(outPath);
     const cleanAndRetry = (err, redirectUrl) => {
-      try { file.close(); } catch {}
+      try {
+        file.close();
+      } catch {}
       if (fs.existsSync(outPath)) {
-        try { fs.unlinkSync(outPath); } catch {}
+        try {
+          fs.unlinkSync(outPath);
+        } catch {}
       }
       if (retries > 0) {
         const nextDelay = (4 - retries) * 1000;
@@ -223,31 +255,34 @@ function downloadFile(url, outPath, retries = 3) {
       }
     };
 
-    https.get(url, (res) => {
-      const status = res.statusCode || 0;
-      if ([301, 302, 303, 307, 308].includes(status) && res.headers.location) {
-        const redirectUrl = res.headers.location;
-        cleanAndRetry(new Error(`HTTP ${status}`), redirectUrl);
-        return;
-      }
-      if (status !== 200) {
-        cleanAndRetry(new Error(`HTTP ${status}`));
-        return;
-      }
-      res.pipe(file);
-      file.on('finish', () => {
-        file.close(resolve);
+    https
+      .get(url, (res) => {
+        const status = res.statusCode || 0;
+        if ([301, 302, 303, 307, 308].includes(status) && res.headers.location) {
+          const redirectUrl = res.headers.location;
+          cleanAndRetry(new Error(`HTTP ${status}`), redirectUrl);
+          return;
+        }
+        if (status !== 200) {
+          cleanAndRetry(new Error(`HTTP ${status}`));
+          return;
+        }
+        res.pipe(file);
+        file.on('finish', () => {
+          file.close(resolve);
+        });
+      })
+      .on('error', (err) => {
+        cleanAndRetry(err);
       });
-    }).on('error', (err) => {
-      cleanAndRetry(err);
-    });
   });
 }
 
 function resolveBaseUrl(absOutDir) {
   const rel = path.relative(path.resolve('public'), absOutDir).split(path.sep).join('/');
   if (rel.startsWith('.')) {
-    return `/${rel.replace(/^\\.+/, '')}`;
+    const cleaned = rel.replace(/^(\.\.\/)+/, '').replace(/^\.\//, '');
+    return `/${cleaned}`;
   }
   return `/${rel}`;
 }

@@ -12,6 +12,7 @@ type TileInfo = {
   url: string;
   state: TileState;
   priority: 'low' | 'high';
+  priorityRank?: number;
   bitmap?: ImageBitmap;
   lastUsed: number;
   failCount: number;
@@ -196,7 +197,7 @@ this.manifest = manifest;
     const allowHigh = !this.lowLevel || this.lowFullyReady || this.highSeeded;
     if (allowHigh && this.highestLevel) {
       const indices = this.computeNeededTiles(camera, this.highestLevel);
-      for (const { col, row } of indices) {
+      for (const { col, row, rank } of indices) {
         const key = `${this.highestLevel.z}_${col}_${row}`;
         let info = this.tilesMap.get(key);
         if (!info) {
@@ -213,6 +214,7 @@ this.manifest = manifest;
           this.tilesMap.set(key, info);
         }
         info.priority = 'high';
+        info.priorityRank = rank;
         info.lastUsed = now;
         if (info.state === 'empty' && !info.retryTimer) {
           info.state = 'loading';
@@ -244,7 +246,7 @@ this.manifest = manifest;
     if (this.highestLevel && !this.highSeeded) {
       const indices = this.computeNeededTiles(camera, this.highestLevel);
       if (indices.length > 0) {
-        for (const { col, row } of indices) {
+        for (const { col, row, rank } of indices) {
           const key = `${this.highestLevel.z}_${col}_${row}`;
           let info = this.tilesMap.get(key);
           if (!info) {
@@ -261,6 +263,7 @@ this.manifest = manifest;
             this.tilesMap.set(key, info);
           }
           info.priority = 'high';
+          info.priorityRank = rank;
           info.lastUsed = now;
           if (info.state === 'empty' && !info.retryTimer) {
             info.state = 'loading';
@@ -270,6 +273,7 @@ this.manifest = manifest;
         this.highSeeded = true;
       }
     }
+    this.reprioritizeLowQueue(camera);
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     this.processQueue();
@@ -335,6 +339,7 @@ this.manifest = manifest;
   }
 
   private processQueue(): void {
+    this.sortPendingHighQueue();
     while (this.activeLoads < this.maxConcurrent && (this.pendingLow.length > 0 || this.pendingHigh.length > 0)) {
       const hasLow = this.pendingLow.length > 0;
       const canTakeHigh =
@@ -471,7 +476,11 @@ this.manifest = manifest;
     const bmp = info.bitmap;
     if (!bmp) {
       const url = info.url || `${this.manifest.baseUrl}/z${info.z}/${info.col}_${info.row}.jpg`;
-      const fetched = await loadExternalImageBitmap(url, { timeoutMs: 12000, retries: 1 });
+      const fetched = await loadExternalImageBitmap(url, {
+        timeoutMs: 12000,
+        retries: 1,
+        priority: info.priority,
+      });
       this.ctx.drawImage(fetched, x, y, tileW, tileH);
       fetched.close?.();
     } else {
@@ -493,7 +502,10 @@ this.manifest = manifest;
     }
   }
 
-  private computeNeededTiles(camera: THREE.PerspectiveCamera, level: TileLevel): Array<{ col: number; row: number }> {
+  private computeNeededTiles(
+    camera: THREE.PerspectiveCamera,
+    level: TileLevel
+  ): Array<{ col: number; row: number; rank: number }> {
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
     const yaw = -Math.atan2(dir.x, dir.z);
@@ -508,13 +520,16 @@ this.manifest = manifest;
     const maxPitch = THREE.MathUtils.clamp(pitch + halfV, -Math.PI / 2, Math.PI / 2);
 
     const colsRange = this.yawToCols(minYaw, maxYaw, level.cols);
-    const centerCol = this.yawToCols(yaw - 1e-6, yaw + 1e-6, level.cols)[0];
+    const centerCol = this.yawToCols(yaw - 1e-6, yaw + 1e-6, level.cols)[0] ?? 0;
     if (!colsRange.includes(centerCol)) colsRange.push(centerCol);
     const rowMin = Math.max(0, Math.floor(((maxPitch * -1 + Math.PI / 2) / Math.PI) * level.rows));
     const rowMax = Math.min(level.rows - 1, Math.floor(((minPitch * -1 + Math.PI / 2) / Math.PI) * level.rows));
     const rows: number[] = [];
     for (let r = rowMin; r <= rowMax; r++) rows.push(r);
-    const centerRow = Math.floor((( -pitch + Math.PI / 2) / Math.PI) * level.rows);
+    const centerRow = Math.min(
+      level.rows - 1,
+      Math.max(0, Math.floor(((-pitch + Math.PI / 2) / Math.PI) * level.rows))
+    );
     if (!rows.includes(centerRow)) rows.push(centerRow);
     // 閭昏繎涓€鍦?
     const expandedCols = [...colsRange];
@@ -528,16 +543,60 @@ this.manifest = manifest;
       if (r - 1 >= 0) expandedRows.push(r - 1);
     }
 
-    const needed: Array<{ col: number; row: number }> = [];
+    const needed = new Map<string, { col: number; row: number; rank: number }>();
+    const push = (c: number, r: number) => {
+      const key = `${c}_${r}`;
+      const colDelta = Math.abs(c - centerCol);
+      const colDist = Math.min(colDelta, level.cols - colDelta);
+      const rowDist = Math.abs(r - centerRow);
+      const rank = colDist * colDist + rowDist * rowDist;
+      const existing = needed.get(key);
+      if (!existing || rank < existing.rank) {
+        needed.set(key, { col: c, row: r, rank });
+      }
+    };
     for (const c of expandedCols) {
       for (const r of expandedRows) {
-        const key = `${c}_${r}`;
-        if (!needed.find((n) => n.col === c && n.row === r)) {
-          needed.push({ col: c, row: r });
-        }
+        push(c, r);
       }
     }
-    return needed;
+    return Array.from(needed.values()).sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      if (a.row !== b.row) return a.row - b.row;
+      return a.col - b.col;
+    });
+  }
+
+  private sortPendingHighQueue(): void {
+    if (this.pendingHigh.length < 2) return;
+    this.pendingHigh.sort((a, b) => {
+      const ra = a.priorityRank ?? Number.POSITIVE_INFINITY;
+      const rb = b.priorityRank ?? Number.POSITIVE_INFINITY;
+      if (ra !== rb) return ra - rb;
+      return b.lastUsed - a.lastUsed;
+    });
+  }
+
+  private reprioritizeLowQueue(camera: THREE.PerspectiveCamera): void {
+    if (!this.lowLevel || this.pendingLow.length < 2) return;
+    const needed = this.computeNeededTiles(camera, this.lowLevel);
+    if (needed.length === 0) return;
+    const rankMap = new Map<string, number>();
+    for (const item of needed) {
+      rankMap.set(`${item.col}_${item.row}`, item.rank);
+    }
+    const indexMap = new Map<TileInfo, number>();
+    this.pendingLow.forEach((info, idx) => indexMap.set(info, idx));
+    this.pendingLow.sort((a, b) => {
+      const ra = rankMap.get(`${a.col}_${a.row}`);
+      const rb = rankMap.get(`${b.col}_${b.row}`);
+      const aHas = ra !== undefined;
+      const bHas = rb !== undefined;
+      if (aHas && bHas && ra !== rb) return ra - rb;
+      if (aHas && !bHas) return -1;
+      if (!aHas && bHas) return 1;
+      return (indexMap.get(a) ?? 0) - (indexMap.get(b) ?? 0);
+    });
   }
 
   private yawToCols(minYaw: number, maxYaw: number, cols: number): number[] {

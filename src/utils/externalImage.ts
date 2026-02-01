@@ -30,6 +30,7 @@ export type ExternalImageLoadOptions = {
   retryBaseDelayMs?: number; // 默认 300
   referrerPolicy?: ReferrerPolicy; // 默认 'no-referrer'
   crossOrigin?: '' | 'anonymous' | 'use-credentials'; // 默认 'anonymous'
+  priority?: 'high' | 'low' | 'auto'; // fetch/Image 优先级提示
   allowFetchFallback?: boolean; // 默认 false
 };
 
@@ -88,7 +89,8 @@ async function fetchWithRetry(
   url: string,
   timeoutMs: number,
   retries: number,
-  retryBaseDelayMs: number
+  retryBaseDelayMs: number,
+  priority?: 'high' | 'low' | 'auto'
 ): Promise<ImageBitmap> {
   let lastError: Error | null = null;
 
@@ -97,11 +99,15 @@ async function fetchWithRetry(
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, {
+      const init: RequestInit = {
         mode: 'cors',
         referrerPolicy: 'no-referrer',
         signal: controller.signal,
-      });
+      };
+      if (priority) {
+        (init as any).priority = priority;
+      }
+      const response = await fetch(url, init);
 
       clearTimeout(timeoutId);
 
@@ -146,6 +152,7 @@ export async function loadExternalImageElement(
     retryBaseDelayMs = 300,
     referrerPolicy = 'no-referrer',
     crossOrigin = 'anonymous',
+    priority,
   } = opts;
 
   // 统一改写为代理 URL（如果是白名单域名）
@@ -169,6 +176,9 @@ export async function loadExternalImageElement(
         img.decoding = 'async';
         (img as any).referrerPolicy = referrerPolicy;
         img.crossOrigin = crossOrigin;
+        if (priority) {
+          (img as any).fetchPriority = priority;
+        }
 
         // 清理旧的超时定时器
         if (timeoutId !== null) {
@@ -290,7 +300,7 @@ export async function loadExternalImageBitmap(
         // 如果允许 fetch 兜底，尝试 fetch（使用代理 URL）
         console.warn(`Image() 加载失败，尝试 fetch 兜底: ${finalUrl}`, error);
         try {
-          return await fetchWithRetry(finalUrl, timeoutMs, retries, retryBaseDelayMs);
+          return await fetchWithRetry(finalUrl, timeoutMs, retries, retryBaseDelayMs, opts.priority);
         } catch (fetchError) {
           // fetch 也失败了，抛出原始错误（Image() 的错误）
           if (error instanceof ExternalImageLoadError) {

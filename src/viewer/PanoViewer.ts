@@ -657,6 +657,7 @@ export class PanoViewer {
         referrerPolicy: 'no-referrer',
         crossOrigin: 'anonymous',
         allowFetchFallback: false,
+        priority: 'high',
       });
 
       // 转为 THREE.Texture
@@ -721,6 +722,7 @@ export class PanoViewer {
         referrerPolicy: 'no-referrer',
         crossOrigin: 'anonymous',
         allowFetchFallback: false,
+        priority: 'high',
       });
 
       // 转为 THREE.Texture
@@ -760,6 +762,7 @@ export class PanoViewer {
           referrerPolicy: 'no-referrer',
           crossOrigin: 'anonymous',
           allowFetchFallback: false,
+          priority: 'low',
         });
         
         // 转为 THREE.Texture
@@ -1551,7 +1554,12 @@ export class PanoViewer {
 
   private async showFallbackTexture(url: string, geometry: THREE.SphereGeometry, isLow: boolean): Promise<void> {
     try {
-      const imageBitmap = await loadExternalImageBitmap(url, { timeoutMs: 15000, retries: 1, allowFetchFallback: true });
+      const imageBitmap = await loadExternalImageBitmap(url, {
+        timeoutMs: 15000,
+        retries: 1,
+        allowFetchFallback: true,
+        priority: 'high',
+      });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
       // 统一关闭 flipY，避免全景上下颠倒

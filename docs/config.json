@@ -19,9 +19,9 @@
         {
           "id": "gate",
           "name": "正门与序厅1",
-          "panoLow": "/assets/external/pic1.imgdb.cn/419616bbde9b.png",
-          "pano": "https://i.ibb.co/Q3mVmjwD/0-4-0.png",
-          "thumb": "/assets/external/s41.ax1x.com/b5acc0519444.png",
+          "panoLow": "/assets/panos/gate-low.jpg",
+          "pano": "/assets/panos/gate.jpg",
+          "thumb": "/assets/panos/gate-low.jpg",
           "initialView": {
             "yaw": 27,
             "pitch": 27,

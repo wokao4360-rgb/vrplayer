@@ -196,7 +196,10 @@ this.manifest = manifest;
 
     const allowHigh = !this.lowLevel || this.lowFullyReady || this.highSeeded;
     if (allowHigh && this.highestLevel) {
-      const indices = this.computeNeededTiles(camera, this.highestLevel);
+      const indices = this.computeNeededTiles(camera, this.highestLevel, {
+        marginDeg: 10,
+        expandNeighbors: false,
+      });
       for (const { col, row, rank } of indices) {
         const key = `${this.highestLevel.z}_${col}_${row}`;
         let info = this.tilesMap.get(key);
@@ -244,7 +247,10 @@ this.manifest = manifest;
     camera.updateMatrixWorld(true);
     const now = performance.now();
     if (this.highestLevel && !this.highSeeded) {
-      const indices = this.computeNeededTiles(camera, this.highestLevel);
+      const indices = this.computeNeededTiles(camera, this.highestLevel, {
+        marginDeg: 10,
+        expandNeighbors: false,
+      });
       if (indices.length > 0) {
         for (const { col, row, rank } of indices) {
           const key = `${this.highestLevel.z}_${col}_${row}`;
@@ -504,14 +510,15 @@ this.manifest = manifest;
 
   private computeNeededTiles(
     camera: THREE.PerspectiveCamera,
-    level: TileLevel
+    level: TileLevel,
+    options: { marginDeg?: number; expandNeighbors?: boolean } = {}
   ): Array<{ col: number; row: number; rank: number }> {
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
     const yaw = -Math.atan2(dir.x, dir.z);
     const pitch = Math.asin(dir.y);
     const fovRad = THREE.MathUtils.degToRad(camera.fov);
-    const margin = THREE.MathUtils.degToRad(20);
+    const margin = THREE.MathUtils.degToRad(options.marginDeg ?? 20);
     const halfV = fovRad / 2 + margin;
     const halfH = (fovRad * camera.aspect) / 2 + margin;
     const minYaw = this.normAngle(yaw - halfH);
@@ -532,15 +539,20 @@ this.manifest = manifest;
     );
     if (!rows.includes(centerRow)) rows.push(centerRow);
     // 閭昏繎涓€鍦?
+    const expandNeighbors = options.expandNeighbors !== false;
     const expandedCols = [...colsRange];
-    for (const c of colsRange) {
-      expandedCols.push(((c + 1) % level.cols + level.cols) % level.cols);
-      expandedCols.push(((c - 1) % level.cols + level.cols) % level.cols);
+    if (expandNeighbors) {
+      for (const c of colsRange) {
+        expandedCols.push(((c + 1) % level.cols + level.cols) % level.cols);
+        expandedCols.push(((c - 1) % level.cols + level.cols) % level.cols);
+      }
     }
     const expandedRows = [...rows];
-    for (const r of rows) {
-      if (r + 1 < level.rows) expandedRows.push(r + 1);
-      if (r - 1 >= 0) expandedRows.push(r - 1);
+    if (expandNeighbors) {
+      for (const r of rows) {
+        if (r + 1 < level.rows) expandedRows.push(r + 1);
+        if (r - 1 >= 0) expandedRows.push(r - 1);
+      }
     }
 
     const needed = new Map<string, { col: number; row: number; rank: number }>();

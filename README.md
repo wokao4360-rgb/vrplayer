@@ -219,5 +219,6 @@ internalYaw = -worldYaw（只在一个入口做一次）
 - 2026-01-27（黑屏在缓存开启场景复现）：复现步骤：正常缓存开启刷新东屋3，低清闪现后黑屏；Disable cache 时不会黑。验收口径：缓存开启也必须始终有画面。根因（推测）：兜底/低清球在 tiles 状态更新时被清理或覆盖；渲染源切换缺少保护。修复：永不清理 fallback/低清球体，仅叠加 tiles；新增渲染源状态记录（fallback/low/tiles）、切换原因、清空计数，tilesDebug 可视；首屏低清一旦显示即保持可见，高精/瓦片失败不再影响画面。
 - 2026-01-27 PM: 缓存开启复现：正常刷新进入“杨虎城纪念馆·东屋3”低清 png 短暂出现后黑屏；勾选 Disable cache 则低清常驻。验收口径：即便开启缓存也必须始终有画面（低清/备用/瓦片），不可回黑。推测根因：tile canvas 初始黑底覆盖 fallback 且可能清理/遮挡兜底，缓存命中导致瓦片队列停滞时黑底外泄。修复策略：fallback 常驻背景不清理；tile 材质初始透明，至少一块瓦片绘制且参与渲染后再显示；保留/增强渲染源状态、切换原因与清空计数，任何退化都留存低清/备用；tilesDebug 展示 mode/source/lastReason/clearedCount 便于肉眼排查。
 - 2026-02-01: 关键资源优先级细化：外链图片支持 fetchPriority（panoLow/兜底高优先，pano 后台低优先）；瓦片高优先队列与低清队列按视角中心距离排序，首屏中心瓦片更早到位。
+- 2026-02-01: KTX2 解码失败会自动禁用并降级 JPG，避免 .ktx2 + .jpg 双下载；最高层瓦片缩小视角边距且不扩邻，减少首屏传输量。
 
 - KTX2/Basis: ??? `npm run ktx2:setup` ?? transcoder ? `public/assets/basis`??? `npm run tiles:ktx2 -- --in <tiles??>` ?? .ktx2?manifest ??? tileFormat=ktx2?????? KTX2 ???? jpg

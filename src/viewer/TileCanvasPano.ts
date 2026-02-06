@@ -115,7 +115,8 @@ export class TileCanvasPano {
     }
 
     this.texture = new THREE.CanvasTexture(this.canvas);
-    this.texture.flipY = false;
+    // Canvas 纹理保持 flipY=true，保证顶端瓦片不倒置
+    this.texture.flipY = true;
     this.texture.wrapS = THREE.ClampToEdgeWrapping;
     this.texture.wrapT = THREE.ClampToEdgeWrapping;
     this.texture.minFilter = THREE.LinearFilter;

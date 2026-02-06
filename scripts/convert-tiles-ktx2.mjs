@@ -61,7 +61,7 @@ for (const level of manifest.levels) {
       if (!force && fs.existsSync(dst)) continue;
       const result = spawnSync(
         toktx,
-        ['--t2', '--encode', 'etc1s', '--qlevel', '80', '--clevel', '2', dst, src],
+        ['--t2', '--encode', 'etc1s', '--qlevel', '80', '--clevel', '2', '--lower_left_maps_to_s0t0', dst, src],
         { stdio: 'inherit' }
       );
       if (result.status !== 0) {

@@ -142,7 +142,8 @@ Pages 已部署到该 commit
 默认策略：关键纹理同源放 Pages
 
 Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
-- chrome-devtools MCP 的 Network 结果是事实来源（用于判断 tile 请求/命中）
+  - 质量红线：每次改动都要“先用 MCP/skills 验证，再提交发布”；至少执行一次 `chrome-devtools` 的页面截图或 Network/Console 采样，避免只凭代码推断
+  - chrome-devtools MCP 的 Network 结果是事实来源（用于判断 tile 请求/命中）
 - 本机项目路径：D:\Projects\vrplayer
 - KTX2/Basis：先 `npm run ktx2:setup`，再 `npm run tiles:ktx2 -- --in <tiles_dir>`；manifest 需 `tileFormat=ktx2`，运行时优先 KTX2，失败回退 jpg
 - Cloudflare 可能对 tiles JPG 做强压缩导致发糊；已通过 `public/_headers` 为 `/assets/panos/tiles/*` 与 `/assets/panos/*.jpg` 添加 `Cache-Control: ... no-transform`，必要时用新 tiles 目录名做缓存隔离

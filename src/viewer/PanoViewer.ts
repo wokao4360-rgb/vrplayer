@@ -665,8 +665,8 @@ export class PanoViewer {
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
-      // 统一关闭 flipY，避免全景上下颠倒
-      texture.flipY = false;
+      // 全景贴图需要翻转 Y 才能匹配内表面方向
+      texture.flipY = true;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;
@@ -730,8 +730,8 @@ export class PanoViewer {
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
       
-      // 统一关闭 flipY，避免全景上下颠倒
-      lowTexture.flipY = false;
+      // 低清全景需要翻转 Y 才能匹配内表面方向
+      lowTexture.flipY = true;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
       lowTexture.wrapT = THREE.ClampToEdgeWrapping;
       lowTexture.needsUpdate = true;
@@ -770,8 +770,8 @@ export class PanoViewer {
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
         
-        // 统一关闭 flipY，避免全景上下颠倒
-        highTexture.flipY = false;
+        // 高清全景需要翻转 Y 才能匹配内表面方向
+        highTexture.flipY = true;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
         highTexture.needsUpdate = true;
@@ -1562,8 +1562,8 @@ export class PanoViewer {
       });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
-      // 统一关闭 flipY，避免全景上下颠倒
-      texture.flipY = false;
+      // fallback 全景需要翻转 Y 才能匹配内表面方向
+      texture.flipY = true;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;

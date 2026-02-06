@@ -401,7 +401,7 @@ export class TileMeshPano {
     if (!response.ok) throw new Error(`tile HTTP ${response.status}: ${url}`);
     const buffer = await response.arrayBuffer();
     const texture = await (this.ktx2Loader as any)._createTexture(buffer);
-    // KTX2 由 toktx 预翻转为 lower-left，保持 flipY=false
+    // KTX2 纹理沿用项目统一朝向链路（flipY=false）
     texture.flipY = false;
     if ('colorSpace' in texture) {
       (texture as any).colorSpace = THREE.SRGBColorSpace;
@@ -428,8 +428,7 @@ export class TileMeshPano {
       });
     }
     const texture = new THREE.Texture(bmp);
-    // JPG 纹理保持 flipY=true，避免瓦片上下倒置
-    texture.flipY = true;
+    texture.flipY = false;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
     texture.minFilter = THREE.LinearFilter;

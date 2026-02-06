@@ -665,8 +665,8 @@ export class PanoViewer {
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
-      // 全景贴图使用 flipY=true（配合 SphereGeometry UV），避免上下倒置
-      texture.flipY = true;
+      // 全景贴图统一关闭 flipY，避免上下颠倒
+      texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;
@@ -730,8 +730,8 @@ export class PanoViewer {
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
       
-      // 低清全景使用 flipY=true（配合 SphereGeometry UV），避免上下倒置
-      lowTexture.flipY = true;
+      // 低清全景统一关闭 flipY，避免上下颠倒
+      lowTexture.flipY = false;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
       lowTexture.wrapT = THREE.ClampToEdgeWrapping;
       lowTexture.needsUpdate = true;
@@ -770,8 +770,8 @@ export class PanoViewer {
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
         
-        // 高清全景使用 flipY=true（配合 SphereGeometry UV），避免上下倒置
-        highTexture.flipY = true;
+        // 高清全景统一关闭 flipY，避免上下颠倒
+        highTexture.flipY = false;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
         highTexture.needsUpdate = true;
@@ -1562,8 +1562,8 @@ export class PanoViewer {
       });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
-      // fallback 全景使用 flipY=true（配合 SphereGeometry UV），避免上下倒置
-      texture.flipY = true;
+      // fallback 全景统一关闭 flipY，避免上下颠倒
+      texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;

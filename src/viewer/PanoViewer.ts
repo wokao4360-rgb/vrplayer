@@ -658,6 +658,7 @@ export class PanoViewer {
         crossOrigin: 'anonymous',
         allowFetchFallback: false,
         priority: 'high',
+        imageOrientation: 'flipY',
       });
 
       // 转为 THREE.Texture
@@ -723,6 +724,7 @@ export class PanoViewer {
         crossOrigin: 'anonymous',
         allowFetchFallback: false,
         priority: 'high',
+        imageOrientation: 'flipY',
       });
 
       // 转为 THREE.Texture
@@ -763,6 +765,7 @@ export class PanoViewer {
           crossOrigin: 'anonymous',
           allowFetchFallback: false,
           priority: 'low',
+          imageOrientation: 'flipY',
         });
         
         // 转为 THREE.Texture
@@ -1107,9 +1110,14 @@ export class PanoViewer {
       const status = this.tilePano.getStatus();
       const fallbackVisible = !!this.fallbackSphere;
       const tilesVisible = status.tilesVisible;
-      const tilesSettled = status.tilesLoadingCount === 0 && status.tilesQueuedCount === 0;
-      if (fallbackVisible && tilesVisible && tilesSettled) {
-        this.clearFallback();
+      const lowReady = status.lowReady || this.tilesLowReady;
+      if (fallbackVisible && tilesVisible && lowReady) {
+        this.tilesVisibleStableFrames += 1;
+        if (this.tilesVisibleStableFrames >= 2) {
+          this.clearFallback();
+        }
+      } else {
+        this.tilesVisibleStableFrames = 0;
       }
       if (!fallbackVisible && !tilesVisible) {
         this.noteCleared('无可见源');
@@ -1563,6 +1571,7 @@ export class PanoViewer {
         retries: 1,
         allowFetchFallback: true,
         priority: 'high',
+        imageOrientation: 'flipY',
       });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);

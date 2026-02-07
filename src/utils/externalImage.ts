@@ -32,6 +32,7 @@ export type ExternalImageLoadOptions = {
   crossOrigin?: '' | 'anonymous' | 'use-credentials'; // 默认 'anonymous'
   priority?: 'high' | 'low' | 'auto'; // fetch/Image 优先级提示
   allowFetchFallback?: boolean; // 默认 false
+  imageOrientation?: 'from-image' | 'flipY' | 'none'; // 默认 from-image
 };
 
 /**
@@ -90,7 +91,8 @@ async function fetchWithRetry(
   timeoutMs: number,
   retries: number,
   retryBaseDelayMs: number,
-  priority?: 'high' | 'low' | 'auto'
+  priority?: 'high' | 'low' | 'auto',
+  imageOrientation: 'from-image' | 'flipY' | 'none' = 'from-image'
 ): Promise<ImageBitmap> {
   let lastError: Error | null = null;
 
@@ -116,7 +118,10 @@ async function fetchWithRetry(
       }
 
       const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob);
+      const imageBitmap = await (createImageBitmap as any)(blob, {
+        imageOrientation,
+        premultiplyAlpha: 'none',
+      });
       return imageBitmap;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -278,6 +283,7 @@ export async function loadExternalImageBitmap(
     retries = 2,
     retryBaseDelayMs = 300,
     allowFetchFallback = false,
+    imageOrientation = 'from-image',
   } = opts;
 
   // 统一改写为代理 URL（如果是白名单域名）
@@ -289,7 +295,7 @@ export async function loadExternalImageBitmap(
       const img = await loadExternalImageElement(finalUrl, opts);
 
       const imageBitmap = await (createImageBitmap as any)(img, {
-        imageOrientation: 'from-image',
+        imageOrientation,
         premultiplyAlpha: 'none',
       });
       return imageBitmap;
@@ -299,7 +305,14 @@ export async function loadExternalImageBitmap(
         // 如果允许 fetch 兜底，尝试 fetch（使用代理 URL）
         console.warn(`Image() 加载失败，尝试 fetch 兜底: ${finalUrl}`, error);
         try {
-          return await fetchWithRetry(finalUrl, timeoutMs, retries, retryBaseDelayMs, opts.priority);
+          return await fetchWithRetry(
+            finalUrl,
+            timeoutMs,
+            retries,
+            retryBaseDelayMs,
+            opts.priority,
+            imageOrientation
+          );
         } catch (fetchError) {
           // fetch 也失败了，抛出原始错误（Image() 的错误）
           if (error instanceof ExternalImageLoadError) {

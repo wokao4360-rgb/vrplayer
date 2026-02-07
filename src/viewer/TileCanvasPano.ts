@@ -115,7 +115,7 @@ export class TileCanvasPano {
     }
 
     this.texture = new THREE.CanvasTexture(this.canvas);
-    // Canvas 已按目标方向绘制，纹理上传不再额外翻转。
+    // Canvas 2D 与球面 UV 以 WebGL 纹理坐标对齐，禁止二次翻转。
     this.texture.flipY = false;
     this.texture.wrapS = THREE.ClampToEdgeWrapping;
     this.texture.wrapT = THREE.ClampToEdgeWrapping;

@@ -401,7 +401,7 @@ export class TileMeshPano {
     if (!response.ok) throw new Error(`tile HTTP ${response.status}: ${url}`);
     const buffer = await response.arrayBuffer();
     const texture = await (this.ktx2Loader as any)._createTexture(buffer);
-    // KTX2 压缩纹理忽略 flipY，方向由 UV 链路统一处理。
+    // KTX2 压缩纹理不依赖纹理阶段翻转，方向由统一 UV 链路控制。
     texture.flipY = false;
     if ('colorSpace' in texture) {
       (texture as any).colorSpace = THREE.SRGBColorSpace;
@@ -428,7 +428,7 @@ export class TileMeshPano {
       });
     }
     const texture = new THREE.Texture(bmp);
-    // JPG 分片由 ImageBitmap 原始方向 + UV 链路统一处理。
+    // JPG 分片与 KTX2 统一为“纹理不翻转，几何 UV 决定方向”。
     texture.flipY = false;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -466,8 +466,9 @@ export class TileMeshPano {
     const geom = this.buildTileGeometry(level, info.col, info.row);
     const mat = new THREE.MeshBasicMaterial({
       map: info.texture,
-      depthWrite: false,
-      depthTest: false,
+      // 必须开启深度测试/写入，避免前后半球同时可见造成“双球叠加”。
+      depthWrite: true,
+      depthTest: true,
     });
     mat.toneMapped = false;
     const mesh = new THREE.Mesh(geom, mat);

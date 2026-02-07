@@ -28,7 +28,10 @@ self.onmessage = async (event: MessageEvent<DecodeRequest>) => {
       throw new Error(`HTTP ${res.status}`);
     }
     const blob = await res.blob();
-    const bitmap = await createImageBitmap(blob);
+    const bitmap = await createImageBitmap(blob, {
+      imageOrientation: 'flipY',
+      premultiplyAlpha: 'none',
+    });
     const payload: DecodeResponse = { id, bitmap };
     (self as any).postMessage(payload, [bitmap]);
   } catch (err) {

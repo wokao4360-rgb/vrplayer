@@ -148,10 +148,10 @@ Reason: intersections may be missing/blocked; ray.direction is stable.
 
 ---
 
-## 8) ?????HARD?
+## 8) MCP / Skills Verification (HARD)
 
-- chrome-devtools MCP ? Network ????????
-- ???????????? Network ?????
+- 调试与验收必须优先使用 MCP/skills，禁止只凭代码推断结果。
+- 至少执行一次 chrome-devtools MCP 的 Network/Console/页面快照采样后，才能认定修复成立。
 
 ---
 

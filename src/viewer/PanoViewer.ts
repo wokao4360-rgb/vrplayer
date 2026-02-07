@@ -665,7 +665,7 @@ export class PanoViewer {
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
-      // 全景贴图统一关闭 flipY，避免上下颠倒
+      // 方向在 createImageBitmap 阶段统一处理，纹理阶段不再重复翻转。
       texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -730,7 +730,7 @@ export class PanoViewer {
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
       
-      // 低清全景统一关闭 flipY，避免上下颠倒
+      // 方向在 createImageBitmap 阶段统一处理，纹理阶段不再重复翻转。
       lowTexture.flipY = false;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
       lowTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -770,7 +770,7 @@ export class PanoViewer {
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
         
-        // 高清全景统一关闭 flipY，避免上下颠倒
+        // 方向在 createImageBitmap 阶段统一处理，纹理阶段不再重复翻转。
         highTexture.flipY = false;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -1107,6 +1107,10 @@ export class PanoViewer {
       const status = this.tilePano.getStatus();
       const fallbackVisible = !!this.fallbackSphere;
       const tilesVisible = status.tilesVisible;
+      const tilesSettled = status.tilesLoadingCount === 0 && status.tilesQueuedCount === 0;
+      if (fallbackVisible && tilesVisible && tilesSettled) {
+        this.clearFallback();
+      }
       if (!fallbackVisible && !tilesVisible) {
         this.noteCleared('无可见源');
       }
@@ -1562,7 +1566,7 @@ export class PanoViewer {
       });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
-      // fallback 全景统一关闭 flipY，避免上下颠倒
+      // 方向在 createImageBitmap 阶段统一处理，纹理阶段不再重复翻转。
       texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;

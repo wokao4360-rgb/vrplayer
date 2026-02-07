@@ -447,10 +447,7 @@ export class TileCanvasPano {
         throw new Error(`tile HTTP ${response.status}: ${url}`);
       }
       const blob = await response.blob();
-      return await createImageBitmap(blob, {
-        imageOrientation: 'flipY',
-        premultiplyAlpha: 'none',
-      });
+      return await createImageBitmap(blob);
     } finally {
       clearTimeout(timeoutId);
     }

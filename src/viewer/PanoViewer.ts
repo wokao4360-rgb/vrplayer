@@ -665,7 +665,7 @@ export class PanoViewer {
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
-      // 方向在 createImageBitmap 阶段统一处理，纹理阶段不再重复翻转。
+      // 方向由纹理/UV 链路统一处理，纹理阶段不做额外翻转。
       texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -730,7 +730,7 @@ export class PanoViewer {
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
       
-      // 方向在 createImageBitmap 阶段统一处理，纹理阶段不再重复翻转。
+      // 方向由纹理/UV 链路统一处理，纹理阶段不做额外翻转。
       lowTexture.flipY = false;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
       lowTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -770,7 +770,7 @@ export class PanoViewer {
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
         
-        // 方向在 createImageBitmap 阶段统一处理，纹理阶段不再重复翻转。
+        // 方向由纹理/UV 链路统一处理，纹理阶段不做额外翻转。
         highTexture.flipY = false;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -1566,7 +1566,7 @@ export class PanoViewer {
       });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
-      // 方向在 createImageBitmap 阶段统一处理，纹理阶段不再重复翻转。
+      // 方向由纹理/UV 链路统一处理，纹理阶段不做额外翻转。
       texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;

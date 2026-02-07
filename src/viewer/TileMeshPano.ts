@@ -401,10 +401,8 @@ export class TileMeshPano {
     if (!response.ok) throw new Error(`tile HTTP ${response.status}: ${url}`);
     const buffer = await response.arrayBuffer();
     const texture = await (this.ktx2Loader as any)._createTexture(buffer);
-    // Compressed textures ignore flipY. Use texture transform for deterministic orientation.
+    // KTX2 压缩纹理忽略 flipY，方向由 UV 链路统一处理。
     texture.flipY = false;
-    texture.offset.set(0, 1);
-    texture.repeat.set(1, -1);
     if ('colorSpace' in texture) {
       (texture as any).colorSpace = THREE.SRGBColorSpace;
     } else {
@@ -430,7 +428,7 @@ export class TileMeshPano {
       });
     }
     const texture = new THREE.Texture(bmp);
-    // JPG tiles are already flipped during createImageBitmap().
+    // JPG 分片由 ImageBitmap 原始方向 + UV 链路统一处理。
     texture.flipY = false;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -527,8 +525,7 @@ export class TileMeshPano {
       const v = uvAttr.getY(i);
       const uu = (u - minU) / du;
       const vv = (v - minV) / dv;
-      // Avoid secondary V inversion; it causes vertical upside-down tiles.
-      uvAttr.setXY(i, uu, vv);
+      uvAttr.setXY(i, uu, 1 - vv);
     }
     uvAttr.needsUpdate = true;
     return geom;

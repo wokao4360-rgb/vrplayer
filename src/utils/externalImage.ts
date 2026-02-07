@@ -116,11 +116,7 @@ async function fetchWithRetry(
       }
 
       const blob = await response.blob();
-      const imageBitmap = await createImageBitmap(blob, {
-        // Keep pano/tile orientation consistent with regular TextureLoader uploads.
-        imageOrientation: 'flipY',
-        premultiplyAlpha: 'none',
-      });
+      const imageBitmap = await createImageBitmap(blob);
       return imageBitmap;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -292,9 +288,8 @@ export async function loadExternalImageBitmap(
       // 优先使用 Image() 原生加载（内部会再次使用代理 URL，但这里传入的是原始 URL 用于错误信息）
       const img = await loadExternalImageElement(finalUrl, opts);
 
-      // 统一转换方向，避免 ImageBitmap 路径在不同浏览器出现上下颠倒
       const imageBitmap = await (createImageBitmap as any)(img, {
-        imageOrientation: 'flipY',
+        imageOrientation: 'from-image',
         premultiplyAlpha: 'none',
       });
       return imageBitmap;

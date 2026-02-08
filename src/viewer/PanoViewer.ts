@@ -1111,8 +1111,9 @@ export class PanoViewer {
       const status = this.tilePano.getStatus();
       const fallbackVisible = !!this.fallbackSphere;
       const tilesVisible = status.tilesVisible;
-      const lowReady = status.lowReady || this.tilesLowReady;
-      if (fallbackVisible && tilesVisible && lowReady) {
+      // 仅在瓦片低层已完整覆盖后再清理 fallback，避免“先清底图再出瓦片”的黑屏闪断。
+      const lowCoverageReady = status.lowReady;
+      if (fallbackVisible && tilesVisible && lowCoverageReady) {
         this.tilesVisibleStableFrames += 1;
         if (this.tilesVisibleStableFrames >= 2) {
           this.clearFallback();

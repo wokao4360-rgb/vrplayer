@@ -1,5 +1,5 @@
 {
-  "appName": "鏉ㄨ檸鍩庣邯蹇甸",
+  "appName": "杨虎城纪念馆",
   "assetCdn": {
     "enabled": true,
     "includePrefixes": [
@@ -18,8 +18,8 @@
   "museums": [
     {
       "id": "wangding",
-      "name": "鏉ㄨ檸鍩庣邯蹇甸",
-      "description": "鏉ㄨ檸鍩庣邯蹇甸浠嬬粛锛屽緟琛ュ厖",
+      "name": "杨虎城纪念馆",
+      "description": "杨虎城纪念馆介绍，待补充",
       "cover": "鐜嬭吘2",
       "map": {
         "image": "1",
@@ -29,7 +29,7 @@
       "scenes": [
         {
           "id": "gate",
-          "name": "姝ｉ棬涓庡簭鍘?",
+          "name": "正门与序厅1",
           "panoLow": "/assets/panos/gate-low.jpg",
           "pano": "/assets/panos/gate.jpg",
           "thumb": "/assets/panos/gate-nail.jpg",
@@ -47,7 +47,7 @@
             {
               "id": "gate_to_yard",
               "type": "scene",
-              "label": "姝ュ叆瑗垮眿2",
+              "label": "步入西屋2",
               "yaw": 20,
               "pitch": -4,
               "target": {
@@ -60,7 +60,7 @@
             {
               "id": "gate_intro_video",
               "type": "video",
-              "label": "搴忚█鐭墖",
+              "label": "序言短片",
               "yaw": -25,
               "pitch": -3,
               "target": {
@@ -71,7 +71,7 @@
         },
         {
           "id": "front_yard",
-          "name": "瑗垮眿2",
+          "name": "西屋2",
           "panoLow": "/assets/panos/xiwu2-low.jpg",
           "pano": "/assets/panos/xiwu2.jpg",
           "thumb": "/assets/panos/xiwu2-nail.jpg",
@@ -94,7 +94,7 @@
             {
               "id": "yard_to_gate",
               "type": "scene",
-              "label": "杩斿洖姝ｉ棬1",
+              "label": "返回正门1",
               "yaw": -160,
               "pitch": 0,
               "target": {
@@ -107,7 +107,7 @@
             {
               "id": "yard_to_hall",
               "type": "scene",
-              "label": "杩涘叆涓滃眿3",
+              "label": "进入东屋3",
               "yaw": 35,
               "pitch": -5,
               "target": {
@@ -120,7 +120,7 @@
             {
               "id": "yard_video",
               "type": "video",
-              "label": "鏁呭眳鏁呬簨",
+              "label": "故居故事",
               "yaw": -20,
               "pitch": -2,
               "target": {
@@ -131,7 +131,7 @@
         },
         {
           "id": "exhibit_hall",
-          "name": "涓滃眿3",
+          "name": "东屋3",
           "thumb": "/assets/panos/dongwu3-nail.jpg",
           "initialView": {
             "yaw": 90,
@@ -146,7 +146,7 @@
             {
               "id": "hall_to_yard",
               "type": "scene",
-              "label": "鍥炲埌瑗垮眿2",
+              "label": "回到西屋2",
               "yaw": -150,
               "pitch": 0,
               "target": {
@@ -159,7 +159,7 @@
             {
               "id": "hall_to_memorial",
               "type": "scene",
-              "label": "鍓嶅線鍖楀眿4",
+              "label": "前往北屋4",
               "yaw": 40,
               "pitch": 0,
               "target": {
@@ -172,7 +172,7 @@
             {
               "id": "hall_story_video",
               "type": "video",
-              "label": "鐐瑰嚮浜嗚В鐜嬮紟涓哄畼浜嬭抗",
+              "label": "点击了解王鼎为官事迹",
               "yaw": 0,
               "pitch": 8,
               "target": {
@@ -188,7 +188,7 @@
         },
         {
           "id": "memorial_wall",
-          "name": "鍖楀眿4",
+          "name": "北屋4",
           "panoLow": "/assets/panos/beiwu4-low.jpg",
           "pano": "/assets/panos/beiwu4.jpg",
           "thumb": "/assets/panos/beiwu4-nail.jpg",
@@ -205,7 +205,7 @@
             {
               "id": "memorial_to_hall",
               "type": "scene",
-              "label": "鍥炲埌灞曞巺",
+              "label": "回到展厅",
               "yaw": -140,
               "pitch": 0,
               "target": {

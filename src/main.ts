@@ -24,7 +24,7 @@ import { TopModeTabs, type AppViewMode } from './ui/TopModeTabs';
 import { StructureView2D } from './ui/StructureView2D';
 import { StructureView3D } from './ui/StructureView3D';
 import { buildSceneGraph } from './graph/sceneGraph';
-import { resolveAssetUrl, AssetType } from './utils/assetResolver';
+import { resolveAssetUrl, AssetType, setAssetResolverConfig } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
 import type { ValidationError } from './utils/configValidator';
@@ -240,6 +240,7 @@ class App {
       
       // 加载配置
       this.config = await loadConfig();
+      setAssetResolverConfig(this.config.assetCdn);
       
       // DNS 预热已禁用：图片通过同源代理 /_img 加载
       
@@ -277,6 +278,7 @@ class App {
     try {
       // 加载配置
       this.config = await loadConfig();
+      setAssetResolverConfig(this.config.assetCdn);
       
       // DNS 预热已禁用：图片通过同源代理 /_img 加载
       
@@ -287,6 +289,7 @@ class App {
       this.configStudio = new ConfigStudio(this.config, (newConfig) => {
         // 配置变更回调：更新内部配置，但不重新加载页面
         this.config = newConfig;
+        setAssetResolverConfig(newConfig.assetCdn);
         // 清除缓存，以便下次加载使用新配置
         clearConfigCache();
       });

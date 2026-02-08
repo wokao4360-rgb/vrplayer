@@ -10,15 +10,15 @@ export interface MapPoint {
 }
 
 export interface MapConfig {
-  image?: string; // 真实平面图图片（可选，如视导出的结构图/平面图）
+  image?: string;
   width: number;
   height: number;
 }
 
 export interface DollhouseConfig {
-  modelUrl?: string; // 真实三维模型 glb/gltf（如视导出或其他）
-  scale?: number; // 可选缩放
-  offset?: { x: number; y: number; z: number }; // 可选平移
+  modelUrl?: string;
+  scale?: number;
+  offset?: { x: number; y: number; z: number };
 }
 
 export interface SceneHotspotTarget {
@@ -40,7 +40,6 @@ export interface SceneHotspot {
   yaw: number;
   pitch: number;
   target?: SceneHotspotTarget;
-  // 可选快捷字段：用于 image/info/video 等轻量配置
   src?: string;
   text?: string;
   title?: string;
@@ -56,14 +55,14 @@ export interface PanoTilesConfig {
 export interface Scene {
   id: string;
   name: string;
-  pano?: string; // 高清全景图（可选，如果提供了 panoLow）
-  panoLow?: string; // 低清全景图（可选，优先加载）
-  panoTiles?: PanoTilesConfig; // 瓦片元数据（manifest + 可选回退）
+  pano?: string;
+  panoLow?: string;
+  panoTiles?: PanoTilesConfig;
   thumb: string;
   initialView: InitialView;
   mapPoint: MapPoint;
   hotspots: SceneHotspot[];
-  northYaw?: number; // 世界北方向（度），相对于全景图纹理的正前方。如果未指定，默认为 0（纹理正前方就是北）
+  northYaw?: number;
 }
 
 export interface Museum {
@@ -71,7 +70,7 @@ export interface Museum {
   name: string;
   cover: string;
   map: MapConfig;
-  dollhouse?: DollhouseConfig; // 真实三维模型配置（可选）
+  dollhouse?: DollhouseConfig;
   scenes: Scene[];
 }
 
@@ -80,9 +79,16 @@ export interface FcChatConfig {
   authToken?: string;
 }
 
+export interface AssetCdnConfig {
+  enabled?: boolean;
+  baseUrl?: string;
+  includePrefixes?: string[];
+  excludePrefixes?: string[];
+}
+
 export interface AppConfig {
   appName: string;
   museums: Museum[];
   fcChat?: FcChatConfig;
+  assetCdn?: AssetCdnConfig;
 }
-

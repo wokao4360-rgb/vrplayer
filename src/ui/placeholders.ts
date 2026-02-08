@@ -9,10 +9,9 @@ export const DEFAULT_COVER_DATA_URI =
         </linearGradient>
       </defs>
       <rect width="100%" height="100%" fill="url(#g)"/>
-      <text x="50%" y="50%" fill="rgba(255,255,255,0.72)" font-size="20" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,&apos;Segoe UI&apos;,sans-serif">
+      <text x="50%" y="50%" fill="rgba(255,255,255,0.72)" font-size="20" text-anchor="middle" font-family="STKaiti,Kaiti SC,KaiTi,Songti SC,SimSun,Source Han Serif SC,Noto Serif SC,serif">
         暂无封面
       </text>
     </svg>`
   );
-
 

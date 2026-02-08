@@ -206,7 +206,15 @@ Agent MUST:
 
 ---
 
-## 16) MCP 工具使用约定
+## 16) 日志记录规范（HARD）
+
+- 新增或更新任何日志、工作记录、发布记录时，必须写明完整日期和时间。
+- 时间格式统一为：`YYYY-MM-DD HH:mm:ss`（24 小时制）。
+- 禁止仅写“今天 / 刚刚 / 下午”等相对时间描述。
+
+---
+
+## 17) MCP 工具使用约定
 
 - 需要时优先使用：`chrome-devtools`、`github`、`filesystem` MCP。
 - 涉及 OpenAI API / ChatGPT Apps SDK / Codex 能力时，优先使用 OpenAI 官方文档 MCP。

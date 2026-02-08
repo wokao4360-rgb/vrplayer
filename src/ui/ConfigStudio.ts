@@ -1186,7 +1186,7 @@ export class ConfigStudio {
         display: flex;
         flex-direction: column;
         color: #fff;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-family: var(--vr-font-ui, "STKaiti", "Kaiti SC", "KaiTi", "Songti SC", "SimSun", "Source Han Serif SC", "Noto Serif SC", Georgia, serif);
       }
       .studio-container {
         display: flex;

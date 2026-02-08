@@ -152,6 +152,7 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - 瓦片画面泛白：CanvasTexture 需标记 sRGB，材质关闭 toneMapping；否则亮部发灰泛白
 - 低清→高清分块：低清层优先排队，首屏可视高清块同时并发；低清作为底图保留避免黑屏
 - 大陆加速策略：`public/config.json` 的 `assetCdn` 为唯一入口；当前首选 `github.cnxiaobai.com`（raw.githubusercontent 镜像），并保持“先探测 CDN，可达才改写，不可达自动回源同站”的安全模式，避免大陆网络下批量 `net::ERR_*`
+- 首屏加速关键：`setAssetResolverConfig(...)` 后需先等待一次 CDN 探测完成，再进入首场景加载；否则首屏资源会在探测完成前直接命中同源，导致“配置已生效但首屏未走加速”
 - manifest 加速注意：`src/viewer/tileManifest.ts` 会对 `manifest.baseUrl` 再走一次 `resolveAssetUrl`；当 CDN 探测失败时，瓦片与低清图会统一回源，避免链路分裂
 - 全景/瓦片纹理不要再做 repeat.set(1,-1)/offset.set(0,1) 这类垂直翻转，容易导致“上下两张全景”分割错位
   - 当前工程的稳定链路是：`SphereGeometry.scale(-1,1,1)` + `texture.flipY = false`（低清/高清/Canvas/JPG tile 统一）

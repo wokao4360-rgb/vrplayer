@@ -44,6 +44,7 @@ let runtimeConfig: RuntimeAssetCdnConfig | null = null;
 let selectedBaseUrl: string | null = null;
 let probeState: ProbeState = 'idle';
 let probeToken = 0;
+let probePromise: Promise<void> | null = null;
 
 function normalizePrefix(input: string): string {
   const trimmed = input.trim();
@@ -199,7 +200,7 @@ function startProbeIfNeeded(): void {
   probeState = 'probing';
   const token = ++probeToken;
 
-  void (async () => {
+  probePromise = (async () => {
     for (const baseUrl of cfg.baseUrls) {
       const ok = await probeBaseUrl(baseUrl, cfg, token);
       if (token !== probeToken) return;
@@ -212,11 +213,16 @@ function startProbeIfNeeded(): void {
     if (token !== probeToken) return;
     selectedBaseUrl = null;
     probeState = 'failed';
-  })().catch(() => {
-    if (token !== probeToken) return;
-    selectedBaseUrl = null;
-    probeState = 'failed';
-  });
+  })()
+    .catch(() => {
+      if (token !== probeToken) return;
+      selectedBaseUrl = null;
+      probeState = 'failed';
+    })
+    .finally(() => {
+      if (token !== probeToken) return;
+      probePromise = null;
+    });
 }
 
 export function setAssetResolverConfig(config: AssetCdnConfig | undefined): void {
@@ -224,6 +230,7 @@ export function setAssetResolverConfig(config: AssetCdnConfig | undefined): void
   probeToken += 1;
   selectedBaseUrl = null;
   probeState = 'idle';
+  probePromise = null;
 
   if (!config || config.enabled === false) {
     runtimeConfig = null;
@@ -250,6 +257,20 @@ export function setAssetResolverConfig(config: AssetCdnConfig | undefined): void
 
   // probe asynchronously; before probe success, keep origin URL to avoid first-screen failures
   startProbeIfNeeded();
+}
+
+export async function waitForAssetResolverReady(): Promise<void> {
+  const cfg = runtimeConfig;
+  if (!cfg || !cfg.enabled) return;
+
+  if (selectedBaseUrl || probeState === 'failed') {
+    return;
+  }
+
+  startProbeIfNeeded();
+  const pending = probePromise;
+  if (!pending) return;
+  await pending;
 }
 
 export function getAssetResolverConfig(): AssetCdnConfig | null {

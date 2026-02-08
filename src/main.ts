@@ -24,7 +24,7 @@ import { TopModeTabs, type AppViewMode } from './ui/TopModeTabs';
 import { StructureView2D } from './ui/StructureView2D';
 import { StructureView3D } from './ui/StructureView3D';
 import { buildSceneGraph } from './graph/sceneGraph';
-import { resolveAssetUrl, AssetType, setAssetResolverConfig } from './utils/assetResolver';
+import { resolveAssetUrl, AssetType, setAssetResolverConfig, waitForAssetResolverReady } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
 import type { ValidationError } from './utils/configValidator';
@@ -241,6 +241,7 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       setAssetResolverConfig(this.config.assetCdn);
+      await waitForAssetResolverReady();
       
       // DNS 预热已禁用：图片通过同源代理 /_img 加载
       
@@ -279,6 +280,7 @@ class App {
       // 加载配置
       this.config = await loadConfig();
       setAssetResolverConfig(this.config.assetCdn);
+      await waitForAssetResolverReady();
       
       // DNS 预热已禁用：图片通过同源代理 /_img 加载
       

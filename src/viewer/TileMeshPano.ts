@@ -57,6 +57,7 @@ export class TileMeshPano {
   private ktx2FailCount = 0;
   private prefetchSeeded = false;
   private ktx2Loader: KTX2Loader;
+  private static readonly TWO_PI = Math.PI * 2;
 
   constructor(
     private scene: THREE.Scene,
@@ -531,7 +532,8 @@ export class TileMeshPano {
     const radius = 500;
     const phiLength = (Math.PI * 2) / level.cols;
     const thetaLength = Math.PI / level.rows;
-    const phiStart = col * phiLength - Math.PI;
+    // 与 PanoViewer 的整图球面对齐（SphereGeometry 默认经线），避免 fallback 与 tiles 相差 180°。
+    const phiStart = col * phiLength;
     const thetaStart = row * thetaLength;
     const widthSegments = Math.max(4, Math.round(64 / level.cols));
     const heightSegments = Math.max(4, Math.round(32 / level.rows));
@@ -688,7 +690,8 @@ export class TileMeshPano {
       const pitch = Math.PI / 2 - (row + 0.5) * pitchStep;
       const pitchDist = Math.abs(pitch - basePitch);
       for (let col = 0; col < level.cols; col++) {
-        const yaw = -Math.PI + (col + 0.5) * yawStep;
+        const phi = (col + 0.5) * yawStep;
+        const yaw = this.normAngle(Math.PI / 2 - phi);
         const yawDist = this.angularDistance(yaw, baseYaw);
         const phase = yawDist <= Math.PI / 2 ? 0 : 1;
         const rank = phase * 1_000_000 + Math.round(yawDist * 1000) + Math.round(pitchDist * 10);
@@ -730,24 +733,21 @@ export class TileMeshPano {
   }
 
   private yawToCols(minYaw: number, maxYaw: number, cols: number): number[] {
-    const wrap = (v: number) => ((v % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    const shift = Math.PI;
-    const min = wrap(minYaw + shift);
-    const max = wrap(maxYaw + shift);
-    const indices: number[] = [];
-    const push = (c: number) => {
-      const cc = ((c % cols) + cols) % cols;
-      if (!indices.includes(cc)) indices.push(cc);
-    };
-    const start = Math.floor((min / (Math.PI * 2)) * cols);
-    const end = Math.floor((max / (Math.PI * 2)) * cols);
-    if (min <= max) {
-      for (let c = start; c <= end; c++) push(c);
-    } else {
-      for (let c = start; c < cols; c++) push(c);
-      for (let c = 0; c <= end; c++) push(c);
+    const normZeroToTwoPi = (v: number) =>
+      ((v % TileMeshPano.TWO_PI) + TileMeshPano.TWO_PI) % TileMeshPano.TWO_PI;
+    const minNorm = normZeroToTwoPi(minYaw + Math.PI);
+    const maxNorm = normZeroToTwoPi(maxYaw + Math.PI);
+    let span = maxNorm - minNorm;
+    if (span < 0) span += TileMeshPano.TWO_PI;
+    const samples = Math.max(cols * 4, 16);
+    const out = new Set<number>();
+    for (let i = 0; i <= samples; i += 1) {
+      const a = normZeroToTwoPi(minNorm + (span * i) / samples) - Math.PI;
+      const phi = normZeroToTwoPi(Math.PI / 2 - a);
+      const c = Math.floor((phi / TileMeshPano.TWO_PI) * cols) % cols;
+      out.add((c + cols) % cols);
     }
-    return indices;
+    return Array.from(out);
   }
 
   private normAngle(a: number): number {

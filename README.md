@@ -159,6 +159,7 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - 瓦片渐进渲染必须“低清底图持续可见”：`fallback` 只能在 `tilePano.getStatus().lowReady === true`（低层完整覆盖）后再清理，不能在首个 tile 出现时清理，否则会出现加载中黑屏
 - 预览图（导览/列表）统一使用 `*-nail.jpg` 小图；低清全景使用 `*-low.jpg`
 - TileMeshPano 分片球体必须把 UV 归一化到 0..1，并对 V 做翻转（`v = 1 - v`），否则会出现“上下两张全景”/分片错位/上下颠倒
+- TileMeshPano 分片经线起点必须与整图球面对齐：`phiStart = col * phiLength`，不要再做 `-Math.PI` 偏移；否则会出现“低清首屏与高清分块相差 180°”
 - tileFormat=ktx2 走 TileMeshPano（KTX2Loader）；其它格式走 TileCanvasPano（Canvas 拼接）
 - 关键指标打点：PanoViewer 会输出 `window.__VR_METRICS__` 并触发 `vr:metrics` 事件，包含首屏低清/高清耗时、tile 命中率、失败/重试数、当前性能档位；`?metrics=1` 会把这些指标显示在顶部提示中
 - 外链资源本地化脚本：`node scripts/localize-external-assets.mjs`（仅图片，失败会保留原 URL）；`i.ibb.co` 在本机可能不可达，需手动提供源图或替换为站内文件

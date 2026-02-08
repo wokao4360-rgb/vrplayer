@@ -2,10 +2,14 @@
   "appName": "杨虎城纪念馆",
   "assetCdn": {
     "enabled": true,
-    "baseUrl": "https://cdn.jsdelivr.net/gh/wokao4360-rgb/vrplayer@main/docs",
     "includePrefixes": [
       "/assets/panos/"
-    ]
+    ],
+    "baseUrls": [
+      "https://cdn.jsdelivr.net/gh/wokao4360-rgb/vrplayer@main/docs"
+    ],
+    "probePath": "/config.json",
+    "probeTimeoutMs": 1800
   },
   "fcChat": {
     "endpoint": "https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/",

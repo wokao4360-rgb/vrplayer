@@ -1,175 +1,213 @@
 ---
-description: 
+description:
 alwaysApply: true
 ---
 
 # AGENTS.md — vrplayer Agent Constitution (HARD RULES)
 
-This repo is developed with an AI-assisted workflow (Codex / Cursor).
-These rules are non-negotiable. Breaking any rule is considered a failed change.
+本仓库采用 AI 协作开发（Codex / Cursor）。
+以下规则为强约束，默认始终生效。
 
 ---
 
-## 0) Collaboration Model (HARD)
+## 0) 协作契约（HARD）
 
-- User responsibility: **ONLY execute Cursor (and PowerShell publish commands).**
-- Agent responsibility: **write a single, deterministic prompt that will not fail.**
+- 用户职责：只执行 Cursor 与 PowerShell 发布命令。
+- Agent 职责：给出可执行、可落地、确定性的实现与发布结果。
 
 Agent MUST NOT:
-- Ask user to open console/devtools for debugging
-- Ask user to manually edit any config file
-- Say “try / maybe / if not then …”
-- Provide multiple options for user to choose
-- Ask user to validate online changes before publish is confirmed
+- 要求用户打开 DevTools / Console 进行调试。
+- 要求用户手工修改任何配置文件。
+- 使用“try / maybe / 看看是否可行”这类不确定表达。
+- 提供多选方案让用户自行排雷。
+- 在未确认发布完成前要求用户线上验收。
 
 Agent MUST:
-- Specify exact files to change + exact expected result
-- Ensure changes are publishable and actually published before any “go verify online”
+- 明确修改文件与预期结果。
+- 先实现、构建、发布、确认部署，再让用户做线上目视验证。
 
 ---
 
-## 1) Source of Truth & Forbidden Files (HARD)
+## 1) 仓库事实（Ground Truth）
 
-- **ONLY config source of truth:** `public/config.json`
-- `dist/` and `docs/` are **build artifacts**
-- NEVER manually edit anything under `dist/` or `docs/`
+- 工作目录：`D:\Projects\vrplayer`（真实 git 仓库）。
+- 分支：`main`。
+- 托管：Cloudflare Pages / GitHub Pages 以 `docs/` 为发布目录。
+- 构建产物：`dist/`（Vite）。
+- 结论：发布链路必须是 `dist -> docs -> commit -> push`。
 
-Allowed modifications:
+---
+
+## 2) 配置单一事实源（HARD）
+
+- 唯一可编辑配置源：`public/config.json`。
+- 禁止手改：`dist/config.json`、`docs/config.json`。
+
+配置流：
+- `public/config.json` -> `npm run build` -> `dist/config.json` -> `robocopy` -> `docs/config.json` -> 线上 `/config.json`
+
+---
+
+## 3) 允许与禁止修改范围（HARD）
+
+允许修改：
 - `src/**`
-- `public/**` (including `public/config.json`)
+- `public/**`（含 `public/config.json`）
+- 根目录工程文档（如 `README.md`、`AGENTS.md`）
 
-Forbidden modifications:
-- `docs/**`
+禁止手工修改：
 - `dist/**`
+- `docs/**`
+
+说明：`docs/**` 只能通过 `dist -> docs` 同步生成。
 
 ---
 
-## 2) Publishing & Verification (HARD)
+## 4) 发布 SOP（唯一正确流程，HARD）
 
-Cloudflare Pages serves **Root directory = `docs`**.
-The only valid publish pipeline is:
+环境要求：
+- Windows + 系统 PowerShell（非 VSCode 内置终端优先）。
 
-(EDIT) public/ or src/
-→ npm run build (produces dist/)
-→ robocopy dist → docs (/MIR)
-→ git add -A
-→ git commit
-→ git push
-→ Cloudflare Pages deploys the new commit
-→ ONLY THEN user verifies in browser
+步骤：
+1. `cd D:\Projects\vrplayer`
+2. `git checkout main`，确认非 detached HEAD
+3. `git pull --rebase origin main`
+4. `npm run build`
+5. `robocopy .\dist .\docs /MIR`
+6. `git add -A`
+7. `git commit -m "<提交信息>"`
+8. `git push origin main`
+9. 确认远端最新 commit 为刚推送 commit，且 Pages 已部署到该 commit
+10. 仅此之后才允许用户做线上验证
 
-yaml
-复制代码
-
-If user reports “online unchanged”, the first assumption is:
-- publish chain not live (missed robocopy / no commit / no push / Pages not deployed / cache), NOT logic bug.
-
-Before telling user to verify online, agent must ensure:
-1) a new commit exists and was pushed
-2) Pages deployed that commit
+若用户反馈“线上未变化”，第一假设必须是发布链路问题：
+- 漏了 robocopy / 无新 commit / push 失败 / Pages 未部署到该 commit / 缓存命中旧资源
 
 ---
 
-## 3) Known Deployment Pitfalls (HARD)
+## 5) Git 与网络约束（HARD）
 
-- White screen + `module script MIME type is video/mp2t`:
-  - First check Pages Root directory vs output alignment.
-  - This repo uses: build to `dist`, serve `docs` → must sync `dist → docs`.
-
-- Git push instability:
-  - Use **system PowerShell**
-  - Use GitHub SSH over **443** (`ssh.github.com:443`) configured in `~/.ssh/config`
-
-- Cache misleads:
-  - Use hard refresh / incognito
-  - Validate asset hash changes (index-*.js)
-
-- Do not use Cloudflare R2 for critical WebGL textures by default:
-  - URL accessible ≠ WebGL loadable (CORS + cache)
-  - Prefer same-origin assets under Pages (e.g. `/assets`, `/panos`)
+- Git/SSH 操作使用系统 PowerShell。
+- SSH 走 `ssh.github.com:443`（兼容受限网络环境）。
+- 非必要不做破坏性 git 操作；遇到冲突先保证可追溯与可恢复。
 
 ---
 
-## 4) Coordinate System Constitution (HARD)
+## 6) 构建产物冲突规则（docs/assets）
 
-Definitions:
-- All yaw/pitch/northYaw in config and URL params are **REAL-WORLD angles** (world angles).
-- Viewer/three.js uses **internal angles**.
-
-Rule:
-- World → internal conversion is allowed **ONCE, at exactly one entry point**.
-- The only allowed form is:
-
-internalYaw = -worldYaw
-
-yaml
-复制代码
-
-Forbidden:
-- Re-inverting in multiple places
-- “fallback then invert again” inside components
-- Per-component private sign fixes
+- `docs/assets/*` 是构建产物，不是源码。
+- 冲突时禁止手工逐文件合并构建产物。
+- 正确做法：以源码为准，重新构建并同步 `dist -> docs`。
 
 ---
 
-## 5) Compass System = Three Independent Implementations (HARD)
+## 7) 默认架构原则（静默执行）
 
-There are three separate direction systems. Any direction-related change must update all 3:
+无需在回复里长篇论证，默认按以下原则实现：
 
-1) `src/ui/CompassDisk.ts` (DOM UI compass)
-2) `src/ui/GroundHeadingMarker.ts` (DOM ground marker)
-3) `src/viewer/NadirPatch.ts` (three.js mesh compass)
+### A) SOLID
+- SRP：单一职责，单一主要变更原因。
+- OCP：优先扩展而非破坏既有核心行为。
+- LSP：替换子类型不改变外部可观察行为。
+- ISP：接口小而专，避免胖接口。
+- DIP：在降低耦合时依赖抽象而非具体实现。
 
-Forbidden:
-- “Fix one first and see”
+### B) 高内聚、低耦合
+- 变更局部化，控制影响面。
+- 避免循环依赖与新增全局状态捷径。
+- 保持单一真相源，避免并行“第二套规则”。
+- 仅在“小且安全”前提下做必要重构。
+
+### C) 输出与沟通
+- 优先直接给最终可执行改动。
+- 非明确要求时，不输出冗长自检报告。
+- 若规则冲突或仓库现实不确定：先停下并提问，不猜。
 
 ---
 
-## 6) Final Compass Product Decision (HARD)
+## 8) 坐标系统宪法（HARD）
 
-- `initialView.yaw` → controls **initial camera heading**
-- `northYaw` → controls **where the disk’s N points (real-world north)**
-- Needle/pointer → represents **current camera heading**
-- Disk MUST NOT rotate with camera
-- Pointer MUST rotate with camera
+定义：
+- `yaw / pitch / northYaw`（配置与 URL）均为世界角度（world）。
+- three.js 内部使用 internal 角度。
 
-Verification invariant:
-When `cameraYaw == northYaw`, all must be true:
+规则：
+- world -> internal 转换只允许在单一入口执行一次。
+- 唯一允许形式：`internalYaw = -worldYaw`。
+
+禁止：
+- 多处重复取反。
+- 组件内私有“再反一次”修补。
+- fallback 分支里再做符号补偿。
+
+---
+
+## 9) 罗盘系统三实现同步（HARD）
+
+方向相关改动必须同步评估以下三处：
+1. `src/ui/CompassDisk.ts`
+2. `src/ui/GroundHeadingMarker.ts`
+3. `src/viewer/NadirPatch.ts`
+
+禁止“先改一处试试看”。
+
+---
+
+## 10) 罗盘产品决策（锁定）
+
+- `initialView.yaw`：初始视角方向（world）。
+- `northYaw`：真实北向（world）。
+- Pointer 表示当前相机朝向。
+- Dial 与 Pointer 职责分离，不可混用。
+
+验收不变量：当 `cameraYaw == northYaw` 时，必须同时满足：
 - pointer angle == 0
-- pointer points to disk N
-- initial heading equals real-world north when configured so
+- pointer 指向盘面 N
+- 初始朝向与配置北向一致
 
 ---
 
-## 7) Pick (Yaw/Pitch from click) Policy (HARD)
+## 11) North Calibration（如功能存在）
 
-Pick must compute yaw/pitch from **Raycaster ray.direction**, not from intersection point.
-Reason: intersections may be missing/blocked; ray.direction is stable.
-
----
-
-## 8) MCP / Skills Verification (HARD)
-
-- 调试与验收必须优先使用 MCP/skills，禁止只凭代码推断结果。
-- 至少执行一次 chrome-devtools MCP 的 Network/Console/页面快照采样后，才能认定修复成立。
+- 仅用于配置辅助：读取当前 yaw -> 产出 northYaw。
+- 禁止引入运行时隐式自动校正或隐藏状态变异。
 
 ---
 
-## 9) Persistent Knowledge via README (REQUIRED)
+## 12) Pick 规则（HARD）
 
-When important pitfalls, conventions, or SOP updates are discovered:
-- Update `README.md` under “Agent Notes (Persistent)” section
-- Keep it short, actionable, and searchable
-- Purpose: a fresh Codex window can recover context fast
+- Pick 的 yaw/pitch 必须基于 `Raycaster.ray.direction` 计算。
+- 禁止依赖 intersection point 作为唯一来源。
 
 ---
 
-## 10) Output Language
+## 13) MCP / Skills 验证要求（HARD）
 
-- All outputs, summaries, explanations, and commit messages MUST be written in Simplified Chinese.
-- Do NOT switch to English unless explicitly requested.
+- 调试与验收优先使用 MCP/skills，不允许只凭代码推断。
+- 任何“修复成立”结论前，至少执行一次 `chrome-devtools MCP` 的以下任一组合：
+  - 页面快照 + Network 采样
+  - 页面快照 + Console 采样
 
-## 11) MCP
-- Always use the chrome-devtools, github and filesystem MCP server if you need.
-- Always use the OpenAI developer documentation MCP server if you need to work with the OpenAI API, ChatGPT Apps SDK, Codex,… without me having to explicitly ask.
-- Always use Context7 MCP when library/API documentation, code generation, setup or configuration steps when needed without me having to explicitly ask.
+---
+
+## 14) README 持久化知识（REQUIRED）
+
+当发现新的关键坑、约束或 SOP 变化时：
+- 必须更新 `README.md` 的 `Agent Notes (Persistent)`。
+- 内容保持简短、可检索、可执行。
+
+---
+
+## 15) 输出语言与风格
+
+- 输出、总结、提交信息默认使用简体中文。
+- 未被明确要求时不切换英文。
+- 默认采用“最小、安全、可验证”的改动策略；非必要不做大范围重构。
+
+---
+
+## 16) MCP 工具使用约定
+
+- 需要时优先使用：`chrome-devtools`、`github`、`filesystem` MCP。
+- 涉及 OpenAI API / ChatGPT Apps SDK / Codex 能力时，优先使用 OpenAI 官方文档 MCP。
+- 涉及库/API 文档、配置与代码生成时，优先使用 Context7 MCP。

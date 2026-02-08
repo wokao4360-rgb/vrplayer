@@ -82,8 +82,11 @@ export interface FcChatConfig {
 export interface AssetCdnConfig {
   enabled?: boolean;
   baseUrl?: string;
+  baseUrls?: string[];
   includePrefixes?: string[];
   excludePrefixes?: string[];
+  probePath?: string;
+  probeTimeoutMs?: number;
 }
 
 export interface AppConfig {

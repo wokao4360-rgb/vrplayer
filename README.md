@@ -151,8 +151,8 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - 若线上仍命中旧构建：通常是 `index.html`/CDN/浏览器缓存导致继续引用旧 hash 资源；发布后优先用带版本参数的 URL 校验（例如 `?v=时间戳`）
 - 瓦片画面泛白：CanvasTexture 需标记 sRGB，材质关闭 toneMapping；否则亮部发灰泛白
 - 低清→高清分块：低清层优先排队，首屏可视高清块同时并发；低清作为底图保留避免黑屏
-- 大陆加速策略：`public/config.json` 的 `assetCdn` 为唯一入口；当前将 `/assets/panos/**` 改写到 `https://cdn.jsdelivr.net/gh/wokao4360-rgb/vrplayer@main/docs`
-- manifest 加速注意：`src/viewer/tileManifest.ts` 会对 `manifest.baseUrl` 再走一次 `resolveAssetUrl`，保证 KTX2/JPG 瓦片与低清图同一加速域，不回源主站
+- 大陆加速策略：`public/config.json` 的 `assetCdn` 为唯一入口；当前采用“先探测 CDN，可达才改写，不可达自动回源同站”的安全模式，避免大陆网络下批量 `net::ERR_*`
+- manifest 加速注意：`src/viewer/tileManifest.ts` 会对 `manifest.baseUrl` 再走一次 `resolveAssetUrl`；当 CDN 探测失败时，瓦片与低清图会统一回源，避免链路分裂
 - 全景/瓦片纹理不要再做 repeat.set(1,-1)/offset.set(0,1) 这类垂直翻转，容易导致“上下两张全景”分割错位
   - 当前工程的稳定链路是：`SphereGeometry.scale(-1,1,1)` + `texture.flipY = false`（低清/高清/Canvas/JPG tile 统一）
   - KTX2 转码保持默认方向（不要加 `--lower_left_maps_to_s0t0`），由现有 UV 链路统一处理；否则会触发“整体上下倒置”

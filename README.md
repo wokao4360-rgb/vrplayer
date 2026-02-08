@@ -1,4 +1,4 @@
-﻿# VR 全景 Web 播放器（vrplayer）
+# VR 全景 Web 播放器（vrplayer）
 
 自研的 VR 全景 Web 播放器，基于 Three.js 实现。支持多馆多场景、热点导航、地图导览等功能。  
 本项目采用 **AI 协作（Codex / Cursor）** 开发，协作铁律见：`AGENTS.md`。
@@ -151,7 +151,7 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
 - 若线上仍命中旧构建：通常是 `index.html`/CDN/浏览器缓存导致继续引用旧 hash 资源；发布后优先用带版本参数的 URL 校验（例如 `?v=时间戳`）
 - 瓦片画面泛白：CanvasTexture 需标记 sRGB，材质关闭 toneMapping；否则亮部发灰泛白
 - 低清→高清分块：低清层优先排队，首屏可视高清块同时并发；低清作为底图保留避免黑屏
-- 大陆加速策略：`public/config.json` 的 `assetCdn` 为唯一入口；当前采用“先探测 CDN，可达才改写，不可达自动回源同站”的安全模式，避免大陆网络下批量 `net::ERR_*`
+- 大陆加速策略：`public/config.json` 的 `assetCdn` 为唯一入口；当前首选 `github.cnxiaobai.com`（raw.githubusercontent 镜像），并保持“先探测 CDN，可达才改写，不可达自动回源同站”的安全模式，避免大陆网络下批量 `net::ERR_*`
 - manifest 加速注意：`src/viewer/tileManifest.ts` 会对 `manifest.baseUrl` 再走一次 `resolveAssetUrl`；当 CDN 探测失败时，瓦片与低清图会统一回源，避免链路分裂
 - 全景/瓦片纹理不要再做 repeat.set(1,-1)/offset.set(0,1) 这类垂直翻转，容易导致“上下两张全景”分割错位
   - 当前工程的稳定链路是：`SphereGeometry.scale(-1,1,1)` + `texture.flipY = false`（低清/高清/Canvas/JPG tile 统一）
@@ -231,3 +231,4 @@ internalYaw = -worldYaw（只在一个入口做一次）
 - 2026-02-01: 瓦片预加载顺序固定：先加载首屏左右 180 度（前半球），再加载后 180 度，正后方瓦片最后；无需等用户转动视角。
 
 - KTX2/Basis: ??? `npm run ktx2:setup` ?? transcoder ? `public/assets/basis`??? `npm run tiles:ktx2 -- --in <tiles??>` ?? .ktx2?manifest ??? tileFormat=ktx2?????? KTX2 ???? jpg
+

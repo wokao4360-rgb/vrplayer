@@ -659,7 +659,7 @@ export class PanoViewer {
         crossOrigin: 'anonymous',
         allowFetchFallback: false,
         priority: 'high',
-        imageOrientation: 'from-image',
+        imageOrientation: 'flipY',
       });
 
       // 转为 THREE.Texture
@@ -667,9 +667,8 @@ export class PanoViewer {
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
-      // 纯全景链路统一用 texture.flipY 做一次垂直翻转，避免不同浏览器
-      // 对 createImageBitmap(imageOrientation) 实现差异造成的倒置。
-      texture.flipY = true;
+      // 纯全景链路在解码阶段翻转，纹理阶段不再翻转，避免重复翻转导致倒立。
+      texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;
@@ -726,7 +725,7 @@ export class PanoViewer {
         crossOrigin: 'anonymous',
         allowFetchFallback: false,
         priority: 'high',
-        imageOrientation: 'from-image',
+        imageOrientation: 'flipY',
       });
 
       // 转为 THREE.Texture
@@ -734,8 +733,8 @@ export class PanoViewer {
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
       
-      // 纯全景链路统一用 texture.flipY 做一次垂直翻转。
-      lowTexture.flipY = true;
+      // 纯全景链路在解码阶段翻转，纹理阶段不再翻转，避免重复翻转导致倒立。
+      lowTexture.flipY = false;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
       lowTexture.wrapT = THREE.ClampToEdgeWrapping;
       lowTexture.needsUpdate = true;
@@ -767,7 +766,7 @@ export class PanoViewer {
           crossOrigin: 'anonymous',
           allowFetchFallback: false,
           priority: 'low',
-          imageOrientation: 'from-image',
+          imageOrientation: 'flipY',
         });
         
         // 转为 THREE.Texture
@@ -775,8 +774,8 @@ export class PanoViewer {
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
         
-        // 纯全景链路统一用 texture.flipY 做一次垂直翻转。
-        highTexture.flipY = true;
+        // 纯全景链路在解码阶段翻转，纹理阶段不再翻转，避免重复翻转导致倒立。
+        highTexture.flipY = false;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
         highTexture.needsUpdate = true;
@@ -1573,12 +1572,12 @@ export class PanoViewer {
         retries: 1,
         allowFetchFallback: true,
         priority: 'high',
-        imageOrientation: 'from-image',
+        imageOrientation: 'flipY',
       });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
-      // 纯全景链路统一用 texture.flipY 做一次垂直翻转。
-      texture.flipY = true;
+      // 纯全景链路在解码阶段翻转，纹理阶段不再翻转，避免重复翻转导致倒立。
+      texture.flipY = false;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;

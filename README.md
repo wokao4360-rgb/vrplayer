@@ -155,6 +155,7 @@ Agent Notes (Persistent) — 给“新 Codex 窗口”的快速定位区
   - 当前工程的稳定链路是：`SphereGeometry.scale(-1,1,1)` + `texture.flipY = false`（低清/高清/Canvas/JPG tile 统一）
   - KTX2 转码保持默认方向（不要加 `--lower_left_maps_to_s0t0`），由现有 UV 链路统一处理；否则会触发“整体上下倒置”
 - 纯全景（pano/panoLow/fallback）与瓦片链路不要混用同一翻转手段：若出现“整图倒立但 KTX2 正常”，优先检查 `loadExternalImageBitmap` 的 `createImageBitmap` 方向参数；纯全景需在解码阶段显式使用 `imageOrientation: 'flipY'`，避免与 tiles UV 链路冲突
+  - 回归警戒：不要把纯全景改成 `imageOrientation: 'from-image' + texture.flipY = true`，线上会出现 gate/low 图倒立；稳定组合是 `imageOrientation: 'flipY' + texture.flipY = false`
 - 预览图（导览/列表）统一使用 `*-nail.jpg` 小图；低清全景使用 `*-low.jpg`
 - TileMeshPano 分片球体必须把 UV 归一化到 0..1，并对 V 做翻转（`v = 1 - v`），否则会出现“上下两张全景”/分片错位/上下颠倒
 - tileFormat=ktx2 走 TileMeshPano（KTX2Loader）；其它格式走 TileCanvasPano（Canvas 拼接）

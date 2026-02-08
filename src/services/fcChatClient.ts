@@ -9,6 +9,11 @@ export type FcChatContext = {
   url?: string;
 };
 
+export type FcChatHistoryItem = {
+  role: "user" | "assistant";
+  text: string;
+};
+
 export type FcChatConfig = {
   endpoint: string;      // e.g. https://xxx.fcapp.run/
   authToken?: string;    // optional
@@ -34,8 +39,28 @@ function normalizeEndpoint(endpoint: string): string {
   return endpoint.endsWith("/") ? endpoint : endpoint + "/";
 }
 
-function buildPayload(question: string, ctx?: FcChatContext): AnyObj {
+function buildPayload(
+  question: string,
+  ctx?: FcChatContext,
+  history: FcChatHistoryItem[] = [],
+  sessionId = ""
+): AnyObj {
+  const normalizedHistory = history
+    .map((item) => ({
+      role: item.role === "assistant" ? "assistant" : "user",
+      content: typeof item.text === "string" ? item.text.trim() : "",
+    }))
+    .filter((item) => !!item.content);
+
   const payload: AnyObj = { question };
+  if (sessionId) {
+    payload.sessionId = sessionId;
+    payload.conversationId = sessionId;
+  }
+  if (normalizedHistory.length > 0) {
+    payload.history = normalizedHistory;
+    payload.messages = normalizedHistory;
+  }
   if (ctx && typeof ctx === "object") {
     payload.context = {
       museumId: ctx.museumId || "",
@@ -43,6 +68,8 @@ function buildPayload(question: string, ctx?: FcChatContext): AnyObj {
       sceneId: ctx.sceneId || "",
       sceneTitle: ctx.sceneTitle || "",
       url: ctx.url || "",
+      sessionId: sessionId || "",
+      historyLength: normalizedHistory.length,
     };
   }
   return payload;
@@ -101,7 +128,12 @@ export class FcChatClient {
     this.timeoutMs = typeof cfg.timeoutMs === "number" && cfg.timeoutMs > 0 ? cfg.timeoutMs : 15000;
   }
 
-  async ask(question: string, ctx?: FcChatContext): Promise<{ answer: string; model?: string }> {
+  async ask(
+    question: string,
+    ctx?: FcChatContext,
+    history: FcChatHistoryItem[] = [],
+    sessionId = ""
+  ): Promise<{ answer: string; model?: string }> {
     const q = (question || "").trim();
     if (!q) throw new Error("empty question");
 
@@ -123,7 +155,7 @@ export class FcChatClient {
       const resp = await fetch(this.endpoint, {
         method: "POST",
         headers,
-        body: JSON.stringify(buildPayload(q, ctx)),
+        body: JSON.stringify(buildPayload(q, ctx, history, sessionId)),
         signal: controller.signal,
       });
 

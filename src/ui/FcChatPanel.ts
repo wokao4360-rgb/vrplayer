@@ -4,6 +4,22 @@ import type { FcChatContext } from "../services/fcChatClient";
 type Role = "assistant" | "user";
 type ChatMsg = { role: Role; text: string };
 
+const MAX_HISTORY_MESSAGES = 40;
+const HISTORY_KEY_PREFIX = "fcchat_history_v2";
+const SESSION_KEY_PREFIX = "fcchat_session_v1";
+
+function buildScopedKey(prefix: string, museumId?: string): string {
+  const scope = (museumId || "global").trim() || "global";
+  return `${prefix}:${scope}`;
+}
+
+function generateSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `fcchat_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export class FcChatPanel {
   private client: FcChatClient;
   private context: FcChatContext;
@@ -29,6 +45,9 @@ export class FcChatPanel {
   private messages: ChatMsg[] = [];
   private isOpen = false;
   private fabButton: HTMLButtonElement | null = null;
+  private historyStorageKey: string;
+  private sessionStorageKey: string;
+  private sessionId: string;
 
   // FAB drag state
   private snapTimer: number | null = null;
@@ -49,11 +68,14 @@ export class FcChatPanel {
   constructor(client: FcChatClient, context: FcChatContext) {
     this.client = client;
     this.context = context;
+    this.historyStorageKey = buildScopedKey(HISTORY_KEY_PREFIX, context.museumId);
+    this.sessionStorageKey = buildScopedKey(SESSION_KEY_PREFIX, context.museumId);
+    this.sessionId = this.loadSessionId();
 
     this.mount();
     this.injectStyles();
     this.detectMobile();
-    this.ensureWelcome();
+    this.restoreHistoryOrWelcome();
   }
 
   public destroy() {
@@ -601,7 +623,91 @@ export class FcChatPanel {
     this.messages = [];
     this.list.innerHTML = "";
     this.statusLine.textContent = "";
+    this.sessionId = generateSessionId();
+    this.persistSessionId();
+    this.persistMessages();
     this.ensureWelcome();
+  }
+
+  private loadSessionId(): string {
+    try {
+      const saved = localStorage.getItem(this.sessionStorageKey);
+      if (saved && saved.trim()) return saved;
+    } catch {
+      // ignore
+    }
+    const next = generateSessionId();
+    try {
+      localStorage.setItem(this.sessionStorageKey, next);
+    } catch {
+      // ignore
+    }
+    return next;
+  }
+
+  private persistSessionId(): void {
+    try {
+      localStorage.setItem(this.sessionStorageKey, this.sessionId);
+    } catch {
+      // ignore
+    }
+  }
+
+  private restoreHistoryOrWelcome(): void {
+    let restored = false;
+    try {
+      const raw = localStorage.getItem(this.historyStorageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const history = parsed
+            .map((item: any) => ({
+              role: item?.role === "assistant" ? "assistant" : "user",
+              text: typeof item?.text === "string" ? item.text.trim() : "",
+            }))
+            .filter((item: ChatMsg) => !!item.text) as ChatMsg[];
+          if (history.length > 0) {
+            this.messages = history.slice(-MAX_HISTORY_MESSAGES);
+            this.renderMessages();
+            restored = true;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    if (!restored) {
+      this.ensureWelcome();
+      this.persistMessages();
+    }
+  }
+
+  private renderMessages(): void {
+    this.list.innerHTML = "";
+    for (const msg of this.messages) {
+      const row = document.createElement("div");
+      row.className = `fcchat-row ${msg.role === "user" ? "is-user" : "is-assistant"}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = `fcchat-bubble ${msg.role === "user" ? "bubble-user" : "bubble-assistant"}`;
+      bubble.textContent = this.normalizeText(msg.text);
+
+      row.appendChild(bubble);
+      this.list.appendChild(row);
+    }
+    this.scrollToBottom();
+  }
+
+  private persistMessages(): void {
+    try {
+      localStorage.setItem(
+        this.historyStorageKey,
+        JSON.stringify(this.messages.slice(-MAX_HISTORY_MESSAGES))
+      );
+    } catch {
+      // ignore
+    }
   }
 
   private ensureWelcome() {
@@ -622,6 +728,9 @@ export class FcChatPanel {
   private addMessage(role: Role, text: string) {
     const msg: ChatMsg = { role, text: this.normalizeText(text) };
     this.messages.push(msg);
+    if (this.messages.length > MAX_HISTORY_MESSAGES) {
+      this.messages = this.messages.slice(-MAX_HISTORY_MESSAGES);
+    }
 
     const row = document.createElement("div");
     row.className = `fcchat-row ${role === "user" ? "is-user" : "is-assistant"}`;
@@ -633,6 +742,7 @@ export class FcChatPanel {
     row.appendChild(bubble);
     this.list.appendChild(row);
     this.scrollToBottom();
+    this.persistMessages();
   }
 
   // create assistant bubble with loading dots
@@ -773,17 +883,19 @@ export class FcChatPanel {
     this.setBusy(true, "");
 
     try {
-      const res = await this.client.ask(q, this.context);
+      const historyForRequest = this.messages.slice(-MAX_HISTORY_MESSAGES);
+      const res = await this.client.ask(q, this.context, historyForRequest, this.sessionId);
 
       // replace loading bubble with empty bubble for typewriter
       const bubble = this.replaceLoadingWithEmpty(loadingRow);
       this.setBusy(true, "输出中…");
       await this.typewriterRender(bubble, res.answer);
 
-      // update messages array with final text
-      if (this.messages.length > 0 && this.messages[this.messages.length - 1].role === "assistant") {
-        this.messages[this.messages.length - 1].text = res.answer;
+      this.messages.push({ role: "assistant", text: this.normalizeText(res.answer) });
+      if (this.messages.length > MAX_HISTORY_MESSAGES) {
+        this.messages = this.messages.slice(-MAX_HISTORY_MESSAGES);
       }
+      this.persistMessages();
 
       this.setBusy(false, "");
     } catch (e: any) {
@@ -793,10 +905,11 @@ export class FcChatPanel {
         loadingRow.removeAttribute("data-loading");
         const msg = typeof e?.message === "string" ? e.message : String(e);
         bubble.textContent = `请求失败：${msg}`;
-        // update messages array
-        if (this.messages.length > 0 && this.messages[this.messages.length - 1].role === "assistant") {
-          this.messages[this.messages.length - 1].text = `请求失败：${msg}`;
+        this.messages.push({ role: "assistant", text: `请求失败：${msg}` });
+        if (this.messages.length > MAX_HISTORY_MESSAGES) {
+          this.messages = this.messages.slice(-MAX_HISTORY_MESSAGES);
         }
+        this.persistMessages();
       }
       this.setBusy(false, "");
     }

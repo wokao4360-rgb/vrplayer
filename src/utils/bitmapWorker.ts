@@ -38,13 +38,18 @@ function ensureWorker(): Worker | null {
 
 export async function decodeImageBitmapInWorker(
   url: string,
-  opts: { timeoutMs?: number; priority?: 'low' | 'high' } = {}
+  opts: {
+    timeoutMs?: number;
+    priority?: 'low' | 'high';
+    imageOrientation?: 'from-image' | 'flipY' | 'none';
+  } = {}
 ): Promise<ImageBitmap | null> {
   const w = ensureWorker();
   if (!w || typeof createImageBitmap === 'undefined') return null;
   const id = ++seq;
   const timeoutMs = Math.max(1000, opts.timeoutMs ?? 12000);
   const priority = opts.priority ?? 'high';
+  const imageOrientation = opts.imageOrientation ?? 'from-image';
   return new Promise<ImageBitmap>((resolve, reject) => {
     const entry: Pending = { resolve, reject };
     entry.timer = window.setTimeout(() => {
@@ -52,6 +57,6 @@ export async function decodeImageBitmapInWorker(
       reject(new Error('worker decode timeout'));
     }, timeoutMs + 500);
     pending.set(id, entry);
-    w.postMessage({ id, url, timeoutMs, priority });
+    w.postMessage({ id, url, timeoutMs, priority, imageOrientation });
   });
 }

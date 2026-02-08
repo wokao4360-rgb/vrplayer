@@ -3,6 +3,7 @@ type DecodeRequest = {
   url: string;
   timeoutMs: number;
   priority: 'low' | 'high';
+  imageOrientation?: 'from-image' | 'flipY' | 'none';
 };
 
 type DecodeResponse = {
@@ -12,7 +13,7 @@ type DecodeResponse = {
 };
 
 self.onmessage = async (event: MessageEvent<DecodeRequest>) => {
-  const { id, url, timeoutMs, priority } = event.data;
+  const { id, url, timeoutMs, priority, imageOrientation = 'from-image' } = event.data;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -28,7 +29,10 @@ self.onmessage = async (event: MessageEvent<DecodeRequest>) => {
       throw new Error(`HTTP ${res.status}`);
     }
     const blob = await res.blob();
-    const bitmap = await createImageBitmap(blob);
+    const bitmap = await (createImageBitmap as any)(blob, {
+      imageOrientation,
+      premultiplyAlpha: 'none',
+    });
     const payload: DecodeResponse = { id, bitmap };
     (self as any).postMessage(payload, [bitmap]);
   } catch (err) {

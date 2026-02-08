@@ -466,7 +466,7 @@ export class TileMeshPano {
     const geom = this.buildTileGeometry(level, info.col, info.row);
     const mat = new THREE.MeshBasicMaterial({
       map: info.texture,
-      // 必须开启深度测试/写入，避免前后半球同时可见造成“双球叠加”。
+      // 开启深度测试/写入，避免前后半球同时可见造成“双球叠加”。
       depthWrite: true,
       depthTest: true,
     });
@@ -485,6 +485,46 @@ export class TileMeshPano {
       this.highReady = true;
       this.onHighReady();
     }
+    this.pruneCoveredAncestors(info.z, info.col, info.row);
+  }
+
+  // 高层 tile 覆盖完成后移除其父层 mesh，避免同半径双层叠加导致“分层/双球”。
+  private pruneCoveredAncestors(z: number, col: number, row: number): void {
+    if (z <= 0) return;
+    const parentZ = z - 1;
+    const parentCol = Math.floor(col / 2);
+    const parentRow = Math.floor(row / 2);
+    if (!this.areDirectChildrenReady(parentZ, parentCol, parentRow)) return;
+    const parentKey = `${parentZ}_${parentCol}_${parentRow}`;
+    const parentInfo = this.tilesMap.get(parentKey);
+    if (!parentInfo?.mesh) return;
+    this.disposeTileMesh(parentInfo);
+    parentInfo.mesh = undefined;
+    parentInfo.texture = undefined;
+    this.pruneCoveredAncestors(parentZ, parentCol, parentRow);
+  }
+
+  private areDirectChildrenReady(parentZ: number, parentCol: number, parentRow: number): boolean {
+    const childZ = parentZ + 1;
+    for (let dy = 0; dy < 2; dy += 1) {
+      for (let dx = 0; dx < 2; dx += 1) {
+        const childKey = `${childZ}_${parentCol * 2 + dx}_${parentRow * 2 + dy}`;
+        const child = this.tilesMap.get(childKey);
+        if (!child || child.state !== 'ready' || !child.mesh) return false;
+      }
+    }
+    return true;
+  }
+
+  private disposeTileMesh(info: TileInfo): void {
+    if (!info.mesh) return;
+    info.mesh.parent?.remove(info.mesh);
+    info.mesh.geometry.dispose();
+    const mat = info.mesh.material as THREE.MeshBasicMaterial;
+    if (mat.map && mat.map === info.texture) {
+      mat.map.dispose();
+    }
+    mat.dispose();
   }
 
   private buildTileGeometry(level: TileLevel, col: number, row: number): THREE.SphereGeometry {

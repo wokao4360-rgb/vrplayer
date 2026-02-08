@@ -556,19 +556,20 @@ export class PanoViewer {
       fetchTileManifest(manifestUrl)
         .then((manifest) => {
           // KTX2 走 Mesh 渲染，其它格式走 Canvas 拼接
-          this.tilePano =
-            manifest.tileFormat === 'ktx2'
-              ? new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
-              : new TileCanvasPano(
-                  this.scene,
-                  onFirstDraw,
-                  onHighReady,
-                  this.renderer.capabilities.maxTextureSize || 0
-                );
+          this.tilePano = manifest.tileFormat === 'ktx2'
+            ? new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
+            : new TileCanvasPano(
+                this.scene,
+                onFirstDraw,
+                onHighReady,
+                this.renderer.capabilities.maxTextureSize || 0
+              );
           if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
             (this.tilePano as any).setPerformanceMode(this.perfMode);
           }
-          return this.tilePano.load(manifest, { fallbackVisible: fallbackPlanned });
+          return this.tilePano.load(manifest, {
+            fallbackVisible: fallbackPlanned,
+          });
         })
         .then(() => {
           if (!this.tilesLowReady) {
@@ -658,7 +659,7 @@ export class PanoViewer {
         crossOrigin: 'anonymous',
         allowFetchFallback: false,
         priority: 'high',
-        imageOrientation: 'flipY',
+        imageOrientation: 'from-image',
       });
 
       // 转为 THREE.Texture
@@ -666,8 +667,9 @@ export class PanoViewer {
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
-      // 方向由纹理/UV 链路统一处理，纹理阶段不做额外翻转。
-      texture.flipY = false;
+      // 纯全景链路统一用 texture.flipY 做一次垂直翻转，避免不同浏览器
+      // 对 createImageBitmap(imageOrientation) 实现差异造成的倒置。
+      texture.flipY = true;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;
@@ -724,7 +726,7 @@ export class PanoViewer {
         crossOrigin: 'anonymous',
         allowFetchFallback: false,
         priority: 'high',
-        imageOrientation: 'flipY',
+        imageOrientation: 'from-image',
       });
 
       // 转为 THREE.Texture
@@ -732,8 +734,8 @@ export class PanoViewer {
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
       
-      // 方向由纹理/UV 链路统一处理，纹理阶段不做额外翻转。
-      lowTexture.flipY = false;
+      // 纯全景链路统一用 texture.flipY 做一次垂直翻转。
+      lowTexture.flipY = true;
       lowTexture.wrapS = THREE.ClampToEdgeWrapping;
       lowTexture.wrapT = THREE.ClampToEdgeWrapping;
       lowTexture.needsUpdate = true;
@@ -765,7 +767,7 @@ export class PanoViewer {
           crossOrigin: 'anonymous',
           allowFetchFallback: false,
           priority: 'low',
-          imageOrientation: 'flipY',
+          imageOrientation: 'from-image',
         });
         
         // 转为 THREE.Texture
@@ -773,8 +775,8 @@ export class PanoViewer {
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
         
-        // 方向由纹理/UV 链路统一处理，纹理阶段不做额外翻转。
-        highTexture.flipY = false;
+        // 纯全景链路统一用 texture.flipY 做一次垂直翻转。
+        highTexture.flipY = true;
         highTexture.wrapS = THREE.ClampToEdgeWrapping;
         highTexture.wrapT = THREE.ClampToEdgeWrapping;
         highTexture.needsUpdate = true;
@@ -1571,12 +1573,12 @@ export class PanoViewer {
         retries: 1,
         allowFetchFallback: true,
         priority: 'high',
-        imageOrientation: 'flipY',
+        imageOrientation: 'from-image',
       });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
-      // 方向由纹理/UV 链路统一处理，纹理阶段不做额外翻转。
-      texture.flipY = false;
+      // 纯全景链路统一用 texture.flipY 做一次垂直翻转。
+      texture.flipY = true;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.needsUpdate = true;

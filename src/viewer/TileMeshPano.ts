@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
@@ -19,6 +18,14 @@ type TileInfo = {
   lastUsed: number;
   failCount: number;
   retryTimer?: number;
+};
+
+type Ktx2LoaderLike = {
+  setTranscoderPath: (path: string) => void;
+  detectSupport: (renderer: THREE.WebGLRenderer) => void;
+  setWorkerLimit: (limit: number) => void;
+  dispose: () => void;
+  _createTexture: (buffer: ArrayBuffer) => Promise<THREE.Texture>;
 };
 
 export class TileMeshPano {
@@ -56,7 +63,7 @@ export class TileMeshPano {
   private ktx2Disabled = false;
   private ktx2FailCount = 0;
   private prefetchSeeded = false;
-  private ktx2Loader: KTX2Loader;
+  private ktx2Loader: Ktx2LoaderLike | null = null;
   private static readonly TWO_PI = Math.PI * 2;
 
   constructor(
@@ -64,12 +71,7 @@ export class TileMeshPano {
     private renderer: THREE.WebGLRenderer,
     private onFirstDraw: () => void,
     private onHighReady: () => void
-  ) {
-    this.ktx2Loader = new KTX2Loader();
-    this.ktx2Loader.setTranscoderPath('/assets/basis/');
-    this.ktx2Loader.detectSupport(renderer);
-    this.ktx2Loader.setWorkerLimit(2);
-  }
+  ) {}
 
   async load(manifest: TileManifest, options?: { fallbackVisible?: boolean }): Promise<void> {
     this.manifest = manifest;
@@ -139,7 +141,10 @@ export class TileMeshPano {
       this.scene.remove(this.group);
       this.group = null;
     }
-    this.ktx2Loader.dispose();
+    if (this.ktx2Loader) {
+      this.ktx2Loader.dispose();
+      this.ktx2Loader = null;
+    }
   }
 
   update(camera: THREE.PerspectiveCamera): void {
@@ -401,7 +406,8 @@ export class TileMeshPano {
     const response = await fetch(url, init);
     if (!response.ok) throw new Error(`tile HTTP ${response.status}: ${url}`);
     const buffer = await response.arrayBuffer();
-    const texture = await (this.ktx2Loader as any)._createTexture(buffer);
+    const ktx2Loader = await this.ensureKtx2Loader();
+    const texture = await ktx2Loader._createTexture(buffer);
     // KTX2 压缩纹理不依赖纹理阶段翻转，方向由统一 UV 链路控制。
     texture.flipY = false;
     if ('colorSpace' in texture) {
@@ -411,6 +417,19 @@ export class TileMeshPano {
     }
     texture.needsUpdate = true;
     return texture;
+  }
+
+  private async ensureKtx2Loader(): Promise<Ktx2LoaderLike> {
+    if (this.ktx2Loader) {
+      return this.ktx2Loader;
+    }
+    const { KTX2Loader } = await import('three/examples/jsm/loaders/KTX2Loader.js');
+    const loader = new KTX2Loader() as unknown as Ktx2LoaderLike;
+    loader.setTranscoderPath('/assets/basis/');
+    loader.detectSupport(this.renderer);
+    loader.setWorkerLimit(2);
+    this.ktx2Loader = loader;
+    return loader;
   }
 
   private async loadJpgTexture(url: string, priority: 'low' | 'high'): Promise<THREE.Texture> {

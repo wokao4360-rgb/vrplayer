@@ -36,6 +36,7 @@ export class StructureView3D {
   private edgeLines: THREE.Line[] = [];
   private hoveredSceneId: string | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private readonly handleWindowResize = () => this.handleResize();
   private statusEl: HTMLElement | null = null;
   private webglErrorEl: HTMLElement | null = null;
   private modelErrorEl: HTMLElement | null = null;
@@ -315,7 +316,7 @@ export class StructureView3D {
   private setupResizeObserver(): void {
     if (!this.container || typeof ResizeObserver === 'undefined') {
       // 降级到 window resize
-      window.addEventListener('resize', () => this.handleResize());
+      window.addEventListener('resize', this.handleWindowResize);
       return;
     }
 
@@ -760,7 +761,7 @@ export class StructureView3D {
     }
 
     // 清理事件监听
-    window.removeEventListener('resize', () => this.handleResize());
+    window.removeEventListener('resize', this.handleWindowResize);
 
     this.scene = null;
     this.camera = null;
@@ -768,4 +769,3 @@ export class StructureView3D {
     this.element.remove();
   }
 }
-

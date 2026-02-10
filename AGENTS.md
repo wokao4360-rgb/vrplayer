@@ -214,13 +214,7 @@ Agent MUST:
 
 ---
 
-## 17) MCP 工具使用约定
-
-- 需要时优先使用：`chrome-devtools`、`github`、`filesystem` MCP。
-- 涉及 OpenAI API / ChatGPT Apps SDK / Codex 能力时，优先使用 OpenAI 官方文档 MCP。
-- 涉及库/API 文档、配置与代码生成时，优先使用 Context7 MCP。
-
-## 18) 工具概览
+## 17) 工具概览
 MCP 工具使用约定
 MCP 全量使用表
 MCP/工具	何时使用（只在这种情况）	不该用的时候

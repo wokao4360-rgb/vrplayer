@@ -14,8 +14,7 @@ import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/extern
 import { ZoomHud } from '../ui/ZoomHud';
 import { showToast } from '../ui/toast';
 import { TileCanvasPano } from './TileCanvasPano';
-import { TileMeshPano } from './TileMeshPano';
-import { fetchTileManifest } from './tileManifest';
+import { fetchTileManifest, type TileManifest } from './tileManifest';
 
 type LoadMetrics = {
   sceneId: string;
@@ -29,6 +28,15 @@ type LoadMetrics = {
   perfMode: 'normal' | 'throttle';
   renderSource: 'none' | 'fallback' | 'low' | 'tiles';
   lastError: string;
+};
+
+type TilePano = {
+  load: (manifest: TileManifest, options?: { fallbackVisible?: boolean }) => Promise<void>;
+  prime: (camera: THREE.PerspectiveCamera) => void;
+  update: (camera: THREE.PerspectiveCamera) => void;
+  dispose: () => void;
+  getStatus: () => any;
+  setPerformanceMode?: (mode: 'normal' | 'throttle') => void;
 };
 
 /**
@@ -111,9 +119,10 @@ export class PanoViewer {
   private camera: THREE.PerspectiveCamera;
   private renderer: THREE.WebGLRenderer;
   private sphere: THREE.Mesh | null = null;
-  private tilePano: TileCanvasPano | TileMeshPano | null = null;
+  private tilePano: TilePano | null = null;
   private fallbackSphere: THREE.Mesh | null = null;
   private container: HTMLElement;
+  private readonly handleWindowResize = () => this.handleResize();
   private frameListeners: Array<(dtMs: number) => void> = [];
   private nadirPatch: NadirPatch | null = null;
   private compassDisk: CompassDisk | null = null;
@@ -238,7 +247,7 @@ export class PanoViewer {
     this.animate();
     
     // 响应窗口大小变化
-    window.addEventListener('resize', () => this.handleResize());
+    window.addEventListener('resize', this.handleWindowResize);
   }
 
   private setupEvents(): void {
@@ -554,16 +563,19 @@ export class PanoViewer {
         this.isDegradedMode = false;
       };
       fetchTileManifest(manifestUrl)
-        .then((manifest) => {
+        .then(async (manifest) => {
           // KTX2 走 Mesh 渲染，其它格式走 Canvas 拼接
-          this.tilePano = manifest.tileFormat === 'ktx2'
-            ? new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
-            : new TileCanvasPano(
-                this.scene,
-                onFirstDraw,
-                onHighReady,
-                this.renderer.capabilities.maxTextureSize || 0
-              );
+          if (manifest.tileFormat === 'ktx2') {
+            const { TileMeshPano } = await import('./TileMeshPano');
+            this.tilePano = new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
+          } else {
+            this.tilePano = new TileCanvasPano(
+              this.scene,
+              onFirstDraw,
+              onHighReady,
+              this.renderer.capabilities.maxTextureSize || 0
+            );
+          }
           if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
             (this.tilePano as any).setPerformanceMode(this.perfMode);
           }
@@ -1500,7 +1512,7 @@ export class PanoViewer {
       this.groundHeading = null;
     }
     this.renderer.dispose();
-    window.removeEventListener('resize', () => this.handleResize());
+    window.removeEventListener('resize', this.handleWindowResize);
   }
 
   /**

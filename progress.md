@@ -26,3 +26,17 @@
 - å·²æ‰§è¡Œå‘å¸ƒé“¾è·¯ï¼š`git pull --rebase`ï¼ˆé€šè¿‡ï¼‰â†’ `npm run build`ï¼ˆé€šè¿‡ï¼‰â†’ `robocopy dist docs /MIR`ï¼ˆé€šè¿‡ï¼‰â†’ `git commit` â†’ `git push`ã€‚
 - å‘å¸ƒæäº¤ï¼š`588dfbb4fe435c30966aa0466c6038b9aaf84d1c`ã€‚
 - è¿œç«¯åˆ†æ”¯å·²å¯¹é½è¯¥æäº¤ï¼›`https://wokao4360-rgb.github.io/vrplayer/` å·²è¿”å›žæ–°å“ˆå¸Œ `index-QqKJpH12.js`ã€‚
+
+## 2026-02-10 22:53:11
+- Íê³É `PanoViewer.ts` / `TileMeshPano.ts` ²ð·Ö£º`TileMeshPano` Óë `KTX2Loader` ¸ÄÎª¶¯Ì¬¼ÓÔØ¡£
+- Íê³É `main.ts` Ê×½»»¥ÁÄÌì´¥·¢ÓëÇåÀíÂß¼­£¬ÒÆ³ý³¡¾° idle ×Ô¶¯Ô¤ÈÈÁÄÌì¡£
+
+## 2026-02-10 23:02:47
+- Íê³É `main.ts` ¶þ¶ÎÊ½ UI ¹ÒÔØ£º`VideoPlayer/GuideTray/SceneGuideDrawer/BottomDock/TopModeTabs/Hotspots/QualityIndicator` ÔÚ LOW_READY ºóÒì²½¼ÓÔØ¡£
+- Íê³É `StructureView3D.ts` Óë `PanoViewer.ts` resize ¼àÌý³É¶Ô½â°ó¡£
+- Íê³É `public/sw.js` ¿Ç²ãÔ¤»º´æÓë `/config.json` ÐÂÏÊ¶È²ßÂÔ¡£
+
+## 2026-02-10 23:08:18
+- `npm run build` Í¨¹ý£»Ö÷°ü½µÖÁ `180.66 kB`£¬`dist/index.html` ÒÑÎÞ `three-extras` preload¡£
+- Íê³É chrome-devtools Ö¤¾Ý²ÉÑù£ºnormal/debug/editor + Ê×½»»¥ÁÄÌì + community ÀÁ¼ÓÔØ + ·Ç KTX2 ³¡¾°ÎÞ `three-extras` ÇëÇó¡£
+- ´ýÖ´ÐÐ£º·¢²¼Á´Â· `dist -> docs -> commit -> push`¡£

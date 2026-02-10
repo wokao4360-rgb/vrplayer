@@ -92,3 +92,4 @@ git push origin main
 - [2026-02-08 23:45:00] ä¸‰é¦†å­¦ä¼´ä¸Šä¸‹æ–‡ä¿®å¤ï¼šè¯·æ±‚ä½“å¿…é¡»æºå¸¦ `sessionId + history/messages + context.historyLength`ï¼›èŠå¤©é¢æ¿é”€æ¯é‡å»ºåä» `localStorage` æ¢å¤æ¶ˆæ¯ä¸ä¼šè¯ï¼Œé¿å…æ¯æ¡æ¶ˆæ¯éƒ½è¢«åç«¯è§†ä½œæ–°ä¼šè¯ã€‚
 
 - [2026-02-10 22:15:09] ·ÇÊ×ÆÁ¹¦ÄÜ±ØĞë¶èĞÔ¼ÓÔØ£ºeditor/debug/structure3d/north-calibration/dock-panels ½öÔÚ´¥·¢Ê± import()£»chat-community ÔÊĞí³¡¾°¿É¼ûºó idle ³õÊ¼»¯£¬½ûÖ¹»Øµ½Èë¿Ú¾²Ì¬ÒÀÀµÁ´¡£
+- [2026-02-10 23:08:18] µÚ¶şÂÖĞÔÄÜ¹æÔò£º`TileMeshPano/KTX2Loader` ±ØĞë°´Ğè¶¯Ì¬¼ÓÔØ£¬½ûÖ¹°Ñ `three-extras` ´øÈëÊ×ÆÁ preload£»ÁÄÌìÃæ°å¸ÄÎªÊ×½»»¥´¥·¢¼ÓÔØ£¨²»ÔÙ idle Ô¤ÈÈ£©£»Service Worker ½öÔ¤»º´æ¿Ç²ã×ÊÔ´£¬`/config.json` ±£³Ö network-only ÒÔ±ÜÃâÅäÖÃ³Â¾É¡£

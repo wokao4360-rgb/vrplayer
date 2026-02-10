@@ -18,3 +18,13 @@
 - å‘å¸ƒæäº¤ï¼š`588dfbb4fe435c30966aa0466c6038b9aaf84d1c`ï¼Œå·²æ¨é€åˆ° `origin/main`ã€‚
 - è¿œç«¯ `main` HEAD ä¸æœ¬åœ° HEAD ä¸€è‡´ã€‚
 - é¡µé¢èµ„æºå·²åˆ‡æ¢åˆ°æ–°æ„å»ºï¼š`https://wokao4360-rgb.github.io/vrplayer/` è¿”å› `assets/index-QqKJpH12.js`ã€‚
+
+## 2026-02-10 23:08:18 µÚ¶şÂÖ¹Ø¼ü·¢ÏÖÓë½á¹û
+- ¹¹½¨Ìå»ı£º`dist/assets/index-DVqOpICs.js` = `180.66 kB`£¨Ä¿±ê `<= 210 kB` ´ï³É£©¡£
+- Ê×ÆÁ preload£º`dist/index.html` ½ö±£Áô `three-core`£¬ÒÑÒÆ³ı `three-extras` Ô¤¼ÓÔØ¡£
+- `TileMeshPano` Óë `KTX2Loader` ¸ÄÎª°´Ğè¶¯Ì¬¼ÓÔØ£»·Ç KTX2 ³¡¾°£¨`scene=gate`£©ÇëÇóÖĞ²»³öÏÖ `three-extras` / `tile-ktx2`¡£
+- ÁÄÌì¸ÄÎªÊ×½»»¥´¥·¢£º`scene=gate` ³õÊ¼ÇëÇó²»º¬ `chat-community`£¬Ê×´Îµã»÷ºó²ÅÇëÇó `assets/chat-community-*.js`¡£
+- Dock Ãæ°å±£³Ö°´Ğè£ºµã»÷¡°ÉçÇø¡±ºóÊ×´ÎÇëÇó `assets/dock-panels-*.js`¡£
+- `?debug=1` / `?editor=1` ½öÔÚ¶ÔÓ¦Ä£Ê½ÇëÇó `assets/editor-debug-*.js`¡£
+- ÎÈ¶¨ĞÔĞŞ¸´£º`PanoViewer.ts` Óë `StructureView3D.ts` µÄ `resize` ¼àÌı¸ÄÎª³Ö¾ÃÒıÓÃ£¬`add/remove` ³É¶ÔÇåÀí¡£
+- SW ²ßÂÔ¸üĞÂ£ºĞÂÔö¿Ç²ãÔ¤»º´æ£¨index + js/css£©£¬`/config.json` ÏÔÊ½×ß network-only£¨²»Ğ´Èë¿Ç²ã»º´æ£©¡£

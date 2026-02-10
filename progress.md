@@ -40,3 +40,9 @@
 - `npm run build` 通过；主包降至 `180.66 kB`，`dist/index.html` 已无 `three-extras` preload。
 - 完成 chrome-devtools 证据采样：normal/debug/editor + 首交互聊天 + community 懒加载 + 非 KTX2 场景无 `three-extras` 请求。
 - 待执行：发布链路 `dist -> docs -> commit -> push`。
+
+## 2026-02-10 23:25:52
+- 按用户要求关闭 PR #1（不走 PR 合并），并直接上线。
+- `main` 已 fast-forward 合入优化提交 `78d2e06`。
+- 执行发布链路：`npm run build` -> `robocopy .\\dist .\\docs /MIR` -> 提交 `43c3287` -> `git push origin main`。
+- 远端 `origin/main` 已对齐 `43c3287`，线上 `https://wokao4360-rgb.github.io/vrplayer/` 已从 `index-QqKJpH12.js` 更新到 `index-DVqOpICs.js`。

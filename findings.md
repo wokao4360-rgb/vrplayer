@@ -28,3 +28,8 @@
 - `?debug=1` / `?editor=1` 仅在对应模式请求 `assets/editor-debug-*.js`。
 - 稳定性修复：`PanoViewer.ts` 与 `StructureView3D.ts` 的 `resize` 监听改为持久引用，`add/remove` 成对清理。
 - SW 策略更新：新增壳层预缓存（index + js/css），`/config.json` 显式走 network-only（不写入壳层缓存）。
+
+## 2026-02-10 23:25:52 直接上线验证
+- PR 已关闭（https://github.com/wokao4360-rgb/vrplayer/pull/1）。
+- 发布提交：`43c3287`。
+- 线上部署确认：首页脚本 hash 命中 `assets/index-DVqOpICs.js`，表示 Pages 已部署到本次产物。

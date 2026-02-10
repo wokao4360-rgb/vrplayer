@@ -1,7 +1,7 @@
 ﻿import * as THREE from 'three';
 import type { Scene, InitialView } from '../types/config';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
-import { LoadStatus } from '../ui/QualityIndicator';
+import { LoadStatus } from '../types/loadStatus';
 import { getPreferredQuality } from '../utils/qualityPreference';
 import { NadirPatch } from './NadirPatch';
 import { getYawPitchFromNDC, screenToNDC } from './picking';

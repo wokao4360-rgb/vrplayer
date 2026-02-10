@@ -9,7 +9,9 @@ export default defineConfig({
     modulePreload: {
       resolveDependencies: (_url, deps, { hostType }) => {
         if (hostType === 'html') {
-          return deps.filter((dep) => !dep.includes('three-extras-'));
+          return deps.filter(
+            (dep) => !dep.includes('three-extras-') && !dep.includes('three-core-'),
+          );
         }
         return deps;
       },

@@ -37,3 +37,19 @@ VRPlayer 第二轮深入优化（首屏链路再瘦身 + 稳定性收口）
 - [x] 阶段5 `PanoViewer/StructureView3D` resize 监听成对清理
 - [x] 阶段6 构建与拆包验证（主包体积与 preload 结果）
 - [ ] 阶段7 发布（`dist -> docs -> commit -> push`）
+
+## 第三轮任务（深入优化）
+VRPlayer 第三轮深入优化（入口解耦 + 路由级按需加载 + VR 模块去静态依赖）
+
+## 时间
+- 创建时间: 2026-02-11 00:06:15
+- 最新更新: 2026-02-11 00:06:15
+
+## 阶段状态
+- [x] 阶段1 入口解耦：main.ts 抽离 SceneList 页面实现到 SceneListPage 模块
+- [x] 阶段2 路由级按需：PanoViewer/TopRightControls/BrandMark/StructureView2D 改懒加载
+- [x] 阶段3 类型去耦：LoadStatus 下沉到 src/types/loadStatus.ts
+- [x] 阶段4 VR 去静态依赖：vrMode 模块改按需初始化
+- [x] 阶段5 预加载策略：移除 HTML 对 three-core/three-extras 的 modulepreload
+- [x] 阶段6 证据化验证：chrome-devtools snapshot + network + console
+- [ ] 阶段7 发布（dist -> docs -> commit -> push）

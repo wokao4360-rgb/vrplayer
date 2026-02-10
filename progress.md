@@ -46,3 +46,11 @@
 - `main` 已 fast-forward 合入优化提交 `78d2e06`。
 - 执行发布链路：`npm run build` -> `robocopy .\\dist .\\docs /MIR` -> 提交 `43c3287` -> `git push origin main`。
 - 远端 `origin/main` 已对齐 `43c3287`，线上 `https://wokao4360-rgb.github.io/vrplayer/` 已从 `index-QqKJpH12.js` 更新到 `index-DVqOpICs.js`。
+
+## 2026-02-11 00:06:15
+- 执行第三轮深入重构：main.ts 入口解耦 + 场景/列表路由级懒加载。
+- 新增 src/ui/SceneListPage.ts，将场景列表页面渲染与样式从 main.ts 拆出。
+- 新增 src/types/loadStatus.ts，PanoViewer/QualityIndicator/main 改为依赖共享类型，消除 UI 反向耦合。
+- rMode 改按需加载初始化，删除入口静态依赖，验证 ?museum=wangding 路由不再请求 	hree-core。
+- 完成 chrome-devtools 证据采样：snapshot + network + console 覆盖场景路由与列表路由。
+- 当前待执行：是否按 SOP 发布（dist -> docs -> commit -> push）。

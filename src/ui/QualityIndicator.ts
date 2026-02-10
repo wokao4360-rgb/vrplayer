@@ -5,15 +5,9 @@
  */
 
 import { isFullscreen } from '../utils/fullscreenState';
+import { LoadStatus } from '../types/loadStatus';
 
-export enum LoadStatus {
-  LOADING_LOW = 'loadingLow',
-  LOW_READY = 'lowReady',
-  LOADING_HIGH = 'loadingHigh',
-  HIGH_READY = 'highReady',
-  DEGRADED = 'degraded',
-  ERROR = 'error',
-}
+export { LoadStatus } from '../types/loadStatus';
 
 export class QualityIndicator {
   private element: HTMLElement;

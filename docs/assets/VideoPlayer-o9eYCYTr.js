@@ -1,4 +1,4 @@
-var s=Object.defineProperty;var l=(o,e,t)=>e in o?s(o,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):o[e]=t;var n=(o,e,t)=>l(o,typeof e!="symbol"?e+"":e,t);import{r,A as d}from"./index-DVqOpICs.js";import"./three-core-0fX1SOzE.js";class v{constructor(){n(this,"element");n(this,"videoElement");n(this,"isOpen",!1);this.element=document.createElement("div"),this.element.className="video-player-overlay",this.videoElement=document.createElement("video"),this.videoElement.controls=!0,this.videoElement.playsInline=!0,this.render(),this.applyStyles()}render(){this.element.innerHTML=`
+var s=Object.defineProperty;var l=(o,e,t)=>e in o?s(o,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):o[e]=t;var n=(o,e,t)=>l(o,typeof e!="symbol"?e+"":e,t);import{r,A as d}from"./index-CGaPg6Yv.js";class c{constructor(){n(this,"element");n(this,"videoElement");n(this,"isOpen",!1);this.element=document.createElement("div"),this.element.className="video-player-overlay",this.videoElement=document.createElement("video"),this.videoElement.controls=!0,this.videoElement.playsInline=!0,this.render(),this.applyStyles()}render(){this.element.innerHTML=`
       <div class="video-player-backdrop"></div>
       <div class="video-player-content">
         <button class="video-player-close">×</button>
@@ -70,4 +70,4 @@ var s=Object.defineProperty;var l=(o,e,t)=>e in o?s(o,e,{enumerable:!0,configura
         width: 100%;
         height: 100%;
       }
-    `,document.head.appendChild(e)}getElement(){return this.element}remove(){this.element.remove()}}export{v as VideoPlayer};
+    `,document.head.appendChild(e)}getElement(){return this.element}remove(){this.element.remove()}}export{c as VideoPlayer};

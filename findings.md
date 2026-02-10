@@ -33,3 +33,12 @@
 - PR 已关闭（https://github.com/wokao4360-rgb/vrplayer/pull/1）。
 - 发布提交：`43c3287`。
 - 线上部署确认：首页脚本 hash 命中 `assets/index-DVqOpICs.js`，表示 Pages 已部署到本次产物。
+
+## 2026-02-11 00:06:15 第三轮深入优化关键发现
+- 主入口体积继续下降：dist/assets/index-CGaPg6Yv.js = 77.03 kB（上一轮为 180.66 kB）。
+- dist/index.html 已无 modulepreload，three-core 不再在 HTML 级别强制预拉。
+- 路由级网络行为验证：
+  - 场景列表路由（?museum=wangding）仅请求 index + css + config + TitleBar + SceneListPage + 缩略图，不再请求 	hree-core。
+  - 场景路由（?museum=wangding&scene=gate）才请求 PanoViewer + three-core。
+- VR 模块完成去静态依赖：rMode.ts 改为按需 import 并在首次切 VR 时初始化监听，解除入口对 three 的静态耦合。
+- 关键功能回归采样通过：snapshot 可见场景/列表 UI 正常；console 仅剩历史警告（apple mobile meta/favcion 404），无新增运行时错误。

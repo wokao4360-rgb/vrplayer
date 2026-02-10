@@ -93,3 +93,4 @@ git push origin main
 
 - [2026-02-10 22:15:09] 非首屏功能必须惰性加载：editor/debug/structure3d/north-calibration/dock-panels 仅在触发时 import()；chat-community 允许场景可见后 idle 初始化，禁止回到入口静态依赖链。
 - [2026-02-10 23:08:18] 第二轮性能规则：`TileMeshPano/KTX2Loader` 必须按需动态加载，禁止把 `three-extras` 带入首屏 preload；聊天面板改为首交互触发加载（不再 idle 预热）；Service Worker 仅预缓存壳层资源，`/config.json` 保持 network-only 以避免配置陈旧。
+- [2026-02-11 00:06:15] 第三轮性能规则：main 入口禁止静态依赖 PanoViewer/vrMode 等 three 相关模块；馆列表/场景列表路由不得触发 three-core 请求，three 仅在 scene 路由按需加载；场景列表页面实现应独立于入口文件，避免将大段模板和样式滞留在入口主包。

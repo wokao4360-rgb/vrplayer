@@ -1,31 +1,28 @@
 ﻿import { loadConfig, getMuseum, getScene, clearConfigCache } from './utils/config';
 import { parseRoute, navigateToMuseumList, navigateToSceneList, navigateToScene, isDebugMode, isEditorMode } from './utils/router';
 import { normalizePathname } from './utils/urlBuilder';
-import { PanoViewer } from './viewer/PanoViewer';
-import { TitleBar } from './ui/TitleBar';
-import { MuseumList } from './ui/MuseumList';
-import { SceneList } from './ui/SceneList';
-import { MapOverlay } from './ui/MapOverlay';
+import type { PanoViewer } from './viewer/PanoViewer';
+import type { TitleBar } from './ui/TitleBar';
+import type { MuseumList } from './ui/MuseumList';
+import type { SceneListPage } from './ui/SceneListPage';
 import type { Hotspots } from './ui/Hotspots';
 import type { VideoPlayer } from './ui/VideoPlayer';
-import { ControlBar } from './ui/ControlBar';
 import { Loading } from './ui/Loading';
 import { ConfigErrorPanel } from './ui/ConfigErrorPanel';
 import type { DebugPanel } from './ui/DebugPanel';
 import type { ConfigStudio } from './ui/ConfigStudio';
-import { LoadStatus, type QualityIndicator } from './ui/QualityIndicator';
+import { LoadStatus } from './types/loadStatus';
+import type { QualityIndicator } from './ui/QualityIndicator';
 import './ui/ui.css';
-import { TopRightControls } from './ui/TopRightControls';
-import { BrandMark } from './ui/BrandMark';
+import type { TopRightControls } from './ui/TopRightControls';
+import type { BrandMark } from './ui/BrandMark';
 import type { BottomDock } from './ui/BottomDock';
 import type { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import type { GuideTray } from './ui/GuideTray';
 import type { TopModeTabs, AppViewMode } from './ui/TopModeTabs';
-import { StructureView2D } from './ui/StructureView2D';
+import type { StructureView2D } from './ui/StructureView2D';
 import type { StructureView3D } from './ui/StructureView3D';
-import { buildSceneGraph } from './graph/sceneGraph';
 import { resolveAssetUrl, AssetType, setAssetResolverConfig } from './utils/assetResolver';
-import { toProxiedImageUrl } from './utils/externalImage';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
 import type { ValidationError } from './utils/configValidator';
@@ -43,7 +40,6 @@ import type { FcChatPanel } from './ui/FcChatPanel';
 import type { FcChatConfig } from './services/fcChatClient';
 import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
-import { initVrMode, enableVrMode, disableVrMode, isVrModeEnabled, setInteractingCallback } from './utils/vrMode';
 import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/fullscreen';
 import { mountModal, type MountedModal } from './ui/Modal';
 import { getPreferredQuality, setPreferredQuality, type QualityLevel } from './utils/qualityPreference';
@@ -123,9 +119,6 @@ initYieldClassManager();
 // 鍒濆鍖栧叏灞忕姸鎬佺鐞嗗櫒
 initFullscreenState();
 
-// 鍒濆鍖朧R妯″紡绠＄悊鍣紙鐩戝惉鍏ㄥ睆鐘舵€佸彉鍖栵級
-const setVrModeChangeCallback = initVrMode();
-
 // 鐩戝惉鍏ㄥ睆鐘舵€佸彉鍖栵紝娓呴櫎鎵€鏈夋彁绀?
 const handleFullscreenChange = () => {
   const d = document as any;
@@ -154,6 +147,8 @@ function isDevMode(): boolean {
 //   // 宸茬鐢細鍥剧墖閫氳繃鍚屾簮浠ｇ悊鍔犺浇锛屼笉闇€瑕?preconnect
 // }
 
+type VrModeModule = typeof import('./utils/vrMode');
+
 class App {
   private appElement: HTMLElement;
   private config: AppConfig | null = null;
@@ -167,11 +162,9 @@ class App {
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
   private guideTray: GuideTray | null = null;
   private museumList: MuseumList | null = null;
-  private sceneList: SceneList | null = null;
-  private mapOverlay: MapOverlay | null = null;
+  private sceneListPage: SceneListPage | null = null;
   private hotspots: Hotspots | null = null;
   private videoPlayer: VideoPlayer | null = null;
-  private controlBar: ControlBar | null = null;
   private loading: Loading;
   private debugPanel: DebugPanel | null = null;
   private configStudio: ConfigStudio | null = null;
@@ -195,6 +188,17 @@ class App {
   private structure3DLoadToken = 0;
   private chatInitToken = 0;
   private chatFirstInteractionHandler: (() => void) | null = null;
+  private panoViewerModulePromise: Promise<typeof import('./viewer/PanoViewer')> | null = null;
+  private topRightControlsModulePromise: Promise<typeof import('./ui/TopRightControls')> | null = null;
+  private brandMarkModulePromise: Promise<typeof import('./ui/BrandMark')> | null = null;
+  private structureView2DModulePromise: Promise<typeof import('./ui/StructureView2D')> | null = null;
+  private titleBarModulePromise: Promise<typeof import('./ui/TitleBar')> | null = null;
+  private museumListModulePromise: Promise<typeof import('./ui/MuseumList')> | null = null;
+  private sceneListPageModulePromise: Promise<typeof import('./ui/SceneListPage')> | null = null;
+  private sceneGraphModulePromise: Promise<typeof import('./graph/sceneGraph')> | null = null;
+  private vrModeModulePromise: Promise<VrModeModule> | null = null;
+  private vrModeInitialized = false;
+  private externalImageModulePromise: Promise<typeof import('./utils/externalImage')> | null = null;
 
   constructor() {
     const appElement = document.getElementById('app');
@@ -221,7 +225,7 @@ class App {
       this.topRightControls?.syncFullscreenState();
       // 鍚屾VR妯″紡鐘舵€侊紙濡傛灉VR妯″紡鍥犻€€鍑哄叏灞忚€屽叧闂級
       if (!isFullscreen()) {
-        if (this.topRightControls && !isVrModeEnabled()) {
+        if (this.topRightControls) {
           this.topRightControls.updateVrModeState(false);
         }
         // 閲嶇疆PanoViewer鐨刅R妯″紡鏍囧織
@@ -234,6 +238,90 @@ class App {
 
     document.addEventListener('fullscreenchange', handler);
     document.addEventListener('webkitfullscreenchange', handler as EventListener);
+  }
+
+  private loadPanoViewerModule(): Promise<typeof import('./viewer/PanoViewer')> {
+    if (!this.panoViewerModulePromise) {
+      this.panoViewerModulePromise = import('./viewer/PanoViewer');
+    }
+    return this.panoViewerModulePromise;
+  }
+
+  private loadTopRightControlsModule(): Promise<typeof import('./ui/TopRightControls')> {
+    if (!this.topRightControlsModulePromise) {
+      this.topRightControlsModulePromise = import('./ui/TopRightControls');
+    }
+    return this.topRightControlsModulePromise;
+  }
+
+  private loadBrandMarkModule(): Promise<typeof import('./ui/BrandMark')> {
+    if (!this.brandMarkModulePromise) {
+      this.brandMarkModulePromise = import('./ui/BrandMark');
+    }
+    return this.brandMarkModulePromise;
+  }
+
+  private loadStructureView2DModule(): Promise<typeof import('./ui/StructureView2D')> {
+    if (!this.structureView2DModulePromise) {
+      this.structureView2DModulePromise = import('./ui/StructureView2D');
+    }
+    return this.structureView2DModulePromise;
+  }
+
+  private loadTitleBarModule(): Promise<typeof import('./ui/TitleBar')> {
+    if (!this.titleBarModulePromise) {
+      this.titleBarModulePromise = import('./ui/TitleBar');
+    }
+    return this.titleBarModulePromise;
+  }
+
+  private loadMuseumListModule(): Promise<typeof import('./ui/MuseumList')> {
+    if (!this.museumListModulePromise) {
+      this.museumListModulePromise = import('./ui/MuseumList');
+    }
+    return this.museumListModulePromise;
+  }
+
+  private loadSceneListPageModule(): Promise<typeof import('./ui/SceneListPage')> {
+    if (!this.sceneListPageModulePromise) {
+      this.sceneListPageModulePromise = import('./ui/SceneListPage');
+    }
+    return this.sceneListPageModulePromise;
+  }
+
+  private loadSceneGraphModule(): Promise<typeof import('./graph/sceneGraph')> {
+    if (!this.sceneGraphModulePromise) {
+      this.sceneGraphModulePromise = import('./graph/sceneGraph');
+    }
+    return this.sceneGraphModulePromise;
+  }
+
+  private loadVrModeModule(): Promise<VrModeModule> {
+    if (!this.vrModeModulePromise) {
+      this.vrModeModulePromise = import('./utils/vrMode');
+    }
+    return this.vrModeModulePromise;
+  }
+
+  private async ensureVrModeInitialized(): Promise<VrModeModule> {
+    const vrMode = await this.loadVrModeModule();
+    if (!this.vrModeInitialized) {
+      vrMode.initVrMode();
+      this.vrModeInitialized = true;
+    }
+    return vrMode;
+  }
+
+  private async resolveProxiedImageUrl(rawUrl: string): Promise<string> {
+    if (!this.externalImageModulePromise) {
+      this.externalImageModulePromise = import('./utils/externalImage');
+    }
+    try {
+      const { toProxiedImageUrl } = await this.externalImageModulePromise;
+      return toProxiedImageUrl(rawUrl);
+    } catch {
+      return rawUrl;
+    }
   }
 
   private async init(): Promise<void> {
@@ -431,6 +519,13 @@ class App {
     if (!this.config) return;
 
     const route = parseRoute();
+
+    // 鍦烘櫙璺敱棰勭儹锛氬彧鍦?scene 妯″紡涓嬫墠鎷夎捣閲嶈祫婧愭ā鍧楋紝閬垮厤鍒楄〃椤典篃涓嬭浇 three 鏍稿績銆?
+    if (route.sceneId) {
+      void this.loadPanoViewerModule();
+      void this.loadTopRightControlsModule();
+      void this.loadBrandMarkModule();
+    }
     
     // 娓呯悊褰撳墠瑙嗗浘
     this.clearView();
@@ -450,12 +545,12 @@ class App {
 
     if (!route.museumId) {
       // 鏄剧ず棣嗗垪琛?
-      this.showMuseumList();
+      await this.showMuseumList();
     } else if (!route.sceneId) {
       // 鏄剧ず鍦烘櫙鍒楄〃
       const museum = getMuseum(route.museumId);
       if (museum) {
-        this.showSceneList(museum);
+        await this.showSceneList(museum);
       } else {
         this.showError('鏈壘鍒版寚瀹氱殑灞曢');
         navigateToMuseumList();
@@ -478,8 +573,13 @@ class App {
     }
   }
 
-  private showMuseumList(): void {
+  private async showMuseumList(): Promise<void> {
     if (!this.config) return;
+
+    const [{ TitleBar }, { MuseumList }] = await Promise.all([
+      this.loadTitleBarModule(),
+      this.loadMuseumListModule(),
+    ]);
 
     // 鍒涘缓鏍囬鏍?
     this.titleBar = new TitleBar(this.config.appName);
@@ -490,120 +590,16 @@ class App {
     this.appElement.appendChild(this.museumList.getElement());
   }
 
-  private showSceneList(museum: Museum): void {
+  private async showSceneList(museum: Museum): Promise<void> {
+    const { TitleBar } = await this.loadTitleBarModule();
+
     // 鍒涘缓鏍囬鏍?
     this.titleBar = new TitleBar(museum.name);
     this.appElement.appendChild(this.titleBar.getElement());
 
-    // 鍒涘缓鍦烘櫙鍒楄〃锛堢被浼奸鍒楄〃鐨勫睍绀烘柟寮忥級
-    const sceneListElement = document.createElement('div');
-    sceneListElement.className = 'scene-list-page';
-    sceneListElement.innerHTML = `
-      <div class="scene-list-container">
-        <h1 class="scene-list-title">${museum.name} - 鍦烘櫙鍒楄〃</h1>
-        ${museum.description ? `<p class="scene-list-desc">${museum.description}</p>` : ''}
-        <div class="scene-grid">
-          ${museum.scenes.map(scene => `
-            <div class="scene-card" data-scene-id="${scene.id}">
-              <div class="scene-cover">
-                <img src="${scene.thumb}" alt="${scene.name}" loading="lazy">
-                <div class="scene-overlay">
-                  <h2 class="scene-name">${scene.name}</h2>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
-    // 娣诲姞鏍峰紡
-    const style = document.createElement('style');
-    style.textContent = `
-      .scene-list-page {
-        width: 100%;
-        height: 100%;
-        overflow-y: auto;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding-top: calc(44px + env(safe-area-inset-top, 0px));
-      }
-      .scene-list-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      .scene-list-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #fff;
-        text-align: center;
-        margin-bottom: 30px;
-      }
-      .scene-list-desc {
-        max-width: 820px;
-        margin: -12px auto 26px;
-        color: rgba(255,255,255,0.92);
-        font-size: 15px;
-        line-height: 1.6;
-        text-align: center;
-      }
-      .scene-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 20px;
-      }
-      .scene-card {
-        cursor: pointer;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        transition: transform 0.2s;
-      }
-      .scene-card:active {
-        transform: scale(0.98);
-      }
-      .scene-cover {
-        position: relative;
-        width: 100%;
-        padding-top: 56.25%;
-        overflow: hidden;
-      }
-      .scene-cover img {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .scene-overlay {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-        padding: 15px;
-        color: #fff;
-      }
-      .scene-name {
-        font-size: 18px;
-        font-weight: 600;
-        margin: 0;
-      }
-    `;
-    document.head.appendChild(style);
-
-    // 缁戝畾鐐瑰嚮浜嬩欢
-    sceneListElement.querySelectorAll('.scene-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const sceneId = card.getAttribute('data-scene-id');
-        if (sceneId) {
-          navigateToScene(museum.id, sceneId);
-        }
-      });
-    });
-
-    this.appElement.appendChild(sceneListElement);
+    const { SceneListPage } = await this.loadSceneListPageModule();
+    this.sceneListPage = new SceneListPage(museum);
+    this.appElement.appendChild(this.sceneListPage.getElement());
   }
 
   private async showScene(museum: Museum, scene: Scene): Promise<void> {
@@ -627,40 +623,12 @@ class App {
 
     // 鍒涘缓鍏ㄦ櫙鏌ョ湅鍣紙妫€鏌ユ槸鍚﹀惎鐢ㄨ皟璇曟ā寮忥級
     const debugMode = isDebugMode();
+    const { PanoViewer } = await this.loadPanoViewerModule();
     this.panoViewer = new PanoViewer(viewerContainer, debugMode);
 
-    // 鏂?UI锛氬彸涓婅鎺у埗鎸夐挳锛堝叏灞?+ 鍧愭爣鎷惧彇 + 鏍″噯鍖楀悜锛? 闄嶇骇淇濇姢
-    // 寮€鍙戣€呮ā寮忥細浠呭綋 URL 甯?development 鍙傛暟鏃舵墠鏄剧ず鍧愭爣鎷惧彇鍜屾牎鍑嗗寳鍚?
+    // 鏂?UI锛氬彸涓婅鎺у埗鎸夐挳锛堝叏灞?+ 鍧愭爣鎷惧彇 + 鏍″噯鍖楀悜锛夛級闈炵鍒濆睆锛屾敼涓哄紓姝ユ寕杞姐€?
     const devMode = isDevMode();
-    try {
-      this.topRightControls = new TopRightControls({
-        viewerRootEl: viewerContainer,
-        onTogglePickMode: devMode ? () => {
-          if (this.panoViewer) {
-            if (this.panoViewer.isPickModeEnabled()) {
-              this.panoViewer.disablePickMode();
-            } else {
-              this.panoViewer.enablePickMode();
-            }
-            return this.panoViewer.isPickModeEnabled();
-          }
-          return false;
-        } : undefined,
-        onOpenNorthCalibration: devMode ? () => {
-          void this.openNorthCalibration(scene.id);
-        } : undefined,
-        showNorthCalibration: devMode, // 浠呭紑鍙戣€呮ā寮忔樉绀?
-        onToggleVrMode: async () => {
-          return this.toggleVrModeFromUI(viewerContainer);
-        },
-      });
-      this.appElement.appendChild(this.topRightControls.getElement());
-    } catch (err) {
-      if (__VR_DEBUG__) {
-        console.debug('[showScene] TopRightControls 鍒涘缓澶辫触锛岃烦杩?', err);
-      }
-      this.topRightControls = null;
-    }
+    void this.mountTopRightControls(viewerContainer, scene, devMode);
 
     // 鏂?UI锛氬乏涓婅鍦烘櫙鏍囬锛堝瑙嗛鏍硷級
     this.sceneTitleEl = document.createElement('div');
@@ -700,35 +668,8 @@ class App {
     };
     window.addEventListener('vr:pickmode', this.handlePickModeEvent);
 
-    // 鏂?UI锛氬乏涓嬭姘村嵃 + About 寮圭獥 - 闄嶇骇淇濇姢 + 骞傜瓑淇濇姢
-    try {
-      // 骞傜瓑淇濇姢锛氬鏋滃凡瀛樺湪锛屼笉鍐嶉噸澶嶅垱寤?
-      const existingBrandMark = this.appElement.querySelector('.vr-brandmark');
-      if (!existingBrandMark) {
-        this.brandMark = new BrandMark({
-          appName: this.config?.appName,
-          brandText: '榧庤檸娓呮簮',
-        });
-        const el = this.brandMark.getElement();
-        el.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          this.openDingHuQingYuan();
-        });
-        this.appElement.appendChild(el);
-      } else {
-        // 濡傛灉宸插瓨鍦紝澶嶇敤鐜版湁鍏冪礌
-        if (__VR_DEBUG__) {
-          console.debug('[showScene] BrandMark 宸插瓨鍦紝璺宠繃閲嶅鍒涘缓');
-        }
-      }
-      // TeamIntroModal 涓嶅啀鐩存帴鎸傝浇锛屽彧鍦?open() 鏃舵寕杞藉埌 #vr-modal-root
-    } catch (err) {
-      if (__VR_DEBUG__) {
-        console.debug('[showScene] BrandMark 鍒涘缓澶辫触锛岃烦杩?', err);
-      }
-      this.brandMark = null;
-    }
+    // 鏂?UI锛氬乏涓嬭姘村嵃 + About 寮圭獥锛氶潪棣栧睆鍏抽敭锛屽紓姝ユ寕杞姐€?
+    void this.mountBrandMark();
     
     // 濡傛灉鍚敤璋冭瘯妯″紡锛屽垱寤鸿皟璇曢潰鏉?
     if (debugMode) {
@@ -1007,6 +948,73 @@ class App {
     this.setupChatOnFirstInteraction(museum, scene);
   }
 
+  private async mountTopRightControls(viewerContainer: HTMLElement, scene: Scene, devMode: boolean): Promise<void> {
+    try {
+      const { TopRightControls } = await this.loadTopRightControlsModule();
+      if (!this.panoViewer) return;
+      if (!this.currentScene || this.currentScene.id !== scene.id) return;
+
+      this.topRightControls?.remove();
+      this.topRightControls = new TopRightControls({
+        viewerRootEl: viewerContainer,
+        onTogglePickMode: devMode
+          ? () => {
+              if (this.panoViewer) {
+                if (this.panoViewer.isPickModeEnabled()) {
+                  this.panoViewer.disablePickMode();
+                } else {
+                  this.panoViewer.enablePickMode();
+                }
+                return this.panoViewer.isPickModeEnabled();
+              }
+              return false;
+            }
+          : undefined,
+        onOpenNorthCalibration: devMode
+          ? () => {
+              void this.openNorthCalibration(scene.id);
+            }
+          : undefined,
+        showNorthCalibration: devMode,
+        onToggleVrMode: async () => {
+          return this.toggleVrModeFromUI(viewerContainer);
+        },
+      });
+      this.appElement.appendChild(this.topRightControls.getElement());
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] TopRightControls 鍒涘缓澶辫触锛岃烦杩?', err);
+      }
+      this.topRightControls = null;
+    }
+  }
+
+  private async mountBrandMark(): Promise<void> {
+    try {
+      const { BrandMark } = await this.loadBrandMarkModule();
+      const existingBrandMark = this.appElement.querySelector('.vr-brandmark');
+      if (existingBrandMark) {
+        return;
+      }
+      this.brandMark = new BrandMark({
+        appName: this.config?.appName,
+        brandText: '榧庤檸娓呮簮',
+      });
+      const el = this.brandMark.getElement();
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openDingHuQingYuan();
+      });
+      this.appElement.appendChild(el);
+    } catch (err) {
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] BrandMark 鍒涘缓澶辫触锛岃烦杩?', err);
+      }
+      this.brandMark = null;
+    }
+  }
+
   private setupChatOnFirstInteraction(museum: Museum, scene: Scene): void {
     this.chatInitToken += 1;
     this.clearChatFirstInteractionListeners();
@@ -1097,7 +1105,13 @@ class App {
         img.crossOrigin = 'anonymous';
         (img as any).loading = 'lazy';
         img.decoding = 'async';
-        img.src = toProxiedImageUrl(resolvedUrl);
+        void this.resolveProxiedImageUrl(resolvedUrl)
+          .then((proxiedUrl) => {
+            img.src = proxiedUrl;
+          })
+          .catch(() => {
+            img.src = resolvedUrl;
+          });
       }
     }
   }
@@ -1179,15 +1193,10 @@ class App {
       this.museumList.remove();
       this.museumList = null;
     }
-    
-    if (this.sceneList) {
-      this.sceneList.remove();
-      this.sceneList = null;
-    }
-    
-    if (this.mapOverlay) {
-      this.mapOverlay.remove();
-      this.mapOverlay = null;
+
+    if (this.sceneListPage) {
+      this.sceneListPage.remove();
+      this.sceneListPage = null;
     }
     
     if (this.hotspots) {
@@ -1198,11 +1207,6 @@ class App {
     if (this.videoPlayer) {
       this.videoPlayer.remove();
       this.videoPlayer = null;
-    }
-    
-    if (this.controlBar) {
-      this.controlBar.remove();
-      this.controlBar = null;
     }
     
     if (this.debugPanel) {
@@ -1280,7 +1284,7 @@ class App {
     
     // 澶勭悊 structure2d overlay
     if (mode === 'structure2d') {
-      this.openStructure2D();
+      void this.openStructure2D();
     } else if (mode === 'structure3d') {
       void this.openStructure3D();
     }
@@ -1289,16 +1293,31 @@ class App {
   /**
    * 鎵撳紑缁撴瀯鍥?D overlay
    */
-  private openStructure2D(): void {
+  private async openStructure2D(): Promise<void> {
     if (!this.currentMuseum || !this.currentScene) return;
-    
+
     // 濡傛灉宸叉湁overlay鎵撳紑锛屽厛娓呭満
     if (this.isStructureOverlayOpen) {
       this.closeStructureOverlay({ toTour: false });
     }
-    
+
+    this.structure3DLoadToken += 1;
+    const loadToken = this.structure3DLoadToken;
+
+    const [{ buildSceneGraph }, { StructureView2D }] = await Promise.all([
+      this.loadSceneGraphModule(),
+      this.loadStructureView2DModule(),
+    ]);
+
+    if (loadToken !== this.structure3DLoadToken || this.mode !== 'structure2d') {
+      return;
+    }
+    if (!this.currentMuseum || !this.currentScene) {
+      return;
+    }
+
     const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
-    
+
     // 鍒涘缓鎴栨洿鏂?structure2d overlay
     if (!this.structureView2D) {
       this.structureView2D = new StructureView2D({
@@ -1323,13 +1342,13 @@ class App {
         currentSceneId: this.currentScene.id,
       });
     }
-    
+
     // 鏍囪overlay宸叉墦寮€
     this.isStructureOverlayOpen = true;
-    
+
     // 璁剧疆body overflow
     document.body.style.overflow = 'hidden';
-    
+
     // 鎵撳紑overlay
     this.structureView2D.open();
   }
@@ -1339,22 +1358,31 @@ class App {
    */
   private async openStructure3D(): Promise<void> {
     if (!this.currentMuseum || !this.currentScene) return;
-    
+
     // 濡傛灉宸叉湁overlay鎵撳紑锛屽厛娓呭満
     if (this.isStructureOverlayOpen) {
       this.closeStructureOverlay({ toTour: false });
     }
-    
+
     this.structure3DLoadToken += 1;
     const loadToken = this.structure3DLoadToken;
+
+    const [{ buildSceneGraph }, { StructureView3D }] = await Promise.all([
+      this.loadSceneGraphModule(),
+      import('./ui/StructureView3D'),
+    ]);
+
+    if (loadToken !== this.structure3DLoadToken || this.mode !== 'structure3d') {
+      return;
+    }
+    if (!this.currentMuseum || !this.currentScene) {
+      return;
+    }
+
     const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
-    
+
     // 鍒涘缓鎴栨洿鏂?structure3d overlay
     if (!this.structureView3D) {
-      const { StructureView3D } = await import('./ui/StructureView3D');
-      if (loadToken !== this.structure3DLoadToken || this.mode !== 'structure3d') {
-        return;
-      }
       this.structureView3D = new StructureView3D({
         museum: this.currentMuseum,
         graph,
@@ -1371,22 +1399,19 @@ class App {
       });
       this.appElement.appendChild(this.structureView3D.getElement());
     } else {
-      if (loadToken !== this.structure3DLoadToken || this.mode !== 'structure3d') {
-        return;
-      }
       this.structureView3D.updateContext({
         museum: this.currentMuseum,
         graph,
         currentSceneId: this.currentScene.id,
       });
     }
-    
+
     // 鏍囪overlay宸叉墦寮€
     this.isStructureOverlayOpen = true;
-    
+
     // 璁剧疆body overflow
     document.body.style.overflow = 'hidden';
-    
+
     // 鎵撳紑overlay
     this.structureView3D.open();
   }
@@ -1567,11 +1592,12 @@ class App {
       return false;
     }
 
-    const currentlyEnabled = isVrModeEnabled();
+    const vrMode = await this.ensureVrModeInitialized();
+    const currentlyEnabled = vrMode.isVrModeEnabled();
 
     if (currentlyEnabled) {
       // 褰撳墠宸插惎鐢紝鍏抽棴VR妯″紡
-      disableVrMode();
+      vrMode.disableVrMode();
       this.panoViewer.setVrModeEnabled(false);
       // 鏇存柊鍙充笂瑙掓寜閽姸鎬?
       if (this.topRightControls) {
@@ -1595,11 +1621,11 @@ class App {
       const initialView = this.panoViewer.getCurrentView();
 
       // 璁剧疆浜や簰妫€鏌ュ洖璋冿紙鎷栨嫿鏃舵殏鍋滈檧铻轰华鏇存柊锛?
-      setInteractingCallback(() => {
+      vrMode.setInteractingCallback(() => {
         return this.panoViewer?.isInteracting() ?? false;
       });
 
-      const success = await enableVrMode((yawDelta, pitchDelta) => {
+      const success = await vrMode.enableVrMode((yawDelta, pitchDelta) => {
         if (this.panoViewer) {
           const newYaw = initialView.yaw + yawDelta;
           const newPitch = Math.max(-90, Math.min(90, initialView.pitch + pitchDelta));
@@ -1714,7 +1740,7 @@ class App {
     vrBtn.textContent = 'VR 鐪奸暅';
 
     const syncVrBtnState = () => {
-      const active = isVrModeEnabled();
+      const active = this.panoViewer?.isVrModeEnabled() ?? false;
       vrBtn.classList.toggle('is-on', active);
     };
 
@@ -1723,13 +1749,8 @@ class App {
       vrBtn.addEventListener('click', async () => {
         if (!this.panoViewer) return;
         const viewerContainer = this.panoViewer.getDomElement();
-        const enabled = await this.toggleVrModeFromUI(viewerContainer);
-        if (enabled !== isVrModeEnabled()) {
-          // 鍏滃簳鍚屾
-          syncVrBtnState();
-        } else {
-          syncVrBtnState();
-        }
+        await this.toggleVrModeFromUI(viewerContainer);
+        syncVrBtnState();
       });
     } else if (isMouse) {
       vrBtn.classList.add('is-disabled');

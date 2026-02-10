@@ -1,5 +1,4 @@
 import type { DockTabKey } from './DockPanels';
-import { DockPanels } from './DockPanels';
 import type { Museum, Scene } from '../types/config';
 import { interactionBus } from './interactionBus';
 import { mountModal } from './Modal';
@@ -17,21 +16,44 @@ type BottomDockOptions = {
   currentSceneId?: string;
 };
 
+type DockPanelsLike = {
+  setVisible(visible: boolean): void;
+  setTab(tab: DockTabKey): void;
+  setSceneContext(sceneId: string, sceneName?: string): void;
+  setMuseumContext(museum: Museum, scenes: Scene[], currentSceneId: string): void;
+  getElement(): HTMLElement;
+  remove(): void;
+  closeAllPanels?: () => void;
+};
+
 const TAB_LABELS: Array<{ key: DockTabKey; label: string }> = [
   { key: 'guide', label: '导览' },
-  // 移除 map 和 dollhouse，它们已移到顶部Tab
   { key: 'community', label: '社区' },
   { key: 'info', label: '信息' },
   { key: 'settings', label: '更多' },
 ];
 
+function isPanelTab(tab: DockTabKey): tab is 'community' | 'map' | 'dollhouse' {
+  return tab === 'community' || tab === 'map' || tab === 'dollhouse';
+}
+
 export class BottomDock {
   private element: HTMLElement;
   private dockEl: HTMLElement;
-  private panels: DockPanels;
+  private panelsHost: HTMLElement;
+  private panels: DockPanelsLike | null = null;
+  private panelsLoadPromise: Promise<void> | null = null;
+  private destroyed = false;
   private activeTabs: Set<DockTabKey>;
+  private onGuideClick?: () => void;
   private onOpenInfo?: () => void;
   private onOpenSettings?: () => void;
+  private initialTab: DockTabKey;
+  private sceneId?: string;
+  private sceneName?: string;
+  private museum?: Museum;
+  private scenes?: Scene[];
+  private currentSceneId?: string;
   private unsubscribeInteracting: (() => void) | null = null;
   private unsubscribeIdle: (() => void) | null = null;
   private unsubscribeUIEngaged: (() => void) | null = null;
@@ -40,87 +62,138 @@ export class BottomDock {
   private handleClosePanels?: () => void;
 
   constructor(options: BottomDockOptions = {}) {
-    // 默认不高亮任何按钮（支持多选高亮）
     this.activeTabs = new Set<DockTabKey>();
+    this.onGuideClick = options.onGuideClick;
     this.onOpenInfo = options.onOpenInfo;
     this.onOpenSettings = options.onOpenSettings;
+    this.initialTab = options.initialTab || 'guide';
+    this.sceneId = options.sceneId;
+    this.sceneName = options.sceneName;
+    this.museum = options.museum;
+    this.scenes = options.scenes;
+    this.currentSceneId = options.currentSceneId || options.sceneId;
 
     this.element = document.createElement('div');
     this.element.className = 'vr-dock-wrap';
 
-    this.panels = new DockPanels({
-      // DockPanels 仍需要一个初始 tab（用于内部状态），但底部高亮保持为空
-      initialTab: options.initialTab || 'guide',
-      sceneId: options.sceneId,
-      sceneName: options.sceneName,
-      museum: options.museum,
-      scenes: options.scenes,
-      currentSceneId: options.currentSceneId || options.sceneId,
-    });
-    this.panels.setVisible(true);
+    this.panelsHost = document.createElement('div');
+    this.panelsHost.className = 'vr-dock-panels-host';
+    this.element.appendChild(this.panelsHost);
 
     this.dockEl = document.createElement('div');
     this.dockEl.className = 'vr-dock vr-glass';
+    this.element.appendChild(this.dockEl);
 
     for (const tab of TAB_LABELS) {
       const btn = document.createElement('button');
       btn.className = 'vr-btn vr-dock-tab';
       btn.setAttribute('data-tab', tab.key);
-      const iconName = tab.key === 'guide' ? 'guide' : tab.key === 'community' ? 'community' : tab.key === 'info' ? 'info' : 'more';
+      const iconName =
+        tab.key === 'guide'
+          ? 'guide'
+          : tab.key === 'community'
+            ? 'community'
+            : tab.key === 'info'
+              ? 'info'
+              : 'more';
       btn.innerHTML = `<span class="vr-dock-tab-icon">${getIcon(iconName)}</span><div class="vr-dock-tab-label">${tab.label}</div>`;
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // UI 被点击，立即恢复
         interactionBus.emitUIEngaged();
-        // 点击按钮：仅切换对应 tab 的激活态/打开对应面板，不影响其他 tab
+
         if (tab.key === 'guide') {
-          // 导览：只控制导览窗口
           this.setTabActive('guide', true);
-          if (options.onGuideClick) {
-            options.onGuideClick();
+          if (this.onGuideClick) {
+            this.onGuideClick();
           }
-        } else if (tab.key === 'community') {
-          // 社区：打开 DockPanels 内的社区窗口
+          return;
+        }
+
+        if (tab.key === 'community') {
           this.setTabActive('community', true);
-          this.panels.setTab('community');
-        } else if (tab.key === 'info') {
-          // 信息：高亮信息 tab，并打开信息弹窗
+          return;
+        }
+
+        if (tab.key === 'info') {
           this.setTabActive('info', true);
           if (this.onOpenInfo) {
             this.onOpenInfo();
           } else {
             this.openFallbackInfoModal();
           }
-        } else if (tab.key === 'settings') {
-          // 更多：高亮设置 tab，并打开设置弹窗
-          this.setTabActive('settings', true);
-          if (this.onOpenSettings) {
-            this.onOpenSettings();
-          } else {
-            this.openFallbackSettingsModal();
-          }
+          return;
+        }
+
+        this.setTabActive('settings', true);
+        if (this.onOpenSettings) {
+          this.onOpenSettings();
+        } else {
+          this.openFallbackSettingsModal();
         }
       });
       this.dockEl.appendChild(btn);
     }
 
-    this.element.appendChild(this.panels.getElement());
-    this.element.appendChild(this.dockEl);
-
     this.syncActiveClass();
     this.setupInteractionListeners();
     this.setupDockEventListeners();
+
+    if (isPanelTab(this.initialTab)) {
+      this.setTabActive(this.initialTab, true);
+    }
+  }
+
+  private async ensurePanels(): Promise<DockPanelsLike | null> {
+    if (this.panels) {
+      return this.panels;
+    }
+    if (this.panelsLoadPromise) {
+      await this.panelsLoadPromise;
+      return this.panels;
+    }
+
+    this.panelsLoadPromise = (async () => {
+      const { DockPanels } = await import('./DockPanels');
+      if (this.destroyed) {
+        return;
+      }
+
+      const panels = new DockPanels({
+        initialTab: this.initialTab,
+        sceneId: this.sceneId,
+        sceneName: this.sceneName,
+        museum: this.museum,
+        scenes: this.scenes,
+        currentSceneId: this.currentSceneId || this.sceneId,
+      });
+      panels.setVisible(true);
+
+      if (this.destroyed) {
+        panels.remove();
+        return;
+      }
+
+      this.panels = panels;
+      this.panelsHost.appendChild(panels.getElement());
+    })().finally(() => {
+      this.panelsLoadPromise = null;
+    });
+
+    await this.panelsLoadPromise;
+    return this.panels;
+  }
+
+  private async openPanelTab(tab: 'community' | 'map' | 'dollhouse'): Promise<void> {
+    const panels = await this.ensurePanels();
+    if (!panels || this.destroyed) return;
+    panels.setTab(tab);
   }
 
   private setupInteractionListeners(): void {
-    // 注意：class管理由 yieldClassManager 统一处理（通过 document.documentElement）
-    // 这里不需要手动管理 class，保留空实现以避免类型错误
+    // class 管理由 yieldClassManager 统一处理
   }
 
-  /**
-   * 根据 activeTabs 状态同步按钮的 .active class
-   */
   syncActiveClass(): void {
     const buttons = this.dockEl.querySelectorAll<HTMLButtonElement>('.vr-dock-tab');
     buttons.forEach((btn) => {
@@ -133,9 +206,6 @@ export class BottomDock {
     });
   }
 
-  /**
-   * 设置某个 tab 是否激活（只影响该 tab，不影响其它 tab）
-   */
   setTabActive(tab: DockTabKey, active: boolean): void {
     if (active) {
       this.activeTabs.add(tab);
@@ -144,22 +214,26 @@ export class BottomDock {
     }
     this.syncActiveClass();
 
-    // DockPanels 只负责管理自己的子面板（community/map/dollhouse）
-    if (active && (tab === 'community' || tab === 'map' || tab === 'dollhouse')) {
-      this.panels.setTab(tab);
+    if (active && isPanelTab(tab)) {
+      void this.openPanelTab(tab);
+      return;
+    }
+
+    if (!active && isPanelTab(tab) && this.panels) {
+      const hasAnyPanelOpen =
+        this.activeTabs.has('community') ||
+        this.activeTabs.has('map') ||
+        this.activeTabs.has('dollhouse');
+      if (!hasAnyPanelOpen && this.panels.closeAllPanels) {
+        this.panels.closeAllPanels();
+      }
     }
   }
 
-  /**
-   * 查询某个 tab 当前是否处于激活态
-   */
   isTabActive(tab: DockTabKey): boolean {
     return this.activeTabs.has(tab);
   }
 
-  /**
-   * 监听全局 Dock 相关事件（打开/关闭单个 tab、统一关闭 DockPanels）
-   */
   private setupDockEventListeners(): void {
     this.handleDockTabOpen = (e: Event) => {
       const evt = e as CustomEvent<{ tab: DockTabKey }>;
@@ -173,11 +247,13 @@ export class BottomDock {
       this.setTabActive(evt.detail.tab, false);
     };
 
-    // 统一关闭 DockPanels 所属的 tab（不影响导览/信息/更多）
     this.handleClosePanels = () => {
       this.setTabActive('community', false);
       this.setTabActive('map', false);
       this.setTabActive('dollhouse', false);
+      if (this.panels?.closeAllPanels) {
+        this.panels.closeAllPanels();
+      }
     };
 
     window.addEventListener('vr:dock-tab-open', this.handleDockTabOpen as EventListener);
@@ -186,20 +262,27 @@ export class BottomDock {
   }
 
   setSceneContext(sceneId: string, sceneName?: string): void {
-    this.panels.setSceneContext(sceneId, sceneName);
+    this.sceneId = sceneId;
+    this.sceneName = sceneName;
+    this.currentSceneId = sceneId;
+    if (this.panels) {
+      this.panels.setSceneContext(sceneId, sceneName);
+    }
   }
 
   setMuseumContext(museum: Museum, scenes: Scene[], currentSceneId: string): void {
-    this.panels.setMuseumContext(museum, scenes, currentSceneId);
+    this.museum = museum;
+    this.scenes = scenes;
+    this.currentSceneId = currentSceneId;
+    if (this.panels) {
+      this.panels.setMuseumContext(museum, scenes, currentSceneId);
+    }
   }
 
   getElement(): HTMLElement {
     return this.element;
   }
 
-  /**
-   * 设置"更多"打开状态（用于 Dock 淡出动效）
-   */
   setMoreOpen(isOpen: boolean): void {
     if (isOpen) {
       this.element.classList.add('dock--more-open');
@@ -208,9 +291,6 @@ export class BottomDock {
     }
   }
 
-  /**
-   * 没有传入上层回调时的兜底信息弹窗
-   */
   private openFallbackInfoModal(): void {
     mountModal({
       title: '信息',
@@ -218,15 +298,12 @@ export class BottomDock {
         <div class="vr-modal-info-list">
           <div><span class="vr-modal-info-row-label">馆：</span><span>-</span></div>
           <div><span class="vr-modal-info-row-label">场景：</span><span>-</span></div>
-          <div><span class="vr-modal-info-row-label">采集于</span><span> 2025-12-27</span></div>
+          <div><span class="vr-modal-info-row-label">采集日：</span><span>2025-12-27</span></div>
         </div>
       `,
     });
   }
 
-  /**
-   * 没有传入上层回调时的兜底设置弹窗
-   */
   private openFallbackSettingsModal(): void {
     mountModal({
       title: '设置',
@@ -239,7 +316,8 @@ export class BottomDock {
   }
 
   remove(): void {
-    // 清理事件监听
+    this.destroyed = true;
+
     if (this.unsubscribeInteracting) {
       this.unsubscribeInteracting();
       this.unsubscribeInteracting = null;
@@ -264,7 +342,10 @@ export class BottomDock {
       window.removeEventListener('vr:close-panels', this.handleClosePanels);
       this.handleClosePanels = undefined;
     }
-    this.panels.remove();
+    if (this.panels) {
+      this.panels.remove();
+      this.panels = null;
+    }
     this.element.remove();
   }
 }

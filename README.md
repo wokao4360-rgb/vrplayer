@@ -90,3 +90,5 @@ git push origin main
 - [2026-02-01 11:30:00] 大陆网络下资源失败优先检查 CDN 可达性与回源逻辑，不要先判断为渲染逻辑故障。
 - [2026-02-01 11:40:00] 每次宣称“修复成立”前，至少做一次 chrome-devtools 的页面快照 + Network/Console 采样。
 - [2026-02-08 23:45:00] 三馆学伴上下文修复：请求体必须携带 `sessionId + history/messages + context.historyLength`；聊天面板销毁重建后从 `localStorage` 恢复消息与会话，避免每条消息都被后端视作新会话。
+
+- [2026-02-10 22:15:09] ���������ܱ�����Լ��أ�editor/debug/structure3d/north-calibration/dock-panels ���ڴ���ʱ import()��chat-community ���������ɼ��� idle ��ʼ������ֹ�ص���ھ�̬��������

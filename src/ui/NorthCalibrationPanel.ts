@@ -23,6 +23,8 @@ export class NorthCalibrationPanel {
   private resultEl: HTMLElement | null = null;
   private updateTimer: number | null = null;
   private northYawValue: number | null = null;
+  private handleOverlayClick: ((e: MouseEvent) => void) | null = null;
+  private handleKeyDown: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(options: NorthCalibrationPanelOptions) {
     this.getCurrentYaw = options.getCurrentYaw;
@@ -71,20 +73,21 @@ export class NorthCalibrationPanel {
     this.startYawUpdate();
 
     // 点击外部关闭（但不影响拖动）
-    this.overlay.addEventListener('click', (e) => {
+    this.handleOverlayClick = (e: MouseEvent) => {
       if (e.target === this.overlay) {
         this.close();
       }
-    });
+    };
+    this.overlay.addEventListener('click', this.handleOverlayClick);
 
     // ESC 键关闭
-    const handleKeyDown = (e: KeyboardEvent) => {
+    this.handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         this.close();
         e.preventDefault();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', this.handleKeyDown);
   }
 
   private render(): void {
@@ -302,6 +305,14 @@ export class NorthCalibrationPanel {
 
   close(): void {
     this.stopYawUpdate();
+    if (this.handleOverlayClick) {
+      this.overlay.removeEventListener('click', this.handleOverlayClick);
+      this.handleOverlayClick = null;
+    }
+    if (this.handleKeyDown) {
+      window.removeEventListener('keydown', this.handleKeyDown);
+      this.handleKeyDown = null;
+    }
     if (this.overlay.parentNode) {
       this.overlay.parentNode.removeChild(this.overlay);
     }

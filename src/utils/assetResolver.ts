@@ -34,11 +34,18 @@ type RuntimeAssetCdnConfig = {
 };
 
 type ProbeState = 'idle' | 'probing' | 'ok' | 'failed';
+type CachedBaseUrlRecord = {
+  baseUrl: string;
+  expiresAt: number;
+  updatedAt: number;
+};
 
 const DEFAULT_INCLUDE_PREFIXES = ['/assets/panos/'];
 const DEFAULT_EXCLUDE_PREFIXES: string[] = [];
 const DEFAULT_PROBE_PATH = '/config.json';
 const DEFAULT_PROBE_TIMEOUT_MS = 1800;
+const CDN_CACHE_KEY = 'vrplayer.assetCdn.lastSuccess';
+const CDN_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
 let runtimeConfig: RuntimeAssetCdnConfig | null = null;
 let selectedBaseUrl: string | null = null;
@@ -95,6 +102,69 @@ function getCurrentOrigin(): string | null {
     return location.origin;
   }
   return null;
+}
+
+function getLocalStorageSafe(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readCachedBaseUrl(cfg: RuntimeAssetCdnConfig): string | null {
+  const storage = getLocalStorageSafe();
+  if (!storage) return null;
+
+  try {
+    const raw = storage.getItem(CDN_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<CachedBaseUrlRecord>;
+    const baseUrl =
+      typeof parsed.baseUrl === 'string' ? trimTrailingSlashes(parsed.baseUrl.trim()) : '';
+    const expiresAt =
+      typeof parsed.expiresAt === 'number' && Number.isFinite(parsed.expiresAt)
+        ? parsed.expiresAt
+        : 0;
+    if (!baseUrl || expiresAt <= Date.now() || !cfg.baseUrls.includes(baseUrl)) {
+      storage.removeItem(CDN_CACHE_KEY);
+      return null;
+    }
+    return baseUrl;
+  } catch {
+    storage.removeItem(CDN_CACHE_KEY);
+    return null;
+  }
+}
+
+function persistCachedBaseUrl(baseUrl: string, cfg: RuntimeAssetCdnConfig): void {
+  const storage = getLocalStorageSafe();
+  if (!storage) return;
+  if (!cfg.baseUrls.includes(baseUrl)) return;
+
+  const now = Date.now();
+  const payload: CachedBaseUrlRecord = {
+    baseUrl,
+    updatedAt: now,
+    expiresAt: now + CDN_CACHE_TTL_MS,
+  };
+
+  try {
+    storage.setItem(CDN_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore quota/storage errors
+  }
+}
+
+function clearCachedBaseUrl(): void {
+  const storage = getLocalStorageSafe();
+  if (!storage) return;
+  try {
+    storage.removeItem(CDN_CACHE_KEY);
+  } catch {
+    // ignore storage errors
+  }
 }
 
 function splitPathAndSuffix(input: string): { path: string; suffix: string } {
@@ -186,10 +256,10 @@ async function probeBaseUrl(
   }
 }
 
-function startProbeIfNeeded(): void {
+function startProbeIfNeeded(force = false): void {
   const cfg = runtimeConfig;
   if (!cfg || !cfg.enabled) return;
-  if (selectedBaseUrl) return;
+  if (!force && selectedBaseUrl) return;
   if (probeState === 'probing') return;
 
   if (typeof window === 'undefined' || typeof fetch !== 'function') {
@@ -206,17 +276,20 @@ function startProbeIfNeeded(): void {
       if (token !== probeToken) return;
       if (ok) {
         selectedBaseUrl = baseUrl;
+        persistCachedBaseUrl(baseUrl, cfg);
         probeState = 'ok';
         return;
       }
     }
     if (token !== probeToken) return;
     selectedBaseUrl = null;
+    clearCachedBaseUrl();
     probeState = 'failed';
   })()
     .catch(() => {
       if (token !== probeToken) return;
       selectedBaseUrl = null;
+      clearCachedBaseUrl();
       probeState = 'failed';
     })
     .finally(() => {
@@ -255,8 +328,17 @@ export function setAssetResolverConfig(config: AssetCdnConfig | undefined): void
         : DEFAULT_PROBE_TIMEOUT_MS,
   };
 
+  const cachedBaseUrl = readCachedBaseUrl(runtimeConfig);
+  if (cachedBaseUrl) {
+    selectedBaseUrl = cachedBaseUrl;
+    probeState = 'ok';
+    // use cached CDN immediately, refresh availability in background
+    startProbeIfNeeded(true);
+    return;
+  }
+
   // probe asynchronously; before probe success, keep origin URL to avoid first-screen failures
-  startProbeIfNeeded();
+  startProbeIfNeeded(false);
 }
 
 export async function waitForAssetResolverReady(): Promise<void> {

@@ -1,6 +1,3 @@
-import { CommunityPanel } from './community/CommunityPanel';
-import { MapPanel } from './MapPanel';
-import { Dollhouse3DPanel } from './Dollhouse3DPanel';
 import type { Museum, Scene } from '../types/config';
 import { interactionBus } from './interactionBus';
 
@@ -15,6 +12,26 @@ type DockPanelsOptions = {
   currentSceneId?: string;
 };
 
+type CommunityPanelLike = {
+  getElement(): HTMLElement;
+  remove(): void;
+  setScene(sceneId: string, sceneName?: string): void;
+};
+
+type MapPanelLike = {
+  getElement(): HTMLElement;
+  remove(): void;
+  updateCurrentScene(sceneId: string): void;
+  updateMuseum(museum: Museum, scenes: Scene[], currentSceneId: string): void;
+};
+
+type DollhousePanelLike = {
+  getElement(): HTMLElement;
+  remove(): void;
+  updateCurrentScene(sceneId: string): void;
+  updateMuseum(museum: Museum, scenes: Scene[], currentSceneId: string): void;
+};
+
 export class DockPanels {
   private element: HTMLElement;
   private currentTab: DockTabKey | null;
@@ -23,13 +40,12 @@ export class DockPanels {
   private museum?: Museum;
   private scenes?: Scene[];
   private currentSceneId?: string;
-  private communityPanel: CommunityPanel | null = null;
-  private mapPanel: MapPanel | null = null;
-  private dollhousePanel: Dollhouse3DPanel | null = null;
-  private unsubscribeInteracting: (() => void) | null = null;
-  private unsubscribeIdle: (() => void) | null = null;
-  private unsubscribeUIEngaged: (() => void) | null = null;
-  private handleClosePanels?: () => void;
+  private communityPanel: CommunityPanelLike | null = null;
+  private mapPanel: MapPanelLike | null = null;
+  private dollhousePanel: DollhousePanelLike | null = null;
+  private handleClosePanels: (() => void) | null = null;
+  private handlePanelClickCapture: ((e: Event) => void) | null = null;
+  private renderToken = 0;
 
   constructor(options: DockPanelsOptions) {
     this.currentTab = options.initialTab;
@@ -38,173 +54,177 @@ export class DockPanels {
     this.museum = options.museum;
     this.scenes = options.scenes;
     this.currentSceneId = options.currentSceneId || options.sceneId;
+
     this.element = document.createElement('div');
     this.element.className = 'vr-panl vr-glass hidden';
-    this.render();
-    this.setupInteractionListeners();
 
-    // 监听统一关闭事件
+    this.handlePanelClickCapture = () => {
+      interactionBus.emitUIEngaged();
+    };
+    this.element.addEventListener('click', this.handlePanelClickCapture, true);
+
     this.handleClosePanels = () => {
       this.closeAllPanels();
     };
     window.addEventListener('vr:close-panels', this.handleClosePanels);
+
+    void this.render();
   }
 
-  private setupInteractionListeners(): void {
-    // 注意：class管理由 yieldClassManager 统一处理（通过 document.documentElement）
-    // 这里不需要手动管理 class
-
-    // 监听面板内的点击事件（包括 MapPanel 和 Dollhouse3DPanel）
-    this.element.addEventListener('click', (e) => {
-      // UI 被点击，立即恢复
-      interactionBus.emitUIEngaged();
-    }, true); // 使用捕获阶段确保所有子元素点击都能捕获
+  private disposeCommunityPanel(): void {
+    if (this.communityPanel) {
+      this.communityPanel.remove();
+      this.communityPanel = null;
+    }
   }
 
-  private render(): void {
-    // 清理变体类
+  private disposeMapPanel(): void {
+    if (this.mapPanel) {
+      this.mapPanel.remove();
+      this.mapPanel = null;
+    }
+  }
+
+  private disposeDollhousePanel(): void {
+    if (this.dollhousePanel) {
+      this.dollhousePanel.remove();
+      this.dollhousePanel = null;
+    }
+  }
+
+  private async ensureCommunityPanel(): Promise<CommunityPanelLike | null> {
+    const sid = this.sceneId || 'unknown';
+    if (!this.communityPanel) {
+      const { CommunityPanel } = await import('./community/CommunityPanel');
+      this.communityPanel = new CommunityPanel({
+        sceneId: sid,
+        sceneName: this.sceneName,
+        onClose: () => {
+          this.disposeCommunityPanel();
+          this.element.classList.add('hidden');
+          this.element.innerHTML = '';
+        },
+      });
+    } else {
+      this.communityPanel.setScene(sid, this.sceneName);
+    }
+    return this.communityPanel;
+  }
+
+  private async ensureMapPanel(sceneId: string): Promise<MapPanelLike | null> {
+    if (!this.museum || !this.scenes || this.scenes.length === 0) {
+      return null;
+    }
+    if (!this.mapPanel) {
+      const { MapPanel } = await import('./MapPanel');
+      this.mapPanel = new MapPanel({
+        museum: this.museum,
+        scenes: this.scenes,
+        currentSceneId: sceneId,
+        onClose: () => {
+          window.dispatchEvent(new CustomEvent('vr:close-panels'));
+        },
+      });
+    } else {
+      this.mapPanel.updateCurrentScene(sceneId);
+    }
+    return this.mapPanel;
+  }
+
+  private async ensureDollhousePanel(sceneId: string): Promise<DollhousePanelLike | null> {
+    if (!this.museum || !this.scenes || this.scenes.length === 0) {
+      return null;
+    }
+    if (!this.dollhousePanel) {
+      const { Dollhouse3DPanel } = await import('./Dollhouse3DPanel');
+      this.dollhousePanel = new Dollhouse3DPanel({
+        museum: this.museum,
+        scenes: this.scenes,
+        currentSceneId: sceneId,
+        onClose: () => {
+          window.dispatchEvent(new CustomEvent('vr:close-panels'));
+        },
+      });
+    } else {
+      this.dollhousePanel.updateCurrentScene(sceneId);
+    }
+    return this.dollhousePanel;
+  }
+
+  private async render(): Promise<void> {
+    const token = ++this.renderToken;
+
     this.element.classList.remove('vr-panel--community', 'vr-panel--map', 'vr-panel--dollhouse');
 
     if (!this.currentTab) {
-      // 关闭所有 panel
       this.element.classList.add('hidden');
       this.element.innerHTML = '';
-      if (this.communityPanel) {
-        this.communityPanel.remove();
-        this.communityPanel = null;
-      }
-      if (this.mapPanel) {
-        this.mapPanel.remove();
-        this.mapPanel = null;
-      }
-      if (this.dollhousePanel) {
-        this.dollhousePanel.remove();
-        this.dollhousePanel = null;
-      }
+      this.disposeCommunityPanel();
+      this.disposeMapPanel();
+      this.disposeDollhousePanel();
       return;
     }
 
     if (this.currentTab === 'community') {
       this.element.classList.add('vr-panel--community');
       this.element.innerHTML = '';
-      const sid = this.sceneId || 'unknown';
-      if (!this.communityPanel) {
-        this.communityPanel = new CommunityPanel({
-          sceneId: sid,
-          sceneName: this.sceneName,
-          onClose: () => {
-            // 真正关闭社区面板：移除 DOM 并清理引用
-            if (this.communityPanel) {
-              this.communityPanel.remove();
-              this.communityPanel = null;
-            }
-            // 隐藏 DockPanels 容器
-            this.element.classList.add('hidden');
-            this.element.innerHTML = '';
-            // 注意：不设置 currentTab = null，避免影响其他 tab 的状态
-          },
-        });
-      } else {
-        this.communityPanel.setScene(sid, this.sceneName);
+      this.disposeMapPanel();
+      this.disposeDollhousePanel();
+      const panel = await this.ensureCommunityPanel();
+      if (!panel || token !== this.renderToken || this.currentTab !== 'community') {
+        return;
       }
-      this.element.appendChild(this.communityPanel.getElement());
+      this.element.appendChild(panel.getElement());
       return;
     }
 
     if (this.currentTab === 'map') {
       this.element.classList.add('vr-panel--map');
       this.element.innerHTML = '';
-      
-      if (this.communityPanel) {
-        this.communityPanel.remove();
-        this.communityPanel = null;
-      }
-      if (this.dollhousePanel) {
-        this.dollhousePanel.remove();
-        this.dollhousePanel = null;
-      }
+      this.disposeCommunityPanel();
+      this.disposeDollhousePanel();
 
-      if (this.museum && this.scenes && this.scenes.length > 0) {
-        const sid = this.currentSceneId || this.sceneId || this.scenes[0].id;
-        if (!this.mapPanel) {
-          this.mapPanel = new MapPanel({
-            museum: this.museum,
-            scenes: this.scenes,
-            currentSceneId: sid,
-            onClose: () => {
-              // 关闭 MapPanel 时，仅关闭面板并广播统一关闭事件
-              window.dispatchEvent(new CustomEvent('vr:close-panels'));
-            },
-          });
-        } else {
-          this.mapPanel.updateCurrentScene(sid);
-        }
-        this.element.appendChild(this.mapPanel.getElement());
-      } else {
-        // 如果没有数据，显示提示
+      const sid = this.currentSceneId || this.sceneId || this.scenes?.[0]?.id;
+      if (!sid) {
         this.element.innerHTML = `
           <div class="vr-panel-title">平面图</div>
           <div class="vr-panel-body">此展馆暂无平面图</div>
         `;
+        return;
       }
+      const panel = await this.ensureMapPanel(sid);
+      if (!panel || token !== this.renderToken || this.currentTab !== 'map') {
+        return;
+      }
+      this.element.appendChild(panel.getElement());
       return;
     }
 
     if (this.currentTab === 'dollhouse') {
       this.element.classList.add('vr-panel--dollhouse');
       this.element.innerHTML = '';
-      
-      if (this.communityPanel) {
-        this.communityPanel.remove();
-        this.communityPanel = null;
-      }
-      if (this.mapPanel) {
-        this.mapPanel.remove();
-        this.mapPanel = null;
-      }
+      this.disposeCommunityPanel();
+      this.disposeMapPanel();
 
-      if (this.museum && this.scenes && this.scenes.length > 0) {
-        const sid = this.currentSceneId || this.sceneId || this.scenes[0].id;
-        if (!this.dollhousePanel) {
-          this.dollhousePanel = new Dollhouse3DPanel({
-            museum: this.museum,
-            scenes: this.scenes,
-            currentSceneId: sid,
-            onClose: () => {
-              // 关闭 DollhousePanel 时，仅关闭面板并广播统一关闭事件
-              window.dispatchEvent(new CustomEvent('vr:close-panels'));
-            },
-          });
-        } else {
-          this.dollhousePanel.updateCurrentScene(sid);
-        }
-        this.element.appendChild(this.dollhousePanel.getElement());
-      } else {
-        // 如果没有数据，显示提示
+      const sid = this.currentSceneId || this.sceneId || this.scenes?.[0]?.id;
+      if (!sid) {
         this.element.innerHTML = `
           <div class="vr-panel-title">三维图</div>
           <div class="vr-panel-body">此展馆暂无三维图</div>
         `;
+        return;
       }
+      const panel = await this.ensureDollhousePanel(sid);
+      if (!panel || token !== this.renderToken || this.currentTab !== 'dollhouse') {
+        return;
+      }
+      this.element.appendChild(panel.getElement());
       return;
     }
 
-    // 清理其他面板
-    if (this.communityPanel) {
-      this.communityPanel.remove();
-      this.communityPanel = null;
-    }
-    if (this.mapPanel) {
-      this.mapPanel.remove();
-      this.mapPanel = null;
-    }
-    if (this.dollhousePanel) {
-      this.dollhousePanel.remove();
-      this.dollhousePanel = null;
-    }
-
-    // guide/info/settings 标签：直接隐藏panel，不显示任何说明框
-    // 点击"导览"后直接由 GuideTray 处理，不再显示中间说明框
+    this.disposeCommunityPanel();
+    this.disposeMapPanel();
+    this.disposeDollhousePanel();
     this.element.classList.add('hidden');
     this.element.innerHTML = '';
   }
@@ -213,17 +233,29 @@ export class DockPanels {
     this.sceneId = sceneId;
     this.sceneName = sceneName;
     this.currentSceneId = sceneId;
-    
-    if (this.currentTab === 'community' && this.communityPanel) {
-      this.communityPanel.setScene(sceneId, sceneName);
+
+    if (this.currentTab === 'community') {
+      if (this.communityPanel) {
+        this.communityPanel.setScene(sceneId, sceneName);
+      } else {
+        void this.render();
+      }
     }
-    
-    if (this.currentTab === 'map' && this.mapPanel) {
-      this.mapPanel.updateCurrentScene(sceneId);
+
+    if (this.currentTab === 'map') {
+      if (this.mapPanel) {
+        this.mapPanel.updateCurrentScene(sceneId);
+      } else {
+        void this.render();
+      }
     }
-    
-    if (this.currentTab === 'dollhouse' && this.dollhousePanel) {
-      this.dollhousePanel.updateCurrentScene(sceneId);
+
+    if (this.currentTab === 'dollhouse') {
+      if (this.dollhousePanel) {
+        this.dollhousePanel.updateCurrentScene(sceneId);
+      } else {
+        void this.render();
+      }
     }
   }
 
@@ -231,19 +263,21 @@ export class DockPanels {
     this.museum = museum;
     this.scenes = scenes;
     this.currentSceneId = currentSceneId;
-    
-    if (this.currentTab === 'map' && this.mapPanel) {
-      this.mapPanel.updateMuseum(museum, scenes, currentSceneId);
-    } else if (this.currentTab === 'map') {
-      // 如果当前是 map tab 但没有 panel，重新渲染
-      this.render();
+
+    if (this.currentTab === 'map') {
+      if (this.mapPanel) {
+        this.mapPanel.updateMuseum(museum, scenes, currentSceneId);
+      } else {
+        void this.render();
+      }
     }
-    
-    if (this.currentTab === 'dollhouse' && this.dollhousePanel) {
-      this.dollhousePanel.updateMuseum(museum, scenes, currentSceneId);
-    } else if (this.currentTab === 'dollhouse') {
-      // 如果当前是 dollhouse tab 但没有 panel，重新渲染
-      this.render();
+
+    if (this.currentTab === 'dollhouse') {
+      if (this.dollhousePanel) {
+        this.dollhousePanel.updateMuseum(museum, scenes, currentSceneId);
+      } else {
+        void this.render();
+      }
     }
   }
 
@@ -254,29 +288,19 @@ export class DockPanels {
 
   setTab(tab: DockTabKey): void {
     this.currentTab = tab;
-    // 简单切换：先隐藏再显示，触发 opacity/translateY 动画
     this.setVisible(false);
     window.setTimeout(() => {
-      this.render();
+      void this.render();
       this.setVisible(true);
     }, 40);
   }
 
   closeAllPanels(): void {
+    this.renderToken += 1;
     this.currentTab = null;
-    // 清理当前 panel
-    if (this.communityPanel) {
-      this.communityPanel.remove();
-      this.communityPanel = null;
-    }
-    if (this.mapPanel) {
-      this.mapPanel.remove();
-      this.mapPanel = null;
-    }
-    if (this.dollhousePanel) {
-      this.dollhousePanel.remove();
-      this.dollhousePanel = null;
-    }
+    this.disposeCommunityPanel();
+    this.disposeMapPanel();
+    this.disposeDollhousePanel();
     this.element.classList.add('hidden');
     this.element.innerHTML = '';
   }
@@ -286,35 +310,18 @@ export class DockPanels {
   }
 
   remove(): void {
-    // 清理事件监听
-    if (this.unsubscribeInteracting) {
-      this.unsubscribeInteracting();
-      this.unsubscribeInteracting = null;
-    }
-    if (this.unsubscribeIdle) {
-      this.unsubscribeIdle();
-      this.unsubscribeIdle = null;
-    }
-    if (this.unsubscribeUIEngaged) {
-      this.unsubscribeUIEngaged();
-      this.unsubscribeUIEngaged = null;
-    }
+    this.renderToken += 1;
     if (this.handleClosePanels) {
       window.removeEventListener('vr:close-panels', this.handleClosePanels);
-      this.handleClosePanels = undefined;
+      this.handleClosePanels = null;
     }
-    if (this.communityPanel) {
-      this.communityPanel.remove();
-      this.communityPanel = null;
+    if (this.handlePanelClickCapture) {
+      this.element.removeEventListener('click', this.handlePanelClickCapture, true);
+      this.handlePanelClickCapture = null;
     }
-    if (this.mapPanel) {
-      this.mapPanel.remove();
-      this.mapPanel = null;
-    }
-    if (this.dollhousePanel) {
-      this.dollhousePanel.remove();
-      this.dollhousePanel = null;
-    }
+    this.disposeCommunityPanel();
+    this.disposeMapPanel();
+    this.disposeDollhousePanel();
     this.element.remove();
   }
 }

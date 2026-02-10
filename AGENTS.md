@@ -219,3 +219,69 @@ Agent MUST:
 - 需要时优先使用：`chrome-devtools`、`github`、`filesystem` MCP。
 - 涉及 OpenAI API / ChatGPT Apps SDK / Codex 能力时，优先使用 OpenAI 官方文档 MCP。
 - 涉及库/API 文档、配置与代码生成时，优先使用 Context7 MCP。
+
+## 18) 工具概览
+MCP 工具使用约定
+MCP 全量使用表
+MCP/工具	何时使用（只在这种情况）	不该用的时候
+shell_command	读取/执行命令、构建、测试、git、发布流程	能直接用已有结果回答时
+filesystem	结构化读写文件、批量查改、安全编辑	只需一两行命令可完成时
+github	查 PR/Issue/远端仓库状态、自动化仓库操作	纯本地开发阶段
+chrome-devtools	页面快照、Console/Network采样、性能证据	纯后端/纯脚本任务
+playwright	需要自动化真实用户流程回放	只需一次静态页面采样时
+memory	存关键决策/坑点/偏好/发布结果，跨会话复用	存临时噪音日志
+deepwiki	快速理解仓库架构、模块关系	已有本地代码足够且问题很小
+repomix	里程碑时打包代码上下文、做全局索引	日常小改动
+context7	查库/API官方文档与配置写法	不涉及第三方库知识
+openaiDeveloperDocs	OpenAI API/SDK/Apps/Codex 相关问题	非 OpenAI 技术问题
+tavily	需要最新公开信息或站外研究	可从本地和官方文档解决
+exa	代码语义检索、公司/网页研究	本地仓库已有答案
+fetch	精确抓取某个URL原文	不需要网页正文时
+shadcn	组件库检索、示例代码、add命令	项目不使用 shadcn 时
+sequentialthinking-tools	复杂多步决策、需要严密分解时	简单直改任务
+list/read_mcp_resources	先探测 MCP 资源再读取	已知目标文件路径明确
+update_plan	多步骤任务需要显式进度跟踪	单步小任务
+
+Skills 全量使用表
+Skill	何时使用（只在这种情况）
+brainstorming	需求不清、需要先澄清目标与边界
+cloudflare-deploy	仅当改动 Cloudflare 平台配置/部署架构
+develop-web-game	仅做 web game 循环开发/渲染调试
+dispatching-parallel-agents	可并行的独立子任务 >=2
+executing-plans	已有计划文档，按计划执行
+finishing-a-development-branch	开发分支收尾、准备合并
+frontend-design	UI界面设计与视觉升级
+interaction-design	动画、微交互、过渡与反馈设计
+openai-docs	OpenAI 产品/API文档查询与落地
+planning-with-files	复杂任务建 task_plan/findings/progress
+planning-with-files-othmanadi	同上，二选一使用，不要双开
+playwright	浏览器自动化操作与流程验证
+receiving-code-review	接收并处理代码评审意见
+requesting-code-review	任务完成后请求质量审查
+screenshot	用户明确要求桌面/区域截图
+security-best-practices	用户明确要求安全最佳实践审查
+security-ownership-map	用户明确要求安全责任图/Bus factor 分析
+security-threat-model	用户明确要求威胁建模
+subagent-driven-development	需要子代理分工执行计划
+systematic-debugging	所有 bug/failure 场景优先启用
+test-driven-development	功能/修复需先测后改
+ui-ux-pro-max	需要高强度 UI/UX 风格化输出
+using-git-worktrees	需要隔离工作树并行开发
+using-superpowers	会话起始需要 superpowers 流程时
+vercel-react-best-practices	React/Next 性能与模式优化
+verification-before-completion	声称完成前的证据化验证（必用）
+web-design-guidelines	UI/可访问性/设计规范审查
+writing-plans	多步骤需求先写计划再动手
+writing-skills	创建或修改 skill 本身
+skill-creator	设计新 skill 框架与内容
+skill-installer	安装/管理 skills
+任务类型速查表（你要的“项目理解/性能/文档查询”等）
+任务类型	首选 MCP	首选 Skills
+项目理解	shell_command + filesystem + deepwiki	writing-plans（复杂时）
+代码实现	shell_command + filesystem	test-driven-development
+Bug 调试	chrome-devtools + shell_command	systematic-debugging
+代码质量与性能	chrome-devtools + shell_command	vercel-react-best-practices + verification-before-completion
+UI 视觉优化	chrome-devtools + playwright	frontend-design + interaction-design + ui-ux-pro-max
+文档查询	context7 / openaiDeveloperDocs / deepwiki	openai-docs
+发布上线	shell_command + github	cloudflare-deploy（仅平台改动）
+经验沉淀	memory	无（直接写记忆）

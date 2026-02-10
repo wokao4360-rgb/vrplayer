@@ -1,6 +1,5 @@
 /**
- * 右上角控制按钮（全屏 + 坐标拾取）
- * 独立于 TopBar，浮动在右上角
+ * 右上角控制按钮（全屏 + 坐标拾取 + 北向校准 + VR）
  */
 
 import { isFullscreen, requestFullscreenBestEffort, exitFullscreenBestEffort } from './fullscreen';
@@ -11,12 +10,11 @@ type TopRightControlsOptions = {
   viewerRootEl?: HTMLElement;
   onTogglePickMode?: () => boolean;
   onOpenNorthCalibration?: () => void;
-  showNorthCalibration?: boolean; // 是否显示校准北向按钮（默认仅在 debug 模式）
-  onToggleVrMode?: () => Promise<boolean>; // VR模式切换回调，返回是否成功启用
+  showNorthCalibration?: boolean;
+  onToggleVrMode?: () => Promise<boolean>;
 };
 
 function createFullscreenIcon(): string {
-  // 简单的 "全屏" 图标（SVG）
   return `
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M9 4H4V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -46,6 +44,8 @@ export class TopRightControls {
   private pickModeBtn: HTMLButtonElement | null = null;
   private northCalibrationBtn: HTMLButtonElement | null = null;
   private vrModeBtn: HTMLButtonElement | null = null;
+  private handlePickModeChange: ((e: Event) => void) | null = null;
+  private handleFullscreenChange: (() => void) | null = null;
   private viewerRootEl?: HTMLElement;
   private onTogglePickMode?: () => boolean;
   private onOpenNorthCalibration?: () => void;
@@ -62,21 +62,18 @@ export class TopRightControls {
     this.element = document.createElement('div');
     this.element.className = 'vr-topright-controls';
 
-    // 监听拾取模式切换事件（用于从外部关闭拾取模式）
-    const handlePickModeChange = (e: Event) => {
+    this.handlePickModeChange = (e: Event) => {
       const evt = e as CustomEvent<{ enabled: boolean }>;
       this.updatePickModeState(evt.detail.enabled);
     };
-    window.addEventListener('vr:pickmode', handlePickModeChange);
+    window.addEventListener('vr:pickmode', this.handlePickModeChange);
 
-    // 监听全屏状态变化，更新按钮图标
-    const handleFullscreenChange = () => {
+    this.handleFullscreenChange = () => {
       this.syncFullscreenState();
     };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
+    document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', this.handleFullscreenChange as EventListener);
 
-    // 全屏按钮
     this.fullscreenBtn = document.createElement('button');
     this.fullscreenBtn.className = 'vr-topright-btn vr-top-icon-only vr-icon-btn';
     this.fullscreenBtn.setAttribute('aria-label', '进入全屏');
@@ -86,10 +83,8 @@ export class TopRightControls {
       const isCurrentlyFullscreen = isFullscreen();
       try {
         if (isCurrentlyFullscreen) {
-          // 当前是全屏状态，退出全屏
           await exitFullscreenBestEffort();
         } else {
-          // 当前不是全屏，进入全屏
           const target = this.viewerRootEl;
           if (!target) {
             console.warn('[TopRightControls] fullscreen target not set');
@@ -102,8 +97,7 @@ export class TopRightControls {
           console.debug('[TopRightControls] fullscreen toggle failed', err);
         }
       } finally {
-        // 延迟一下确保状态更新
-        setTimeout(() => {
+        window.setTimeout(() => {
           this.syncFullscreenState();
         }, 100);
       }
@@ -111,12 +105,11 @@ export class TopRightControls {
 
     this.syncFullscreenState();
 
-    // 拾取模式按钮（如果提供了回调）
     if (this.onTogglePickMode) {
       this.pickModeBtn = document.createElement('button');
       this.pickModeBtn.className = 'vr-topright-btn';
       this.pickModeBtn.setAttribute('aria-label', '拾取模式');
-      this.pickModeBtn.title = '拾取模式：点一下画面获取 yaw/pitch';
+      this.pickModeBtn.title = '拾取模式：点击画面获取 yaw/pitch';
       this.pickModeBtn.textContent = '🎯';
       this.pickModeBtn.style.fontSize = '18px';
       this.pickModeBtn.addEventListener('click', (e) => {
@@ -130,9 +123,8 @@ export class TopRightControls {
       this.element.appendChild(this.pickModeBtn);
     }
 
-    // 校准北向按钮（如果提供了回调，或显示标志为 true）
-    const shouldShowNorthCalibration = options.showNorthCalibration !== false && 
-                                     (options.onOpenNorthCalibration || __VR_DEBUG__);
+    const shouldShowNorthCalibration = options.showNorthCalibration !== false
+      && (options.onOpenNorthCalibration || __VR_DEBUG__);
     if (shouldShowNorthCalibration && this.onOpenNorthCalibration) {
       this.northCalibrationBtn = document.createElement('button');
       this.northCalibrationBtn.className = 'vr-topright-btn';
@@ -150,7 +142,6 @@ export class TopRightControls {
       this.element.appendChild(this.northCalibrationBtn);
     }
 
-    // VR眼镜按钮（仅移动端显示）
     if (isTouchDevice() && this.onToggleVrMode) {
       this.vrModeBtn = document.createElement('button');
       this.vrModeBtn.className = 'vr-topright-btn vr-top-icon-only vr-icon-btn';
@@ -182,12 +173,8 @@ export class TopRightControls {
     this.isPickModeActive = isActive;
     if (this.pickModeBtn) {
       this.pickModeBtn.setAttribute('aria-label', isActive ? '关闭拾取模式' : '开启拾取模式');
-      this.pickModeBtn.title = isActive ? '关闭拾取模式' : '开启拾取模式：点一下画面获取 yaw/pitch';
-      if (isActive) {
-        this.pickModeBtn.style.background = 'rgba(255,255,255,0.18)';
-      } else {
-        this.pickModeBtn.style.background = '';
-      }
+      this.pickModeBtn.title = isActive ? '关闭拾取模式' : '开启拾取模式：点击画面获取 yaw/pitch';
+      this.pickModeBtn.style.background = isActive ? 'rgba(255,255,255,0.18)' : '';
     }
   }
 
@@ -196,11 +183,7 @@ export class TopRightControls {
     if (this.vrModeBtn) {
       this.vrModeBtn.setAttribute('aria-label', isActive ? '退出VR模式' : '进入VR模式');
       this.vrModeBtn.title = isActive ? '退出VR模式' : 'VR眼镜：转动设备控制视角';
-      if (isActive) {
-        this.vrModeBtn.style.background = 'rgba(255,255,255,0.18)';
-      } else {
-        this.vrModeBtn.style.background = '';
-      }
+      this.vrModeBtn.style.background = isActive ? 'rgba(255,255,255,0.18)' : '';
     }
   }
 
@@ -220,8 +203,15 @@ export class TopRightControls {
   }
 
   remove(): void {
+    if (this.handlePickModeChange) {
+      window.removeEventListener('vr:pickmode', this.handlePickModeChange);
+      this.handlePickModeChange = null;
+    }
+    if (this.handleFullscreenChange) {
+      document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', this.handleFullscreenChange as EventListener);
+      this.handleFullscreenChange = null;
+    }
     this.element.remove();
   }
 }
-
-

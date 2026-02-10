@@ -22,6 +22,7 @@ export class DollhouseScene {
   private unsubscribeFocus: (() => void) | null = null;
   private hoveredSceneId: string | null = null;
   private focusAnimation: { target: THREE.Vector3; start: THREE.Vector3; progress: number } | null = null;
+  private handleWindowResize: (() => void) | null = null;
 
   constructor(
     container: HTMLElement,
@@ -74,7 +75,8 @@ export class DollhouseScene {
     this.animate();
 
     // 响应窗口大小变化
-    window.addEventListener('resize', () => this.handleResize());
+    this.handleWindowResize = () => this.handleResize();
+    window.addEventListener('resize', this.handleWindowResize);
 
     // 监听场景聚焦事件
     this.unsubscribeFocus = onSceneFocus((event) => {
@@ -446,6 +448,10 @@ export class DollhouseScene {
     if (this.animationId !== null) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
+    }
+    if (this.handleWindowResize) {
+      window.removeEventListener('resize', this.handleWindowResize);
+      this.handleWindowResize = null;
     }
 
     // 取消事件监听

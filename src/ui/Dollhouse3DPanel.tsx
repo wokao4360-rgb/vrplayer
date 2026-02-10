@@ -1,6 +1,6 @@
 import type { Museum, Scene } from '../types/config';
+import type { DollhouseScene } from '../viewer/dollhouseScene';
 import { navigateToScene } from '../utils/router';
-import { DollhouseScene } from '../viewer/dollhouseScene';
 
 type Dollhouse3DPanelProps = {
   museum: Museum;
@@ -17,6 +17,9 @@ export class Dollhouse3DPanel {
   private onClose?: () => void;
   private container: HTMLElement;
   private dollhouseScene: DollhouseScene | null = null;
+  private initToken = 0;
+  private handleCanvasClick: ((e: MouseEvent) => void) | null = null;
+  private handleCanvasMove: ((e: MouseEvent) => void) | null = null;
 
   constructor(props: Dollhouse3DPanelProps) {
     this.museum = props.museum;
@@ -31,7 +34,6 @@ export class Dollhouse3DPanel {
   }
 
   private render(): void {
-    // Header
     const header = document.createElement('div');
     header.className = 'vr-dollhouse-header';
 
@@ -52,29 +54,48 @@ export class Dollhouse3DPanel {
     header.appendChild(title);
     header.appendChild(closeBtn);
 
-    // 3D Container
     this.container = document.createElement('div');
     this.container.className = 'vr-dollhouse-container';
 
-    // Body
     const body = document.createElement('div');
     body.className = 'vr-dollhouse-body';
     body.appendChild(this.container);
 
-    // Assemble
     this.element.appendChild(header);
     this.element.appendChild(body);
 
-    // 初始化 3D 场景
-    this.initDollhouseScene();
+    void this.initDollhouseScene();
   }
 
-  private initDollhouseScene(): void {
-    if (this.dollhouseScene) {
-      this.dollhouseScene.dispose();
+  private teardownDollhouseScene(): void {
+    if (!this.dollhouseScene) {
+      return;
+    }
+    const canvas = this.dollhouseScene.getDomElement();
+    if (this.handleCanvasClick) {
+      canvas.removeEventListener('click', this.handleCanvasClick);
+      this.handleCanvasClick = null;
+    }
+    if (this.handleCanvasMove) {
+      canvas.removeEventListener('mousemove', this.handleCanvasMove);
+      this.handleCanvasMove = null;
+    }
+    this.dollhouseScene.dispose();
+    this.dollhouseScene = null;
+  }
+
+  private async initDollhouseScene(): Promise<void> {
+    this.initToken += 1;
+    const token = this.initToken;
+
+    this.teardownDollhouseScene();
+
+    const { DollhouseScene } = await import('../viewer/dollhouseScene');
+    if (token !== this.initToken) {
+      return;
     }
 
-    this.dollhouseScene = new DollhouseScene(
+    const sceneInstance = new DollhouseScene(
       this.container,
       this.museum.id,
       this.scenes,
@@ -85,19 +106,25 @@ export class Dollhouse3DPanel {
           this.onClose();
         }
       },
-      this.museum
+      this.museum,
     );
 
-    // 绑定点击事件
-    const canvas = this.dollhouseScene.getDomElement();
-    canvas.addEventListener('click', (e) => {
-      this.dollhouseScene?.handleClick(e);
-    });
+    if (token !== this.initToken) {
+      sceneInstance.dispose();
+      return;
+    }
 
-    // 绑定 hover 事件
-    canvas.addEventListener('mousemove', (e) => {
+    this.dollhouseScene = sceneInstance;
+
+    const canvas = this.dollhouseScene.getDomElement();
+    this.handleCanvasClick = (e: MouseEvent) => {
+      this.dollhouseScene?.handleClick(e);
+    };
+    this.handleCanvasMove = (e: MouseEvent) => {
       this.dollhouseScene?.handleMouseMove(e);
-    });
+    };
+    canvas.addEventListener('click', this.handleCanvasClick);
+    canvas.addEventListener('mousemove', this.handleCanvasMove);
   }
 
   updateCurrentScene(sceneId: string): void {
@@ -111,11 +138,11 @@ export class Dollhouse3DPanel {
     this.museum = museum;
     this.scenes = scenes;
     this.currentSceneId = currentSceneId;
-    
+
     if (this.dollhouseScene) {
       this.dollhouseScene.updateScenes(scenes, currentSceneId);
     } else {
-      this.initDollhouseScene();
+      void this.initDollhouseScene();
     }
   }
 
@@ -124,18 +151,8 @@ export class Dollhouse3DPanel {
   }
 
   remove(): void {
-    if (this.dollhouseScene) {
-      this.dollhouseScene.dispose();
-      this.dollhouseScene = null;
-    }
+    this.initToken += 1;
+    this.teardownDollhouseScene();
     this.element.remove();
   }
 }
-
-
-
-
-
-
-
-

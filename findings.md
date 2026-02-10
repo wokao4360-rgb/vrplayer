@@ -1,0 +1,15 @@
+# findings.md
+
+## 2026-02-10 21:46:36 基线
+- `main.ts` 入口存在多处可选功能静态耦合，导致首屏依赖链偏重。
+- `DockPanels.tsx` 和 `Dollhouse3DPanel.tsx` 存在可选模块静态引入。
+- CDN 探测仅有 probe，无“上次成功节点缓存”。
+- 多处全局监听与 RAF 缺少统一清理。
+
+## 2026-02-10 22:15:09 本轮关键发现与结果
+- 首屏入口主包已明显下降：`dist/assets/index-QqKJpH12.js` 为 `223.77 kB`（minified）。
+- `index.html` 仅保留 `three-core` 与 `three-extras` 的 modulepreload；`editor-debug/chat-community/dock-panels` 不再首屏预拉取。
+- `chat-community` 仍按“场景可见后 idle 初始化”触发自动加载（非阻塞首屏，但会在空闲时请求）。
+- `dock-panels` 已验证按触发加载：首次打开社区或切到 3D 结构图时才请求。
+- `editor-debug` 已验证仅在 `?debug=1` / `?editor=1` 触发请求。
+- MCP 采样中无新的运行时错误；仅保留已有警告（`apple-mobile-web-app-capable`、`favicon 404`、表单可访问性提示）。

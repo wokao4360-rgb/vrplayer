@@ -1,4 +1,4 @@
-import { loadConfig, getMuseum, getScene, clearConfigCache } from './utils/config';
+﻿import { loadConfig, getMuseum, getScene, clearConfigCache } from './utils/config';
 import { parseRoute, navigateToMuseumList, navigateToSceneList, navigateToScene, isDebugMode, isEditorMode } from './utils/router';
 import { normalizePathname } from './utils/urlBuilder';
 import { PanoViewer } from './viewer/PanoViewer';
@@ -11,8 +11,8 @@ import { VideoPlayer } from './ui/VideoPlayer';
 import { ControlBar } from './ui/ControlBar';
 import { Loading } from './ui/Loading';
 import { ConfigErrorPanel } from './ui/ConfigErrorPanel';
-import { DebugPanel } from './ui/DebugPanel';
-import { ConfigStudio } from './ui/ConfigStudio';
+import type { DebugPanel } from './ui/DebugPanel';
+import type { ConfigStudio } from './ui/ConfigStudio';
 import { QualityIndicator, LoadStatus } from './ui/QualityIndicator';
 import './ui/ui.css';
 import { TopRightControls } from './ui/TopRightControls';
@@ -22,9 +22,10 @@ import { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import { GuideTray } from './ui/GuideTray';
 import { TopModeTabs, type AppViewMode } from './ui/TopModeTabs';
 import { StructureView2D } from './ui/StructureView2D';
-import { StructureView3D } from './ui/StructureView3D';
+import type { StructureView3D } from './ui/StructureView3D';
 import { buildSceneGraph } from './graph/sceneGraph';
-import { resolveAssetUrl, AssetType, setAssetResolverConfig, waitForAssetResolverReady } from './utils/assetResolver';
+import { resolveAssetUrl, AssetType, setAssetResolverConfig } from './utils/assetResolver';
+import { toProxiedImageUrl } from './utils/externalImage';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
 import type { ValidationError } from './utils/configValidator';
@@ -37,9 +38,9 @@ import { initYieldPolicy } from './ui/uiYieldPolicy';
 import { interactionBus } from './ui/interactionBus';
 import { __VR_DEBUG__ } from './utils/debug';
 import { dumpVRState, resetVRUI } from './utils/debugHelper';
-import { NorthCalibrationPanel } from './ui/NorthCalibrationPanel';
-import { FcChatPanel } from './ui/FcChatPanel';
-import { FcChatClient, type FcChatConfig } from './services/fcChatClient';
+import type { NorthCalibrationPanel } from './ui/NorthCalibrationPanel';
+import type { FcChatPanel } from './ui/FcChatPanel';
+import type { FcChatConfig } from './services/fcChatClient';
 import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
 import { initVrMode, enableVrMode, disableVrMode, isVrModeEnabled, setInteractingCallback } from './utils/vrMode';
@@ -50,82 +51,82 @@ import { isTouchDevice, isMouseDevice } from './utils/deviceDetect';
 import './ui/uiRefresh.css';
 
 /**
- * 罗盘旋转验证点（修复"脚底下东西南北罗盘跟着视角一起转"问题）：
- * - 非全屏模式下拖动视角：罗盘盘面（N/E/S/W 或 wedge/tick）不随 yaw 旋转；needle 旋转。
- * - 如果盘面仍跟着转：说明还有一个 transform 写在更外层 wrapper（继续向上找 parent 元素的 style.transform 写入点，直到消失）。
- * - GroundHeadingMarker: root 和 inner 的 transform 只包含 translateX/translateY/scaleY，不包含 rotate
- * - CompassDisk: root 的 transform 只包含 translateX/translateY/scaleY，不包含 rotate
- * - 只有 needle 通过 CSS 变量 --groundheading-needle-rot 和 --compass-needle-rot 旋转
+ * 缃楃洏鏃嬭浆楠岃瘉鐐癸紙淇"鑴氬簳涓嬩笢瑗垮崡鍖楃綏鐩樿窡鐫€瑙嗚涓€璧疯浆"闂锛夛細
+ * - 闈炲叏灞忔ā寮忎笅鎷栧姩瑙嗚锛氱綏鐩樼洏闈紙N/E/S/W 鎴?wedge/tick锛変笉闅?yaw 鏃嬭浆锛沶eedle 鏃嬭浆銆?
+ * - 濡傛灉鐩橀潰浠嶈窡鐫€杞細璇存槑杩樻湁涓€涓?transform 鍐欏湪鏇村灞?wrapper锛堢户缁悜涓婃壘 parent 鍏冪礌鐨?style.transform 鍐欏叆鐐癸紝鐩村埌娑堝け锛夈€?
+ * - GroundHeadingMarker: root 鍜?inner 鐨?transform 鍙寘鍚?translateX/translateY/scaleY锛屼笉鍖呭惈 rotate
+ * - CompassDisk: root 鐨?transform 鍙寘鍚?translateX/translateY/scaleY锛屼笉鍖呭惈 rotate
+ * - 鍙湁 needle 閫氳繃 CSS 鍙橀噺 --groundheading-needle-rot 鍜?--compass-needle-rot 鏃嬭浆
  */
 
 /**
- * 初始化调试工具（仅在 debug=1 时启用）
+ * 鍒濆鍖栬皟璇曞伐鍏凤紙浠呭湪 debug=1 鏃跺惎鐢級
  */
 if (__VR_DEBUG__) {
-  // 挂载状态快照函数
+  // 鎸傝浇鐘舵€佸揩鐓у嚱鏁?
   (window as any).__vrDump = () => {
     const snapshot = dumpVRState();
     console.debug('[VR State Snapshot]', snapshot);
     return snapshot;
   };
 
-  // 挂载一键复位函数
+  // 鎸傝浇涓€閿浣嶅嚱鏁?
   (window as any).__vrResetUI = () => {
-    console.debug('[VR Reset UI] 正在清理所有 UI 状态...');
+    console.debug('[VR Reset UI] 姝ｅ湪娓呯悊鎵€鏈?UI 鐘舵€?..');
     resetVRUI(interactionBus);
-    console.debug('[VR Reset UI] 清理完成');
+    console.debug('[VR Reset UI] 娓呯悊瀹屾垚');
   };
 
-  console.debug('[VR Debug] 调试模式已启用。使用 __vrDump() 查看状态，使用 __vrResetUI() 复位 UI');
+  console.debug('[VR Debug] 璋冭瘯妯″紡宸插惎鐢ㄣ€備娇鐢?__vrDump() 鏌ョ湅鐘舵€侊紝浣跨敤 __vrResetUI() 澶嶄綅 UI');
 }
 
 /**
- * 最后一次人工回归路径清单（上线前人工确认）
+ * 鏈€鍚庝竴娆′汉宸ュ洖褰掕矾寰勬竻鍗曪紙涓婄嚎鍓嶄汉宸ョ‘璁わ級
  * 
- * 1. 快速左右拖动
- *    - 验证：所有 UI 立即隐藏，无残留状态
+ * 1. 蹇€熷乏鍙虫嫋鍔?
+ *    - 楠岃瘉锛氭墍鏈?UI 绔嬪嵆闅愯棌锛屾棤娈嬬暀鐘舵€?
  * 
- * 2. 低头扫多个地面点
- *    - 验证：只有一个目标被认定，无闪烁
- *    - 验证：底部横条只轻微跟随，不抢控制权
- *    - 验证：预览卡稳定切换无闪烁
+ * 2. 浣庡ご鎵涓湴闈㈢偣
+ *    - 楠岃瘉锛氬彧鏈変竴涓洰鏍囪璁ゅ畾锛屾棤闂儊
+ *    - 楠岃瘉锛氬簳閮ㄦí鏉″彧杞诲井璺熼殢锛屼笉鎶㈡帶鍒舵潈
+ *    - 楠岃瘉锛氶瑙堝崱绋冲畾鍒囨崲鏃犻棯鐑?
  * 
- * 3. 扫点 → 立刻滑横条
- *    - 验证：系统不抢控制权，自动行为立即停止
- *    - 验证：停手后才恢复自动行为
+ * 3. 鎵偣 鈫?绔嬪埢婊戞í鏉?
+ *    - 楠岃瘉锛氱郴缁熶笉鎶㈡帶鍒舵潈锛岃嚜鍔ㄨ涓虹珛鍗冲仠姝?
+ *    - 楠岃瘉锛氬仠鎵嬪悗鎵嶆仮澶嶈嚜鍔ㄨ涓?
  * 
- * 4. 扫点 → 抬头
- *    - 验证：所有状态立即清空，无残留
+ * 4. 鎵偣 鈫?鎶ご
+ *    - 楠岃瘉锛氭墍鏈夌姸鎬佺珛鍗虫竻绌猴紝鏃犳畫鐣?
  * 
- * 5. 自动进入触发瞬间点击其他 UI
- *    - 验证：所有提示/倒计时/瞄准状态立即清空
- *    - 验证：不会触发自动进入
+ * 5. 鑷姩杩涘叆瑙﹀彂鐬棿鐐瑰嚮鍏朵粬 UI
+ *    - 楠岃瘉锛氭墍鏈夋彁绀?鍊掕鏃?鐬勫噯鐘舵€佺珛鍗虫竻绌?
+ *    - 楠岃瘉锛氫笉浼氳Е鍙戣嚜鍔ㄨ繘鍏?
  * 
- * 调试开关：在 src/utils/debug.ts 中将 __VR_DEBUG__ 设为 true 可查看状态流转日志
+ * 璋冭瘯寮€鍏筹細鍦?src/utils/debug.ts 涓皢 __VR_DEBUG__ 璁句负 true 鍙煡鐪嬬姸鎬佹祦杞棩蹇?
  */
 
 /**
- * 发布流程清单
+ * 鍙戝竷娴佺▼娓呭崟
  * 
- * PowerShell 下删除 docs/assets 和 docs/index.html 的命令：
+ * PowerShell 涓嬪垹闄?docs/assets 鍜?docs/index.html 鐨勫懡浠わ細
  * Remove-Item -Recurse -Force .\docs\assets -ErrorAction SilentlyContinue
  * Remove-Item -Force .\docs\index.html -ErrorAction SilentlyContinue
  */
 
-// 【入口】修复双斜杠路径问题（如 //vrplayer// -> /vrplayer/）
+// 銆愬叆鍙ｃ€戜慨澶嶅弻鏂滄潬璺緞闂锛堝 //vrplayer// -> /vrplayer/锛?
 normalizePathname();
 
-// 初始化 UI 让位策略
+// 鍒濆鍖?UI 璁╀綅绛栫暐
 initYieldPolicy();
 initYieldClassManager();
 
-// 初始化全屏状态管理器
+// 鍒濆鍖栧叏灞忕姸鎬佺鐞嗗櫒
 initFullscreenState();
 
-// 初始化VR模式管理器（监听全屏状态变化）
+// 鍒濆鍖朧R妯″紡绠＄悊鍣紙鐩戝惉鍏ㄥ睆鐘舵€佸彉鍖栵級
 const setVrModeChangeCallback = initVrMode();
 
-// 监听全屏状态变化，清除所有提示
+// 鐩戝惉鍏ㄥ睆鐘舵€佸彉鍖栵紝娓呴櫎鎵€鏈夋彁绀?
 const handleFullscreenChange = () => {
   const d = document as any;
   const isFullscreenNow = Boolean(document.fullscreenElement || d.webkitFullscreenElement);
@@ -137,8 +138,8 @@ document.addEventListener('fullscreenchange', handleFullscreenChange);
 document.addEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
 
 /**
- * 检测是否为开发者模式
- * URL 参数：?development=1 或 ?dev=1 或 #development
+ * 妫€娴嬫槸鍚︿负寮€鍙戣€呮ā寮?
+ * URL 鍙傛暟锛?development=1 鎴??dev=1 鎴?#development
  */
 function isDevMode(): boolean {
   const params = new URLSearchParams(location.search);
@@ -146,11 +147,11 @@ function isDevMode(): boolean {
 }
 
 /**
- * DNS 预热：已禁用
- * 由于图片现在通过同源代理 /_img 加载，不再需要 preconnect 到第三方域名
+ * DNS 棰勭儹锛氬凡绂佺敤
+ * 鐢变簬鍥剧墖鐜板湪閫氳繃鍚屾簮浠ｇ悊 /_img 鍔犺浇锛屼笉鍐嶉渶瑕?preconnect 鍒扮涓夋柟鍩熷悕
  */
 // function warmupExternalImageHostsFromConfig(config: AppConfig): void {
-//   // 已禁用：图片通过同源代理加载，不需要 preconnect
+//   // 宸茬鐢細鍥剧墖閫氳繃鍚屾簮浠ｇ悊鍔犺浇锛屼笉闇€瑕?preconnect
 // }
 
 class App {
@@ -180,20 +181,27 @@ class App {
   private currentScene: Scene | null = null;
   private hasBoundFullscreenEvents = false;
   private mode: AppViewMode = 'tour';
-  private isStructureOverlayOpen = false; // 结构图/三维模型overlay是否打开
+  private isStructureOverlayOpen = false; // 缁撴瀯鍥?涓夌淮妯″瀷overlay鏄惁鎵撳紑
   private structureView2D: StructureView2D | null = null;
   private structureView3D: StructureView3D | null = null;
   private fcChatPanel: FcChatPanel | null = null;
   private infoModalMounted: MountedModal | null = null;
   private settingsModalMounted: MountedModal | null = null;
+  private handlePopState: (() => void) | null = null;
+  private handlePickEvent: ((e: Event) => void) | null = null;
+  private handlePickModeEvent: ((e: Event) => void) | null = null;
+  private handleMetricsEvent: ((e: Event) => void) | null = null;
+  private debugPanelRafId: number | null = null;
+  private structure3DLoadToken = 0;
+  private chatInitToken = 0;
 
   constructor() {
     const appElement = document.getElementById('app');
     if (!appElement) {
-      throw new Error('找不到 #app 元素');
+      throw new Error('鎵句笉鍒?#app 鍏冪礌');
     }
     this.appElement = appElement;
-    // 初始化全局 ModalHost（用于热点弹窗等）
+    // 鍒濆鍖栧叏灞€ ModalHost锛堢敤浜庣儹鐐瑰脊绐楃瓑锛?
     ensureModalHost();
     
     this.loading = new Loading();
@@ -208,14 +216,14 @@ class App {
     this.hasBoundFullscreenEvents = true;
 
     const handler = () => {
-      // 同步 TopRightControls 图标/aria
+      // 鍚屾 TopRightControls 鍥炬爣/aria
       this.topRightControls?.syncFullscreenState();
-      // 同步VR模式状态（如果VR模式因退出全屏而关闭）
+      // 鍚屾VR妯″紡鐘舵€侊紙濡傛灉VR妯″紡鍥犻€€鍑哄叏灞忚€屽叧闂級
       if (!isFullscreen()) {
         if (this.topRightControls && !isVrModeEnabled()) {
           this.topRightControls.updateVrModeState(false);
         }
-        // 重置PanoViewer的VR模式标志
+        // 閲嶇疆PanoViewer鐨刅R妯″紡鏍囧織
         if (this.panoViewer && this.panoViewer.isVrModeEnabled()) {
           this.panoViewer.setVrModeEnabled(false);
         }
@@ -231,97 +239,101 @@ class App {
     try {
       this.loading.show();
       
-      // 检查是否是编辑器模式
+      // 妫€鏌ユ槸鍚︽槸缂栬緫鍣ㄦā寮?
       if (isEditorMode()) {
         await this.initEditorMode();
         this.loading.hide();
         return;
       }
       
-      // 加载配置
+      // 鍔犺浇閰嶇疆
       this.config = await loadConfig();
       setAssetResolverConfig(this.config.assetCdn);
-      await waitForAssetResolverReady();
       
-      // DNS 预热已禁用：图片通过同源代理 /_img 加载
+      // DNS 棰勭儹宸茬鐢細鍥剧墖閫氳繃鍚屾簮浠ｇ悊 /_img 鍔犺浇
       
-      // 设置应用标题
+      // 璁剧疆搴旂敤鏍囬
       if (this.titleBar) {
         this.titleBar.setTitle(this.config.appName);
       }
       
-      // 监听路由变化
-      window.addEventListener('popstate', () => this.handleRoute());
+      // 鐩戝惉璺敱鍙樺寲
+      if (!this.handlePopState) {
+        this.handlePopState = () => {
+          void this.handleRoute();
+        };
+        window.addEventListener('popstate', this.handlePopState);
+      }
       
-      // 处理初始路由（UI组件初始化失败不阻塞全景显示）
-      // showScene 内部已有降级保护，单个组件失败不会抛出异常
+      // 澶勭悊鍒濆璺敱锛圲I缁勪欢鍒濆鍖栧け璐ヤ笉闃诲鍏ㄦ櫙鏄剧ず锛?
+      // showScene 鍐呴儴宸叉湁闄嶇骇淇濇姢锛屽崟涓粍浠跺け璐ヤ笉浼氭姏鍑哄紓甯?
       await this.handleRoute();
       
       this.loading.hide();
     } catch (error: any) {
-      console.error('配置加载失败:', error);
+      console.error('閰嶇疆鍔犺浇澶辫触:', error);
       this.loading.hide();
       
-      // 检查是否是配置校验错误
+      // 妫€鏌ユ槸鍚︽槸閰嶇疆鏍￠獙閿欒
       if (error.validationErrors && Array.isArray(error.validationErrors)) {
         this.showConfigErrorPanel(error.validationErrors);
       } else {
-        // 配置加载失败（fetch/解析失败）
-        this.showError('加载配置失败，请刷新页面重试');
+        // 閰嶇疆鍔犺浇澶辫触锛坒etch/瑙ｆ瀽澶辫触锛?
+        this.showError('鍔犺浇閰嶇疆澶辫触锛岃鍒锋柊椤甸潰閲嶈瘯');
       }
     }
   }
 
   /**
-   * 初始化编辑器模式
+   * 鍒濆鍖栫紪杈戝櫒妯″紡
    */
   private async initEditorMode(): Promise<void> {
     try {
-      // 加载配置
+      // 鍔犺浇閰嶇疆
       this.config = await loadConfig();
       setAssetResolverConfig(this.config.assetCdn);
-      await waitForAssetResolverReady();
       
-      // DNS 预热已禁用：图片通过同源代理 /_img 加载
+      // DNS 棰勭儹宸茬鐢細鍥剧墖閫氳繃鍚屾簮浠ｇ悊 /_img 鍔犺浇
       
-      // 清空当前视图
+      // 娓呯┖褰撳墠瑙嗗浘
       this.appElement.innerHTML = '';
       
-      // 创建配置工作台
+      // 鍒涘缓閰嶇疆宸ヤ綔鍙?
+      const { ConfigStudio } = await import('./ui/ConfigStudio');
       this.configStudio = new ConfigStudio(this.config, (newConfig) => {
-        // 配置变更回调：更新内部配置，但不重新加载页面
+        // 閰嶇疆鍙樻洿鍥炶皟锛氭洿鏂板唴閮ㄩ厤缃紝浣嗕笉閲嶆柊鍔犺浇椤甸潰
         this.config = newConfig;
         setAssetResolverConfig(newConfig.assetCdn);
-        // 清除缓存，以便下次加载使用新配置
+        // 娓呴櫎缂撳瓨锛屼互渚夸笅娆″姞杞戒娇鐢ㄦ柊閰嶇疆
         clearConfigCache();
       });
       
       this.appElement.appendChild(this.configStudio.getElement());
     } catch (error: any) {
-      console.error('初始化编辑器模式失败:', error);
+      console.error('鍒濆鍖栫紪杈戝櫒妯″紡澶辫触:', error);
       
-      // 检查是否是配置校验错误
+      // 妫€鏌ユ槸鍚︽槸閰嶇疆鏍￠獙閿欒
       if (error.validationErrors && Array.isArray(error.validationErrors)) {
         this.showConfigErrorPanel(error.validationErrors);
       } else {
-      this.showError('加载配置失败，请刷新页面重试');
+      this.showError('鍔犺浇閰嶇疆澶辫触锛岃鍒锋柊椤甸潰閲嶈瘯');
       }
     }
   }
 
   private showConfigErrorPanel(errors: ValidationError[]): void {
-    // 清空当前视图
+    // 娓呯┖褰撳墠瑙嗗浘
     this.appElement.innerHTML = '';
     
     const errorPanel = new ConfigErrorPanel(
       errors,
       () => {
-        // 刷新重试
+        // 鍒锋柊閲嶈瘯
         clearConfigCache();
         window.location.reload();
       },
       () => {
-        // 显示示例配置（跳转到 README 或显示示例）
+        // 鏄剧ず绀轰緥閰嶇疆锛堣烦杞埌 README 鎴栨樉绀虹ず渚嬶級
         this.showConfigExample();
       }
     );
@@ -338,7 +350,7 @@ class App {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>config.json 示例</title>
+          <title>config.json 绀轰緥</title>
           <style>
             body {
               font-family: 'Courier New', monospace;
@@ -358,13 +370,13 @@ class App {
           </style>
         </head>
         <body>
-          <h1>config.json 示例配置</h1>
+          <h1>config.json 绀轰緥閰嶇疆</h1>
           <pre><code>{
-  "appName": "应用名称",
+  "appName": "搴旂敤鍚嶇О",
   "museums": [
     {
       "id": "museum_id",
-      "name": "展馆名称",
+      "name": "灞曢鍚嶇О",
       "cover": "https://example.com/cover.jpg",
       "map": {
         "image": "https://example.com/map.jpg",
@@ -374,7 +386,7 @@ class App {
       "scenes": [
         {
           "id": "scene_id",
-          "name": "场景名称",
+          "name": "鍦烘櫙鍚嶇О",
           "panoLow": "https://example.com/pano-low.jpg",
           "pano": "https://example.com/pano.jpg",
           "thumb": "https://example.com/thumb.jpg",
@@ -391,7 +403,7 @@ class App {
             {
               "id": "hotspot_id",
               "type": "scene",
-              "label": "热点标签",
+              "label": "鐑偣鏍囩",
               "yaw": 35,
               "pitch": -5,
               "target": {
@@ -407,7 +419,7 @@ class App {
     }
   ]
 }</code></pre>
-          <p>详细配置说明请查看 README.md</p>
+          <p>璇︾粏閰嶇疆璇存槑璇锋煡鐪?README.md</p>
         </body>
         </html>
       `);
@@ -419,10 +431,10 @@ class App {
 
     const route = parseRoute();
     
-    // 清理当前视图
+    // 娓呯悊褰撳墠瑙嗗浘
     this.clearView();
 
-    // 默认直接进入王鼎纪念馆（或唯一展馆）
+    // 榛樿鐩存帴杩涘叆鐜嬮紟绾康棣嗭紙鎴栧敮涓€灞曢锛?
     if (!route.museumId) {
       const defaultMuseum = this.config.museums.find(m => m.id === 'wangding') || this.config.museums[0];
       if (defaultMuseum) {
@@ -436,26 +448,26 @@ class App {
     }
 
     if (!route.museumId) {
-      // 显示馆列表
+      // 鏄剧ず棣嗗垪琛?
       this.showMuseumList();
     } else if (!route.sceneId) {
-      // 显示场景列表
+      // 鏄剧ず鍦烘櫙鍒楄〃
       const museum = getMuseum(route.museumId);
       if (museum) {
         this.showSceneList(museum);
       } else {
-        this.showError('未找到指定的展馆');
+        this.showError('鏈壘鍒版寚瀹氱殑灞曢');
         navigateToMuseumList();
       }
     } else {
-      // 显示场景
+      // 鏄剧ず鍦烘櫙
       const museum = getMuseum(route.museumId);
       const scene = getScene(route.museumId, route.sceneId);
       
       if (museum && scene) {
         await this.showScene(museum, scene);
       } else {
-        this.showError('未找到指定的场景');
+        this.showError('鏈壘鍒版寚瀹氱殑鍦烘櫙');
         if (museum) {
           navigateToSceneList(museum.id);
         } else {
@@ -468,26 +480,26 @@ class App {
   private showMuseumList(): void {
     if (!this.config) return;
 
-    // 创建标题栏
+    // 鍒涘缓鏍囬鏍?
     this.titleBar = new TitleBar(this.config.appName);
     this.appElement.appendChild(this.titleBar.getElement());
 
-    // 创建馆列表
+    // 鍒涘缓棣嗗垪琛?
     this.museumList = new MuseumList(this.config.museums);
     this.appElement.appendChild(this.museumList.getElement());
   }
 
   private showSceneList(museum: Museum): void {
-    // 创建标题栏
+    // 鍒涘缓鏍囬鏍?
     this.titleBar = new TitleBar(museum.name);
     this.appElement.appendChild(this.titleBar.getElement());
 
-    // 创建场景列表（类似馆列表的展示方式）
+    // 鍒涘缓鍦烘櫙鍒楄〃锛堢被浼奸鍒楄〃鐨勫睍绀烘柟寮忥級
     const sceneListElement = document.createElement('div');
     sceneListElement.className = 'scene-list-page';
     sceneListElement.innerHTML = `
       <div class="scene-list-container">
-        <h1 class="scene-list-title">${museum.name} - 场景列表</h1>
+        <h1 class="scene-list-title">${museum.name} - 鍦烘櫙鍒楄〃</h1>
         ${museum.description ? `<p class="scene-list-desc">${museum.description}</p>` : ''}
         <div class="scene-grid">
           ${museum.scenes.map(scene => `
@@ -504,7 +516,7 @@ class App {
       </div>
     `;
 
-    // 添加样式
+    // 娣诲姞鏍峰紡
     const style = document.createElement('style');
     style.textContent = `
       .scene-list-page {
@@ -580,7 +592,7 @@ class App {
     `;
     document.head.appendChild(style);
 
-    // 绑定点击事件
+    // 缁戝畾鐐瑰嚮浜嬩欢
     sceneListElement.querySelectorAll('.scene-card').forEach(card => {
       card.addEventListener('click', () => {
         const sceneId = card.getAttribute('data-scene-id');
@@ -599,7 +611,7 @@ class App {
 
     this.loading.show();
 
-    // 创建全景查看器容器（不再需要为TopBar预留空间）
+    // 鍒涘缓鍏ㄦ櫙鏌ョ湅鍣ㄥ鍣紙涓嶅啀闇€瑕佷负TopBar棰勭暀绌洪棿锛?
     const viewerContainer = document.createElement('div');
     viewerContainer.className = 'viewer-container';
     viewerContainer.style.cssText = `
@@ -612,12 +624,12 @@ class App {
     `;
     this.appElement.appendChild(viewerContainer);
 
-    // 创建全景查看器（检查是否启用调试模式）
+    // 鍒涘缓鍏ㄦ櫙鏌ョ湅鍣紙妫€鏌ユ槸鍚﹀惎鐢ㄨ皟璇曟ā寮忥級
     const debugMode = isDebugMode();
     this.panoViewer = new PanoViewer(viewerContainer, debugMode);
 
-    // 新 UI：右上角控制按钮（全屏 + 坐标拾取 + 校准北向）- 降级保护
-    // 开发者模式：仅当 URL 带 development 参数时才显示坐标拾取和校准北向
+    // 鏂?UI锛氬彸涓婅鎺у埗鎸夐挳锛堝叏灞?+ 鍧愭爣鎷惧彇 + 鏍″噯鍖楀悜锛? 闄嶇骇淇濇姢
+    // 寮€鍙戣€呮ā寮忥細浠呭綋 URL 甯?development 鍙傛暟鏃舵墠鏄剧ず鍧愭爣鎷惧彇鍜屾牎鍑嗗寳鍚?
     const devMode = isDevMode();
     try {
       this.topRightControls = new TopRightControls({
@@ -634,9 +646,9 @@ class App {
           return false;
         } : undefined,
         onOpenNorthCalibration: devMode ? () => {
-          this.openNorthCalibration(scene.id);
+          void this.openNorthCalibration(scene.id);
         } : undefined,
-        showNorthCalibration: devMode, // 仅开发者模式显示
+        showNorthCalibration: devMode, // 浠呭紑鍙戣€呮ā寮忔樉绀?
         onToggleVrMode: async () => {
           return this.toggleVrModeFromUI(viewerContainer);
         },
@@ -644,49 +656,57 @@ class App {
       this.appElement.appendChild(this.topRightControls.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] TopRightControls 创建失败，跳过:', err);
+        console.debug('[showScene] TopRightControls 鍒涘缓澶辫触锛岃烦杩?', err);
       }
       this.topRightControls = null;
     }
 
-    // 新 UI：左上角场景标题（如视风格）
+    // 鏂?UI锛氬乏涓婅鍦烘櫙鏍囬锛堝瑙嗛鏍硷級
     this.sceneTitleEl = document.createElement('div');
     this.sceneTitleEl.className = 'vr-scenetitle';
     this.sceneTitleEl.textContent = scene.name || this.config?.appName || 'VR Player';
     this.appElement.appendChild(this.sceneTitleEl);
 
-    // 监听拾取事件
-    const handlePick = (e: Event) => {
+    // 鐩戝惉鎷惧彇浜嬩欢
+    if (this.handlePickEvent) {
+      window.removeEventListener('vr:pick', this.handlePickEvent);
+      this.handlePickEvent = null;
+    }
+    this.handlePickEvent = (e: Event) => {
       const evt = e as CustomEvent<{ x: number; y: number; yaw: number; pitch: number }>;
       const { x, y, yaw, pitch } = evt.detail;
-      // 保存到全局缓存（供 ConfigStudio 使用）
+      // 淇濆瓨鍒板叏灞€缂撳瓨锛堜緵 ConfigStudio 浣跨敤锛?
       setLastPick({ yaw, pitch, ts: Date.now() });
-      showToast(`已复制 yaw: ${yaw.toFixed(2)}, pitch: ${pitch.toFixed(2)}`);
+      showToast(`宸插鍒?yaw: ${yaw.toFixed(2)}, pitch: ${pitch.toFixed(2)}`);
       if (this.panoViewer) {
         const viewerEl = this.panoViewer.getDomElement();
         showPickMarker(viewerEl, x, y);
       }
     };
-    window.addEventListener('vr:pick', handlePick);
+    window.addEventListener('vr:pick', this.handlePickEvent);
 
-    // 监听拾取模式切换事件（用于从 ConfigStudio 关闭拾取模式）
-    const handlePickModeChange = (e: Event) => {
+    // 鐩戝惉鎷惧彇妯″紡鍒囨崲浜嬩欢锛堢敤浜庝粠 ConfigStudio 鍏抽棴鎷惧彇妯″紡锛?
+    if (this.handlePickModeEvent) {
+      window.removeEventListener('vr:pickmode', this.handlePickModeEvent);
+      this.handlePickModeEvent = null;
+    }
+    this.handlePickModeEvent = (e: Event) => {
       const evt = e as CustomEvent<{ enabled: boolean }>;
       if (this.panoViewer && !evt.detail.enabled && this.panoViewer.isPickModeEnabled()) {
         this.panoViewer.disablePickMode();
-        // TopRightControls 会通过 vr:pickmode 事件自动更新状态
+        // TopRightControls 浼氶€氳繃 vr:pickmode 浜嬩欢鑷姩鏇存柊鐘舵€?
       }
     };
-    window.addEventListener('vr:pickmode', handlePickModeChange);
+    window.addEventListener('vr:pickmode', this.handlePickModeEvent);
 
-    // 新 UI：左下角水印 + About 弹窗 - 降级保护 + 幂等保护
+    // 鏂?UI锛氬乏涓嬭姘村嵃 + About 寮圭獥 - 闄嶇骇淇濇姢 + 骞傜瓑淇濇姢
     try {
-      // 幂等保护：如果已存在，不再重复创建
+      // 骞傜瓑淇濇姢锛氬鏋滃凡瀛樺湪锛屼笉鍐嶉噸澶嶅垱寤?
       const existingBrandMark = this.appElement.querySelector('.vr-brandmark');
       if (!existingBrandMark) {
         this.brandMark = new BrandMark({
           appName: this.config?.appName,
-          brandText: '鼎虎清源',
+          brandText: '榧庤檸娓呮簮',
         });
         const el = this.brandMark.getElement();
         el.addEventListener('click', (e) => {
@@ -696,65 +716,70 @@ class App {
         });
         this.appElement.appendChild(el);
       } else {
-        // 如果已存在，复用现有元素
+        // 濡傛灉宸插瓨鍦紝澶嶇敤鐜版湁鍏冪礌
         if (__VR_DEBUG__) {
-          console.debug('[showScene] BrandMark 已存在，跳过重复创建');
+          console.debug('[showScene] BrandMark 宸插瓨鍦紝璺宠繃閲嶅鍒涘缓');
         }
       }
-      // TeamIntroModal 不再直接挂载，只在 open() 时挂载到 #vr-modal-root
+      // TeamIntroModal 涓嶅啀鐩存帴鎸傝浇锛屽彧鍦?open() 鏃舵寕杞藉埌 #vr-modal-root
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] BrandMark 创建失败，跳过:', err);
+        console.debug('[showScene] BrandMark 鍒涘缓澶辫触锛岃烦杩?', err);
       }
       this.brandMark = null;
     }
     
-    // 如果启用调试模式，创建调试面板
+    // 濡傛灉鍚敤璋冭瘯妯″紡锛屽垱寤鸿皟璇曢潰鏉?
     if (debugMode) {
+      const { DebugPanel } = await import('./ui/DebugPanel');
       this.debugPanel = new DebugPanel();
       this.appElement.appendChild(this.debugPanel.getElement());
       
-      // 设置调试点击回调
+      // 璁剧疆璋冭瘯鐐瑰嚮鍥炶皟
       this.panoViewer.setOnDebugClick((x, y, yaw, pitch, fov) => {
         if (this.debugPanel) {
           this.debugPanel.show(x, y, yaw, pitch, fov);
         }
       });
       
-      // 实时更新调试面板（当视角改变时）
+      // 瀹炴椂鏇存柊璋冭瘯闈㈡澘锛堝綋瑙嗚鏀瑰彉鏃讹級
+      if (this.debugPanelRafId !== null) {
+        cancelAnimationFrame(this.debugPanelRafId);
+        this.debugPanelRafId = null;
+      }
       const updateDebugPanel = () => {
         if (this.debugPanel && this.panoViewer) {
           const view = this.panoViewer.getCurrentView();
           this.debugPanel.updateView(view.yaw, view.pitch, view.fov);
         }
-        requestAnimationFrame(updateDebugPanel);
+        this.debugPanelRafId = requestAnimationFrame(updateDebugPanel);
       };
       updateDebugPanel();
     }
     
-    // 创建视频播放器 - 降级保护
+    // 鍒涘缓瑙嗛鎾斁鍣?- 闄嶇骇淇濇姢
     try {
       this.videoPlayer = new VideoPlayer();
       this.appElement.appendChild(this.videoPlayer.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] VideoPlayer 创建失败，跳过:', err);
+        console.debug('[showScene] VideoPlayer 鍒涘缓澶辫触锛岃烦杩?', err);
       }
       this.videoPlayer = null;
     }
 
-    // 新 UI：导览轻量预览条（框3）- 降级保护
+    // 鏂?UI锛氬瑙堣交閲忛瑙堟潯锛堟3锛? 闄嶇骇淇濇姢
     try {
       this.guideTray = new GuideTray({
         museumId: museum.id,
         currentSceneId: scene.id,
         scenes: museum.scenes,
         onSceneClick: (sceneId) => {
-          // 框3点击直接切换场景
+          // 妗?鐐瑰嚮鐩存帴鍒囨崲鍦烘櫙
           navigateToScene(museum.id, sceneId);
         },
         onMoreClick: () => {
-          // 打开框4（完整导览抽屉）
+          // 鎵撳紑妗?锛堝畬鏁村瑙堟娊灞夛級
           if (!this.sceneGuideDrawer) {
             try {
               this.sceneGuideDrawer = new SceneGuideDrawer({
@@ -762,13 +787,13 @@ class App {
                 currentSceneId: scene.id,
                 scenes: museum.scenes,
                 onClose: () => {
-                  // 框4关闭时，框3保持显示
+                  // 妗?鍏抽棴鏃讹紝妗?淇濇寔鏄剧ず
                 },
               });
               this.appElement.appendChild(this.sceneGuideDrawer.getElement());
             } catch (err) {
               if (__VR_DEBUG__) {
-                console.debug('[GuideTray] SceneGuideDrawer 创建失败:', err);
+                console.debug('[GuideTray] SceneGuideDrawer 鍒涘缓澶辫触:', err);
               }
             }
           }
@@ -780,7 +805,7 @@ class App {
           }
         },
         onClose: () => {
-          // 关闭框3并熄灭导览高亮
+          // 鍏抽棴妗?骞剁唲鐏瑙堥珮浜?
           if (this.guideTray) {
             this.guideTray.setVisible(false);
           }
@@ -791,37 +816,28 @@ class App {
           );
         },
       });
-      this.guideTray.setVisible(false); // 初始隐藏
+      this.guideTray.setVisible(false); // 鍒濆闅愯棌
       this.appElement.appendChild(this.guideTray.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] GuideTray 创建失败，跳过:', err);
+        console.debug('[showScene] GuideTray 鍒涘缓澶辫触锛岃烦杩?', err);
       }
       this.guideTray = null;
     }
 
-    // 新 UI：导览抽屉（框4）- 延迟创建，只在点击"更多"时创建
-    // this.sceneGuideDrawer 将在 onMoreClick 中创建
+    // 鏂?UI锛氬瑙堟娊灞夛紙妗?锛? 寤惰繜鍒涘缓锛屽彧鍦ㄧ偣鍑?鏇村"鏃跺垱寤?
+    // this.sceneGuideDrawer 灏嗗湪 onMoreClick 涓垱寤?
 
-    // SceneStrip 已删除，不再创建常驻缩略图横条
+    // SceneStrip 宸插垹闄わ紝涓嶅啀鍒涘缓甯搁┗缂╃暐鍥炬í鏉?
 
-    // 新 UI：场景预览卡片（Scene Preview Card）
-    // 构建 sceneIndex Map（sceneId -> { title, thumb }）
-    const sceneIndex = new Map<string, { title: string; thumb?: string; panoUrl?: string }>();
-    museum.scenes.forEach((s) => {
-      sceneIndex.set(s.id, {
-        title: s.name,
-        thumb: s.thumb, // 缩略图URL（用于场景索引，可选）
-        panoUrl: undefined, // 禁止预热全景，避免首屏加载无关大图
-      });
-    });
+    // Scene Preview Card 已移除，保留 guide tray 作为主导航入口
 
 
-    // 新 UI：底部 Dock（导览 tab 打开抽屉）- 降级保护
+    // 鏂?UI锛氬簳閮?Dock锛堝瑙?tab 鎵撳紑鎶藉眽锛? 闄嶇骇淇濇姢
     try {
       this.bottomDock = new BottomDock({
         onGuideClick: () => {
-          // 点击"导览"时显示框3（GuideTray）
+          // 鐐瑰嚮"瀵艰"鏃舵樉绀烘3锛圙uideTray锛?
           if (this.guideTray) {
             this.guideTray.setVisible(true);
           }
@@ -837,12 +853,12 @@ class App {
       this.appElement.appendChild(this.bottomDock.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] BottomDock 创建失败，跳过:', err);
+        console.debug('[showScene] BottomDock 鍒涘缓澶辫触锛岃烦杩?', err);
       }
       this.bottomDock = null;
     }
 
-    // 新 UI：顶部模式切换Tab（如视风格）- 降级保护
+    // 鏂?UI锛氶《閮ㄦā寮忓垏鎹ab锛堝瑙嗛鏍硷級- 闄嶇骇淇濇姢
     try {
       this.topModeTabs = new TopModeTabs({
         initialMode: this.mode,
@@ -853,48 +869,53 @@ class App {
       this.appElement.appendChild(this.topModeTabs.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] TopModeTabs 创建失败，跳过:', err);
+        console.debug('[showScene] TopModeTabs 鍒涘缓澶辫触锛岃烦杩?', err);
       }
       this.topModeTabs = null;
     }
 
 
-    // 创建热点（DOM Overlay：每帧跟随 camera 投影）- 降级保护
+    // 鍒涘缓鐑偣锛圖OM Overlay锛氭瘡甯ц窡闅?camera 鎶曞奖锛? 闄嶇骇淇濇姢
     try {
       const sceneNameMap = new Map(museum.scenes.map((s) => [s.id, s.name]));
       this.hotspots = new Hotspots(this.panoViewer, scene.hotspots, {
         resolveSceneName: (sceneId) => sceneNameMap.get(sceneId),
         onEnterScene: (sceneId) => {
-          // 走既有路由/加载链路，避免重构私有 showScene
+          // 璧版棦鏈夎矾鐢?鍔犺浇閾捐矾锛岄伩鍏嶉噸鏋勭鏈?showScene
           navigateToScene(museum.id, sceneId);
         },
-        museumId: museum.id, // 传入 museumId 用于匹配 hover 事件
+        museumId: museum.id, // 浼犲叆 museumId 鐢ㄤ簬鍖归厤 hover 浜嬩欢
       });
       viewerContainer.appendChild(this.hotspots.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] Hotspots 创建失败，跳过:', err);
+        console.debug('[showScene] Hotspots 鍒涘缓澶辫触锛岃烦杩?', err);
       }
       this.hotspots = null;
     }
 
-    // 创建清晰度状态指示器 - 降级保护
+    // 鍒涘缓娓呮櫚搴︾姸鎬佹寚绀哄櫒 - 闄嶇骇淇濇姢
     try {
       this.qualityIndicator = new QualityIndicator();
       this.appElement.appendChild(this.qualityIndicator.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] QualityIndicator 创建失败，跳过:', err);
+        console.debug('[showScene] QualityIndicator 鍒涘缓澶辫触锛岃烦杩?', err);
       }
       this.qualityIndicator = null;
     }
-    window.addEventListener('vr:metrics', (event: Event) => {
+    if (this.handleMetricsEvent) {
+      window.removeEventListener('vr:metrics', this.handleMetricsEvent);
+      this.handleMetricsEvent = null;
+    }
+    this.handleMetricsEvent = (event: Event) => {
       if (!this.qualityIndicator) return;
       const detail = (event as CustomEvent).detail || {};
       this.qualityIndicator.updateMetrics(detail);
-    });
+    };
+    window.addEventListener('vr:metrics', this.handleMetricsEvent);
 
-    // 设置加载状态变化回调
+    // 璁剧疆鍔犺浇鐘舵€佸彉鍖栧洖璋?
     this.panoViewer.setOnStatusChange((status) => {
       if (this.qualityIndicator) {
         this.qualityIndicator.updateStatus(status);
@@ -908,18 +929,18 @@ class App {
       }
     });
 
-    // 加载场景
+    // 鍔犺浇鍦烘櫙
     this.panoViewer.setOnLoad(() => {
       this.loading.hide();
-      // 全景加载成功后，清除任何 UI 错误遮罩（但保留 config 错误）
+      // 鍏ㄦ櫙鍔犺浇鎴愬姛鍚庯紝娓呴櫎浠讳綍 UI 閿欒閬僵锛堜絾淇濈暀 config 閿欒锛?
       this.hideUIError();
       
-      // 预加载下一个场景的缩略图
+      // 棰勫姞杞戒笅涓€涓満鏅殑缂╃暐鍥?
       this.preloadNextScene(museum, scene);
     });
 
     this.panoViewer.setOnError((error) => {
-      console.error('加载场景失败:', error);
+      console.error('鍔犺浇鍦烘櫙澶辫触:', error);
       this.loading.hide();
       this.showError('加载全景图失败，请检查网络连接');
       if (this.qualityIndicator) {
@@ -927,54 +948,71 @@ class App {
       }
     });
 
-    // 【最终铁律】所有来自 config.json 或 URL 的 yaw 都是【现实世界角度】
-    // 进入渲染/罗盘系统前，必须统一取反一次：internalYaw = -worldYaw
+    // 銆愭渶缁堥搧寰嬨€戞墍鏈夋潵鑷?config.json 鎴?URL 鐨?yaw 閮芥槸銆愮幇瀹炰笘鐣岃搴︺€?
+    // 杩涘叆娓叉煋/缃楃洏绯荤粺鍓嶏紝蹇呴』缁熶竴鍙栧弽涓€娆★細internalYaw = -worldYaw
     
-    // 应用初始视角（优先使用 URL 参数中的视角，否则使用场景配置的视角）
+    // 搴旂敤鍒濆瑙嗚锛堜紭鍏堜娇鐢?URL 鍙傛暟涓殑瑙嗚锛屽惁鍒欎娇鐢ㄥ満鏅厤缃殑瑙嗚锛?
     const route = parseRoute();
     const worldTargetYaw = route.yaw !== undefined ? route.yaw : (scene.initialView.yaw || 0);
     const targetPitch = route.pitch !== undefined ? route.pitch : (scene.initialView.pitch || 0);
     const targetFov = route.fov !== undefined ? route.fov : (scene.initialView.fov || 75);
     
-    // 统一世界 → 内部 yaw（关键）
+    // 缁熶竴涓栫晫 鈫?鍐呴儴 yaw锛堝叧閿級
     const internalTargetYaw = -worldTargetYaw;
     
     this.panoViewer.setView(internalTargetYaw, targetPitch, targetFov);
     this.panoViewer.loadScene(scene);
     
-    // 设置场景数据（用于 GroundNavDots）
+    // 璁剧疆鍦烘櫙鏁版嵁锛堢敤浜?GroundNavDots锛?
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
 
-    // 创建聊天面板（学伴/问答）- 降级保护
-    try {
-      const fcChatConfig = this.config?.fcChat;
-      if (fcChatConfig?.endpoint && fcChatConfig.endpoint.trim()) {
-        const clientConfig: FcChatConfig = {
-          endpoint: fcChatConfig.endpoint,
-          authToken: fcChatConfig.authToken,
-          timeoutMs: 15000,
-        };
-        const client = new FcChatClient(clientConfig);
-        this.fcChatPanel = new FcChatPanel(client, {
-          museumId: museum.id,
-          sceneId: scene.id,
-          sceneTitle: scene.name,
-          museumName: museum.name,
-          url: window.location.href,
-        });
-        // FcChatPanel 已自动 append 到 body，不需要再 append
-      }
-    } catch (err) {
-      if (__VR_DEBUG__) {
-        console.debug('[showScene] FcChatPanel 创建失败，跳过:', err);
-      }
-      this.fcChatPanel = null;
+    // 鍒涘缓鑱婂ぉ闈㈡澘锛堝浼?闂瓟锛? 闄嶇骇淇濇姢
+    this.chatInitToken += 1;
+    const chatToken = this.chatInitToken;
+    const fcChatConfig = this.config?.fcChat;
+    if (fcChatConfig?.endpoint && fcChatConfig.endpoint.trim()) {
+      const scheduleIdle = (cb: () => void) => {
+        if (typeof window.requestIdleCallback === 'function') {
+          window.requestIdleCallback(() => cb(), { timeout: 800 });
+        } else {
+          window.setTimeout(cb, 0);
+        }
+      };
+      scheduleIdle(async () => {
+        if (chatToken !== this.chatInitToken) return;
+        if (!this.currentScene || this.currentScene.id !== scene.id) return;
+        try {
+          const [{ FcChatPanel }, { FcChatClient }] = await Promise.all([
+            import('./ui/FcChatPanel'),
+            import('./services/fcChatClient'),
+          ]);
+          if (chatToken !== this.chatInitToken) return;
+          const clientConfig: FcChatConfig = {
+            endpoint: fcChatConfig.endpoint,
+            authToken: fcChatConfig.authToken,
+            timeoutMs: 15000,
+          };
+          const client = new FcChatClient(clientConfig);
+          this.fcChatPanel = new FcChatPanel(client, {
+            museumId: museum.id,
+            sceneId: scene.id,
+            sceneTitle: scene.name,
+            museumName: museum.name,
+            url: window.location.href,
+          });
+        } catch (err) {
+          if (__VR_DEBUG__) {
+            console.debug('[showScene] FcChatPanel 鍒涘缓澶辫触锛岃烦杩?', err);
+          }
+          this.fcChatPanel = null;
+        }
+      });
     }
   }
 
   /**
-   * 预加载下一个场景的缩略图
-   * 资源类型：thumb（用于列表/预览）
+   * 棰勫姞杞戒笅涓€涓満鏅殑缂╃暐鍥?
+   * 璧勬簮绫诲瀷锛歵humb锛堢敤浜庡垪琛?棰勮锛?
    */
   private preloadNextScene(museum: Museum, currentScene: Scene): void {
     const currentIndex = museum.scenes.findIndex(s => s.id === currentScene.id);
@@ -982,26 +1020,40 @@ class App {
     const nextScene = museum.scenes[nextIndex];
     
     if (nextScene && nextScene.thumb) {
-      // 使用资源解析器统一处理 URL
-      Promise.all([
-        import('./utils/assetResolver'),
-        import('./utils/externalImage')
-      ]).then(([{ resolveAssetUrl, AssetType }, { toProxiedImageUrl }]) => {
-        const resolvedUrl = resolveAssetUrl(nextScene.thumb, AssetType.THUMB);
-        if (resolvedUrl) {
-          const img = new Image();
-          img.referrerPolicy = 'no-referrer';
-          img.crossOrigin = 'anonymous';
-          (img as any).loading = 'lazy';
-          img.decoding = 'async';
-          img.src = toProxiedImageUrl(resolvedUrl);
-        }
-      });
+      const resolvedUrl = resolveAssetUrl(nextScene.thumb, AssetType.THUMB);
+      if (resolvedUrl) {
+        const img = new Image();
+        img.referrerPolicy = 'no-referrer';
+        img.crossOrigin = 'anonymous';
+        (img as any).loading = 'lazy';
+        img.decoding = 'async';
+        img.src = toProxiedImageUrl(resolvedUrl);
+      }
     }
   }
 
   private clearView(): void {
-    // 清理所有组件
+    // 娓呯悊鎵€鏈夌粍浠?
+    this.chatInitToken += 1;
+    this.structure3DLoadToken += 1;
+
+    if (this.handlePickEvent) {
+      window.removeEventListener('vr:pick', this.handlePickEvent);
+      this.handlePickEvent = null;
+    }
+    if (this.handlePickModeEvent) {
+      window.removeEventListener('vr:pickmode', this.handlePickModeEvent);
+      this.handlePickModeEvent = null;
+    }
+    if (this.handleMetricsEvent) {
+      window.removeEventListener('vr:metrics', this.handleMetricsEvent);
+      this.handleMetricsEvent = null;
+    }
+    if (this.debugPanelRafId !== null) {
+      cancelAnimationFrame(this.debugPanelRafId);
+      this.debugPanelRafId = null;
+    }
+
     if (this.panoViewer) {
       this.panoViewer.dispose();
       this.panoViewer = null;
@@ -1098,7 +1150,7 @@ class App {
     }
 
 
-    // 清理结构图/三维模型overlay
+    // 娓呯悊缁撴瀯鍥?涓夌淮妯″瀷overlay
     if (this.structureView2D) {
       const element = this.structureView2D.getElement();
       if (element && element.parentNode) {
@@ -1120,10 +1172,10 @@ class App {
       this.fcChatPanel = null;
     }
 
-    // 重置 mode（刷新后回到 tour）
+    // 閲嶇疆 mode锛堝埛鏂板悗鍥炲埌 tour锛?
     this.mode = 'tour';
 
-    // 清空容器
+    // 娓呯┖瀹瑰櫒
     this.appElement.innerHTML = '';
     this.appElement.appendChild(this.loading.getElement());
   }
@@ -1138,56 +1190,56 @@ class App {
   }
 
   /**
-   * 设置全局模式（tour / structure2d / structure3d）
+   * 璁剧疆鍏ㄥ眬妯″紡锛坱our / structure2d / structure3d锛?
    */
   private setMode(mode: AppViewMode): void {
     if (this.mode === mode) return;
     const previousMode = this.mode;
     this.mode = mode;
     
-    // 更新 TopModeTabs
+    // 鏇存柊 TopModeTabs
     if (this.topModeTabs) {
       this.topModeTabs.setMode(mode);
     }
     
-    // 如果切换到tour模式，且当前有overlay打开，先关闭overlay
+    // 濡傛灉鍒囨崲鍒皌our妯″紡锛屼笖褰撳墠鏈塷verlay鎵撳紑锛屽厛鍏抽棴overlay
     if (mode === 'tour' && this.isStructureOverlayOpen) {
       this.closeStructureOverlay({ toTour: false });
     }
     
-    // 处理 structure2d overlay
+    // 澶勭悊 structure2d overlay
     if (mode === 'structure2d') {
       this.openStructure2D();
     } else if (mode === 'structure3d') {
-      this.openStructure3D();
+      void this.openStructure3D();
     }
   }
 
   /**
-   * 打开结构图2D overlay
+   * 鎵撳紑缁撴瀯鍥?D overlay
    */
   private openStructure2D(): void {
     if (!this.currentMuseum || !this.currentScene) return;
     
-    // 如果已有overlay打开，先清场
+    // 濡傛灉宸叉湁overlay鎵撳紑锛屽厛娓呭満
     if (this.isStructureOverlayOpen) {
       this.closeStructureOverlay({ toTour: false });
     }
     
     const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
     
-    // 创建或更新 structure2d overlay
+    // 鍒涘缓鎴栨洿鏂?structure2d overlay
     if (!this.structureView2D) {
       this.structureView2D = new StructureView2D({
         museum: this.currentMuseum,
         graph,
         currentSceneId: this.currentScene.id,
         onClose: () => {
-          // 点击×关闭时，关闭overlay并切回tour
+          // 鐐瑰嚮脳鍏抽棴鏃讹紝鍏抽棴overlay骞跺垏鍥瀟our
           this.closeStructureOverlay({ toTour: true });
         },
         onNodeClick: (museumId, sceneId) => {
-          // 点击节点时，先关闭overlay，再跳转场景
+          // 鐐瑰嚮鑺傜偣鏃讹紝鍏堝叧闂璷verlay锛屽啀璺宠浆鍦烘櫙
           this.closeStructureOverlay({ toTour: false });
           navigateToScene(museumId, sceneId);
         },
@@ -1201,47 +1253,56 @@ class App {
       });
     }
     
-    // 标记overlay已打开
+    // 鏍囪overlay宸叉墦寮€
     this.isStructureOverlayOpen = true;
     
-    // 设置body overflow
+    // 璁剧疆body overflow
     document.body.style.overflow = 'hidden';
     
-    // 打开overlay
+    // 鎵撳紑overlay
     this.structureView2D.open();
   }
 
   /**
-   * 打开三维模型3D overlay
+   * 鎵撳紑涓夌淮妯″瀷3D overlay
    */
-  private openStructure3D(): void {
+  private async openStructure3D(): Promise<void> {
     if (!this.currentMuseum || !this.currentScene) return;
     
-    // 如果已有overlay打开，先清场
+    // 濡傛灉宸叉湁overlay鎵撳紑锛屽厛娓呭満
     if (this.isStructureOverlayOpen) {
       this.closeStructureOverlay({ toTour: false });
     }
     
+    this.structure3DLoadToken += 1;
+    const loadToken = this.structure3DLoadToken;
     const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
     
-    // 创建或更新 structure3d overlay
+    // 鍒涘缓鎴栨洿鏂?structure3d overlay
     if (!this.structureView3D) {
+      const { StructureView3D } = await import('./ui/StructureView3D');
+      if (loadToken !== this.structure3DLoadToken || this.mode !== 'structure3d') {
+        return;
+      }
       this.structureView3D = new StructureView3D({
         museum: this.currentMuseum,
         graph,
         currentSceneId: this.currentScene.id,
         onClose: () => {
-          // 点击×关闭时，关闭overlay并切回tour
+          // 鐐瑰嚮脳鍏抽棴鏃讹紝鍏抽棴overlay骞跺垏鍥瀟our
           this.closeStructureOverlay({ toTour: true });
         },
         onNodeClick: (museumId, sceneId) => {
-          // 点击节点时，先关闭overlay，再跳转场景
+          // 鐐瑰嚮鑺傜偣鏃讹紝鍏堝叧闂璷verlay锛屽啀璺宠浆鍦烘櫙
           this.closeStructureOverlay({ toTour: false });
           navigateToScene(museumId, sceneId);
         },
       });
       this.appElement.appendChild(this.structureView3D.getElement());
     } else {
+      if (loadToken !== this.structure3DLoadToken || this.mode !== 'structure3d') {
+        return;
+      }
       this.structureView3D.updateContext({
         museum: this.currentMuseum,
         graph,
@@ -1249,28 +1310,29 @@ class App {
       });
     }
     
-    // 标记overlay已打开
+    // 鏍囪overlay宸叉墦寮€
     this.isStructureOverlayOpen = true;
     
-    // 设置body overflow
+    // 璁剧疆body overflow
     document.body.style.overflow = 'hidden';
     
-    // 打开overlay
+    // 鎵撳紑overlay
     this.structureView3D.open();
   }
 
   /**
-   * 关闭结构图/三维模型overlay（唯一关闭入口）
-   * @param toTour 是否切换到tour模式
+   * 鍏抽棴缁撴瀯鍥?涓夌淮妯″瀷overlay锛堝敮涓€鍏抽棴鍏ュ彛锛?
+   * @param toTour 鏄惁鍒囨崲鍒皌our妯″紡
    */
   private closeStructureOverlay(options: { toTour: boolean }): void {
-    // 如果overlay未打开，直接返回
+    // 濡傛灉overlay鏈墦寮€锛岀洿鎺ヨ繑鍥?
     if (!this.isStructureOverlayOpen) return;
+    this.structure3DLoadToken += 1;
     
-    // 标记overlay已关闭
+    // 鏍囪overlay宸插叧闂?
     this.isStructureOverlayOpen = false;
     
-    // 从DOM中彻底移除overlay元素（而不是只隐藏）
+    // 浠嶥OM涓交搴曠Щ闄verlay鍏冪礌锛堣€屼笉鏄彧闅愯棌锛?
     if (this.structureView2D) {
       const element = this.structureView2D.getElement();
       if (element && element.parentNode) {
@@ -1287,12 +1349,12 @@ class App {
       this.structureView3D = null;
     }
     
-    // 恢复body样式（清除所有可能添加的样式）
+    // 鎭㈠body鏍峰紡锛堟竻闄ゆ墍鏈夊彲鑳芥坊鍔犵殑鏍峰紡锛?
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
     document.body.style.overscrollBehavior = '';
     
-    // 如果要求切换到tour模式，更新状态和UI
+    // 濡傛灉瑕佹眰鍒囨崲鍒皌our妯″紡锛屾洿鏂扮姸鎬佸拰UI
     if (options.toTour) {
       this.mode = 'tour';
       if (this.topModeTabs) {
@@ -1301,20 +1363,21 @@ class App {
     }
   }
 
-  private openNorthCalibration(sceneId: string): void {
-    // 清理之前的校准面板（如果存在）
+  private async openNorthCalibration(sceneId: string): Promise<void> {
+    // 娓呯悊涔嬪墠鐨勬牎鍑嗛潰鏉匡紙濡傛灉瀛樺湪锛?
     if (this.northCalibrationPanel) {
       this.northCalibrationPanel.close();
       this.northCalibrationPanel = null;
     }
 
     if (!this.panoViewer) {
-      console.warn('[openNorthCalibration] PanoViewer 未初始化');
+      console.warn('[openNorthCalibration] PanoViewer 鏈垵濮嬪寲');
       return;
     }
 
-    // 创建校准面板
+    // 鍒涘缓鏍″噯闈㈡澘
     try {
+      const { NorthCalibrationPanel } = await import('./ui/NorthCalibrationPanel');
       this.northCalibrationPanel = new NorthCalibrationPanel({
         getCurrentYaw: () => {
           const view = this.panoViewer?.getCurrentView();
@@ -1326,13 +1389,13 @@ class App {
         },
       });
     } catch (err) {
-      console.error('[openNorthCalibration] 创建校准面板失败:', err);
+      console.error('[openNorthCalibration] 鍒涘缓鏍″噯闈㈡澘澶辫触:', err);
       this.northCalibrationPanel = null;
     }
   }
 
   private showError(message: string): void {
-    // 隐藏之前的错误（如果有）
+    // 闅愯棌涔嬪墠鐨勯敊璇紙濡傛灉鏈夛級
     this.hideUIError();
     this.uiErrorElement = document.createElement('div');
     this.uiErrorElement.className = 'error-message';
@@ -1359,7 +1422,7 @@ class App {
   }
 
   /**
-   * 统一打开“鼎虎清源”团队介绍弹窗
+   * 缁熶竴鎵撳紑鈥滈紟铏庢竻婧愨€濆洟闃熶粙缁嶅脊绐?
    */
   private openDingHuQingYuan(): void {
     if (!this.brandMark) return;
@@ -1368,16 +1431,16 @@ class App {
       modal.open();
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[openDingHuQingYuan] 打开团队介绍失败:', err);
+        console.debug('[openDingHuQingYuan] 鎵撳紑鍥㈤槦浠嬬粛澶辫触:', err);
       }
     }
   }
 
   /**
-   * 底部「信息」弹窗
+   * 搴曢儴銆屼俊鎭€嶅脊绐?
    */
   private openInfoModal(): void {
-    // 确保单例：如已存在先关闭
+    // 纭繚鍗曚緥锛氬宸插瓨鍦ㄥ厛鍏抽棴
     this.infoModalMounted?.close();
     this.infoModalMounted = null;
 
@@ -1387,21 +1450,21 @@ class App {
     const content = document.createElement('div');
     content.className = 'vr-modal-info-list';
     content.innerHTML = `
-      <div><span class="vr-modal-info-row-label">展馆</span><span>${museumName}</span></div>
-      <div><span class="vr-modal-info-row-label">场景</span><span>${sceneName}</span></div>
-      <div><span class="vr-modal-info-row-label">采集时间</span><span> 2025-12-27</span></div>
+      <div><span class="vr-modal-info-row-label">灞曢</span><span>${museumName}</span></div>
+      <div><span class="vr-modal-info-row-label">鍦烘櫙</span><span>${sceneName}</span></div>
+      <div><span class="vr-modal-info-row-label">閲囬泦鏃堕棿</span><span> 2025-12-27</span></div>
       <div class="vr-modal-info-copyright">
-        <button type="button" role="button" class="vr-modal-info-copyright-btn">© 2025 鼎虎清源</button>
+        <button type="button" role="button" class="vr-modal-info-copyright-btn">漏 2025 榧庤檸娓呮簮</button>
       </div>
     `;
 
-    // 底部版权文本点击事件：先关闭信息弹窗，再打开“鼎虎清源”弹窗
+    // 搴曢儴鐗堟潈鏂囨湰鐐瑰嚮浜嬩欢锛氬厛鍏抽棴淇℃伅寮圭獥锛屽啀鎵撳紑鈥滈紟铏庢竻婧愨€濆脊绐?
     const copyrightBtn = content.querySelector('.vr-modal-info-copyright-btn') as HTMLButtonElement;
     if (copyrightBtn) {
       copyrightBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // 先关闭信息弹窗，再打开鼎虎清源，避免层级遮挡
+        // 鍏堝叧闂俊鎭脊绐楋紝鍐嶆墦寮€榧庤檸娓呮簮锛岄伩鍏嶅眰绾ч伄鎸?
         if (this.infoModalMounted) {
           this.infoModalMounted.close();
         }
@@ -1412,7 +1475,7 @@ class App {
     }
 
     this.infoModalMounted = mountModal({
-      title: '信息',
+      title: '淇℃伅',
       contentEl: content,
       onClose: () => {
         this.infoModalMounted = null;
@@ -1426,7 +1489,7 @@ class App {
   }
 
   /**
-   * 统一 VR 模式开关逻辑，供右上角按钮与设置弹窗共用
+   * 缁熶竴 VR 妯″紡寮€鍏抽€昏緫锛屼緵鍙充笂瑙掓寜閽笌璁剧疆寮圭獥鍏辩敤
    */
   private async toggleVrModeFromUI(viewerContainer: HTMLElement): Promise<boolean> {
     if (!this.panoViewer) {
@@ -1436,18 +1499,18 @@ class App {
     const currentlyEnabled = isVrModeEnabled();
 
     if (currentlyEnabled) {
-      // 当前已启用，关闭VR模式
+      // 褰撳墠宸插惎鐢紝鍏抽棴VR妯″紡
       disableVrMode();
       this.panoViewer.setVrModeEnabled(false);
-      // 更新右上角按钮状态
+      // 鏇存柊鍙充笂瑙掓寜閽姸鎬?
       if (this.topRightControls) {
         this.topRightControls.updateVrModeState(false);
       }
-      // 退出全屏（推荐）
+      // 閫€鍑哄叏灞忥紙鎺ㄨ崘锛?
       await exitFullscreenBestEffort();
       return false;
     } else {
-      // 当前未启用，启用VR模式
+      // 褰撳墠鏈惎鐢紝鍚敤VR妯″紡
       try {
         await requestFullscreenBestEffort(viewerContainer);
       } catch (err) {
@@ -1457,10 +1520,10 @@ class App {
         return false;
       }
 
-      // 启用VR模式（陀螺仪控制）
+      // 鍚敤VR妯″紡锛堥檧铻轰华鎺у埗锛?
       const initialView = this.panoViewer.getCurrentView();
 
-      // 设置交互检查回调（拖拽时暂停陀螺仪更新）
+      // 璁剧疆浜や簰妫€鏌ュ洖璋冿紙鎷栨嫿鏃舵殏鍋滈檧铻轰华鏇存柊锛?
       setInteractingCallback(() => {
         return this.panoViewer?.isInteracting() ?? false;
       });
@@ -1487,10 +1550,10 @@ class App {
   }
 
   /**
-   * 底部「设置」弹窗
+   * 搴曢儴銆岃缃€嶅脊绐?
    */
   private openSettingsModal(): void {
-    // 确保单例：如已存在先关闭
+    // 纭繚鍗曚緥锛氬宸插瓨鍦ㄥ厛鍏抽棴
     this.settingsModalMounted?.close();
     this.settingsModalMounted = null;
 
@@ -1501,22 +1564,22 @@ class App {
     const container = document.createElement('div');
     container.className = 'vr-modal-settings-list';
 
-    // 画质切换
+    // 鐢昏川鍒囨崲
     const qualityLabel = document.createElement('div');
     qualityLabel.className = 'vr-modal-settings-item-label';
-    qualityLabel.textContent = '画质';
+    qualityLabel.textContent = '鐢昏川';
 
     const qualityGroup = document.createElement('div');
     qualityGroup.className = 'vr-modal-settings-quality';
 
     const highBtn = document.createElement('button');
     highBtn.className = 'vr-modal-settings-quality-btn';
-    highBtn.textContent = '高清';
+    highBtn.textContent = '楂樻竻';
     highBtn.dataset.level = 'high';
 
     const lowBtn = document.createElement('button');
     lowBtn.className = 'vr-modal-settings-quality-btn';
-    lowBtn.textContent = '省流';
+    lowBtn.textContent = '鐪佹祦';
     lowBtn.dataset.level = 'low';
 
     const applyQualityActive = (level: QualityLevel) => {
@@ -1532,7 +1595,7 @@ class App {
       if (prev === level) return;
       setPreferredQuality(level);
       applyQualityActive(level);
-      // 使用 preserveView 重新加载当前场景资源
+      // 浣跨敤 preserveView 閲嶆柊鍔犺浇褰撳墠鍦烘櫙璧勬簮
       this.panoViewer.loadScene(this.currentScene, { preserveView: true });
     };
 
@@ -1546,15 +1609,15 @@ class App {
     qualityRow.appendChild(qualityLabel);
     qualityRow.appendChild(qualityGroup);
 
-    // 重置视角
+    // 閲嶇疆瑙嗚
     const resetLabel = document.createElement('div');
     resetLabel.className = 'vr-modal-settings-item-label';
-    resetLabel.textContent = '视角';
+    resetLabel.textContent = '瑙嗚';
 
     const resetBtn = document.createElement('button');
     resetBtn.className = 'vr-modal-settings-row-btn';
     resetBtn.type = 'button';
-    resetBtn.textContent = '恢复初始视角';
+    resetBtn.textContent = '鎭㈠鍒濆瑙嗚';
     resetBtn.addEventListener('click', () => {
       if (!this.currentScene || !this.panoViewer) return;
       const iv = this.currentScene.initialView || { yaw: 0, pitch: 0, fov: 75 };
@@ -1569,15 +1632,15 @@ class App {
     resetRow.appendChild(resetLabel);
     resetRow.appendChild(resetBtn);
 
-    // VR 眼镜
+    // VR 鐪奸暅
     const vrLabel = document.createElement('div');
     vrLabel.className = 'vr-modal-settings-item-label';
-    vrLabel.textContent = 'VR 眼镜';
+    vrLabel.textContent = 'VR 鐪奸暅';
 
     const vrBtn = document.createElement('button');
     vrBtn.className = 'vr-modal-settings-row-btn';
     vrBtn.type = 'button';
-    vrBtn.textContent = 'VR 眼镜';
+    vrBtn.textContent = 'VR 鐪奸暅';
 
     const syncVrBtnState = () => {
       const active = isVrModeEnabled();
@@ -1591,7 +1654,7 @@ class App {
         const viewerContainer = this.panoViewer.getDomElement();
         const enabled = await this.toggleVrModeFromUI(viewerContainer);
         if (enabled !== isVrModeEnabled()) {
-          // 兜底同步
+          // 鍏滃簳鍚屾
           syncVrBtnState();
         } else {
           syncVrBtnState();
@@ -1610,10 +1673,10 @@ class App {
     vrRow.appendChild(vrLabel);
     vrRow.appendChild(vrBtn);
 
-    // 缩放控制
+    // 缂╂斁鎺у埗
     const zoomLabel = document.createElement('div');
     zoomLabel.className = 'vr-modal-settings-item-label';
-    zoomLabel.textContent = '缩放';
+    zoomLabel.textContent = '缂╂斁';
 
     const zoomGroup = document.createElement('div');
     zoomGroup.className = 'vr-modal-settings-quality';
@@ -1621,12 +1684,12 @@ class App {
 
     const zoomOutBtn = document.createElement('button');
     zoomOutBtn.className = 'vr-modal-settings-quality-btn';
-    zoomOutBtn.textContent = '缩小';
+    zoomOutBtn.textContent = '缂╁皬';
     zoomOutBtn.style.minWidth = '70px';
 
     const zoomInBtn = document.createElement('button');
     zoomInBtn.className = 'vr-modal-settings-quality-btn';
-    zoomInBtn.textContent = '放大';
+    zoomInBtn.textContent = '鏀惧ぇ';
     zoomInBtn.style.minWidth = '70px';
 
     const handleZoomOut = () => {
@@ -1658,17 +1721,17 @@ class App {
     container.appendChild(zoomRow);
     container.appendChild(vrRow);
 
-    // 打开"更多"时，让 Dock 淡出
+    // 鎵撳紑"鏇村"鏃讹紝璁?Dock 娣″嚭
     if (this.bottomDock) {
       this.bottomDock.setMoreOpen(true);
     }
 
     this.settingsModalMounted = mountModal({
-      title: '更多',
+      title: '鏇村',
       contentEl: container,
       panelClassName: 'vr-modal-settings',
       onClose: () => {
-        // 关闭"更多"时，恢复 Dock
+        // 鍏抽棴"鏇村"鏃讹紝鎭㈠ Dock
         if (this.bottomDock) {
           this.bottomDock.setMoreOpen(false);
         }
@@ -1683,7 +1746,7 @@ class App {
   }
 }
 
-// 启动应用
+// 鍚姩搴旂敤
 new App();
 
 
@@ -1695,3 +1758,4 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+

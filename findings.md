@@ -42,3 +42,8 @@
   - 场景路由（?museum=wangding&scene=gate）才请求 PanoViewer + three-core。
 - VR 模块完成去静态依赖：rMode.ts 改为按需 import 并在首次切 VR 时初始化监听，解除入口对 three 的静态耦合。
 - 关键功能回归采样通过：snapshot 可见场景/列表 UI 正常；console 仅剩历史警告（apple mobile meta/favcion 404），无新增运行时错误。
+
+## 2026-02-11 00:10:50 第三轮发布与部署确认
+- 发布提交：90cf3298056dcdcb20ab51a2dfd8459a135578da（main）。
+- GitHub Actions: pages build and deployment 对该 SHA 状态 completed/success。
+- 线上命中新入口脚本：index-CGaPg6Yv.js（https://wokao4360-rgb.github.io/vrplayer/）。

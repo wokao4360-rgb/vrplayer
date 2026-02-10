@@ -54,3 +54,9 @@
 - rMode 改按需加载初始化，删除入口静态依赖，验证 ?museum=wangding 路由不再请求 	hree-core。
 - 完成 chrome-devtools 证据采样：snapshot + network + console 覆盖场景路由与列表路由。
 - 当前待执行：是否按 SOP 发布（dist -> docs -> commit -> push）。
+
+## 2026-02-11 00:10:50
+- 执行发布 SOP：git pull --rebase --autostash -> 
+pm run build -> obocopy dist docs /MIR -> git commit -> git push。
+- 发布 commit：90cf329，远端 origin/main 已对齐。
+- Pages 部署确认：workflow completed/success，线上返回 index-CGaPg6Yv.js。

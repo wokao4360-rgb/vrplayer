@@ -13,3 +13,8 @@
 - `dock-panels` 已验证按触发加载：首次打开社区或切到 3D 结构图时才请求。
 - `editor-debug` 已验证仅在 `?debug=1` / `?editor=1` 触发请求。
 - MCP 采样中无新的运行时错误；仅保留已有警告（`apple-mobile-web-app-capable`、`favicon 404`、表单可访问性提示）。
+
+## 2026-02-10 22:20:43 发布验证
+- 发布提交：`588dfbb4fe435c30966aa0466c6038b9aaf84d1c`，已推送到 `origin/main`。
+- 远端 `main` HEAD 与本地 HEAD 一致。
+- 页面资源已切换到新构建：`https://wokao4360-rgb.github.io/vrplayer/` 返回 `assets/index-QqKJpH12.js`。

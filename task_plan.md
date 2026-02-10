@@ -14,7 +14,7 @@ VRPlayer 首轮高 ROI 全仓优化（性能优先 + 关键稳定性修复）
 - [x] 阶段4 CDN 探测去阻塞（`assetResolver.ts` 缓存上次成功 CDN + TTL + 后台复探测；`main.ts` 不阻塞等待）
 - [x] 阶段5 关键稳定性修复（全局监听与 RAF 生命周期清理）
 - [x] 阶段6 构建拆包（`vite.config.ts` manualChunks + `onlyExplicitManualChunks`）
-- [ ] 阶段7 发布（`dist -> docs -> commit -> push`）
+- [x] 阶段7 发布（`dist -> docs -> commit -> push`）
 
 ## 约束
 - 仅修改 `src/**`、`README.md`、规划记录文件。

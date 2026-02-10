@@ -21,3 +21,8 @@
 - 调整 `vite.config.ts`（`onlyExplicitManualChunks` + 手工分包）。
 - 完成多轮 `chrome-devtools` 证据采样（normal/debug/editor/community/map/dollhouse/structure3d）。
 - 待执行：`dist -> docs -> commit -> push` 发布链路。
+
+## 2026-02-10 22:20:43
+- 已执行发布链路：`git pull --rebase`（通过）→ `npm run build`（通过）→ `robocopy dist docs /MIR`（通过）→ `git commit` → `git push`。
+- 发布提交：`588dfbb4fe435c30966aa0466c6038b9aaf84d1c`。
+- 远端分支已对齐该提交；`https://wokao4360-rgb.github.io/vrplayer/` 已返回新哈希 `index-QqKJpH12.js`。

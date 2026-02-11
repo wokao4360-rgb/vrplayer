@@ -62,3 +62,34 @@
 - 发布提交：`50254a8c83556f576890891fe0693da3b5936ad2`。
 - 远端核对：`origin/main` 已指向同一 commit。
 - 线上核对：`https://wokao4360-rgb.github.io/vrplayer/` 返回 `index-CQkzrWWN.js`，且线上 `/config.json` 的 `assetCdn.probeTimeoutMs=1000`，与本次发布一致。
+
+## 2026-02-11 19:44:47
+- 启用 `brainstorming + planning-with-files` 工作流后，锁定本次优先级：P0 先修乱码与防回归，P1 补性能基线。
+- 已记录用户偏好：任务完成后不再执行 Cloudflare 部署侧 commit 对齐核验，用户自行线上目视验收。
+
+## 2026-02-11 19:44:47
+- 修复 `src/main.ts` 的用户可见乱码文案：
+  - 左下角品牌文案：`鼎虎清源`
+  - 信息弹窗：标题/字段名/版权文字
+  - 更多弹窗：标题、画质、视角、缩放、VR 等文案
+  - 配置示例页与关键错误提示文案
+- 修复 `public/config.json` 馆封面字段乱码：`cover` 改为 `/assets/panos/gate-nail.jpg`。
+
+## 2026-02-11 19:44:47
+- 新增乱码守卫：`scripts/check-text-quality.mjs`，并接入 `package.json`：
+  - `npm run check:text`
+  - `npm run build` 前置执行 `check:text`
+- 新增 P1 体积基线：`scripts/perf-baseline.mjs`，产出 `reports/perf-baseline/latest.json`。
+- 本地执行：`npm run check:text`、`npm run build`、`npm run perf:baseline` 全部通过。
+
+## 2026-02-11 19:44:47
+- chrome-devtools 证据采样（`snapshot + network + console`）已完成：
+  - URL：`?museum=wangding&scene=memorial_wall&v=5`
+  - 左下角显示 `鼎虎清源` 正常
+  - “更多”弹窗显示 `更多/画质/高清/省流/视角/恢复初始视角/缩放/缩小/放大/VR 眼镜`
+  - “信息”弹窗显示 `信息/展馆/场景/采集日期/© 2025 鼎虎清源`
+
+## 2026-02-11 19:47:53
+- `npm run build` 首次被 `check:text` 拦截：`findings.md` 中记录了“乱码样例串”导致误报。
+- 已将示例文本改为中性描述后重跑构建，`check:text + vite build` 全部通过。
+- 重新生成性能基线：`reports/perf-baseline/latest.json`（时间戳 `2026-02-11 19:47:53`）。

@@ -1,4 +1,4 @@
-var a=Object.defineProperty;var r=(i,e,t)=>e in i?a(i,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):i[e]=t;var s=(i,e,t)=>r(i,typeof e!="symbol"?e+"":e,t);import{n as o}from"./index-CQkzrWWN.js";let n=!1;class d{constructor(e){s(this,"element");this.museum=e,this.element=document.createElement("div"),this.element.className="scene-list-page",this.render(),this.applyStyles()}render(){this.element.innerHTML=`
+var a=Object.defineProperty;var r=(i,e,t)=>e in i?a(i,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):i[e]=t;var s=(i,e,t)=>r(i,typeof e!="symbol"?e+"":e,t);import{n as o}from"./index-Cos8uFQt.js";let n=!1;class d{constructor(e){s(this,"element");this.museum=e,this.element=document.createElement("div"),this.element.className="scene-list-page",this.render(),this.applyStyles()}render(){this.element.innerHTML=`
       <div class="scene-list-container">
         <h1 class="scene-list-title">${this.museum.name} - 场景列表</h1>
         ${this.museum.description?`<p class="scene-list-desc">${this.museum.description}</p>`:""}

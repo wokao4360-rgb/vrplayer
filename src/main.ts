@@ -360,7 +360,7 @@ class App {
       
       this.loading.hide();
     } catch (error: any) {
-      console.error('閰嶇疆鍔犺浇澶辫触:', error);
+      console.error('配置加载失败:', error);
       this.loading.hide();
       
       // 妫€鏌ユ槸鍚︽槸閰嶇疆鏍￠獙閿欒
@@ -368,7 +368,7 @@ class App {
         this.showConfigErrorPanel(error.validationErrors);
       } else {
         // 閰嶇疆鍔犺浇澶辫触锛坒etch/瑙ｆ瀽澶辫触锛?
-        this.showError('鍔犺浇閰嶇疆澶辫触锛岃鍒锋柊椤甸潰閲嶈瘯');
+        this.showError('加载配置失败，请刷新页面重试');
       }
     }
   }
@@ -399,13 +399,13 @@ class App {
       
       this.appElement.appendChild(this.configStudio.getElement());
     } catch (error: any) {
-      console.error('鍒濆鍖栫紪杈戝櫒妯″紡澶辫触:', error);
+      console.error('初始化编辑器模式失败:', error);
       
       // 妫€鏌ユ槸鍚︽槸閰嶇疆鏍￠獙閿欒
       if (error.validationErrors && Array.isArray(error.validationErrors)) {
         this.showConfigErrorPanel(error.validationErrors);
       } else {
-      this.showError('鍔犺浇閰嶇疆澶辫触锛岃鍒锋柊椤甸潰閲嶈瘯');
+      this.showError('加载配置失败，请刷新页面重试');
       }
     }
   }
@@ -439,7 +439,7 @@ class App {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>config.json 绀轰緥</title>
+          <title>config.json 示例</title>
           <style>
             body {
               font-family: 'Courier New', monospace;
@@ -459,13 +459,13 @@ class App {
           </style>
         </head>
         <body>
-          <h1>config.json 绀轰緥閰嶇疆</h1>
+          <h1>config.json 示例配置</h1>
           <pre><code>{
-  "appName": "搴旂敤鍚嶇О",
+  "appName": "应用名称",
   "museums": [
     {
       "id": "museum_id",
-      "name": "灞曢鍚嶇О",
+      "name": "展馆名称",
       "cover": "https://example.com/cover.jpg",
       "map": {
         "image": "https://example.com/map.jpg",
@@ -475,7 +475,7 @@ class App {
       "scenes": [
         {
           "id": "scene_id",
-          "name": "鍦烘櫙鍚嶇О",
+          "name": "场景名称",
           "panoLow": "https://example.com/pano-low.jpg",
           "pano": "https://example.com/pano.jpg",
           "thumb": "https://example.com/thumb.jpg",
@@ -492,7 +492,7 @@ class App {
             {
               "id": "hotspot_id",
               "type": "scene",
-              "label": "鐑偣鏍囩",
+              "label": "热点标签",
               "yaw": 35,
               "pitch": -5,
               "target": {
@@ -508,7 +508,7 @@ class App {
     }
   ]
 }</code></pre>
-          <p>璇︾粏閰嶇疆璇存槑璇锋煡鐪?README.md</p>
+          <p>详细配置说明请查看 README.md</p>
         </body>
         </html>
       `);
@@ -552,7 +552,7 @@ class App {
       if (museum) {
         await this.showSceneList(museum);
       } else {
-        this.showError('鏈壘鍒版寚瀹氱殑灞曢');
+        this.showError('未找到指定展馆');
         navigateToMuseumList();
       }
     } else {
@@ -563,7 +563,7 @@ class App {
       if (museum && scene) {
         await this.showScene(museum, scene);
       } else {
-        this.showError('鏈壘鍒版寚瀹氱殑鍦烘櫙');
+        this.showError('未找到指定场景');
         if (museum) {
           navigateToSceneList(museum.id);
         } else {
@@ -737,7 +737,7 @@ class App {
           this.appElement.appendChild(this.videoPlayer.getElement());
         } catch (err) {
           if (__VR_DEBUG__) {
-            console.debug('[showScene] VideoPlayer 鍒涘缓澶辫触锛岃烦杩?', err);
+            console.debug('[showScene] VideoPlayer 创建失败，已跳过', err);
           }
           this.videoPlayer = null;
         }
@@ -765,7 +765,7 @@ class App {
                   this.appElement.appendChild(this.sceneGuideDrawer.getElement());
                 } catch (err) {
                   if (__VR_DEBUG__) {
-                    console.debug('[GuideTray] SceneGuideDrawer 鍒涘缓澶辫触:', err);
+                    console.debug('[GuideTray] SceneGuideDrawer 创建失败:', err);
                   }
                 }
               }
@@ -791,7 +791,7 @@ class App {
           this.appElement.appendChild(this.guideTray.getElement());
         } catch (err) {
           if (__VR_DEBUG__) {
-            console.debug('[showScene] GuideTray 鍒涘缓澶辫触锛岃烦杩?', err);
+            console.debug('[showScene] GuideTray 创建失败，已跳过', err);
           }
           this.guideTray = null;
         }
@@ -815,7 +815,7 @@ class App {
           this.appElement.appendChild(this.bottomDock.getElement());
         } catch (err) {
           if (__VR_DEBUG__) {
-            console.debug('[showScene] BottomDock 鍒涘缓澶辫触锛岃烦杩?', err);
+            console.debug('[showScene] BottomDock 创建失败，已跳过', err);
           }
           this.bottomDock = null;
         }
@@ -831,7 +831,7 @@ class App {
           this.appElement.appendChild(this.topModeTabs.getElement());
         } catch (err) {
           if (__VR_DEBUG__) {
-            console.debug('[showScene] TopModeTabs 鍒涘缓澶辫触锛岃烦杩?', err);
+            console.debug('[showScene] TopModeTabs 创建失败，已跳过', err);
           }
           this.topModeTabs = null;
         }
@@ -849,7 +849,7 @@ class App {
           viewerContainer.appendChild(this.hotspots.getElement());
         } catch (err) {
           if (__VR_DEBUG__) {
-            console.debug('[showScene] Hotspots 鍒涘缓澶辫触锛岃烦杩?', err);
+            console.debug('[showScene] Hotspots 创建失败，已跳过', err);
           }
           this.hotspots = null;
         }
@@ -863,7 +863,7 @@ class App {
           }
         } catch (err) {
           if (__VR_DEBUG__) {
-            console.debug('[showScene] QualityIndicator 鍒涘缓澶辫触锛岃烦杩?', err);
+            console.debug('[showScene] QualityIndicator 创建失败，已跳过', err);
           }
           this.qualityIndicator = null;
         }
@@ -918,7 +918,7 @@ class App {
     });
 
     this.panoViewer.setOnError((error) => {
-      console.error('鍔犺浇鍦烘櫙澶辫触:', error);
+      console.error('加载场景失败:', error);
       this.loading.hide();
       this.showError('加载全景图失败，请检查网络连接');
       if (this.qualityIndicator) {
@@ -983,7 +983,7 @@ class App {
       this.appElement.appendChild(this.topRightControls.getElement());
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] TopRightControls 鍒涘缓澶辫触锛岃烦杩?', err);
+        console.debug('[showScene] TopRightControls 创建失败，已跳过', err);
       }
       this.topRightControls = null;
     }
@@ -998,7 +998,7 @@ class App {
       }
       this.brandMark = new BrandMark({
         appName: this.config?.appName,
-        brandText: '榧庤檸娓呮簮',
+        brandText: '鼎虎清源',
       });
       const el = this.brandMark.getElement();
       el.addEventListener('click', (e) => {
@@ -1009,7 +1009,7 @@ class App {
       this.appElement.appendChild(el);
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] BrandMark 鍒涘缓澶辫触锛岃烦杩?', err);
+        console.debug('[showScene] BrandMark 创建失败，已跳过', err);
       }
       this.brandMark = null;
     }
@@ -1074,7 +1074,7 @@ class App {
       });
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[showScene] FcChatPanel 鍒涘缓澶辫触锛岃烦杩?', err);
+        console.debug('[showScene] FcChatPanel 创建失败，已跳过', err);
       }
       this.fcChatPanel = null;
     }
@@ -1467,7 +1467,7 @@ class App {
     }
 
     if (!this.panoViewer) {
-      console.warn('[openNorthCalibration] PanoViewer 鏈垵濮嬪寲');
+      console.warn('[openNorthCalibration] PanoViewer 未初始化');
       return;
     }
 
@@ -1485,7 +1485,7 @@ class App {
         },
       });
     } catch (err) {
-      console.error('[openNorthCalibration] 鍒涘缓鏍″噯闈㈡澘澶辫触:', err);
+      console.error('[openNorthCalibration] 创建校准面板失败:', err);
       this.northCalibrationPanel = null;
     }
   }
@@ -1527,7 +1527,7 @@ class App {
       modal.open();
     } catch (err) {
       if (__VR_DEBUG__) {
-        console.debug('[openDingHuQingYuan] 鎵撳紑鍥㈤槦浠嬬粛澶辫触:', err);
+        console.debug('[openDingHuQingYuan] 打开团队介绍失败:', err);
       }
     }
   }
@@ -1546,11 +1546,11 @@ class App {
     const content = document.createElement('div');
     content.className = 'vr-modal-info-list';
     content.innerHTML = `
-      <div><span class="vr-modal-info-row-label">灞曢</span><span>${museumName}</span></div>
-      <div><span class="vr-modal-info-row-label">鍦烘櫙</span><span>${sceneName}</span></div>
-      <div><span class="vr-modal-info-row-label">閲囬泦鏃堕棿</span><span> 2025-12-27</span></div>
+      <div><span class="vr-modal-info-row-label">展馆</span><span>${museumName}</span></div>
+      <div><span class="vr-modal-info-row-label">场景</span><span>${sceneName}</span></div>
+      <div><span class="vr-modal-info-row-label">采集日期</span><span>2025-12-27</span></div>
       <div class="vr-modal-info-copyright">
-        <button type="button" role="button" class="vr-modal-info-copyright-btn">漏 2025 榧庤檸娓呮簮</button>
+        <button type="button" role="button" class="vr-modal-info-copyright-btn">© 2025 鼎虎清源</button>
       </div>
     `;
 
@@ -1571,7 +1571,7 @@ class App {
     }
 
     this.infoModalMounted = mountModal({
-      title: '淇℃伅',
+      title: '信息',
       contentEl: content,
       onClose: () => {
         this.infoModalMounted = null;
@@ -1664,19 +1664,19 @@ class App {
     // 鐢昏川鍒囨崲
     const qualityLabel = document.createElement('div');
     qualityLabel.className = 'vr-modal-settings-item-label';
-    qualityLabel.textContent = '鐢昏川';
+    qualityLabel.textContent = '画质';
 
     const qualityGroup = document.createElement('div');
     qualityGroup.className = 'vr-modal-settings-quality';
 
     const highBtn = document.createElement('button');
     highBtn.className = 'vr-modal-settings-quality-btn';
-    highBtn.textContent = '楂樻竻';
+    highBtn.textContent = '高清';
     highBtn.dataset.level = 'high';
 
     const lowBtn = document.createElement('button');
     lowBtn.className = 'vr-modal-settings-quality-btn';
-    lowBtn.textContent = '鐪佹祦';
+    lowBtn.textContent = '省流';
     lowBtn.dataset.level = 'low';
 
     const applyQualityActive = (level: QualityLevel) => {
@@ -1709,12 +1709,12 @@ class App {
     // 閲嶇疆瑙嗚
     const resetLabel = document.createElement('div');
     resetLabel.className = 'vr-modal-settings-item-label';
-    resetLabel.textContent = '瑙嗚';
+    resetLabel.textContent = '视角';
 
     const resetBtn = document.createElement('button');
     resetBtn.className = 'vr-modal-settings-row-btn';
     resetBtn.type = 'button';
-    resetBtn.textContent = '鎭㈠鍒濆瑙嗚';
+    resetBtn.textContent = '恢复初始视角';
     resetBtn.addEventListener('click', () => {
       if (!this.currentScene || !this.panoViewer) return;
       const iv = this.currentScene.initialView || { yaw: 0, pitch: 0, fov: 75 };
@@ -1732,12 +1732,12 @@ class App {
     // VR 鐪奸暅
     const vrLabel = document.createElement('div');
     vrLabel.className = 'vr-modal-settings-item-label';
-    vrLabel.textContent = 'VR 鐪奸暅';
+    vrLabel.textContent = 'VR 眼镜';
 
     const vrBtn = document.createElement('button');
     vrBtn.className = 'vr-modal-settings-row-btn';
     vrBtn.type = 'button';
-    vrBtn.textContent = 'VR 鐪奸暅';
+    vrBtn.textContent = 'VR 眼镜';
 
     const syncVrBtnState = () => {
       const active = this.panoViewer?.isVrModeEnabled() ?? false;
@@ -1768,7 +1768,7 @@ class App {
     // 缂╂斁鎺у埗
     const zoomLabel = document.createElement('div');
     zoomLabel.className = 'vr-modal-settings-item-label';
-    zoomLabel.textContent = '缂╂斁';
+    zoomLabel.textContent = '缩放';
 
     const zoomGroup = document.createElement('div');
     zoomGroup.className = 'vr-modal-settings-quality';
@@ -1776,12 +1776,12 @@ class App {
 
     const zoomOutBtn = document.createElement('button');
     zoomOutBtn.className = 'vr-modal-settings-quality-btn';
-    zoomOutBtn.textContent = '缂╁皬';
+    zoomOutBtn.textContent = '缩小';
     zoomOutBtn.style.minWidth = '70px';
 
     const zoomInBtn = document.createElement('button');
     zoomInBtn.className = 'vr-modal-settings-quality-btn';
-    zoomInBtn.textContent = '鏀惧ぇ';
+    zoomInBtn.textContent = '放大';
     zoomInBtn.style.minWidth = '70px';
 
     const handleZoomOut = () => {
@@ -1819,7 +1819,7 @@ class App {
     }
 
     this.settingsModalMounted = mountModal({
-      title: '鏇村',
+      title: '更多',
       contentEl: container,
       panelClassName: 'vr-modal-settings',
       onClose: () => {
@@ -1850,4 +1850,3 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
-

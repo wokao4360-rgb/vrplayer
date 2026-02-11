@@ -1,0 +1,84 @@
+{
+  "generatedAt": "2026-02-11 19:47:53",
+  "metrics": {
+    "indexJsKB": 79.23,
+    "panoViewerJsKB": 70.11,
+    "threeCoreJsKB": 501.39,
+    "totalJsKB": 980.26,
+    "totalCssKB": 55.58
+  },
+  "topAssets": [
+    {
+      "name": "three-core-0fX1SOzE.js",
+      "ext": ".js",
+      "sizeBytes": 513426,
+      "sizeKB": 501.39
+    },
+    {
+      "name": "three-extras-9r4FsFIk.js",
+      "ext": ".js",
+      "sizeBytes": 104074,
+      "sizeKB": 101.63
+    },
+    {
+      "name": "index-Cos8uFQt.js",
+      "ext": ".js",
+      "sizeBytes": 81129,
+      "sizeKB": 79.23
+    },
+    {
+      "name": "PanoViewer-BGVQNiGf.js",
+      "ext": ".js",
+      "sizeBytes": 71796,
+      "sizeKB": 70.11
+    },
+    {
+      "name": "index-BfJu72vJ.css",
+      "ext": ".css",
+      "sizeBytes": 56918,
+      "sizeKB": 55.58
+    },
+    {
+      "name": "editor-debug-DQwQ-F_m.js",
+      "ext": ".js",
+      "sizeBytes": 56122,
+      "sizeKB": 54.81
+    },
+    {
+      "name": "chat-community-CV8dPrhn.js",
+      "ext": ".js",
+      "sizeBytes": 39808,
+      "sizeKB": 38.88
+    },
+    {
+      "name": "dock-panels-Bq13T4qN.js",
+      "ext": ".js",
+      "sizeBytes": 26229,
+      "sizeKB": 25.61
+    },
+    {
+      "name": "tile-ktx2-CaMYJFht.js",
+      "ext": ".js",
+      "sizeBytes": 26041,
+      "sizeKB": 25.43
+    },
+    {
+      "name": "Hotspots-CxlEKZO8.js",
+      "ext": ".js",
+      "sizeBytes": 8877,
+      "sizeKB": 8.67
+    },
+    {
+      "name": "StructureView2D-B182XaP0.js",
+      "ext": ".js",
+      "sizeBytes": 7679,
+      "sizeKB": 7.5
+    },
+    {
+      "name": "dollhouseScene-DGl7gRyo.js",
+      "ext": ".js",
+      "sizeBytes": 7161,
+      "sizeKB": 6.99
+    }
+  ]
+}

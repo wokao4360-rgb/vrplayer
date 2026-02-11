@@ -5,7 +5,7 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 
 ## 时间
 - 创建时间：2026-02-11 18:51:14
-- 最新更新：2026-02-11 22:55:46
+- 最新更新：2026-02-12 00:24:13
 
 ## 已完成基线
 - 第一轮：入口依赖瘦身、Dock 惰性化、CDN 后台探测、关键生命周期清理。
@@ -85,3 +85,11 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 | 并发提高导致弱网抖动 | 按设备档位区分并发上限（桌面/移动） |
 | 跨域缓存不可见头部 | 允许 opaque 响应缓存，仅限全景资源路径 |
 | 调整输入链路引发交互回归 | 用 chrome-devtools 做交互与网络双采样回归 |
+
+## 第九轮阶段状态（本次）
+- [x] 阶段0（P0）：`three-renderer` 继续瘦身（Structure3D runtime 拆分 + `PanoViewer` 中 `NadirPatch` 改为按需加载）
+- [x] 阶段1（P0）：`main.ts / PanoViewer.ts` 结构解耦（`ViewSessionRuntime`、`PanoLifecycleRuntime` 落地）
+- [x] 阶段2（P1）：预热改为预算化调度（`WarmupScheduler` + `sceneUiRuntime` 分档触发）
+- [x] 阶段3（P1）：中文乱码全链路守卫（`check-encoding` + 文案源统一 + build 前置校验）
+- [x] 阶段4：构建验证 + `chrome-devtools` 证据采样（`snapshot + network + console`）
+- [ ] 阶段5：按 SOP 发布第九轮（`dist -> docs -> commit -> push`，本次包含 `AGENTS.md`）

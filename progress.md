@@ -201,3 +201,25 @@
   - 首屏快照无“打开三馆学伴”头像按钮。
   - 点击“社区”后才出现“打开三馆学伴”按钮与学伴浮窗。
   - 未点击按钮前网络已出现 `GuideTray/VideoPlayer/SceneGuideDrawer/dock-panels/chat-community/appModals`，说明“高清后后台预热”生效。
+
+## 2026-02-12 00:24:13
+- 第九轮四项一次收口代码已落地并合并到当前工作区：
+  - `StructureView3D` 拆分为外壳 + `structure3d/StructureSceneRuntime` 动态加载；
+  - `PanoViewer` 中 `NadirPatch` 改为按需加载，避免首屏强制进入该链路；
+  - 新增 `viewSessionRuntime` 与 `panoLifecycleRuntime`，收口入口和 viewer 生命周期调度；
+  - 新增 `warmupScheduler`，`HIGH_READY` 走 `immediate` 预算化预热，`DEGRADED` 走 `idle` 预热；
+  - 文案源统一到 `src/i18n/zh-CN.ts`，并引入 `check-encoding` 构建前守卫。
+- 当前待执行：最终一轮验证与发布（本次按用户要求把 `AGENTS.md` 一并提交上线）。
+
+## 2026-02-12 00:28:56
+- 最终验证完成：
+  - `npm run check:encoding` 通过；
+  - `npm run check:text` 通过；
+  - `npm run build` 通过；
+  - `npm run perf:baseline` 通过（`index=58.43kB`，`three-renderer=459.82kB`）。
+- `chrome-devtools` 证据采样完成（`snapshot + network + console`，URL：`?museum=wangding&scene=memorial_wall&v=24`）：
+  - 首页标题、底部品牌、信息弹窗均为正确简体中文；
+  - “社区”点击后才出现“打开三馆学伴”；
+  - 点击“三维模型”后首次请求 `structure3d-runtime-BBIptQ-6.js`；
+  - Console 仅剩历史非阻断 warning/issue（无新增阻断错误）。
+- 当前待执行：按 SOP 发布到 `main`（本次提交包含 `AGENTS.md`）。

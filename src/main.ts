@@ -20,8 +20,6 @@ import type { BottomDock } from './ui/BottomDock';
 import type { SceneGuideDrawer } from './ui/SceneGuideDrawer';
 import type { GuideTray } from './ui/GuideTray';
 import type { TopModeTabs, AppViewMode } from './ui/TopModeTabs';
-import type { StructureView2D } from './ui/StructureView2D';
-import type { StructureView3D } from './ui/StructureView3D';
 import { resolveAssetUrl, AssetType, setAssetResolverConfig } from './utils/assetResolver';
 import { isFullscreen, unlockOrientationBestEffort } from './ui/fullscreen';
 import type { AppConfig, Museum, Scene } from './types/config';
@@ -40,89 +38,34 @@ import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/full
 import type { MountedModal } from './ui/Modal';
 import type { SceneUiRuntime } from './app/sceneUiRuntime';
 import type { ChatRuntime } from './app/chatRuntime';
+import { ViewSessionRuntime } from './app/viewSessionRuntime';
+import { ZH_CN } from './i18n/zh-CN';
 import './ui/uiRefresh.css';
-
-/**
- * 缃楃洏鏃嬭浆楠岃瘉鐐癸紙淇"鑴氬簳涓嬩笢瑗垮崡鍖楃綏鐩樿窡鐫€瑙嗚涓€璧疯浆"闂锛夛細
- * - 闈炲叏灞忔ā寮忎笅鎷栧姩瑙嗚锛氱綏鐩樼洏闈紙N/E/S/W 鎴?wedge/tick锛変笉闅?yaw 鏃嬭浆锛沶eedle 鏃嬭浆銆?
- * - 濡傛灉鐩橀潰浠嶈窡鐫€杞細璇存槑杩樻湁涓€涓?transform 鍐欏湪鏇村灞?wrapper锛堢户缁悜涓婃壘 parent 鍏冪礌鐨?style.transform 鍐欏叆鐐癸紝鐩村埌娑堝け锛夈€?
- * - GroundHeadingMarker: root 鍜?inner 鐨?transform 鍙寘鍚?translateX/translateY/scaleY锛屼笉鍖呭惈 rotate
- * - CompassDisk: root 鐨?transform 鍙寘鍚?translateX/translateY/scaleY锛屼笉鍖呭惈 rotate
- * - 鍙湁 needle 閫氳繃 CSS 鍙橀噺 --groundheading-needle-rot 鍜?--compass-needle-rot 鏃嬭浆
- */
-
-/**
- * 鍒濆鍖栬皟璇曞伐鍏凤紙浠呭湪 debug=1 鏃跺惎鐢級
- */
 if (__VR_DEBUG__) {
   void Promise.all([import('./utils/debugHelper'), import('./ui/interactionBus')])
     .then(([debugHelperModule, interactionBusModule]) => {
       const { dumpVRState, resetVRUI } = debugHelperModule;
       const { interactionBus } = interactionBusModule;
-
       (window as any).__vrDump = () => {
         const snapshot = dumpVRState();
         console.debug('[VR State Snapshot]', snapshot);
         return snapshot;
       };
-
       (window as any).__vrResetUI = () => {
-        console.debug('[VR Reset UI] 姝ｅ湪娓呯悊鎵€鏈?UI 鐘舵€?..');
+        console.debug('[VR Reset UI] 正在清理所有 UI 状态...');
         resetVRUI(interactionBus);
-        console.debug('[VR Reset UI] 娓呯悊瀹屾垚');
+        console.debug('[VR Reset UI] 清理完成');
       };
-
-      console.debug('[VR Debug] 璋冭瘯妯″紡宸插惎鐢ㄣ€備娇鐢?__vrDump() 鏌ョ湅鐘舵€侊紝浣跨敤 __vrResetUI() 澶嶄綅 UI');
+      console.debug('[VR Debug] 调试模式已启用。使用 __vrDump() 查看状态，使用 __vrResetUI() 复位 UI');
     })
     .catch(() => {
       // debug helper 按需加载失败时不阻断主流程
     });
 }
-
-/**
- * 鏈€鍚庝竴娆′汉宸ュ洖褰掕矾寰勬竻鍗曪紙涓婄嚎鍓嶄汉宸ョ‘璁わ級
- * 
- * 1. 蹇€熷乏鍙虫嫋鍔?
- *    - 楠岃瘉锛氭墍鏈?UI 绔嬪嵆闅愯棌锛屾棤娈嬬暀鐘舵€?
- * 
- * 2. 浣庡ご鎵涓湴闈㈢偣
- *    - 楠岃瘉锛氬彧鏈変竴涓洰鏍囪璁ゅ畾锛屾棤闂儊
- *    - 楠岃瘉锛氬簳閮ㄦí鏉″彧杞诲井璺熼殢锛屼笉鎶㈡帶鍒舵潈
- *    - 楠岃瘉锛氶瑙堝崱绋冲畾鍒囨崲鏃犻棯鐑?
- * 
- * 3. 鎵偣 鈫?绔嬪埢婊戞í鏉?
- *    - 楠岃瘉锛氱郴缁熶笉鎶㈡帶鍒舵潈锛岃嚜鍔ㄨ涓虹珛鍗冲仠姝?
- *    - 楠岃瘉锛氬仠鎵嬪悗鎵嶆仮澶嶈嚜鍔ㄨ涓?
- * 
- * 4. 鎵偣 鈫?鎶ご
- *    - 楠岃瘉锛氭墍鏈夌姸鎬佺珛鍗虫竻绌猴紝鏃犳畫鐣?
- * 
- * 5. 鑷姩杩涘叆瑙﹀彂鐬棿鐐瑰嚮鍏朵粬 UI
- *    - 楠岃瘉锛氭墍鏈夋彁绀?鍊掕鏃?鐬勫噯鐘舵€佺珛鍗虫竻绌?
- *    - 楠岃瘉锛氫笉浼氳Е鍙戣嚜鍔ㄨ繘鍏?
- * 
- * 璋冭瘯寮€鍏筹細鍦?src/utils/debug.ts 涓皢 __VR_DEBUG__ 璁句负 true 鍙煡鐪嬬姸鎬佹祦杞棩蹇?
- */
-
-/**
- * 鍙戝竷娴佺▼娓呭崟
- * 
- * PowerShell 涓嬪垹闄?docs/assets 鍜?docs/index.html 鐨勫懡浠わ細
- * Remove-Item -Recurse -Force .\docs\assets -ErrorAction SilentlyContinue
- * Remove-Item -Force .\docs\index.html -ErrorAction SilentlyContinue
- */
-
-// 銆愬叆鍙ｃ€戜慨澶嶅弻鏂滄潬璺緞闂锛堝 //vrplayer// -> /vrplayer/锛?
 normalizePathname();
-
-// 鍒濆鍖?UI 璁╀綅绛栫暐
 initYieldPolicy();
 initYieldClassManager();
-
-// 鍒濆鍖栧叏灞忕姸鎬佺鐞嗗櫒
 initFullscreenState();
-
-// 鐩戝惉鍏ㄥ睆鐘舵€佸彉鍖栵紝娓呴櫎鎵€鏈夋彁绀?
 const handleFullscreenChange = () => {
   const d = document as any;
   const isFullscreenNow = Boolean(document.fullscreenElement || d.webkitFullscreenElement);
@@ -132,26 +75,22 @@ const handleFullscreenChange = () => {
 };
 document.addEventListener('fullscreenchange', handleFullscreenChange);
 document.addEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
-
 /**
- * 妫€娴嬫槸鍚︿负寮€鍙戣€呮ā寮?
- * URL 鍙傛暟锛?development=1 鎴??dev=1 鎴?#development
+ * 检测是否为开发者模式
+ * URL 参数：development=1 / dev=1 / #development
  */
 function isDevMode(): boolean {
   const params = new URLSearchParams(location.search);
   return params.has('development') || params.get('dev') === '1' || location.hash.includes('development');
 }
-
 /**
- * DNS 棰勭儹锛氬凡绂佺敤
- * 鐢变簬鍥剧墖鐜板湪閫氳繃鍚屾簮浠ｇ悊 /_img 鍔犺浇锛屼笉鍐嶉渶瑕?preconnect 鍒扮涓夋柟鍩熷悕
+ * DNS 预热：已禁用
+ * 图片现在通过同源代理 /_img 加载，不再需要 preconnect 到第三方域名
  */
 // function warmupExternalImageHostsFromConfig(config: AppConfig): void {
-//   // 宸茬鐢細鍥剧墖閫氳繃鍚屾簮浠ｇ悊鍔犺浇锛屼笉闇€瑕?preconnect
+//   // 已禁用：图片通过同源代理加载，不需要 preconnect
 // }
-
 type VrModeModule = typeof import('./utils/vrMode');
-
 class App {
   private appElement: HTMLElement;
   private config: AppConfig | null = null;
@@ -177,22 +116,20 @@ class App {
   private currentScene: Scene | null = null;
   private sceneUiRuntime: SceneUiRuntime | null = null;
   private chatRuntime: ChatRuntime | null = null;
+  private viewSessionRuntime: ViewSessionRuntime;
   private hasBoundFullscreenEvents = false;
   private mode: AppViewMode = 'tour';
-  private isStructureOverlayOpen = false; // 缁撴瀯鍥?涓夌淮妯″瀷overlay鏄惁鎵撳紑
-  private structureView2D: StructureView2D | null = null;
-  private structureView3D: StructureView3D | null = null;
   private infoModalMounted: MountedModal | null = null;
   private settingsModalMounted: MountedModal | null = null;
   private handlePopState: (() => void) | null = null;
   private handlePickEvent: ((e: Event) => void) | null = null;
   private handlePickModeEvent: ((e: Event) => void) | null = null;
   private debugPanelRafId: number | null = null;
-  private structure3DLoadToken = 0;
   private panoViewerModulePromise: Promise<typeof import('./viewer/PanoViewer')> | null = null;
   private topRightControlsModulePromise: Promise<typeof import('./ui/TopRightControls')> | null = null;
   private brandMarkModulePromise: Promise<typeof import('./ui/BrandMark')> | null = null;
   private structureView2DModulePromise: Promise<typeof import('./ui/StructureView2D')> | null = null;
+  private structureView3DModulePromise: Promise<typeof import('./ui/StructureView3D')> | null = null;
   private titleBarModulePromise: Promise<typeof import('./ui/TitleBar')> | null = null;
   private museumListModulePromise: Promise<typeof import('./ui/MuseumList')> | null = null;
   private sceneListPageModulePromise: Promise<typeof import('./ui/SceneListPage')> | null = null;
@@ -204,11 +141,10 @@ class App {
   private sceneUiRuntimeModulePromise: Promise<typeof import('./app/sceneUiRuntime')> | null = null;
   private chatRuntimeModulePromise: Promise<typeof import('./app/chatRuntime')> | null = null;
   private configErrorPanelModulePromise: Promise<typeof import('./ui/ConfigErrorPanel')> | null = null;
-
   constructor() {
     const appElement = document.getElementById('app');
     if (!appElement) {
-      throw new Error('鎵句笉鍒?#app 鍏冪礌');
+      throw new Error('找不到 #app 元素');
     }
     this.appElement = appElement;
     // 鍒濆鍖栧叏灞€ ModalHost锛堢敤浜庣儹鐐瑰脊绐楃瓑锛?
@@ -216,15 +152,29 @@ class App {
     
     this.loading = new Loading();
     this.appElement.appendChild(this.loading.getElement());
+    this.viewSessionRuntime = new ViewSessionRuntime({
+      appElement: this.appElement,
+      getCurrentMuseum: () => this.currentMuseum,
+      getCurrentScene: () => this.currentScene,
+      getMode: () => this.mode,
+      onSwitchToTour: () => {
+        this.mode = 'tour';
+        this.topModeTabs?.setMode('tour');
+      },
+      navigateToScene: (museumId, sceneId) => {
+        navigateToScene(museumId, sceneId);
+      },
+      loadSceneGraphModule: () => this.loadSceneGraphModule(),
+      loadStructureView2DModule: () => this.loadStructureView2DModule(),
+      loadStructureView3DModule: () => this.loadStructureView3DModule(),
+    });
     
     this.bindFullscreenEventsOnce();
     this.init();
   }
-
   private bindFullscreenEventsOnce(): void {
     if (this.hasBoundFullscreenEvents) return;
     this.hasBoundFullscreenEvents = true;
-
     const handler = () => {
       // 鍚屾 TopRightControls 鍥炬爣/aria
       this.topRightControls?.syncFullscreenState();
@@ -240,102 +190,93 @@ class App {
         unlockOrientationBestEffort();
       }
     };
-
     document.addEventListener('fullscreenchange', handler);
     document.addEventListener('webkitfullscreenchange', handler as EventListener);
   }
-
   private loadPanoViewerModule(): Promise<typeof import('./viewer/PanoViewer')> {
     if (!this.panoViewerModulePromise) {
       this.panoViewerModulePromise = import('./viewer/PanoViewer');
     }
     return this.panoViewerModulePromise;
   }
-
   private loadTopRightControlsModule(): Promise<typeof import('./ui/TopRightControls')> {
     if (!this.topRightControlsModulePromise) {
       this.topRightControlsModulePromise = import('./ui/TopRightControls');
     }
     return this.topRightControlsModulePromise;
   }
-
   private loadBrandMarkModule(): Promise<typeof import('./ui/BrandMark')> {
     if (!this.brandMarkModulePromise) {
       this.brandMarkModulePromise = import('./ui/BrandMark');
     }
     return this.brandMarkModulePromise;
   }
-
   private loadStructureView2DModule(): Promise<typeof import('./ui/StructureView2D')> {
     if (!this.structureView2DModulePromise) {
       this.structureView2DModulePromise = import('./ui/StructureView2D');
     }
     return this.structureView2DModulePromise;
   }
-
+  private loadStructureView3DModule(): Promise<typeof import('./ui/StructureView3D')> {
+    if (!this.structureView3DModulePromise) {
+      this.structureView3DModulePromise = import('./ui/StructureView3D');
+    }
+    return this.structureView3DModulePromise;
+  }
   private loadTitleBarModule(): Promise<typeof import('./ui/TitleBar')> {
     if (!this.titleBarModulePromise) {
       this.titleBarModulePromise = import('./ui/TitleBar');
     }
     return this.titleBarModulePromise;
   }
-
   private loadMuseumListModule(): Promise<typeof import('./ui/MuseumList')> {
     if (!this.museumListModulePromise) {
       this.museumListModulePromise = import('./ui/MuseumList');
     }
     return this.museumListModulePromise;
   }
-
   private loadSceneListPageModule(): Promise<typeof import('./ui/SceneListPage')> {
     if (!this.sceneListPageModulePromise) {
       this.sceneListPageModulePromise = import('./ui/SceneListPage');
     }
     return this.sceneListPageModulePromise;
   }
-
   private loadSceneGraphModule(): Promise<typeof import('./graph/sceneGraph')> {
     if (!this.sceneGraphModulePromise) {
       this.sceneGraphModulePromise = import('./graph/sceneGraph');
     }
     return this.sceneGraphModulePromise;
   }
-
   private loadVrModeModule(): Promise<VrModeModule> {
     if (!this.vrModeModulePromise) {
       this.vrModeModulePromise = import('./utils/vrMode');
     }
     return this.vrModeModulePromise;
   }
-
   private loadAppModalsModule(): Promise<typeof import('./ui/modals/appModals')> {
     if (!this.appModalsModulePromise) {
       this.appModalsModulePromise = import('./ui/modals/appModals');
     }
     return this.appModalsModulePromise;
   }
-
   private loadSceneUiRuntimeModule(): Promise<typeof import('./app/sceneUiRuntime')> {
     if (!this.sceneUiRuntimeModulePromise) {
       this.sceneUiRuntimeModulePromise = import('./app/sceneUiRuntime');
     }
     return this.sceneUiRuntimeModulePromise;
   }
-
   private loadChatRuntimeModule(): Promise<typeof import('./app/chatRuntime')> {
     if (!this.chatRuntimeModulePromise) {
       this.chatRuntimeModulePromise = import('./app/chatRuntime');
     }
     return this.chatRuntimeModulePromise;
   }
-
   private loadConfigErrorPanelModule(): Promise<typeof import('./ui/ConfigErrorPanel')> {
     if (!this.configErrorPanelModulePromise) {
       this.configErrorPanelModulePromise = import('./ui/ConfigErrorPanel');
     }
     return this.configErrorPanelModulePromise;
   }
-
   private async ensureVrModeInitialized(): Promise<VrModeModule> {
     const vrMode = await this.loadVrModeModule();
     if (!this.vrModeInitialized) {
@@ -344,7 +285,6 @@ class App {
     }
     return vrMode;
   }
-
   private async resolveProxiedImageUrl(rawUrl: string): Promise<string> {
     if (!this.externalImageModulePromise) {
       this.externalImageModulePromise = import('./utils/externalImage');
@@ -356,7 +296,6 @@ class App {
       return rawUrl;
     }
   }
-
   private async init(): Promise<void> {
     try {
       this.loading.show();
@@ -405,7 +344,6 @@ class App {
       }
     }
   }
-
   /**
    * 鍒濆鍖栫紪杈戝櫒妯″紡
    */
@@ -442,12 +380,10 @@ class App {
       }
     }
   }
-
   private async showConfigErrorPanel(errors: ValidationError[]): Promise<void> {
     // 娓呯┖褰撳墠瑙嗗浘
     this.appElement.innerHTML = '';
     const { ConfigErrorPanel } = await this.loadConfigErrorPanelModule();
-
     const errorPanel = new ConfigErrorPanel(
       errors,
       () => {
@@ -463,7 +399,6 @@ class App {
     
     this.appElement.appendChild(errorPanel.getElement());
   }
-
   private showConfigExample(): void {
     const exampleWindow = window.open('', '_blank');
     if (exampleWindow) {
@@ -548,12 +483,9 @@ class App {
       `);
     }
   }
-
   private async handleRoute(): Promise<void> {
     if (!this.config) return;
-
     const route = parseRoute();
-
     // 鍦烘櫙璺敱棰勭儹锛氬彧鍦?scene 妯″紡涓嬫墠鎷夎捣閲嶈祫婧愭ā鍧楋紝閬垮厤鍒楄〃椤典篃涓嬭浇 three 鏍稿績銆?
     if (route.sceneId) {
       void this.loadPanoViewerModule();
@@ -563,7 +495,6 @@ class App {
     
     // 娓呯悊褰撳墠瑙嗗浘
     this.clearView();
-
     // 榛樿鐩存帴杩涘叆鐜嬮紟绾康棣嗭紙鎴栧敮涓€灞曢锛?
     if (!route.museumId) {
       const defaultMuseum = this.config.museums.find(m => m.id === 'wangding') || this.config.museums[0];
@@ -576,7 +507,6 @@ class App {
         return;
       }
     }
-
     if (!route.museumId) {
       // 鏄剧ず棣嗗垪琛?
       await this.showMuseumList();
@@ -606,42 +536,32 @@ class App {
       }
     }
   }
-
   private async showMuseumList(): Promise<void> {
     if (!this.config) return;
-
     const [{ TitleBar }, { MuseumList }] = await Promise.all([
       this.loadTitleBarModule(),
       this.loadMuseumListModule(),
     ]);
-
     // 鍒涘缓鏍囬鏍?
     this.titleBar = new TitleBar(this.config.appName);
     this.appElement.appendChild(this.titleBar.getElement());
-
     // 鍒涘缓棣嗗垪琛?
     this.museumList = new MuseumList(this.config.museums);
     this.appElement.appendChild(this.museumList.getElement());
   }
-
   private async showSceneList(museum: Museum): Promise<void> {
     const { TitleBar } = await this.loadTitleBarModule();
-
     // 鍒涘缓鏍囬鏍?
     this.titleBar = new TitleBar(museum.name);
     this.appElement.appendChild(this.titleBar.getElement());
-
     const { SceneListPage } = await this.loadSceneListPageModule();
     this.sceneListPage = new SceneListPage(museum);
     this.appElement.appendChild(this.sceneListPage.getElement());
   }
-
   private async showScene(museum: Museum, scene: Scene): Promise<void> {
     this.currentMuseum = museum;
     this.currentScene = scene;
-
     this.loading.show();
-
     // 鍒涘缓鍏ㄦ櫙鏌ョ湅鍣ㄥ鍣紙涓嶅啀闇€瑕佷负TopBar棰勭暀绌洪棿锛?
     const viewerContainer = document.createElement('div');
     viewerContainer.className = 'viewer-container';
@@ -654,22 +574,18 @@ class App {
       z-index: 1;
     `;
     this.appElement.appendChild(viewerContainer);
-
     // 鍒涘缓鍏ㄦ櫙鏌ョ湅鍣紙妫€鏌ユ槸鍚﹀惎鐢ㄨ皟璇曟ā寮忥級
     const debugMode = isDebugMode();
     const { PanoViewer } = await this.loadPanoViewerModule();
     this.panoViewer = new PanoViewer(viewerContainer, debugMode);
-
     // 鏂?UI锛氬彸涓婅鎺у埗鎸夐挳锛堝叏灞?+ 鍧愭爣鎷惧彇 + 鏍″噯鍖楀悜锛夛級闈炵鍒濆睆锛屾敼涓哄紓姝ユ寕杞姐€?
     const devMode = isDevMode();
     void this.mountTopRightControls(viewerContainer, scene, devMode);
-
     // 鏂?UI锛氬乏涓婅鍦烘櫙鏍囬锛堝瑙嗛鏍硷級
     this.sceneTitleEl = document.createElement('div');
     this.sceneTitleEl.className = 'vr-scenetitle';
     this.sceneTitleEl.textContent = scene.name || this.config?.appName || 'VR Player';
     this.appElement.appendChild(this.sceneTitleEl);
-
     // 鐩戝惉鎷惧彇浜嬩欢
     if (this.handlePickEvent) {
       window.removeEventListener('vr:pick', this.handlePickEvent);
@@ -687,7 +603,6 @@ class App {
       }
     };
     window.addEventListener('vr:pick', this.handlePickEvent);
-
     // 鐩戝惉鎷惧彇妯″紡鍒囨崲浜嬩欢锛堢敤浜庝粠 ConfigStudio 鍏抽棴鎷惧彇妯″紡锛?
     if (this.handlePickModeEvent) {
       window.removeEventListener('vr:pickmode', this.handlePickModeEvent);
@@ -701,7 +616,6 @@ class App {
       }
     };
     window.addEventListener('vr:pickmode', this.handlePickModeEvent);
-
     // 鏂?UI锛氬乏涓嬭姘村嵃 + About 寮圭獥锛氶潪棣栧睆鍏抽敭锛屽紓姝ユ寕杞姐€?
     void this.mountBrandMark();
     
@@ -732,19 +646,16 @@ class App {
       };
       updateDebugPanel();
     }
-
     const [{ ChatRuntime }, { SceneUiRuntime }] = await Promise.all([
       this.loadChatRuntimeModule(),
       this.loadSceneUiRuntimeModule(),
     ]);
-
     this.chatRuntime = new ChatRuntime();
     this.chatRuntime.updateContext({
       museum,
       scene,
       fcChatConfig: this.config?.fcChat,
     });
-
     this.sceneUiRuntime = new SceneUiRuntime({
       appElement: this.appElement,
       viewerContainer,
@@ -776,7 +687,6 @@ class App {
       },
     });
     await this.sceneUiRuntime.ensureQualityIndicatorMounted();
-
     const syncSceneUiRuntimeRefs = () => {
       this.bottomDock = this.sceneUiRuntime?.getBottomDock() ?? null;
       this.topModeTabs = this.sceneUiRuntime?.getTopModeTabs() ?? null;
@@ -786,7 +696,6 @@ class App {
       this.sceneGuideDrawer = this.sceneUiRuntime?.getSceneGuideDrawer() ?? null;
       this.qualityIndicator = this.sceneUiRuntime?.getQualityIndicator() ?? null;
     };
-
     let coreUiRequested = false;
     const ensureCoreSceneUi = () => {
       if (coreUiRequested) return;
@@ -802,12 +711,10 @@ class App {
           }
         });
     };
-
     // 璁剧疆鍔犺浇鐘舵€佸彉鍖栧洖璋?
     this.panoViewer.setOnStatusChange((status) => {
       this.sceneUiRuntime?.handleStatusChange(status);
       syncSceneUiRuntimeRefs();
-
       if (
         !coreUiRequested &&
         (status === LoadStatus.LOW_READY ||
@@ -819,7 +726,7 @@ class App {
         }, 0);
       }
       if (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED) {
-        this.sceneUiRuntime?.scheduleFeatureWarmup();
+        this.sceneUiRuntime?.scheduleFeatureWarmup(status === LoadStatus.HIGH_READY ? 'immediate' : 'idle');
       }
       if (
         status === LoadStatus.LOW_READY ||
@@ -829,7 +736,6 @@ class App {
         this.loading.hide();
       }
     });
-
     // 鍔犺浇鍦烘櫙
     this.panoViewer.setOnLoad(() => {
       ensureCoreSceneUi();
@@ -840,7 +746,6 @@ class App {
       // 棰勫姞杞戒笅涓€涓満鏅殑缂╃暐鍥?
       this.preloadNextScene(museum, scene);
     });
-
     this.panoViewer.setOnError((error) => {
       console.error('加载场景失败:', error);
       this.loading.hide();
@@ -849,7 +754,6 @@ class App {
         this.qualityIndicator.updateStatus(LoadStatus.ERROR);
       }
     });
-
     // 銆愭渶缁堥搧寰嬨€戞墍鏈夋潵鑷?config.json 鎴?URL 鐨?yaw 閮芥槸銆愮幇瀹炰笘鐣岃搴︺€?
     // 杩涘叆娓叉煋/缃楃洏绯荤粺鍓嶏紝蹇呴』缁熶竴鍙栧弽涓€娆★細internalYaw = -worldYaw
     
@@ -868,13 +772,11 @@ class App {
     // 璁剧疆鍦烘櫙鏁版嵁锛堢敤浜?GroundNavDots锛?
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
   }
-
   private async mountTopRightControls(viewerContainer: HTMLElement, scene: Scene, devMode: boolean): Promise<void> {
     try {
       const { TopRightControls } = await this.loadTopRightControlsModule();
       if (!this.panoViewer) return;
       if (!this.currentScene || this.currentScene.id !== scene.id) return;
-
       this.topRightControls?.remove();
       this.topRightControls = new TopRightControls({
         viewerRootEl: viewerContainer,
@@ -909,7 +811,6 @@ class App {
       this.topRightControls = null;
     }
   }
-
   private async mountBrandMark(): Promise<void> {
     try {
       const { BrandMark } = await this.loadBrandMarkModule();
@@ -919,7 +820,7 @@ class App {
       }
       this.brandMark = new BrandMark({
         appName: this.config?.appName,
-        brandText: '鼎虎清源',
+        brandText: ZH_CN.brand.name,
       });
       const el = this.brandMark.getElement();
       el.addEventListener('click', (e) => {
@@ -935,7 +836,6 @@ class App {
       this.brandMark = null;
     }
   }
-
   /**
    * 棰勫姞杞戒笅涓€涓満鏅殑缂╃暐鍥?
    * 璧勬簮绫诲瀷锛歵humb锛堢敤浜庡垪琛?棰勮锛?
@@ -963,11 +863,9 @@ class App {
       }
     }
   }
-
   private clearView(): void {
-    // 娓呯悊鎵€鏈夌粍浠?
-    this.structure3DLoadToken += 1;
-
+    // 清理所有场景级组件
+    this.viewSessionRuntime.clearOverlayState();
     if (this.handlePickEvent) {
       window.removeEventListener('vr:pick', this.handlePickEvent);
       this.handlePickEvent = null;
@@ -980,7 +878,6 @@ class App {
       cancelAnimationFrame(this.debugPanelRafId);
       this.debugPanelRafId = null;
     }
-
     if (this.chatRuntime) {
       this.chatRuntime.dispose();
       this.chatRuntime = null;
@@ -996,7 +893,6 @@ class App {
     this.guideTray = null;
     this.sceneGuideDrawer = null;
     this.qualityIndicator = null;
-
     if (this.panoViewer) {
       this.panoViewer.dispose();
       this.panoViewer = null;
@@ -1006,32 +902,26 @@ class App {
       this.titleBar.remove();
       this.titleBar = null;
     }
-
     if (this.topRightControls) {
       this.topRightControls.remove();
       this.topRightControls = null;
     }
-
     if (this.northCalibrationPanel) {
       this.northCalibrationPanel.close();
       this.northCalibrationPanel = null;
     }
-
     if (this.sceneTitleEl) {
       this.sceneTitleEl.remove();
       this.sceneTitleEl = null;
     }
-
     if (this.brandMark) {
       this.brandMark.remove();
       this.brandMark = null;
     }
-
     if (this.museumList) {
       this.museumList.remove();
       this.museumList = null;
     }
-
     if (this.sceneListPage) {
       this.sceneListPage.remove();
       this.sceneListPage = null;
@@ -1047,46 +937,24 @@ class App {
       this.configStudio = null;
     }
     
-    // 娓呯悊缁撴瀯鍥?涓夌淮妯″瀷overlay
-    if (this.structureView2D) {
-      const element = this.structureView2D.getElement();
-      if (element && element.parentNode) {
-        element.parentNode.removeChild(element);
-      }
-      this.structureView2D = null;
-    }
-    if (this.structureView3D) {
-      const element = this.structureView3D.getElement();
-      if (element && element.parentNode) {
-        element.parentNode.removeChild(element);
-      }
-      this.structureView3D = null;
-    }
-    this.isStructureOverlayOpen = false;
-
-    // 閲嶇疆 mode锛堝埛鏂板悗鍥炲埌 tour锛?
+    // 重置 mode（刷新后回到 tour）
     this.mode = 'tour';
-
-    // 娓呯┖瀹瑰櫒
+    // 清空容器
     this.appElement.innerHTML = '';
     this.appElement.appendChild(this.loading.getElement());
   }
-
   private uiErrorElement: HTMLElement | null = null;
-
   private hideUIError(): void {
     if (this.uiErrorElement && this.uiErrorElement.parentNode) {
       this.uiErrorElement.parentNode.removeChild(this.uiErrorElement);
       this.uiErrorElement = null;
     }
   }
-
   /**
    * 璁剧疆鍏ㄥ眬妯″紡锛坱our / structure2d / structure3d锛?
    */
   private setMode(mode: AppViewMode): void {
     if (this.mode === mode) return;
-    const previousMode = this.mode;
     this.mode = mode;
     
     // 鏇存柊 TopModeTabs
@@ -1095,199 +963,27 @@ class App {
     }
     
     // 濡傛灉鍒囨崲鍒皌our妯″紡锛屼笖褰撳墠鏈塷verlay鎵撳紑锛屽厛鍏抽棴overlay
-    if (mode === 'tour' && this.isStructureOverlayOpen) {
-      this.closeStructureOverlay({ toTour: false });
+    if (mode === 'tour' && this.viewSessionRuntime.isStructureOverlayOpen()) {
+      this.viewSessionRuntime.closeStructureOverlay({ toTour: false });
     }
     
     // 澶勭悊 structure2d overlay
     if (mode === 'structure2d') {
-      void this.openStructure2D();
+      void this.viewSessionRuntime.openStructure2D();
     } else if (mode === 'structure3d') {
-      void this.openStructure3D();
+      void this.viewSessionRuntime.openStructure3D();
     }
   }
-
-  /**
-   * 鎵撳紑缁撴瀯鍥?D overlay
-   */
-  private async openStructure2D(): Promise<void> {
-    if (!this.currentMuseum || !this.currentScene) return;
-
-    // 濡傛灉宸叉湁overlay鎵撳紑锛屽厛娓呭満
-    if (this.isStructureOverlayOpen) {
-      this.closeStructureOverlay({ toTour: false });
-    }
-
-    this.structure3DLoadToken += 1;
-    const loadToken = this.structure3DLoadToken;
-
-    const [{ buildSceneGraph }, { StructureView2D }] = await Promise.all([
-      this.loadSceneGraphModule(),
-      this.loadStructureView2DModule(),
-    ]);
-
-    if (loadToken !== this.structure3DLoadToken || this.mode !== 'structure2d') {
-      return;
-    }
-    if (!this.currentMuseum || !this.currentScene) {
-      return;
-    }
-
-    const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
-
-    // 鍒涘缓鎴栨洿鏂?structure2d overlay
-    if (!this.structureView2D) {
-      this.structureView2D = new StructureView2D({
-        museum: this.currentMuseum,
-        graph,
-        currentSceneId: this.currentScene.id,
-        onClose: () => {
-          // 鐐瑰嚮脳鍏抽棴鏃讹紝鍏抽棴overlay骞跺垏鍥瀟our
-          this.closeStructureOverlay({ toTour: true });
-        },
-        onNodeClick: (museumId, sceneId) => {
-          // 鐐瑰嚮鑺傜偣鏃讹紝鍏堝叧闂璷verlay锛屽啀璺宠浆鍦烘櫙
-          this.closeStructureOverlay({ toTour: false });
-          navigateToScene(museumId, sceneId);
-        },
-      });
-      this.appElement.appendChild(this.structureView2D.getElement());
-    } else {
-      this.structureView2D.updateContext({
-        museum: this.currentMuseum,
-        graph,
-        currentSceneId: this.currentScene.id,
-      });
-    }
-
-    // 鏍囪overlay宸叉墦寮€
-    this.isStructureOverlayOpen = true;
-
-    // 璁剧疆body overflow
-    document.body.style.overflow = 'hidden';
-
-    // 鎵撳紑overlay
-    this.structureView2D.open();
-  }
-
-  /**
-   * 鎵撳紑涓夌淮妯″瀷3D overlay
-   */
-  private async openStructure3D(): Promise<void> {
-    if (!this.currentMuseum || !this.currentScene) return;
-
-    // 濡傛灉宸叉湁overlay鎵撳紑锛屽厛娓呭満
-    if (this.isStructureOverlayOpen) {
-      this.closeStructureOverlay({ toTour: false });
-    }
-
-    this.structure3DLoadToken += 1;
-    const loadToken = this.structure3DLoadToken;
-
-    const [{ buildSceneGraph }, { StructureView3D }] = await Promise.all([
-      this.loadSceneGraphModule(),
-      import('./ui/StructureView3D'),
-    ]);
-
-    if (loadToken !== this.structure3DLoadToken || this.mode !== 'structure3d') {
-      return;
-    }
-    if (!this.currentMuseum || !this.currentScene) {
-      return;
-    }
-
-    const graph = buildSceneGraph(this.currentMuseum, this.currentScene.id);
-
-    // 鍒涘缓鎴栨洿鏂?structure3d overlay
-    if (!this.structureView3D) {
-      this.structureView3D = new StructureView3D({
-        museum: this.currentMuseum,
-        graph,
-        currentSceneId: this.currentScene.id,
-        onClose: () => {
-          // 鐐瑰嚮脳鍏抽棴鏃讹紝鍏抽棴overlay骞跺垏鍥瀟our
-          this.closeStructureOverlay({ toTour: true });
-        },
-        onNodeClick: (museumId, sceneId) => {
-          // 鐐瑰嚮鑺傜偣鏃讹紝鍏堝叧闂璷verlay锛屽啀璺宠浆鍦烘櫙
-          this.closeStructureOverlay({ toTour: false });
-          navigateToScene(museumId, sceneId);
-        },
-      });
-      this.appElement.appendChild(this.structureView3D.getElement());
-    } else {
-      this.structureView3D.updateContext({
-        museum: this.currentMuseum,
-        graph,
-        currentSceneId: this.currentScene.id,
-      });
-    }
-
-    // 鏍囪overlay宸叉墦寮€
-    this.isStructureOverlayOpen = true;
-
-    // 璁剧疆body overflow
-    document.body.style.overflow = 'hidden';
-
-    // 鎵撳紑overlay
-    this.structureView3D.open();
-  }
-
-  /**
-   * 鍏抽棴缁撴瀯鍥?涓夌淮妯″瀷overlay锛堝敮涓€鍏抽棴鍏ュ彛锛?
-   * @param toTour 鏄惁鍒囨崲鍒皌our妯″紡
-   */
-  private closeStructureOverlay(options: { toTour: boolean }): void {
-    // 濡傛灉overlay鏈墦寮€锛岀洿鎺ヨ繑鍥?
-    if (!this.isStructureOverlayOpen) return;
-    this.structure3DLoadToken += 1;
-    
-    // 鏍囪overlay宸插叧闂?
-    this.isStructureOverlayOpen = false;
-    
-    // 浠嶥OM涓交搴曠Щ闄verlay鍏冪礌锛堣€屼笉鏄彧闅愯棌锛?
-    if (this.structureView2D) {
-      const element = this.structureView2D.getElement();
-      if (element && element.parentNode) {
-        element.parentNode.removeChild(element);
-      }
-      this.structureView2D = null;
-    }
-    
-    if (this.structureView3D) {
-      const element = this.structureView3D.getElement();
-      if (element && element.parentNode) {
-        element.parentNode.removeChild(element);
-      }
-      this.structureView3D = null;
-    }
-    
-    // 鎭㈠body鏍峰紡锛堟竻闄ゆ墍鏈夊彲鑳芥坊鍔犵殑鏍峰紡锛?
-    document.body.style.overflow = '';
-    document.body.style.touchAction = '';
-    document.body.style.overscrollBehavior = '';
-    
-    // 濡傛灉瑕佹眰鍒囨崲鍒皌our妯″紡锛屾洿鏂扮姸鎬佸拰UI
-    if (options.toTour) {
-      this.mode = 'tour';
-      if (this.topModeTabs) {
-        this.topModeTabs.setMode('tour');
-      }
-    }
-  }
-
   private async openNorthCalibration(sceneId: string): Promise<void> {
     // 娓呯悊涔嬪墠鐨勬牎鍑嗛潰鏉匡紙濡傛灉瀛樺湪锛?
     if (this.northCalibrationPanel) {
       this.northCalibrationPanel.close();
       this.northCalibrationPanel = null;
     }
-
     if (!this.panoViewer) {
       console.warn('[openNorthCalibration] PanoViewer 未初始化');
       return;
     }
-
     // 鍒涘缓鏍″噯闈㈡澘
     try {
       const { NorthCalibrationPanel } = await import('./ui/NorthCalibrationPanel');
@@ -1306,7 +1002,6 @@ class App {
       this.northCalibrationPanel = null;
     }
   }
-
   private showError(message: string): void {
     // 闅愯棌涔嬪墠鐨勯敊璇紙濡傛灉鏈夛級
     this.hideUIError();
@@ -1333,7 +1028,6 @@ class App {
       this.hideUIError();
     }, 3000);
   }
-
   /**
    * 缁熶竴鎵撳紑鈥滈紟铏庢竻婧愨€濆洟闃熶粙缁嶅脊绐?
    */
@@ -1348,14 +1042,12 @@ class App {
       }
     }
   }
-
   /**
    * 底部“信息”弹窗（按需加载）
    */
   private async openInfoModal(): Promise<void> {
     this.infoModalMounted?.close();
     this.infoModalMounted = null;
-
     const { openInfoModal } = await this.loadAppModalsModule();
     this.infoModalMounted = openInfoModal({
       museumName: this.currentMuseum?.name || '-',
@@ -1373,7 +1065,6 @@ class App {
       },
     });
   }
-
   /**
    * 缁熶竴 VR 妯″紡寮€鍏抽€昏緫锛屼緵鍙充笂瑙掓寜閽笌璁剧疆寮圭獥鍏辩敤
    */
@@ -1381,10 +1072,8 @@ class App {
     if (!this.panoViewer) {
       return false;
     }
-
     const vrMode = await this.ensureVrModeInitialized();
     const currentlyEnabled = vrMode.isVrModeEnabled();
-
     if (currentlyEnabled) {
       // 褰撳墠宸插惎鐢紝鍏抽棴VR妯″紡
       vrMode.disableVrMode();
@@ -1406,15 +1095,12 @@ class App {
         }
         return false;
       }
-
       // 鍚敤VR妯″紡锛堥檧铻轰华鎺у埗锛?
       const initialView = this.panoViewer.getCurrentView();
-
       // 璁剧疆浜や簰妫€鏌ュ洖璋冿紙鎷栨嫿鏃舵殏鍋滈檧铻轰华鏇存柊锛?
       vrMode.setInteractingCallback(() => {
         return this.panoViewer?.isInteracting() ?? false;
       });
-
       const success = await vrMode.enableVrMode((yawDelta, pitchDelta) => {
         if (this.panoViewer) {
           const newYaw = initialView.yaw + yawDelta;
@@ -1422,7 +1108,6 @@ class App {
           this.panoViewer.setView(newYaw, newPitch);
         }
       });
-
       if (success) {
         this.panoViewer.setVrModeEnabled(true);
         if (this.topRightControls) {
@@ -1435,14 +1120,9 @@ class App {
       }
     }
   }
-
-  /**
-   * 底部“更多”弹窗（按需加载）
-   */
   private async openSettingsModal(): Promise<void> {
     this.settingsModalMounted?.close();
     this.settingsModalMounted = null;
-
     const { openSettingsModal } = await this.loadAppModalsModule();
     this.settingsModalMounted = openSettingsModal({
       currentScene: this.currentScene,
@@ -1460,12 +1140,7 @@ class App {
     });
   }
 }
-
-// 鍚姩搴旂敤
 new App();
-
-
-// Service Worker?stale-while-revalidate ?????
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {
@@ -1473,3 +1148,4 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+

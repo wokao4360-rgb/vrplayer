@@ -3,6 +3,7 @@ import type { Museum, Scene } from '../types/config';
 import { interactionBus } from './interactionBus';
 import { mountModal } from './Modal';
 import { getIcon } from './icons';
+import { ZH_CN } from '../i18n/zh-CN';
 
 type BottomDockOptions = {
   initialTab?: DockTabKey;
@@ -28,10 +29,10 @@ type DockPanelsLike = {
 };
 
 const TAB_LABELS: Array<{ key: DockTabKey; label: string }> = [
-  { key: 'guide', label: '导览' },
-  { key: 'community', label: '社区' },
-  { key: 'info', label: '信息' },
-  { key: 'settings', label: '更多' },
+  { key: 'guide', label: ZH_CN.dock.guide },
+  { key: 'community', label: ZH_CN.dock.community },
+  { key: 'info', label: ZH_CN.dock.info },
+  { key: 'settings', label: ZH_CN.dock.settings },
 ];
 
 function isPanelTab(tab: DockTabKey): tab is 'community' | 'map' | 'dollhouse' {

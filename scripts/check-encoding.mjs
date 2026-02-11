@@ -13,9 +13,9 @@ const extraFiles = [
 ];
 
 const codeExts = new Set(['.ts', '.tsx', '.js', '.jsx']);
-const textExts = new Set(['.css', '.html', '.json', '.md']);
+const textExts = new Set(['.css', '.json', '.html', '.md']);
+const targetExts = new Set([...codeExts, ...textExts]);
 
-// 常见 UTF-8 被错误按 GBK/ANSI 解释后的特征片段
 const mojibakePatterns = [
   '锟',
   '鎵句笉鍒',
@@ -45,7 +45,10 @@ const mojibakePatterns = [
   '銆',
   '鈥',
   '鈫',
+  '\uFFFD',
 ];
+
+const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
 
 function walk(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -54,15 +57,12 @@ function walk(dir) {
     if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'docs' || entry.name === '.git') {
       continue;
     }
-
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       files.push(...walk(fullPath));
       continue;
     }
-
-    const ext = path.extname(entry.name).toLowerCase();
-    if (codeExts.has(ext) || textExts.has(ext)) {
+    if (targetExts.has(path.extname(entry.name).toLowerCase())) {
       files.push(fullPath);
     }
   }
@@ -72,19 +72,13 @@ function walk(dir) {
 function extractStringLiterals(code) {
   const out = [];
   let i = 0;
-  let line = 1;
   let state = 'normal';
   let quote = '';
-  let startLine = 1;
   let buffer = '';
 
   while (i < code.length) {
     const ch = code[i];
     const next = i + 1 < code.length ? code[i + 1] : '';
-
-    if (ch === '\n') {
-      line += 1;
-    }
 
     if (state === 'normal') {
       if (ch === '/' && next === '/') {
@@ -100,7 +94,6 @@ function extractStringLiterals(code) {
       if (ch === '\'' || ch === '"' || ch === '`') {
         state = 'string';
         quote = ch;
-        startLine = line;
         buffer = '';
         i += 1;
         continue;
@@ -110,9 +103,7 @@ function extractStringLiterals(code) {
     }
 
     if (state === 'lineComment') {
-      if (ch === '\n') {
-        state = 'normal';
-      }
+      if (ch === '\n') state = 'normal';
       i += 1;
       continue;
     }
@@ -131,15 +122,12 @@ function extractStringLiterals(code) {
       if (ch === '\\') {
         if (i + 1 < code.length) {
           buffer += ch + code[i + 1];
-          if (code[i + 1] === '\n') {
-            line += 1;
-          }
           i += 2;
           continue;
         }
       }
       if (ch === quote) {
-        out.push({ text: buffer, line: startLine });
+        out.push(buffer);
         state = 'normal';
         quote = '';
         buffer = '';
@@ -158,66 +146,78 @@ function hasMojibake(text) {
   return mojibakePatterns.some((pattern) => text.includes(pattern));
 }
 
-function locatePatternLine(content, pattern) {
-  const idx = content.indexOf(pattern);
-  if (idx < 0) return 1;
-  return content.slice(0, idx).split('\n').length;
-}
-
-const targetFiles = [];
+const files = [];
 for (const root of sourceRoots) {
-  const abs = path.join(projectRoot, root);
-  if (fs.existsSync(abs)) {
-    targetFiles.push(...walk(abs));
+  const absRoot = path.join(projectRoot, root);
+  if (fs.existsSync(absRoot)) {
+    files.push(...walk(absRoot));
   }
 }
-
-for (const rel of extraFiles) {
-  const abs = path.join(projectRoot, rel);
-  if (fs.existsSync(abs)) {
-    targetFiles.push(abs);
+for (const relPath of extraFiles) {
+  const absPath = path.join(projectRoot, relPath);
+  if (fs.existsSync(absPath)) {
+    files.push(absPath);
   }
 }
 
 const issues = [];
-
-for (const absPath of targetFiles) {
+for (const absPath of files) {
   const relPath = path.relative(projectRoot, absPath).replace(/\\/g, '/');
   if (relPath === 'scripts/check-text-quality.mjs' || relPath === 'scripts/check-encoding.mjs') {
     continue;
   }
-  const content = fs.readFileSync(absPath, 'utf8');
+
   const ext = path.extname(absPath).toLowerCase();
+  const buf = fs.readFileSync(absPath);
+
+  let decoded = '';
+  try {
+    decoded = utf8Decoder.decode(buf);
+  } catch (error) {
+    issues.push({
+      file: relPath,
+      reason: `UTF-8 解码失败：${error instanceof Error ? error.message : String(error)}`,
+    });
+    continue;
+  }
+
+  if (decoded.includes('\uFFFD')) {
+    issues.push({
+      file: relPath,
+      reason: '包含 Unicode 替换字符（�），疑似编码损坏',
+    });
+    continue;
+  }
 
   if (codeExts.has(ext)) {
-    const literals = extractStringLiterals(content);
-    for (const literal of literals) {
-      if (!hasMojibake(literal.text)) continue;
+    const literals = extractStringLiterals(decoded);
+    const hit = literals.find((text) => hasMojibake(text));
+    if (hit) {
       issues.push({
         file: relPath,
-        line: literal.line,
-        sample: literal.text.slice(0, 80),
+        reason: `字符串命中乱码特征：${hit.slice(0, 80)}`,
       });
     }
     continue;
   }
 
-  if (textExts.has(ext) && hasMojibake(content)) {
-    const hit = mojibakePatterns.find((pattern) => content.includes(pattern)) || mojibakePatterns[0];
-    issues.push({
-      file: relPath,
-      line: locatePatternLine(content, hit),
-      sample: hit,
-    });
+  if (textExts.has(ext)) {
+    const hit = mojibakePatterns.find((pattern) => decoded.includes(pattern));
+    if (hit) {
+      issues.push({
+        file: relPath,
+        reason: `文本命中乱码特征：${hit}`,
+      });
+    }
   }
 }
 
 if (issues.length > 0) {
-  console.error('检测到潜在中文乱码，请先修复后再构建：');
+  console.error('检测到编码问题，请修复后再构建：');
   for (const issue of issues) {
-    console.error(`- ${issue.file}:${issue.line} -> ${issue.sample}`);
+    console.error(`- ${issue.file}: ${issue.reason}`);
   }
   process.exit(1);
 }
 
-console.log('文本质量检查通过：未检测到已知乱码特征。');
+console.log('编码检查通过：目标文件均为有效 UTF-8，且未命中乱码特征。');

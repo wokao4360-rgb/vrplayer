@@ -1,9 +1,9 @@
-﻿import { ACESFilmicToneMapping, CanvasTexture, ClampToEdgeWrapping, LinearFilter, LinearMipmapLinearFilter, MathUtils, Mesh, MeshBasicMaterial, NoToneMapping, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, sRGBEncoding, Texture, type TextureFilter, type ToneMapping, WebGLRenderer } from 'three';
+﻿import { ACESFilmicToneMapping, CanvasTexture, ClampToEdgeWrapping, LinearFilter, LinearMipmapLinearFilter, MathUtils, Mesh, MeshBasicMaterial, NoToneMapping, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, Texture, WebGLRenderer, sRGBEncoding } from '../vendor/three-core';
+import type { TextureFilter, ToneMapping } from 'three';
 import type { Scene, InitialView } from '../types/config';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { LoadStatus } from '../types/loadStatus';
 import { getPreferredQuality } from '../utils/qualityPreference';
-import { NadirPatch } from './NadirPatch';
 import { getYawPitchFromNDC, screenToNDC } from './picking';
 import { CompassDisk } from '../ui/CompassDisk';
 import { GroundNavDots } from '../ui/GroundNavDots';
@@ -15,6 +15,9 @@ import { ZoomHud } from '../ui/ZoomHud';
 import { showToast } from '../ui/toast';
 import { TileCanvasPano } from './TileCanvasPano';
 import { fetchTileManifest, type TileManifest } from './tileManifest';
+import { PanoLifecycleRuntime } from './panoLifecycleRuntime';
+
+type NadirPatchType = import('./NadirPatch').NadirPatch;
 
 type LoadMetrics = {
   sceneId: string;
@@ -39,8 +42,6 @@ type TilePano = {
   setPerformanceMode?: (mode: 'normal' | 'throttle') => void;
 };
 
-/**
- * 娓叉煋閰嶇疆妗ｄ綅锛堢敤浜庣敾闈㈠姣旓細鍘熷 vs 鐮斿浼樺寲锛? */
 enum RenderProfile {
   Original = 'original',
   Enhanced = 'enhanced',
@@ -109,11 +110,6 @@ const RENDER_PRESETS: Record<RenderProfile, RenderPreset> = {
   },
 };
 
-/**
- * PanoViewer - 鍏ㄦ櫙鍥炬煡鐪嬪櫒
- * 
- * 璧勬簮鍔犺浇绛栫暐锛? * - thumb: 缂╃暐鍥撅紝鐢ㄤ簬鍒楄〃/棰勮锛堜笉鍦ㄦ澶勫姞杞斤級
- * - panoLow: 浣庢竻鍏ㄦ櫙鍥撅紝棣栧睆蹇€熷姞杞斤紙浼樺厛锛? * - pano: 楂樻竻鍏ㄦ櫙鍥撅紝鍚庡彴鍔犺浇鍚庢棤缂濇浛鎹? * - video: 瑙嗛璧勬簮锛岀偣鍑荤儹鐐瑰悗鎵嶅姞杞斤紙涓嶅湪姝ゅ鍔犺浇锛? */
 export class PanoViewer {
   private scene: Scene;
   private camera: PerspectiveCamera;
@@ -122,12 +118,12 @@ export class PanoViewer {
   private tilePano: TilePano | null = null;
   private fallbackSphere: Mesh | null = null;
   private container: HTMLElement;
-  private readonly handleWindowResize = () => this.handleResize();
-  private readonly domEventRemovers: Array<() => void> = [];
-  private animationFrameId: number | null = null;
+  private readonly lifecycleRuntime: PanoLifecycleRuntime;
   private disposed = false;
   private frameListeners: Array<(dtMs: number) => void> = [];
-  private nadirPatch: NadirPatch | null = null;
+  private nadirPatch: NadirPatchType | null = null;
+  private nadirPatchModulePromise: Promise<typeof import('./NadirPatch')> | null = null;
+  private pendingNorthYaw: number | null = null;
   private compassDisk: CompassDisk | null = null;
   private groundNavDots: GroundNavDots | null = null;
   private groundHeading: GroundHeadingMarker | null = null;
@@ -144,7 +140,7 @@ export class PanoViewer {
   private onStatusChangeCallback?: (status: LoadStatus) => void;
   private debugMode = false;
   private onDebugClick?: (x: number, y: number, yaw: number, pitch: number, fov: number) => void;
-  private longPressTimer: number | null = null;
+  private longPressThreshold = 500; // 长按阈值（毫秒）
   private tilesDebugEl: HTMLDivElement | null = null;
   private tilesVisibleStableFrames = 0;
   private tilesLastError = '';
@@ -153,7 +149,6 @@ export class PanoViewer {
   private tilesLastProgressAt = 0;
   private tilesHighStartAt = 0;
   private tilesDegradedNotified = false;
-  private longPressThreshold = 500; // 长按阈值（毫秒）
   private renderSource: 'none' | 'fallback' | 'low' | 'tiles' = 'none';
   private perfSamples: number[] = [];
   private perfMode: 'normal' | 'throttle' = 'normal';
@@ -183,7 +178,6 @@ export class PanoViewer {
 
   // 拾取模式
   private pickMode = false;
-  private pickModeListeners: Array<() => void> = [];
   private pickStartX = 0;
   private pickStartY = 0;
   private pickStartTime = 0;
@@ -226,9 +220,6 @@ export class PanoViewer {
     this.applyRendererProfile();
     container.appendChild(this.renderer.domElement);
 
-    // Nadir patch：补丁不影响全景主材质
-    this.nadirPatch = new NadirPatch(this.scene, 500);
-    
     // 指南针圆盘（DOM overlay，可强制关闭）
     this.compassDisk = new CompassDisk();
     this.compassDisk.mount(container);
@@ -247,119 +238,51 @@ export class PanoViewer {
     this.groundHeading = new GroundHeadingMarker(container);
     this.groundHeading.getElement().style.display = 'none';
     
-    // 背景蒙版右移由 main.ts 统一管理，避免重复显示
-    // 绑定事件
-    this.setupEvents();
-    
-    // 开始渲染循环
-    this.animate();
-    
-    // 响应窗口大小变化
-    window.addEventListener('resize', this.handleWindowResize);
+    this.lifecycleRuntime = new PanoLifecycleRuntime(this.renderer.domElement, {
+      debugMode: this.debugMode,
+      longPressThreshold: this.longPressThreshold,
+      onPointerDown: (event) => this.onPointerDown(event),
+      onPointerMove: (event) => this.onPointerMove(event),
+      onPointerUp: () => this.onPointerUp(),
+      onTouchStart: (event) => this.onTouchStart(event),
+      onTouchMove: (event) => this.onTouchMove(event),
+      onTouchEnd: () => this.onTouchEnd(),
+      onWheel: (event) => this.onWheel(event),
+      onDebugClick: (clientX, clientY) => this.handleDebugClick(clientX, clientY),
+      onResize: () => this.handleResize(),
+      onTick: (dtMs) => this.renderFrame(dtMs),
+    });
+    this.lifecycleRuntime.bindBaseEvents();
+    this.lifecycleRuntime.startAnimationLoop();
   }
 
-  private setupEvents(): void {
-    const dom = this.renderer.domElement;
-    const addDomListener = (
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: AddEventListenerOptions,
-    ) => {
-      dom.addEventListener(type, listener, options);
-      this.domEventRemovers.push(() => {
-        dom.removeEventListener(type, listener, options?.capture ?? false);
-      });
-    };
-
-    // 鼠标/触摸拖拽
-    const onMouseDown = (e: Event) => this.onPointerDown(e as MouseEvent);
-    const onMouseMove = (e: Event) => this.onPointerMove(e as MouseEvent);
-    const onMouseUp = () => this.onPointerUp();
-    const onMouseLeave = () => this.onPointerUp();
-    addDomListener('mousedown', onMouseDown);
-    addDomListener('mousemove', onMouseMove);
-    addDomListener('mouseup', onMouseUp);
-    addDomListener('mouseleave', onMouseLeave);
-
-    // 触摸事件
-    const onTouchStart = (e: Event) => this.onTouchStart(e as TouchEvent);
-    const onTouchMove = (e: Event) => this.onTouchMove(e as TouchEvent);
-    const onTouchEnd = () => this.onTouchEnd();
-    addDomListener('touchstart', onTouchStart, { passive: false });
-    addDomListener('touchmove', onTouchMove, { passive: false });
-    addDomListener('touchend', onTouchEnd);
-
-    // 滚轮缩放（桌面端）
-    const onWheel = (e: Event) => this.onWheel(e as WheelEvent);
-    addDomListener('wheel', onWheel, { passive: false });
-
-    // 调试模式：双击（PC）或长按（移动端）显示调试信息
-    if (this.debugMode) {
-      const onDebugDblClick = (e: Event) => {
-        const mouseEvent = e as MouseEvent;
-        this.handleDebugClick(mouseEvent.clientX, mouseEvent.clientY);
-      };
-      addDomListener('dblclick', onDebugDblClick);
-
-      // 移动端长按
-      let touchStartX = 0;
-      let touchStartY = 0;
-
-      const onDebugTouchStart = (e: Event) => {
-        const touchEvent = e as TouchEvent;
-        if (touchEvent.touches.length === 1) {
-          touchStartX = touchEvent.touches[0].clientX;
-          touchStartY = touchEvent.touches[0].clientY;
-          this.longPressTimer = window.setTimeout(() => {
-            this.handleDebugClick(touchStartX, touchStartY);
-          }, this.longPressThreshold);
-        }
-      };
-      const onDebugTouchMove = () => {
-        if (this.longPressTimer) {
-          clearTimeout(this.longPressTimer);
-          this.longPressTimer = null;
-        }
-      };
-      const onDebugTouchEnd = () => {
-        if (this.longPressTimer) {
-          clearTimeout(this.longPressTimer);
-          this.longPressTimer = null;
-        }
-      };
-
-      addDomListener('touchstart', onDebugTouchStart, { passive: true });
-      addDomListener('touchmove', onDebugTouchMove, { passive: true });
-      addDomListener('touchend', onDebugTouchEnd, { passive: true });
+  private async ensureNadirPatch(): Promise<void> {
+    if (this.nadirPatch || this.disposed) {
+      return;
+    }
+    if (!this.nadirPatchModulePromise) {
+      this.nadirPatchModulePromise = import('./NadirPatch');
+    }
+    try {
+      const { NadirPatch } = await this.nadirPatchModulePromise;
+      if (this.disposed || this.nadirPatch) return;
+      this.nadirPatch = new NadirPatch(this.scene, 500);
+      if (typeof this.pendingNorthYaw === 'number') {
+        this.nadirPatch.setNorthYaw(this.pendingNorthYaw);
+      }
+    } catch {
+      // 按需加载失败时不阻断全景主链路
     }
   }
 
-  private clearDomEvents(): void {
-    for (const removeListener of this.domEventRemovers) {
-      removeListener();
-    }
-    this.domEventRemovers.length = 0;
-
-    if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-    }
-  }
-  
-  /**
-   * 璋冭瘯妯″紡涓嬬殑鐐瑰嚮澶勭悊
-   */
-  private handleDebugClick(x: number, y: number): void {
+    private handleDebugClick(x: number, y: number): void {
     if (this.onDebugClick && this.debugMode) {
       const view = this.getCurrentView();
       this.onDebugClick(x, y, view.yaw, view.pitch, view.fov);
     }
   }
   
-  /**
-   * 璁剧疆璋冭瘯鐐瑰嚮鍥炶皟
-   */
-  setOnDebugClick(callback: (x: number, y: number, yaw: number, pitch: number, fov: number) => void): void {
+    setOnDebugClick(callback: (x: number, y: number, yaw: number, pitch: number, fov: number) => void): void {
     this.onDebugClick = callback;
   }
 
@@ -414,13 +337,7 @@ export class PanoViewer {
 
   private onTouchMove(e: TouchEvent): void {
     e.preventDefault();
-    
-    // 如果正在长按等待调试面板，取消它
-    if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-    }
-    
+
     // 单指拖拽控制（VR模式下也允许）
     if (e.touches.length === 1 && this.isDragging) {
       const deltaX = e.touches[0].clientX - this.lastMouseX;
@@ -489,14 +406,7 @@ export class PanoViewer {
     this.hasPendingViewDelta = false;
   }
 
-  /**
-   * 鍔犺浇鍦烘櫙鍏ㄦ櫙鍥?   * 
-   * 璧勬簮鍔犺浇绛栫暐锛?   * - thumb: 鍒楄〃/棰勮锛堜笉鍦ㄦ澶勫姞杞斤級
-   * - panoLow: 棣栧睆蹇€熷姞杞斤紙浼樺厛锛?   * - pano: 楂樻竻鏇挎崲锛堝悗鍙板姞杞斤級
-   * - video: 鐐瑰嚮鐑偣鍚庢墠鍔犺浇锛堜笉鍦ㄦ澶勫姞杞斤級
-   * 
-   * 鏀寔娓愯繘寮忓姞杞斤細鍏堝姞杞戒綆娓呭浘锛坧anoLow锛夛紝鍐嶆棤缂濇浛鎹负楂樻竻鍥撅紙pano锛?   */
-  loadScene(sceneData: Scene, options?: { preserveView?: boolean }): void {
+    loadScene(sceneData: Scene, options?: { preserveView?: boolean }): void {
     // 重置状态
     this.isDegradedMode = false;
     this.resetMetrics(sceneData.id);
@@ -557,6 +467,8 @@ export class PanoViewer {
     
     if (this.nadirPatch) {
       this.nadirPatch.setNorthYaw(northYaw);
+    } else {
+      this.pendingNorthYaw = northYaw;
     }
     if (this.compassDisk) {
       this.compassDisk.setSceneId(sceneData.id);
@@ -689,11 +601,7 @@ export class PanoViewer {
     }
   }
 
-  /**
-   * 鍔犺浇鍗曚釜绾圭悊锛堜娇鐢ㄥ閾惧浘鐗囧姞杞藉櫒锛?   * @param geometry 鐞冧綋鍑犱綍浣?   * @param url 鍥剧墖 URL
-   * @param isLowRes 鏄惁涓轰綆娓呭浘锛堢敤浜庣姸鎬佹爣璁帮級
-   */
-  private async loadSingleTexture(
+    private async loadSingleTexture(
     geometry: SphereGeometry,
     url: string,
     isLowRes: boolean
@@ -759,12 +667,7 @@ export class PanoViewer {
     }
   }
 
-  /**
-   * 娓愯繘寮忓姞杞斤細鍏堝姞杞戒綆娓呭浘锛屽啀鏃犵紳鏇挎崲涓洪珮娓呭浘
-   * 鏇挎崲鏃朵繚鎸佸綋鍓嶈瑙掞紙yaw/pitch/fov锛変笉鍙?   * 
-   * 澶辫触鍏滃簳绛栫暐锛?   * - 浣庢竻鍥惧け璐ワ細灏濊瘯鍔犺浇楂樻竻鍥?   * - 楂樻竻鍥惧け璐ワ細淇濈暀浣庢竻鍥撅紝鏍囪涓洪檷绾фā寮忥紙涓嶈Е鍙戦敊璇洖璋冿紝涓嶅奖鍝嶇敤鎴蜂綋楠岋級
-   */
-  private async loadProgressiveTextures(
+    private async loadProgressiveTextures(
     geometry: SphereGeometry,
     panoLowUrl: string,
     panoUrl: string
@@ -875,28 +778,19 @@ export class PanoViewer {
     }
   }
 
-  /**
-   * 璁剧疆鍔犺浇瀹屾垚鍥炶皟锛堜綆娓呭浘鍔犺浇瀹屾垚鏃惰Е鍙戯紝鐢ㄦ埛鍙互寮€濮嬩氦浜掞級
-   */
-  setOnLoad(callback: () => void): void {
+    setOnLoad(callback: () => void): void {
     this.onLoadCallback = callback;
   }
 
-  /**
-   * 璁剧疆閿欒鍥炶皟锛堟墍鏈夎祫婧愬姞杞藉け璐ユ椂瑙﹀彂锛?   */
-  setOnError(callback: (error: Error) => void): void {
+    setOnError(callback: (error: Error) => void): void {
     this.onErrorCallback = callback;
   }
 
-  /**
-   * 璁剧疆鍔犺浇鐘舵€佸彉鍖栧洖璋冿紙鐢ㄤ簬 UI 鏇存柊锛?   */
-  setOnStatusChange(callback: (status: LoadStatus) => void): void {
+    setOnStatusChange(callback: (status: LoadStatus) => void): void {
     this.onStatusChangeCallback = callback;
   }
 
-  /**
-   * 鑾峰彇褰撳墠鍔犺浇鐘舵€?   */
-  getLoadStatus(): LoadStatus {
+    getLoadStatus(): LoadStatus {
     return this.loadStatus;
   }
 
@@ -952,16 +846,11 @@ export class PanoViewer {
     this.lastMetricsEmitAt = now;
   }
 
-  /**
-   * 鏄惁澶勪簬闄嶇骇妯″紡锛堥珮娓呭姞杞藉け璐ワ紝浣跨敤浣庢竻锛?   */
-  isInDegradedMode(): boolean {
+    isInDegradedMode(): boolean {
     return this.isDegradedMode;
   }
 
-  /**
-   * 鏇存柊鍔犺浇鐘舵€佸苟瑙﹀彂鍥炶皟
-   */
-  private updateLoadStatus(status: LoadStatus): void {
+    private updateLoadStatus(status: LoadStatus): void {
     if (this.loadStatus === status) return;
     this.loadStatus = status;
     const now = performance.now();
@@ -990,10 +879,7 @@ export class PanoViewer {
     this.updateCamera();
   }
 
-  /**
-   * 缁熶竴鐨?FOV 璁剧疆鏂规硶锛堝唴閮ㄤ娇鐢級
-   * @param fov 鏂扮殑 FOV 鍊?   * @param showHud 鏄惁鏄剧ず缂╂斁 HUD锛堥粯璁?true锛?   */
-  private setFovInternal(fov: number, showHud: boolean = true): void {
+    private setFovInternal(fov: number, showHud: boolean = true): void {
     this.fov = Math.max(30, Math.min(120, fov));
     this.camera.fov = this.fov;
     this.camera.updateProjectionMatrix();
@@ -1007,16 +893,11 @@ export class PanoViewer {
     }
   }
 
-  /**
-   * 璁剧疆 FOV锛堝叕寮€鏂规硶锛岀敤浜庡閮ㄦ帶鍒剁缉鏀撅級
-   * @param fov 鏂扮殑 FOV 鍊?   */
-  setFov(fov: number): void {
+    setFov(fov: number): void {
     this.setFovInternal(fov, true);
   }
 
-  /**
-   * 璁剧疆VR妯″紡鐘舵€侊紙鍚敤/绂佺敤鎷栨嫿鎺у埗锛?   */
-  setVrModeEnabled(enabled: boolean): void {
+    setVrModeEnabled(enabled: boolean): void {
     this.vrModeEnabled = enabled;
     // 如果禁用 VR 模式，同时停止拖拽状态
     if (!enabled) {
@@ -1024,17 +905,11 @@ export class PanoViewer {
     }
   }
 
-  /**
-   * 鑾峰彇VR妯″紡鐘舵€?   */
-  isVrModeEnabled(): boolean {
+    isVrModeEnabled(): boolean {
     return this.vrModeEnabled;
   }
 
-  /**
-   * 妫€鏌ユ槸鍚︽鍦ㄤ氦浜掞紙鎷栨嫿涓級
-   * 鐢ㄤ簬VR妯″紡涓嬫殏鍋滈檧铻轰华鏇存柊
-   */
-  isInteracting(): boolean {
+    isInteracting(): boolean {
     return this.isDragging || this.isPinching;
   }
 
@@ -1133,13 +1008,10 @@ export class PanoViewer {
       `lowReady=${this.tilesLowReady}`;
   }
 
-  private animate(): void {
+  private renderFrame(dtMs: number): void {
     if (this.disposed) return;
-    this.animationFrameId = requestAnimationFrame(() => this.animate());
     const now = performance.now();
-    const dtMs = this.lastFrameTimeMs ? now - this.lastFrameTimeMs : 16.7;
     this.updatePerformanceGuard(dtMs);
-    this.lastFrameTimeMs = now;
 
     // 输入高频事件只累计增量，在每帧统一应用，减少主线程抖动
     this.applyPendingViewDelta();
@@ -1239,6 +1111,11 @@ export class PanoViewer {
     this.updateTilesDebug();
     this.emitMetrics('frame');
     
+    // 用户低头后再加载 NadirPatch，避免首屏提前拉取可选 three 依赖。
+    if (!this.nadirPatch && view.pitch <= -20) {
+      void this.ensureNadirPatch();
+    }
+
     // 更新 nadir patch（低头时渐显 + yaw 罗盘旋转）
     if (this.nadirPatch) {
       this.nadirPatch.update(this.camera, { yaw: view.yaw, pitch: view.pitch }, dtMs);
@@ -1266,11 +1143,8 @@ export class PanoViewer {
     if (this.disposed) return;
     this.renderer.render(this.scene, this.camera);
   }
-  private lastFrameTimeMs: number | null = null;
 
-  /**
-   * 姣忎竴甯э紙render 鍓嶏級瑙﹀彂锛岀敤浜?DOM Overlay锛堢儹鐐圭瓑锛夋洿鏂?   */
-  onFrame(listener: (dtMs: number) => void): () => void {
+    onFrame(listener: (dtMs: number) => void): () => void {
     this.frameListeners.push(listener);
     return () => {
       const idx = this.frameListeners.indexOf(listener);
@@ -1278,21 +1152,15 @@ export class PanoViewer {
     };
   }
 
-  /**
-   * 鏆撮湶鐩告満锛氱敤浜庡皢 world position 鎶曞奖鍒板睆骞曪紙DOM Overlay 鐑偣锛?   */
-  getCamera(): PerspectiveCamera {
+    getCamera(): PerspectiveCamera {
     return this.camera;
   }
 
-  /**
-   * 鑾峰彇 DOM 鍏冪礌锛堢敤浜庢嬀鍙栨ā寮忕瓑锛?   */
-  getDomElement(): HTMLElement {
+    getDomElement(): HTMLElement {
     return this.renderer.domElement;
   }
 
-  /**
-   * 璁剧疆鍦烘櫙鏁版嵁锛堢敤浜?GroundNavDots锛?   */
-  setSceneData(museumId: string, currentSceneId: string, sceneHotspots: SceneHotspot[]): void {
+    setSceneData(museumId: string, currentSceneId: string, sceneHotspots: SceneHotspot[]): void {
     if (this.groundNavDots) {
       // 过滤出 type=scene 且 target.sceneId 存在的热点
       const sceneHotspotsFiltered = sceneHotspots
@@ -1312,43 +1180,55 @@ export class PanoViewer {
     }
   }
 
-  /**
-   * 鑾峰彇鐞冧綋鍗婂緞
-   */
-  getSphereRadius(): number {
+    getSphereRadius(): number {
     return 500;
   }
 
-  /**
-   * 褰撳墠娓叉煋灏哄锛堜笌 canvas 涓€鑷达級
-   */
-  getViewportSize(): { width: number; height: number } {
+    getViewportSize(): { width: number; height: number } {
     return { width: this.container.clientWidth, height: this.container.clientHeight };
   }
 
-  /**
-   * 鍚敤鎷惧彇妯″紡
-   */
-  enablePickMode(): void {
+    enablePickMode(): void {
     if (this.pickMode) return;
     this.pickMode = true;
-    this.setupPickModeListeners();
+    this.lifecycleRuntime.enablePickMode({
+      onStart: (clientX, clientY) => {
+        this.pickStartX = clientX;
+        this.pickStartY = clientY;
+        this.pickStartTime = Date.now();
+        this.pickHasMoved = false;
+      },
+      onMove: (clientX, clientY) => {
+        const dx = Math.abs(clientX - this.pickStartX);
+        const dy = Math.abs(clientY - this.pickStartY);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > this.pickDragThreshold) {
+          this.pickHasMoved = true;
+        }
+      },
+      onEnd: (clientX, clientY) => {
+        const elapsed = Date.now() - this.pickStartTime;
+        const dx = Math.abs(clientX - this.pickStartX);
+        const dy = Math.abs(clientY - this.pickStartY);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const isDrag =
+          distance > this.pickDragThreshold ||
+          (elapsed > this.pickTimeThreshold && this.pickHasMoved);
+        if (!isDrag) {
+          this.handlePick(clientX, clientY);
+        }
+        this.pickHasMoved = false;
+      },
+    });
   }
 
-  /**
-   * 绂佺敤鎷惧彇妯″紡
-   */
-  disablePickMode(): void {
+    disablePickMode(): void {
     if (!this.pickMode) return;
     this.pickMode = false;
-    this.removePickModeListeners();
+    this.lifecycleRuntime.disablePickMode();
   }
 
-  /**
-   * 鍒囨崲鎷惧彇妯″紡
-   * @returns 褰撳墠鏄惁鍚敤
-   */
-  togglePickMode(): boolean {
+    togglePickMode(): boolean {
     if (this.pickMode) {
       this.disablePickMode();
     } else {
@@ -1357,129 +1237,11 @@ export class PanoViewer {
     return this.pickMode;
   }
 
-  /**
-   * 鑾峰彇鎷惧彇妯″紡鐘舵€?   */
-  isPickModeEnabled(): boolean {
+    isPickModeEnabled(): boolean {
     return this.pickMode;
   }
 
-  /**
-   * 璁剧疆鎷惧彇妯″紡鐩戝惉鍣?   */
-  private setupPickModeListeners(): void {
-    const dom = this.renderer.domElement;
-
-    const onPointerDown = (e: PointerEvent | MouseEvent | TouchEvent) => {
-      if (!this.pickMode) return;
-
-      let clientX: number;
-      let clientY: number;
-
-      if (e instanceof TouchEvent) {
-        if (e.touches.length !== 1) return;
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-
-      this.pickStartX = clientX;
-      this.pickStartY = clientY;
-      this.pickStartTime = Date.now();
-      this.pickHasMoved = false;
-    };
-
-    const onPointerMove = (e: PointerEvent | MouseEvent | TouchEvent) => {
-      if (!this.pickMode) return;
-
-      let clientX: number;
-      let clientY: number;
-
-      if (e instanceof TouchEvent) {
-        if (e.touches.length !== 1) return;
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-
-      const dx = Math.abs(clientX - this.pickStartX);
-      const dy = Math.abs(clientY - this.pickStartY);
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance > this.pickDragThreshold) {
-        this.pickHasMoved = true;
-      }
-    };
-
-    const onPointerUp = (e: PointerEvent | MouseEvent | TouchEvent) => {
-      if (!this.pickMode) return;
-
-      let clientX: number;
-      let clientY: number;
-
-      if (e instanceof TouchEvent) {
-        if (e.changedTouches.length !== 1) return;
-        clientX = e.changedTouches[0].clientX;
-        clientY = e.changedTouches[0].clientY;
-      } else {
-        clientX = e.clientX;
-        clientY = e.clientY;
-      }
-
-      const elapsed = Date.now() - this.pickStartTime;
-      const dx = Math.abs(clientX - this.pickStartX);
-      const dy = Math.abs(clientY - this.pickStartY);
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      //
-      // 判断是否为拖动：移动距离 > 阈值 或 按下时间 > 阈值且发生移动
-      const isDrag = distance > this.pickDragThreshold || (elapsed > this.pickTimeThreshold && this.pickHasMoved);
-
-      if (!isDrag) {
-        // 视为点击拾取
-        this.handlePick(clientX, clientY);
-      }
-
-      // 重置状态
-      this.pickHasMoved = false;
-    };
-
-    dom.addEventListener('pointerdown', onPointerDown);
-    dom.addEventListener('mousedown', onPointerDown);
-    dom.addEventListener('touchstart', onPointerDown, { passive: true });
-    dom.addEventListener('pointermove', onPointerMove);
-    dom.addEventListener('mousemove', onPointerMove);
-    dom.addEventListener('touchmove', onPointerMove, { passive: true });
-    dom.addEventListener('pointerup', onPointerUp);
-    dom.addEventListener('mouseup', onPointerUp);
-    dom.addEventListener('touchend', onPointerUp, { passive: true });
-
-    this.pickModeListeners.push(() => {
-      dom.removeEventListener('pointerdown', onPointerDown);
-      dom.removeEventListener('mousedown', onPointerDown);
-      dom.removeEventListener('touchstart', onPointerDown);
-      dom.removeEventListener('pointermove', onPointerMove);
-      dom.removeEventListener('mousemove', onPointerMove);
-      dom.removeEventListener('touchmove', onPointerMove);
-      dom.removeEventListener('pointerup', onPointerUp);
-      dom.removeEventListener('mouseup', onPointerUp);
-      dom.removeEventListener('touchend', onPointerUp);
-    });
-  }
-
-  /**
-   * 绉婚櫎鎷惧彇妯″紡鐩戝惉鍣?   */
-  private removePickModeListeners(): void {
-    this.pickModeListeners.forEach((remove) => remove());
-    this.pickModeListeners = [];
-  }
-
-  /**
-   * 澶勭悊鎷惧彇鐐瑰嚮
-   */
-  private handlePick(clientX: number, clientY: number): void {
+    private handlePick(clientX: number, clientY: number): void {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const ndc = screenToNDC(clientX, clientY, rect);
     const result = getYawPitchFromNDC(ndc.x, ndc.y, this.camera, this.getSphereRadius());
@@ -1514,9 +1276,7 @@ export class PanoViewer {
     );
   }
 
-  /**
-   * 濡傛灉鍏ㄦ櫙鍥炬瘮渚嬩笉鏄?2:1锛屾墦鍗拌鍛婁絾涓嶉樆濉炲姞杞?   */
-  private warnIfNotPanoAspect(texture: Texture, url: string): void {
+    private warnIfNotPanoAspect(texture: Texture, url: string): void {
     if (!texture.image) return;
     const image: any = texture.image;
     const width = image.width;
@@ -1537,13 +1297,8 @@ export class PanoViewer {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-    this.removePickModeListeners();
-    this.clearDomEvents();
+    this.lifecycleRuntime.dispose();
+    this.pickMode = false;
 
     if (this.tilePano) {
       this.tilePano.dispose();
@@ -1577,12 +1332,9 @@ export class PanoViewer {
     }
     this.frameListeners = [];
     this.renderer.dispose();
-    window.removeEventListener('resize', this.handleWindowResize);
   }
 
-  /**
-   * 鏍规嵁棰勮搴旂敤娓叉煋鍣ㄥ弬鏁帮紙鐢ㄤ簬鍘熷/鐮斿浼樺寲瀵规瘮锛?   */
-  private applyRendererProfile(): void {
+    private applyRendererProfile(): void {
     const preset = RENDER_PRESETS[this.renderProfile];
     this.renderer.setPixelRatio(preset.renderer.pixelRatio);
     if ('outputColorSpace' in this.renderer) {
@@ -1597,9 +1349,7 @@ export class PanoViewer {
     }
   }
 
-  /**
-   * 浠?URL 鍙傛暟妫€娴嬫覆鏌撴。浣嶏紙榛樿 Original锛屾敮鎸??render=enhanced锛?   */
-  private detectRenderProfile(): RenderProfile {
+    private detectRenderProfile(): RenderProfile {
     try {
       const params = new URLSearchParams(window.location.search);
       const render = params.get('render');
@@ -1733,4 +1483,6 @@ export class PanoViewer {
     }
   }
 }
+
+
 

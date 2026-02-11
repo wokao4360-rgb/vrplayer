@@ -1,4 +1,4 @@
-﻿import { PerspectiveCamera, Vector3 } from 'three';
+﻿import { PerspectiveCamera, Vector3 } from '../vendor/three-core';
 import type { SceneHotspot } from '../types/config';
 import type { PanoViewer } from '../viewer/PanoViewer';
 import { yawPitchToScreen } from '../viewer/spatialProjection';
@@ -402,5 +402,6 @@ export class Hotspots {
     this.element.remove();
   }
 }
+
 
 

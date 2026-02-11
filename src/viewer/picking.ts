@@ -1,11 +1,11 @@
-import { Camera, MathUtils, Raycaster, Vector2 } from 'three';
+﻿import { MathUtils, Raycaster, Vector2 } from '../vendor/three-core';
+import type { Camera } from 'three';
 
 /**
- * 屏幕坐标转 NDC（标准化设备坐标）
- * @param clientX 屏幕 X 坐标
- * @param clientY 屏幕 Y 坐标
- * @param canvasRect canvas 元素的 getBoundingClientRect()
- * @returns NDC 坐标 { x: [-1,1], y: [-1,1] }
+ * 灞忓箷鍧愭爣杞?NDC锛堟爣鍑嗗寲璁惧鍧愭爣锛? * @param clientX 灞忓箷 X 鍧愭爣
+ * @param clientY 灞忓箷 Y 鍧愭爣
+ * @param canvasRect canvas 鍏冪礌鐨?getBoundingClientRect()
+ * @returns NDC 鍧愭爣 { x: [-1,1], y: [-1,1] }
  */
 export function screenToNDC(
   clientX: number,
@@ -18,15 +18,14 @@ export function screenToNDC(
 }
 
 /**
- * 从 NDC 坐标计算全景球上的 yaw/pitch（度）
- * @param ndcX NDC X 坐标 [-1, 1]
- * @param ndcY NDC Y 坐标 [-1, 1]
- * @param camera Three.js 相机
- * @param sphereRadius 全景球半径（不再使用，保留参数以兼容调用方）
+ * 浠?NDC 鍧愭爣璁＄畻鍏ㄦ櫙鐞冧笂鐨?yaw/pitch锛堝害锛? * @param ndcX NDC X 鍧愭爣 [-1, 1]
+ * @param ndcY NDC Y 鍧愭爣 [-1, 1]
+ * @param camera Three.js 鐩告満
+ * @param sphereRadius 鍏ㄦ櫙鐞冨崐寰勶紙涓嶅啀浣跨敤锛屼繚鐣欏弬鏁颁互鍏煎璋冪敤鏂癸級
  * @returns { yaw: number, pitch: number } | null
- *   - yaw: 水平角（度），范围 [-180, 180]
- *   - pitch: 仰俯角（度），范围 [-90, 90]
- *   - null: 仅在 ray.direction 不存在时返回
+ *   - yaw: 姘村钩瑙掞紙搴︼級锛岃寖鍥?[-180, 180]
+ *   - pitch: 浠颁刊瑙掞紙搴︼級锛岃寖鍥?[-90, 90]
+ *   - null: 浠呭湪 ray.direction 涓嶅瓨鍦ㄦ椂杩斿洖
  */
 export function getYawPitchFromNDC(
   ndcX: number,
@@ -34,26 +33,27 @@ export function getYawPitchFromNDC(
   camera: Camera,
   sphereRadius: number = 500
 ): { yaw: number; pitch: number } | null {
-  // 创建射线
+  // 鍒涘缓灏勭嚎
   const raycaster = new Raycaster();
   raycaster.setFromCamera(new Vector2(ndcX, ndcY), camera);
 
-  // 直接使用 ray.direction（归一化向量）计算 yaw/pitch，不依赖球体相交
+  // 鐩存帴浣跨敤 ray.direction锛堝綊涓€鍖栧悜閲忥級璁＄畻 yaw/pitch锛屼笉渚濊禆鐞冧綋鐩镐氦
   const dir = raycaster.ray.direction;
   if (!dir || dir.length() === 0) {
     return null;
   }
 
-  // 归一化方向向量（确保是单位向量）
+  // 褰掍竴鍖栨柟鍚戝悜閲忥紙纭繚鏄崟浣嶅悜閲忥級
   const normalized = dir.normalize();
 
-  // 计算 pitch（仰俯角）：arcsin(y)，范围 [-90, 90]
+  // 璁＄畻 pitch锛堜话淇锛夛細arcsin(y)锛岃寖鍥?[-90, 90]
   const pitchRad = Math.asin(Math.max(-1, Math.min(1, normalized.y)));
   const pitch = MathUtils.radToDeg(pitchRad);
 
-  // 计算 yaw（水平角）：atan2(x, z)，范围 [-180, 180]
+  // 璁＄畻 yaw锛堟按骞宠锛夛細atan2(x, z)锛岃寖鍥?[-180, 180]
   const yawRad = Math.atan2(normalized.x, normalized.z);
   const yaw = MathUtils.radToDeg(yawRad);
 
   return { yaw, pitch };
 }
+

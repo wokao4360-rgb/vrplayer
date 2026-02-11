@@ -279,3 +279,5 @@ UI 视觉优化	chrome-devtools + playwright	frontend-design + interaction-desig
 文档查询	context7 / openaiDeveloperDocs / deepwiki	openai-docs
 发布上线	shell_command + github	cloudflare-deploy（仅平台改动）
 经验沉淀	memory	无（直接写记忆）
+
+// ## 请忽略这条：未来新功能开发完成正式上线后，实现这个功能：当用户空闲无操作时，自动缓存高清全景原图jpg，当用户下一次再进入已经加载过高清全图的场景时，直接加载缓存的全图，而不是ktx块图

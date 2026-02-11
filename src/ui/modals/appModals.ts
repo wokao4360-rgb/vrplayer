@@ -4,6 +4,7 @@ import { mountModal, type MountedModal } from '../Modal';
 import { showToast } from '../toast';
 import { isMouseDevice, isTouchDevice } from '../../utils/deviceDetect';
 import { getPreferredQuality, setPreferredQuality, type QualityLevel } from '../../utils/qualityPreference';
+import { ZH_CN } from '../../i18n/zh-CN';
 
 type DockCloseTab = 'info' | 'settings';
 
@@ -41,9 +42,9 @@ function createInfoRow(labelText: string, valueText: string): HTMLDivElement {
 export function openInfoModal(options: OpenInfoModalOptions): MountedModal {
   const content = document.createElement('div');
   content.className = 'vr-modal-info-list';
-  content.appendChild(createInfoRow('展馆', options.museumName));
-  content.appendChild(createInfoRow('场景', options.sceneName));
-  content.appendChild(createInfoRow('采集日期', '2025-12-27'));
+  content.appendChild(createInfoRow(ZH_CN.modal.museumLabel, options.museumName));
+  content.appendChild(createInfoRow(ZH_CN.modal.sceneLabel, options.sceneName));
+  content.appendChild(createInfoRow(ZH_CN.modal.collectDateLabel, '2025-12-27'));
 
   const copyrightRow = document.createElement('div');
   copyrightRow.className = 'vr-modal-info-copyright';
@@ -51,7 +52,7 @@ export function openInfoModal(options: OpenInfoModalOptions): MountedModal {
   copyrightBtn.type = 'button';
   copyrightBtn.role = 'button';
   copyrightBtn.className = 'vr-modal-info-copyright-btn';
-  copyrightBtn.textContent = '© 2025 鼎虎清源';
+  copyrightBtn.textContent = ZH_CN.brand.copyright;
   copyrightRow.appendChild(copyrightBtn);
   content.appendChild(copyrightRow);
 
@@ -66,7 +67,7 @@ export function openInfoModal(options: OpenInfoModalOptions): MountedModal {
   });
 
   mounted = mountModal({
-    title: '信息',
+    title: ZH_CN.modal.infoTitle,
     contentEl: content,
     onClose: () => {
       options.onDockTabClose('info');
@@ -85,19 +86,19 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
 
   const qualityLabel = document.createElement('div');
   qualityLabel.className = 'vr-modal-settings-item-label';
-  qualityLabel.textContent = '画质';
+  qualityLabel.textContent = ZH_CN.modal.qualityLabel;
 
   const qualityGroup = document.createElement('div');
   qualityGroup.className = 'vr-modal-settings-quality';
 
   const highBtn = document.createElement('button');
   highBtn.className = 'vr-modal-settings-quality-btn';
-  highBtn.textContent = '高清';
+  highBtn.textContent = ZH_CN.modal.qualityHigh;
   highBtn.dataset.level = 'high';
 
   const lowBtn = document.createElement('button');
   lowBtn.className = 'vr-modal-settings-quality-btn';
-  lowBtn.textContent = '省流';
+  lowBtn.textContent = ZH_CN.modal.qualityLow;
   lowBtn.dataset.level = 'low';
 
   const applyQualityActive = (level: QualityLevel) => {
@@ -125,12 +126,12 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
 
   const resetLabel = document.createElement('div');
   resetLabel.className = 'vr-modal-settings-item-label';
-  resetLabel.textContent = '视角';
+  resetLabel.textContent = ZH_CN.modal.viewLabel;
 
   const resetBtn = document.createElement('button');
   resetBtn.className = 'vr-modal-settings-row-btn';
   resetBtn.type = 'button';
-  resetBtn.textContent = '恢复初始视角';
+  resetBtn.textContent = ZH_CN.modal.resetView;
   resetBtn.addEventListener('click', () => {
     if (!options.currentScene || !options.panoViewer) return;
     const iv = options.currentScene.initialView || { yaw: 0, pitch: 0, fov: 75 };
@@ -147,12 +148,12 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
 
   const vrLabel = document.createElement('div');
   vrLabel.className = 'vr-modal-settings-item-label';
-  vrLabel.textContent = 'VR 眼镜';
+  vrLabel.textContent = ZH_CN.modal.vrLabel;
 
   const vrBtn = document.createElement('button');
   vrBtn.className = 'vr-modal-settings-row-btn';
   vrBtn.type = 'button';
-  vrBtn.textContent = 'VR 眼镜';
+  vrBtn.textContent = ZH_CN.modal.vrLabel;
 
   const syncVrBtnState = () => {
     const active = options.panoViewer?.isVrModeEnabled() ?? false;
@@ -182,7 +183,7 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
 
   const zoomLabel = document.createElement('div');
   zoomLabel.className = 'vr-modal-settings-item-label';
-  zoomLabel.textContent = '缩放';
+  zoomLabel.textContent = ZH_CN.modal.zoomLabel;
 
   const zoomGroup = document.createElement('div');
   zoomGroup.className = 'vr-modal-settings-quality';
@@ -190,12 +191,12 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
 
   const zoomOutBtn = document.createElement('button');
   zoomOutBtn.className = 'vr-modal-settings-quality-btn';
-  zoomOutBtn.textContent = '缩小';
+  zoomOutBtn.textContent = ZH_CN.modal.zoomOut;
   zoomOutBtn.style.minWidth = '70px';
 
   const zoomInBtn = document.createElement('button');
   zoomInBtn.className = 'vr-modal-settings-quality-btn';
-  zoomInBtn.textContent = '放大';
+  zoomInBtn.textContent = ZH_CN.modal.zoomIn;
   zoomInBtn.style.minWidth = '70px';
 
   const handleZoomOut = () => {
@@ -229,7 +230,7 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
   options.bottomDock?.setMoreOpen(true);
 
   return mountModal({
-    title: '更多',
+    title: ZH_CN.modal.settingsTitle,
     contentEl: container,
     panelClassName: 'vr-modal-settings',
     onClose: () => {

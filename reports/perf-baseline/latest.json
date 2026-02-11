@@ -1,38 +1,44 @@
 {
-  "generatedAt": "2026-02-11 22:57:55",
+  "generatedAt": "2026-02-12 00:26:25",
   "metrics": {
-    "indexJsKB": 57.37,
-    "panoViewerJsKB": 69.2,
-    "threeRendererJsKB": 501.39,
-    "threeMathJsKB": 2.28,
-    "threeRenderMathCombinedKB": 503.68,
-    "totalJsKB": 992.3,
+    "indexJsKB": 58.43,
+    "panoViewerJsKB": 65.6,
+    "threeRendererJsKB": 459.82,
+    "threeMathJsKB": null,
+    "threeRenderMathCombinedKB": 459.82,
+    "totalJsKB": 1458.82,
     "totalCssKB": 55.58
   },
   "topAssets": [
     {
-      "name": "three-renderer-toiwjbvW.js",
+      "name": "three.module-Brkpord5.js",
       "ext": ".js",
-      "sizeBytes": 513426,
-      "sizeKB": 501.39
+      "sizeBytes": 513408,
+      "sizeKB": 501.38
     },
     {
-      "name": "three-extras-3VrNSzCK.js",
+      "name": "three-renderer-DqCmgmK_.js",
       "ext": ".js",
-      "sizeBytes": 104078,
-      "sizeKB": 101.64
+      "sizeBytes": 470858,
+      "sizeKB": 459.82
     },
     {
-      "name": "PanoViewer-Liv3T7Fw.js",
+      "name": "three-extras-F77eSNTx.js",
       "ext": ".js",
-      "sizeBytes": 70861,
-      "sizeKB": 69.2
+      "sizeBytes": 104070,
+      "sizeKB": 101.63
     },
     {
-      "name": "index-eWkhSg8A.js",
+      "name": "PanoViewer-tVEm8XCm.js",
       "ext": ".js",
-      "sizeBytes": 58748,
-      "sizeKB": 57.37
+      "sizeBytes": 67176,
+      "sizeKB": 65.6
+    },
+    {
+      "name": "index-CntEWe8z.js",
+      "ext": ".js",
+      "sizeBytes": 59830,
+      "sizeKB": 58.43
     },
     {
       "name": "index-BfJu72vJ.css",
@@ -41,46 +47,40 @@
       "sizeKB": 55.58
     },
     {
-      "name": "editor-debug-mWv5z7Kh.js",
+      "name": "editor-debug-Dy3AxbKg.js",
       "ext": ".js",
       "sizeBytes": 56163,
       "sizeKB": 54.85
     },
     {
-      "name": "chat-community-Dwo08PGa.js",
+      "name": "chat-community-C7AQ4g7Y.js",
       "ext": ".js",
       "sizeBytes": 39802,
       "sizeKB": 38.87
     },
     {
-      "name": "dock-panels-DSIdrbB3.js",
+      "name": "tile-ktx2-ilAKl5fw.js",
       "ext": ".js",
-      "sizeBytes": 26237,
-      "sizeKB": 25.62
-    },
-    {
-      "name": "tile-ktx2-DhqDmZCN.js",
-      "ext": ".js",
-      "sizeBytes": 26118,
+      "sizeBytes": 26120,
       "sizeKB": 25.51
     },
     {
-      "name": "scene-runtime-HHSQgGxQ.js",
+      "name": "dock-panels-BDqLbesR.js",
       "ext": ".js",
-      "sizeBytes": 11522,
-      "sizeKB": 11.25
+      "sizeBytes": 18329,
+      "sizeKB": 17.9
     },
     {
-      "name": "Hotspots-DMmqx2Du.js",
+      "name": "scene-runtime-B080iYiH.js",
       "ext": ".js",
-      "sizeBytes": 8318,
-      "sizeKB": 8.12
+      "sizeBytes": 11066,
+      "sizeKB": 10.81
     },
     {
-      "name": "StructureView2D-k3a6hmJS.js",
+      "name": "structure3d-runtime-BBIptQ-6.js",
       "ext": ".js",
-      "sizeBytes": 7679,
-      "sizeKB": 7.5
+      "sizeBytes": 10817,
+      "sizeKB": 10.56
     }
   ]
 }

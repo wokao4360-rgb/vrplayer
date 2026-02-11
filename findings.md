@@ -188,3 +188,39 @@
    - 首屏 snapshot：无学伴头像浮窗；
    - 点击社区后 snapshot：出现“打开三馆学伴”按钮；
    - network：在未点击前已加载 `GuideTray/VideoPlayer/SceneGuideDrawer/dock-panels/chat-community/appModals`，确认后台预热已生效。
+
+## 第九轮新增发现（2026-02-12 00:24:13）
+1. `StructureView3D` 仍携带 three 构建细节，首开 3D 时解析与初始化链路偏重，且难以独立复用。
+2. `PanoViewer` 早期初始化路径里存在 `NadirPatch` 提前进入风险，影响首屏链路纯度。
+3. 交互模块预热虽已接入，但缺少统一预算器时会出现任务同时触发、抢占网络和主线程的问题。
+4. 中文文案已经修复多轮，必须将“编码校验 + 文案单一来源”变成构建硬闸，才能防止回退。
+
+## 第九轮实施结果（2026-02-12 00:24:13）
+1. three 链路瘦身（P0）：
+   - `StructureView3D` 改为 UI 外壳，three 场景逻辑迁移到 `src/ui/structure3d/StructureSceneRuntime.ts` 并按需加载。
+   - `PanoViewer` 中 `NadirPatch` 改为条件触发 `ensureNadirPatch()`，不再在常规首屏路径强制加载。
+2. 结构解耦（P0）：
+   - 新增 `src/app/viewSessionRuntime.ts` 与 `src/viewer/panoLifecycleRuntime.ts`，将入口调度与 viewer 生命周期治理拆出。
+3. 预热预算化（P1）：
+   - 新增 `src/app/warmupScheduler.ts`，按网络状态和模式（`immediate/idle`）分配预热预算，保持全速渲染且不降画质。
+4. 中文守卫永久化（P1）：
+   - 新增 `scripts/check-encoding.mjs`，并与 `check:text` 共同前置到 `npm run build`。
+   - 文案统一至 `src/i18n/zh-CN.ts`，减少散落硬编码导致的乱码回归。
+
+## 第九轮待发布项（2026-02-12 00:24:13）
+1. 执行最终验证：`npm run check:encoding`、`npm run check:text`、`npm run build`、`npm run perf:baseline`。
+2. 使用 `chrome-devtools` 完成本轮最终证据采样（`snapshot + network + console`）。
+3. 按 SOP 一次发布，并按用户要求将 `AGENTS.md` 一并提交上线。
+
+## 第九轮最终验证结果（2026-02-12 00:28:56）
+1. 命令验证全部通过：
+   - `check:encoding` 通过；
+   - `check:text` 通过；
+   - `build` 通过；
+   - `perf:baseline` 通过（`index=58.43kB`，`three-renderer=459.82kB`）。
+2. `chrome-devtools` 证据结论：
+   - snapshot：标题/品牌/信息弹窗均为正确简体中文；
+   - network：点击“社区”后出现学伴入口，点击“三维模型”后首次请求 `structure3d-runtime`；
+   - console：仅保留非阻断警告，无新增阻断错误。
+3. 注意项：
+   - 构建产物仍会生成 `three.module-*.js`（用于可选链路），不在 HTML preload 中，不阻塞首页渲染路径。

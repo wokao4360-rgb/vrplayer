@@ -1,4 +1,4 @@
-import { CanvasTexture, SRGBColorSpace } from 'three';
+﻿import { CanvasTexture, SRGBColorSpace } from '../vendor/three-core';
 
 export function createCompassTexture(size = 512): CanvasTexture {
   const canvas = document.createElement('canvas');
@@ -6,7 +6,7 @@ export function createCompassTexture(size = 512): CanvasTexture {
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
-    // 兜底：创建一个空纹理
+    // 鍏滃簳锛氬垱寤轰竴涓┖绾圭悊
     const fallback = new CanvasTexture(canvas);
     fallback.needsUpdate = true;
     return fallback;
@@ -18,7 +18,7 @@ export function createCompassTexture(size = 512): CanvasTexture {
 
   ctx.clearRect(0, 0, size, size);
 
-  // 外圈暗角（轻微）
+  // 澶栧湀鏆楄锛堣交寰級
   const vignette = ctx.createRadialGradient(cx, cy, r * 0.25, cx, cy, r);
   vignette.addColorStop(0, 'rgba(0,0,0,0.00)');
   vignette.addColorStop(0.55, 'rgba(0,0,0,0.18)');
@@ -29,14 +29,14 @@ export function createCompassTexture(size = 512): CanvasTexture {
   ctx.closePath();
   ctx.fill();
 
-  // 中心遮挡区（遮住摄影杆/三脚架）
+  // 涓績閬尅鍖猴紙閬綇鎽勫奖鏉?涓夎剼鏋讹級
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   ctx.beginPath();
   ctx.arc(cx, cy, r * 0.28, 0, Math.PI * 2);
   ctx.closePath();
   ctx.fill();
 
-  // 中心轻微“雾化感”（不用真实模糊，叠层即可）
+  // 涓績杞诲井鈥滈浘鍖栨劅鈥濓紙涓嶇敤鐪熷疄妯＄硦锛屽彔灞傚嵆鍙級
   const haze = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.42);
   haze.addColorStop(0, 'rgba(0,0,0,0.22)');
   haze.addColorStop(1, 'rgba(0,0,0,0.00)');
@@ -46,8 +46,7 @@ export function createCompassTexture(size = 512): CanvasTexture {
   ctx.closePath();
   ctx.fill();
 
-  // 刻度线（每 30° 一条，轻量）
-  ctx.save();
+  // 鍒诲害绾匡紙姣?30掳 涓€鏉★紝杞婚噺锛?  ctx.save();
   ctx.translate(cx, cy);
   for (let deg = 0; deg < 360; deg += 30) {
     const rad = (deg * Math.PI) / 180;
@@ -63,10 +62,10 @@ export function createCompassTexture(size = 512): CanvasTexture {
   }
   ctx.restore();
 
-  // 如视模型：文字不再画在纹理上，而是使用独立的sprite
-  // 这里只绘制刻度线和背景，文字由NadirPatch创建独立的sprite
+  // 濡傝妯″瀷锛氭枃瀛椾笉鍐嶇敾鍦ㄧ汗鐞嗕笂锛岃€屾槸浣跨敤鐙珛鐨剆prite
+  // 杩欓噷鍙粯鍒跺埢搴︾嚎鍜岃儗鏅紝鏂囧瓧鐢盢adirPatch鍒涘缓鐙珛鐨剆prite
 
-  // 外圈边缘再压一点（让 patch 更“贴地”）
+  // 澶栧湀杈圭紭鍐嶅帇涓€鐐癸紙璁?patch 鏇粹€滆创鍦扳€濓級
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -76,13 +75,13 @@ export function createCompassTexture(size = 512): CanvasTexture {
 
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace as any;
-  // 设置纹理中心点和旋转，确保文字方向正确
-  texture.center.set(0.5, 0.5);
+  // 璁剧疆绾圭悊涓績鐐瑰拰鏃嬭浆锛岀‘淇濇枃瀛楁柟鍚戞纭?  texture.center.set(0.5, 0.5);
   texture.rotation = 0;
-  texture.flipY = false; // 防止纹理上下翻转导致文字镜像
+  texture.flipY = false; // 闃叉绾圭悊涓婁笅缈昏浆瀵艰嚧鏂囧瓧闀滃儚
   texture.needsUpdate = true;
   return texture;
 }
+
 
 
 

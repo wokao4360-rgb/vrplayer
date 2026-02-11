@@ -1,15 +1,11 @@
 /**
- * StructureView3D - 全屏3D结构图Overlay
- * 显示场景图的三维视图（节点=scene球体，边=scene热点跳转连线）
+ * StructureView3D - 全屏 3D 结构图 Overlay（UI 壳层）
+ * 运行时逻辑在 structure3d/StructureSceneRuntime 中按需加载
  */
 
-import * as THREE from 'three';
 import type { Museum } from '../types/config';
 import type { SceneGraph } from '../graph/sceneGraph';
-import { getNodeDegree } from '../graph/sceneGraph';
-import { forceLayout2D, shouldUseAutoLayout } from '../graph/autoLayout';
-import { navigateToScene } from '../utils/router';
-import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
+import type { StructureSceneRuntime } from './structure3d/StructureSceneRuntime';
 
 type StructureView3DOptions = {
   museum: Museum;
@@ -19,29 +15,29 @@ type StructureView3DOptions = {
   onNodeClick?: (museumId: string, sceneId: string) => void;
 };
 
+type StructureRuntimeModule = typeof import('./structure3d/StructureSceneRuntime');
+
 export class StructureView3D {
   private element: HTMLElement;
   private container: HTMLElement;
-  private scene: THREE.Scene | null = null;
-  private camera: THREE.PerspectiveCamera | null = null;
-  private renderer: THREE.WebGLRenderer | null = null;
-  private controls: any; // OrbitControls (动态导入)
   private museum: Museum;
   private graph: SceneGraph;
   private currentSceneId: string;
   private onClose?: () => void;
   private onNodeClick?: (museumId: string, sceneId: string) => void;
-  private animationId: number | null = null;
-  private sceneNodes: Map<string, THREE.Mesh> = new Map();
-  private edgeLines: THREE.Line[] = [];
-  private hoveredSceneId: string | null = null;
-  private resizeObserver: ResizeObserver | null = null;
-  private readonly handleWindowResize = () => this.handleResize();
   private statusEl: HTMLElement | null = null;
   private webglErrorEl: HTMLElement | null = null;
   private modelErrorEl: HTMLElement | null = null;
-  private modelGroup: THREE.Group | null = null; // 真实模型组
-  private modelLoaded: boolean = false; // 模型是否加载成功
+  private runtime: StructureSceneRuntime | null = null;
+  private runtimeModulePromise: Promise<StructureRuntimeModule> | null = null;
+  private runtimeInitPromise: Promise<void> | null = null;
+  private opened = false;
+  private disposed = false;
+  private readonly handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      this.close();
+    }
+  };
 
   constructor(options: StructureView3DOptions) {
     this.museum = options.museum;
@@ -57,13 +53,54 @@ export class StructureView3D {
     this.container.className = 'vr-structure3d-canvas';
 
     this.render();
-    this.init3D().then(() => {
-      this.bindEvents();
+    void this.ensureRuntime();
+  }
+
+  getElement(): HTMLElement {
+    return this.element;
+  }
+
+  updateContext(opts: { museum: Museum; graph: SceneGraph; currentSceneId: string }): void {
+    this.museum = opts.museum;
+    this.graph = opts.graph;
+    this.currentSceneId = opts.currentSceneId;
+    this.runtime?.updateContext(opts);
+    this.updateStatusText('loading');
+  }
+
+  open(): void {
+    this.element.classList.add('is-visible');
+    this.opened = true;
+    document.addEventListener('keydown', this.handleKeyDown);
+    void this.ensureRuntime().then(() => {
+      if (this.disposed || !this.opened) return;
+      this.runtime?.open();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this.runtime?.open();
+        });
+      });
     });
   }
 
+  close(): void {
+    this.element.classList.remove('is-visible');
+    this.opened = false;
+    document.removeEventListener('keydown', this.handleKeyDown);
+    this.onClose?.();
+  }
+
+  remove(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.opened = false;
+    document.removeEventListener('keydown', this.handleKeyDown);
+    this.runtime?.dispose();
+    this.runtime = null;
+    this.element.remove();
+  }
+
   private render(): void {
-    // Header
     const header = document.createElement('div');
     header.className = 'vr-structure3d-header';
 
@@ -76,13 +113,9 @@ export class StructureView3D {
     title.className = 'vr-structure3d-title';
     title.textContent = '三维模型';
 
-    // 状态自检文本（可视化，不看控制台）
     this.statusEl = document.createElement('div');
     this.statusEl.className = 'vr-structure3d-status';
-    this.updateStatusText();
-
-    titleWrapper.appendChild(title);
-    titleWrapper.appendChild(this.statusEl);
+    this.updateStatusText('loading');
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'vr-btn vr-structure3d-close';
@@ -92,10 +125,11 @@ export class StructureView3D {
       this.close();
     });
 
+    titleWrapper.appendChild(title);
+    titleWrapper.appendChild(this.statusEl);
     header.appendChild(titleWrapper);
     header.appendChild(closeBtn);
 
-    // WebGL 错误提示（初始隐藏）
     this.webglErrorEl = document.createElement('div');
     this.webglErrorEl.className = 'vr-structure3d-webgl-error';
     this.webglErrorEl.style.display = 'none';
@@ -106,7 +140,6 @@ export class StructureView3D {
       </div>
     `;
 
-    // 模型加载失败提示（初始隐藏）
     this.modelErrorEl = document.createElement('div');
     this.modelErrorEl.className = 'vr-structure3d-model-error';
     this.modelErrorEl.style.display = 'none';
@@ -117,655 +150,81 @@ export class StructureView3D {
       </div>
     `;
 
-    // Assemble
     this.element.appendChild(header);
     this.element.appendChild(this.container);
     this.element.appendChild(this.webglErrorEl);
     this.element.appendChild(this.modelErrorEl);
   }
 
-  private updateStatusText(): void {
-    if (!this.statusEl) return;
-    const nodeCount = this.graph.nodes.length;
-    const edgeCount = this.graph.edges.length;
-    const w = this.container?.clientWidth || 0;
-    const h = this.container?.clientHeight || 0;
-    const modelStatus = this.modelLoaded ? 'loaded' : (this.museum.dollhouse?.modelUrl ? 'loading' : 'none');
-    
-    if (nodeCount === 0) {
-      this.statusEl.textContent = `model: ${modelStatus}, No nodes (check museum.scenes)`;
-      this.statusEl.style.color = 'rgba(255,200,100,0.9)';
-    } else {
-      this.statusEl.textContent = `model: ${modelStatus}, nodes: ${nodeCount}, edges: ${edgeCount}, size: ${w}x${h}`;
-      this.statusEl.style.color = 'rgba(255,255,255,0.65)';
+  private async ensureRuntime(): Promise<void> {
+    if (this.runtime || this.disposed) return;
+    if (this.runtimeInitPromise) {
+      await this.runtimeInitPromise;
+      return;
     }
-  }
 
-  private async init3D(): Promise<void> {
-    try {
-      // 创建场景
-      this.scene = new THREE.Scene();
-      this.scene.background = null; // 透明背景
-
-      // 创建相机（使用合理的初始值，后续会在 open() 时重新设置）
-      const initialAspect = this.container.clientWidth > 0 
-        ? this.container.clientWidth / this.container.clientHeight 
-        : window.innerWidth / window.innerHeight;
-      this.camera = new THREE.PerspectiveCamera(60, initialAspect, 0.1, 1000);
-      this.camera.position.set(0, 12, 18);
-      this.camera.lookAt(0, 0, 0);
-
-      // 创建渲染器（捕获 WebGL 错误）
-      try {
-        this.renderer = new THREE.WebGLRenderer({
-          antialias: true,
-          alpha: true,
-        });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.container.appendChild(this.renderer.domElement);
-      } catch (webglError) {
-        // WebGL 不可用
-        if (this.webglErrorEl) {
-          this.webglErrorEl.style.display = 'block';
-        }
+    const pending = (async () => {
+      const { StructureSceneRuntime } = await this.loadRuntimeModule();
+      if (this.disposed) return;
+      const runtime = new StructureSceneRuntime({
+        container: this.container,
+        museum: this.museum,
+        graph: this.graph,
+        currentSceneId: this.currentSceneId,
+        onNodeClick: this.onNodeClick,
+        onStatusChange: (status) => {
+          this.updateStatusText(status.modelStatus, status.nodeCount, status.edgeCount, status.width, status.height);
+        },
+        onWebGlUnavailable: () => {
+          if (this.webglErrorEl) {
+            this.webglErrorEl.style.display = 'block';
+          }
+        },
+        onModelError: (message) => {
+          if (!this.modelErrorEl) return;
+          this.modelErrorEl.style.display = message ? 'block' : 'none';
+        },
+      });
+      const ready = await runtime.init();
+      if (!ready || this.disposed) {
+        runtime.dispose();
         return;
       }
-
-      // 初始化 OrbitControls
-      try {
-        const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.05;
-        this.controls.minDistance = 3;
-        this.controls.maxDistance = 50;
-        this.controls.maxPolarAngle = Math.PI / 2.2;
-        this.controls.minPolarAngle = Math.PI / 6;
-        this.controls.target.set(0, 0, 0);
-      } catch (error) {
-        // OrbitControls 加载失败，仍然可以渲染，只是没有交互控制
+      this.runtime = runtime;
+      if (this.opened) {
+        runtime.open();
       }
-
-      // 添加基础光照
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      this.scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
-      directionalLight.position.set(5, 10, 5);
-      this.scene.add(directionalLight);
-
-      // 创建模型组（用于真实模型）
-      this.modelGroup = new THREE.Group();
-      this.scene.add(this.modelGroup);
-
-      // 加载真实模型（如果存在）
-      if (this.museum.dollhouse?.modelUrl) {
-        this.loadModel();
-      } else {
-        // 没有模型，直接生成 graph
-        this.generateGraph();
+    })().finally(() => {
+      if (this.runtimeInitPromise === pending) {
+        this.runtimeInitPromise = null;
       }
+    });
 
-      // 设置 ResizeObserver（监听容器尺寸变化）
-      this.setupResizeObserver();
+    this.runtimeInitPromise = pending;
+    await pending;
+  }
 
-      // 更新状态文本
-      this.updateStatusText();
-    } catch (error) {
-      // 初始化失败，显示错误提示
-      if (this.webglErrorEl) {
-        this.webglErrorEl.style.display = 'block';
-      }
+  private loadRuntimeModule(): Promise<StructureRuntimeModule> {
+    if (!this.runtimeModulePromise) {
+      this.runtimeModulePromise = import('./structure3d/StructureSceneRuntime');
     }
+    return this.runtimeModulePromise;
   }
 
-  private async loadModel(): Promise<void> {
-    if (!this.museum.dollhouse?.modelUrl || !this.scene || !this.modelGroup) return;
-
-    const modelUrl = resolveAssetUrl(this.museum.dollhouse.modelUrl, AssetType.DOLLHOUSE);
-    if (!modelUrl) return;
-
-    try {
-      // 动态导入 GLTFLoader
-      const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-      const loader = new GLTFLoader();
-
-      const gltf = await loader.loadAsync(modelUrl);
-
-      // 清除旧模型
-      while (this.modelGroup.children.length > 0) {
-        const child = this.modelGroup.children[0];
-        this.modelGroup.remove(child);
-        if (child instanceof THREE.Mesh || child instanceof THREE.Group) {
-          child.traverse((obj) => {
-            if (obj instanceof THREE.Mesh) {
-              obj.geometry?.dispose();
-              if (Array.isArray(obj.material)) {
-                obj.material.forEach((m) => m.dispose());
-              } else {
-                obj.material?.dispose();
-              }
-            }
-          });
-        }
-      }
-
-      // 应用 scale 和 offset
-      const model = gltf.scene;
-      const scale = this.museum.dollhouse.scale ?? 1;
-      const offset = this.museum.dollhouse.offset ?? { x: 0, y: 0, z: 0 };
-
-      model.scale.set(scale, scale, scale);
-      model.position.set(offset.x, offset.y, offset.z);
-
-      this.modelGroup.add(model);
-      this.modelLoaded = true;
-
-      // 加载模型后生成点位（悬浮节点）
-      this.generateGraph();
-
-      // Fit to view
-      this.fitModelToView();
-
-      // 更新状态
-      this.updateStatusText();
-
-      // 隐藏错误提示
-      if (this.modelErrorEl) {
-        this.modelErrorEl.style.display = 'none';
-      }
-    } catch (error) {
-      // 模型加载失败
-      this.modelLoaded = false;
-      this.updateStatusText();
-
-      // 显示错误提示
-      if (this.modelErrorEl) {
-        this.modelErrorEl.style.display = 'block';
-      }
-
-      // 仍然生成 graph（fallback）
-      this.generateGraph();
-    }
-  }
-
-  private fitModelToView(): void {
-    if (!this.modelGroup || !this.scene || !this.camera || !this.controls) return;
-
-    // 计算模型的 bounding box
-    const box = new THREE.Box3().setFromObject(this.modelGroup);
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 2; // 距离倍数
-
-    // 设置相机位置和目标
-    this.camera.position.set(center.x, center.y + size.y * 0.5, center.z + distance);
-    this.camera.lookAt(center);
-    this.camera.updateProjectionMatrix();
-
-    // 设置 controls 目标
-    this.controls.target.copy(center);
-    this.controls.update();
-
-    // 调整 controls 距离限制
-    this.controls.minDistance = maxDim * 0.5;
-    this.controls.maxDistance = maxDim * 5;
-  }
-
-  private setupResizeObserver(): void {
-    if (!this.container || typeof ResizeObserver === 'undefined') {
-      // 降级到 window resize
-      window.addEventListener('resize', this.handleWindowResize);
+  private updateStatusText(
+    modelStatus: 'none' | 'loading' | 'loaded' | 'error' = 'loading',
+    nodeCount = 0,
+    edgeCount = 0,
+    width = 0,
+    height = 0,
+  ): void {
+    if (!this.statusEl) return;
+    if (nodeCount === 0) {
+      this.statusEl.textContent = `model: ${modelStatus}, no nodes`;
+      this.statusEl.style.color = 'rgba(255,200,100,0.9)';
       return;
     }
-
-    this.resizeObserver = new ResizeObserver(() => {
-      this.handleResize();
-    });
-    this.resizeObserver.observe(this.container);
-  }
-
-  private handleResize(): void {
-    if (!this.renderer || !this.camera || !this.container) return;
-
-    const width = this.container.clientWidth;
-    const height = this.container.clientHeight;
-
-    if (width === 0 || height === 0) return;
-
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height, false);
-    
-    // 更新状态文本
-    this.updateStatusText();
-  }
-
-  private generateGraph(): void {
-    if (!this.scene) return;
-
-    // 清理现有节点和边
-    this.sceneNodes.forEach((mesh) => {
-      this.scene!.remove(mesh);
-      mesh.geometry.dispose();
-      if (Array.isArray(mesh.material)) {
-        mesh.material.forEach((m) => m.dispose());
-      } else {
-        mesh.material.dispose();
-      }
-    });
-    this.sceneNodes.clear();
-
-    this.edgeLines.forEach((line) => {
-      this.scene!.remove(line);
-      line.geometry.dispose();
-      if (Array.isArray(line.material)) {
-        line.material.forEach((m) => m.dispose());
-      } else {
-        line.material.dispose();
-      }
-    });
-    this.edgeLines = [];
-
-    // 如果有真实模型，不渲染边（只渲染悬浮节点）
-    const hasRealModel = this.modelLoaded && this.modelGroup && this.modelGroup.children.length > 0;
-
-    // 计算2D布局
-    const useAutoLayout = shouldUseAutoLayout(this.graph.nodes);
-    const mapWidth = this.museum.map?.width || 1000;
-    const mapHeight = this.museum.map?.height || 600;
-
-    let layout2D: Record<string, { x: number; y: number }> = {};
-
-    if (useAutoLayout) {
-      layout2D = forceLayout2D(this.graph.nodes, this.graph.edges, {
-        width: mapWidth,
-        height: mapHeight,
-        iterations: 300,
-        padding: 40,
-      });
-    } else {
-      for (const node of this.graph.nodes) {
-        if (node.mapPoint) {
-          layout2D[node.id] = {
-            x: node.mapPoint.x,
-            y: node.mapPoint.y,
-          };
-        }
-      }
-    }
-
-    // 归一化到 3D 空间（-10 到 10 的范围）
-    const normalizeTo3D = (
-      layout: Record<string, { x: number; y: number }>
-    ): Record<string, { x: number; y: number; z: number }> => {
-      const entries = Object.entries(layout);
-      if (entries.length === 0) return {};
-
-      let minX = Infinity,
-        maxX = -Infinity,
-        minY = Infinity,
-        maxY = -Infinity;
-
-      for (const [, p] of entries) {
-        minX = Math.min(minX, p.x);
-        maxX = Math.max(maxX, p.x);
-        minY = Math.min(minY, p.y);
-        maxY = Math.max(maxY, p.y);
-      }
-
-      const spanX = maxX - minX || 1;
-      const spanY = maxY - minY || 1;
-      const scaleX = 20 / spanX;
-      const scaleZ = 20 / spanY;
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-
-      const layout3D: Record<string, { x: number; y: number; z: number }> = {};
-
-      for (const [id, p] of entries) {
-        const degree = getNodeDegree(this.graph, id);
-        const zNoise = (Math.random() - 0.5) * 0.5;
-        layout3D[id] = {
-          x: (p.x - centerX) * scaleX,
-          y: degree * 1.5 + zNoise, // z = degree * 1.5 + 噪声
-          z: (p.y - centerY) * scaleZ,
-        };
-      }
-
-      return layout3D;
-    };
-
-    const layout3D = normalizeTo3D(layout2D);
-
-    // 渲染边（先渲染边，节点在上层）- 仅在没有真实模型时渲染
-    if (!hasRealModel) {
-      for (const edge of this.graph.edges) {
-        const fromPos = layout3D[edge.from];
-        const toPos = layout3D[edge.to];
-
-        if (!fromPos || !toPos) continue;
-
-        const geometry = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(fromPos.x, fromPos.y, fromPos.z),
-          new THREE.Vector3(toPos.x, toPos.y, toPos.z),
-        ]);
-
-        const material = new THREE.LineBasicMaterial({
-          color: 0xffffff,
-          opacity: 0.3,
-          transparent: true,
-        });
-
-        const line = new THREE.Line(geometry, material);
-        this.scene.add(line);
-        this.edgeLines.push(line);
-      }
-    }
-
-    // 渲染节点（球体）- 如果有真实模型，节点作为悬浮点位
-    for (const node of this.graph.nodes) {
-      const pos = layout3D[node.id];
-      if (!pos) continue;
-
-      const isCurrent = node.id === this.currentSceneId;
-
-      // 创建球体
-      const geometry = new THREE.SphereGeometry(
-        isCurrent ? 0.8 : 0.6,
-        16,
-        16
-      );
-      const material = new THREE.MeshStandardMaterial({
-        color: isCurrent ? 0x4a90e2 : 0x888888,
-        opacity: isCurrent ? 0.9 : 0.7,
-        transparent: true,
-        metalness: 0.1,
-        roughness: 0.7,
-      });
-
-      const mesh = new THREE.Mesh(geometry, material);
-      
-      // 如果有真实模型，节点悬浮在模型上方（基于模型中心）
-      if (hasRealModel && this.modelGroup) {
-        const box = new THREE.Box3().setFromObject(this.modelGroup);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        // 节点位置：在模型上方 + 基于 layout3D 的相对位置
-        mesh.position.set(
-          center.x + pos.x * 0.1, // 缩放布局坐标以适应模型尺寸
-          center.y + size.y * 0.5 + pos.y * 0.1 + 1, // 悬浮在模型上方
-          center.z + pos.z * 0.1
-        );
-      } else {
-        // 没有真实模型，使用原始布局坐标
-        mesh.position.set(pos.x, pos.y, pos.z);
-      }
-
-      mesh.userData = { sceneId: node.id, sceneName: node.name };
-
-      // 当前节点添加脉冲动画（通过 scale）
-      if (isCurrent) {
-        mesh.userData.isCurrent = true;
-        mesh.scale.set(1.2, 1.2, 1.2);
-      }
-
-      this.scene.add(mesh);
-      this.sceneNodes.set(node.id, mesh);
-    }
-  }
-
-  private animate = (): void => {
-    if (!this.renderer || !this.scene || !this.camera) {
-      return;
-    }
-
-    this.animationId = requestAnimationFrame(this.animate);
-
-    // 更新 controls
-    if (this.controls) {
-      this.controls.update();
-    }
-
-    // 更新当前节点的脉冲动画
-    const time = Date.now() * 0.001;
-    this.sceneNodes.forEach((mesh) => {
-      if (mesh.userData.isCurrent) {
-        const pulse = Math.sin(time * 2) * 0.1 + 1;
-        mesh.scale.set(pulse * 1.2, pulse * 1.2, pulse * 1.2);
-        const material = mesh.material as THREE.MeshStandardMaterial;
-        material.opacity = 0.7 + Math.sin(time * 2) * 0.2;
-      }
-    });
-
-    // 渲染
-    this.renderer.render(this.scene, this.camera);
-  };
-
-  private handleClick(event: MouseEvent): void {
-    if (!this.renderer || !this.camera || this.sceneNodes.size === 0) return;
-
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
-
-    const intersects = raycaster.intersectObjects(
-      Array.from(this.sceneNodes.values())
-    );
-
-    if (intersects.length > 0) {
-      const mesh = intersects[0].object as THREE.Mesh;
-      const sceneId = mesh.userData.sceneId;
-
-      if (sceneId && this.onNodeClick) {
-        this.onNodeClick(this.museum.id, sceneId);
-      }
-    }
-  }
-
-  private handleMouseMove(event: MouseEvent): void {
-    if (!this.renderer || !this.camera || this.sceneNodes.size === 0) return;
-
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
-
-    const intersects = raycaster.intersectObjects(
-      Array.from(this.sceneNodes.values())
-    );
-
-    // 重置所有节点的 hover 状态
-    this.sceneNodes.forEach((mesh) => {
-      const material = mesh.material as THREE.MeshStandardMaterial;
-      if (!mesh.userData.isCurrent) {
-        material.opacity = 0.7;
-      }
-    });
-
-    // 设置 hover 节点
-    if (intersects.length > 0) {
-      const mesh = intersects[0].object as THREE.Mesh;
-      const material = mesh.material as THREE.MeshStandardMaterial;
-      const sceneId = mesh.userData.sceneId;
-
-      if (!mesh.userData.isCurrent) {
-        material.opacity = 0.9;
-      }
-
-      this.hoveredSceneId = sceneId;
-      this.renderer.domElement.style.cursor = 'pointer';
-    } else {
-      this.hoveredSceneId = null;
-      this.renderer.domElement.style.cursor = 'default';
-    }
-  }
-
-  private bindEvents(): void {
-    if (!this.renderer) return;
-    
-    const canvas = this.renderer.domElement;
-
-    canvas.addEventListener('click', (e) => this.handleClick(e));
-    canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-
-    // ESC key
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        this.close();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    this.element.addEventListener('vr:cleanup', () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    });
-  }
-
-  updateContext(opts: {
-    museum: Museum;
-    graph: SceneGraph;
-    currentSceneId: string;
-  }): void {
-    this.museum = opts.museum;
-    this.graph = opts.graph;
-    this.currentSceneId = opts.currentSceneId;
-
-    if (this.scene) {
-      // 如果模型 URL 变化，重新加载模型
-      const newModelUrl = opts.museum.dollhouse?.modelUrl;
-      const oldModelUrl = this.museum.dollhouse?.modelUrl;
-      
-      if (newModelUrl !== oldModelUrl) {
-        // 清除旧模型
-        if (this.modelGroup) {
-          while (this.modelGroup.children.length > 0) {
-            const child = this.modelGroup.children[0];
-            this.modelGroup.remove(child);
-          }
-        }
-        this.modelLoaded = false;
-        
-        // 加载新模型
-        if (newModelUrl) {
-          this.loadModel();
-        } else {
-          this.generateGraph();
-        }
-      } else {
-        this.generateGraph();
-      }
-      this.updateStatusText();
-    }
-  }
-
-  open(): void {
-    this.element.classList.add('is-visible');
-    
-    // overlay visible 后，延迟一帧确保尺寸正确
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        this.handleResize();
-        // 确保渲染循环已启动
-        if (!this.animationId && this.renderer && this.scene && this.camera) {
-          this.animate();
-        }
-      });
-    });
-  }
-
-  close(): void {
-    this.element.classList.remove('is-visible');
-    if (this.onClose) {
-      this.onClose();
-    }
-  }
-
-  getElement(): HTMLElement {
-    return this.element;
-  }
-
-  remove(): void {
-    // 清理动画
-    if (this.animationId !== null) {
-      cancelAnimationFrame(this.animationId);
-      this.animationId = null;
-    }
-
-    // 清理 ResizeObserver
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
-    }
-
-    // 清理节点
-    if (this.scene) {
-      this.sceneNodes.forEach((mesh) => {
-        this.scene!.remove(mesh);
-        mesh.geometry.dispose();
-        if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((m) => m.dispose());
-        } else {
-          mesh.material.dispose();
-        }
-      });
-      this.sceneNodes.clear();
-
-      // 清理边
-      this.edgeLines.forEach((line) => {
-        this.scene!.remove(line);
-        line.geometry.dispose();
-        if (Array.isArray(line.material)) {
-          line.material.forEach((m) => m.dispose());
-        } else {
-          line.material.dispose();
-        }
-      });
-      this.edgeLines = [];
-
-      // 清理模型
-      if (this.modelGroup) {
-        this.modelGroup.traverse((obj) => {
-          if (obj instanceof THREE.Mesh) {
-            obj.geometry?.dispose();
-            if (Array.isArray(obj.material)) {
-              obj.material.forEach((m) => m.dispose());
-            } else {
-              obj.material?.dispose();
-            }
-          }
-        });
-        this.scene.remove(this.modelGroup);
-        this.modelGroup = null;
-      }
-    }
-
-    // 清理渲染器
-    if (this.renderer) {
-      this.renderer.dispose();
-      if (this.renderer.domElement.parentNode) {
-        this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
-      }
-      this.renderer = null;
-    }
-
-    // 清理 controls
-    if (this.controls) {
-      this.controls.dispose();
-      this.controls = null;
-    }
-
-    // 清理事件监听
-    window.removeEventListener('resize', this.handleWindowResize);
-
-    this.scene = null;
-    this.camera = null;
-
-    this.element.remove();
+    this.statusEl.textContent = `model: ${modelStatus}, nodes: ${nodeCount}, edges: ${edgeCount}, size: ${width}x${height}`;
+    this.statusEl.style.color = 'rgba(255,255,255,0.65)';
   }
 }

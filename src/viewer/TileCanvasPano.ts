@@ -1,4 +1,4 @@
-﻿import { CanvasTexture, ClampToEdgeWrapping, LinearFilter, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, sRGBEncoding, Vector3 } from 'three';
+﻿import { CanvasTexture, ClampToEdgeWrapping, LinearFilter, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, Vector3, sRGBEncoding } from '../vendor/three-core';
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
@@ -702,5 +702,6 @@ export class TileCanvasPano {
     }
   }
 }
+
 
 

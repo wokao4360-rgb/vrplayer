@@ -8,6 +8,7 @@ import type { GuideTray } from '../ui/GuideTray';
 import type { SceneGuideDrawer } from '../ui/SceneGuideDrawer';
 import type { QualityIndicator } from '../ui/QualityIndicator';
 import { LoadStatus } from '../types/loadStatus';
+import { WarmupScheduler } from './warmupScheduler';
 
 type SceneUiRuntimeOptions = {
   appElement: HTMLElement;
@@ -50,7 +51,7 @@ export class SceneUiRuntime {
   private observerMounting = false;
   private observerIdleHandle: IdleHandle | null = null;
   private featureWarmupStarted = false;
-  private featureWarmupIdleHandle: IdleHandle | null = null;
+  private readonly warmupScheduler = new WarmupScheduler();
 
   private bottomDock: BottomDock | null = null;
   private topModeTabs: TopModeTabs | null = null;
@@ -230,24 +231,19 @@ export class SceneUiRuntime {
     }, 500);
   }
 
-  scheduleFeatureWarmup(): void {
-    if (this.featureWarmupStarted || this.disposed || this.featureWarmupIdleHandle !== null || !this.isAlive()) {
+  scheduleFeatureWarmup(startMode: 'idle' | 'immediate' = 'idle'): void {
+    if (this.featureWarmupStarted || this.disposed || !this.isAlive()) {
       return;
     }
     this.featureWarmupStarted = true;
-
-    if (requestIdle && cancelIdle) {
-      this.featureWarmupIdleHandle = requestIdle(() => {
-        this.featureWarmupIdleHandle = null;
-        void this.warmupFeatureModules();
-      }, { timeout: 1600 });
-      return;
-    }
-
-    this.featureWarmupIdleHandle = window.setTimeout(() => {
-      this.featureWarmupIdleHandle = null;
-      void this.warmupFeatureModules();
-    }, 600);
+    this.warmupScheduler.schedule([
+      () => this.loadVideoPlayerModule(),
+      () => this.loadGuideTrayModule(),
+      () => this.loadSceneGuideDrawerModule(),
+      () => this.loadDockPanelsModule(),
+      () => this.loadCommunityPanelModule(),
+      () => Promise.resolve(this.options.onWarmupFeatures?.()),
+    ], startMode);
   }
 
   handleStatusChange(status: LoadStatus): void {
@@ -255,8 +251,10 @@ export class SceneUiRuntime {
     if (!this.observerMounted && !this.observerMounting && !this.disposed) {
       void this.mountObserver();
     }
-    if (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED) {
-      this.scheduleFeatureWarmup();
+    if (status === LoadStatus.HIGH_READY) {
+      this.scheduleFeatureWarmup('immediate');
+    } else if (status === LoadStatus.DEGRADED) {
+      this.scheduleFeatureWarmup('idle');
     }
   }
 
@@ -271,14 +269,7 @@ export class SceneUiRuntime {
       }
       this.observerIdleHandle = null;
     }
-    if (this.featureWarmupIdleHandle !== null) {
-      if (requestIdle && cancelIdle) {
-        cancelIdle(this.featureWarmupIdleHandle);
-      } else {
-        clearTimeout(this.featureWarmupIdleHandle);
-      }
-      this.featureWarmupIdleHandle = null;
-    }
+    this.warmupScheduler.dispose();
 
     if (this.handleMetricsEvent) {
       window.removeEventListener('vr:metrics', this.handleMetricsEvent);
@@ -417,23 +408,6 @@ export class SceneUiRuntime {
       this.communityPanelModulePromise = import('../ui/community/CommunityPanel');
     }
     return this.communityPanelModulePromise;
-  }
-
-  private async warmupFeatureModules(): Promise<void> {
-    if (this.disposed || !this.isAlive()) {
-      return;
-    }
-    const tasks: Array<Promise<unknown>> = [
-      this.loadVideoPlayerModule(),
-      this.loadGuideTrayModule(),
-      this.loadSceneGuideDrawerModule(),
-      this.loadDockPanelsModule(),
-      this.loadCommunityPanelModule(),
-    ];
-    if (this.options.onWarmupFeatures) {
-      tasks.push(Promise.resolve(this.options.onWarmupFeatures()));
-    }
-    await Promise.allSettled(tasks);
   }
 
   private isAlive(): boolean {

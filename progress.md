@@ -56,3 +56,9 @@
 ## 2026-02-11 19:15:19
 - 修复 `README.md` 持久化记录乱码并统一为 UTF-8；补充第四轮优化结论条目（含完整时间戳）。
 - 当前待执行：按 SOP 发布（`dist -> docs -> commit -> push`）。
+
+## 2026-02-11 19:19:01
+- 按 SOP 完成发布：`npm run build` -> `robocopy .\\dist .\\docs /MIR` -> `git add -A` -> `git commit` -> `git push origin main`。
+- 发布提交：`50254a8c83556f576890891fe0693da3b5936ad2`。
+- 远端核对：`origin/main` 已指向同一 commit。
+- 线上核对：`https://wokao4360-rgb.github.io/vrplayer/` 返回 `index-CQkzrWWN.js`，且线上 `/config.json` 的 `assetCdn.probeTimeoutMs=1000`，与本次发布一致。

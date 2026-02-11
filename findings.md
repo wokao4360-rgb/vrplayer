@@ -38,3 +38,9 @@
    - 未交互前未请求 `chat-community` chunk；
    - 首次点击“导览”后才请求 `chat-community` 与 `store`；
    - Console 无新的阻断错误。
+
+## 发布确认（2026-02-11 19:19:01）
+- 发布 commit：`50254a8c83556f576890891fe0693da3b5936ad2`。
+- 远端 `origin/main` 已对齐该 commit。
+- 线上页面主入口已命中新 hash：`index-CQkzrWWN.js`。
+- 线上 `/config.json` 已生效：`assetCdn.probeTimeoutMs=1000`。

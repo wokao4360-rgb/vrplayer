@@ -1,0 +1,1 @@
+const e="vr_quality";function r(){if(typeof window>"u")return"high";try{const t=window.localStorage.getItem(e);if(t==="low"||t==="high")return t}catch{}return"high"}function n(t){if(!(typeof window>"u"))try{window.localStorage.setItem(e,t)}catch{}}export{r as g,n as s};

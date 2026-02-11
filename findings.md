@@ -69,3 +69,25 @@
 - 远端 `origin/main` 已对齐该 commit。
 - 线上主页已切换新入口：`index-Cos8uFQt.js`。
 - 线上 `config.json` 已切换为修复后的封面：`/assets/panos/gate-nail.jpg`。
+
+## 第六轮新增发现（2026-02-11 20:24:30）
+1. `src/viewer/PanoViewer.ts` 现有动画循环通过 `requestAnimationFrame(() => this.animate())` 自递归，但无显式 RAF 句柄与销毁短路，`dispose()` 时未硬停止循环，属于长期性能与生命周期风险点。
+2. `PanoViewer` 输入事件在 `setupEvents()` 里大量使用匿名函数注册，虽然容器销毁后通常可回收，但缺少成对解绑会增加切场景后隐患与排障成本。
+3. `src/main.ts` 的信息弹窗/更多弹窗仍是重 DOM 构建逻辑内联在入口文件，虽然功能正确，但会提高入口复杂度，不利于后续继续瘦首屏与治理乱码风险。
+4. 当前体积基线（`reports/perf-baseline/latest.json`）显示 `index=79.23kB`，仍有继续下探空间，适合将“低频交互逻辑”迁移到按需模块。
+
+## 第六轮实施结果（2026-02-11 20:32:35）
+1. 生命周期收口（P0）：
+   - `src/viewer/PanoViewer.ts` 增加 `animationFrameId` 与 `disposed`，`dispose()` 时显式停止 RAF；
+   - 输入事件改为统一登记/统一解绑（`domEventRemovers` + `clearDomEvents()`），避免匿名监听残留。
+2. 入口继续瘦身（P1）：
+   - 新增 `src/ui/modals/appModals.ts`；
+   - `main.ts` 的信息弹窗/更多弹窗改为动态 import 按需加载；
+   - 点击“信息/更多”前不请求弹窗模块，点击后才加载 `appModals` chunk。
+3. 量化结果：
+   - `index` 主包：`79.23kB -> 73.77kB`（下降约 6.89%）；
+   - `PanoViewer` 小幅增加（事件生命周期治理引入少量代码），但总体验证通过且换来稳定性收益。
+4. devtools 证据：
+   - snapshot：信息/更多弹窗文案正常简体中文；
+   - network：`appModals-*.js` 仅在点击对应 tab 后出现；
+   - console：仅保留历史非阻断 warning，无新增阻断错误。

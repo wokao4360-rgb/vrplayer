@@ -99,3 +99,21 @@
 - 发布提交：`6f8560426a8b25ea58138cfb3d2576bbe3511726`。
 - 远端对齐：`origin/main` 已指向同一提交。
 - Pages 轮询确认：线上已切换到 `index-Cos8uFQt.js`，且 `/config.json` 的 `museums[0].cover=/assets/panos/gate-nail.jpg`，发布生效。
+
+## 2026-02-11 20:24:30
+- 启用 `brainstorming + planning-with-files` 进入第六轮计划执行。
+- 完成基线勘测：`main.ts` 1852 行、`PanoViewer.ts` 1684 行，且 `PanoViewer` 仍存在“RAF 未显式停止 + 匿名监听不易解绑”的生命周期风险。
+- 锁定本轮目标：先做 P0 生命周期治理，再做 P1 入口弹窗逻辑拆分与按需加载，保持全速渲染、不做降帧降画质策略。
+
+## 2026-02-11 20:29:48
+- 完成 P0：`src/viewer/PanoViewer.ts` 新增可取消 RAF（`animationFrameId`）与销毁短路（`disposed`），`dispose()` 中显式 `cancelAnimationFrame` 并清理 DOM 输入监听。
+- 完成 P1：新增 `src/ui/modals/appModals.ts`，将信息弹窗/更多弹窗 DOM 构建迁移为按需模块；`src/main.ts` 改为点击时动态 import。
+- 构建验证通过：`npm run check:text`、`npm run build`、`npm run perf:baseline` 全部通过。
+- 新基线：`index` 从 `79.23kB` 降至 `73.77kB`。
+
+## 2026-02-11 20:32:35
+- `chrome-devtools` 证据采样完成（snapshot + network + console）：
+  - 普通场景加载正常，无阻断错误；
+  - 首次点击“信息”后才请求 `assets/appModals-*.js`，按需加载生效；
+  - “更多”弹窗中文显示正常；
+  - 场景来回切换后 console 未出现新增持续增长型错误。

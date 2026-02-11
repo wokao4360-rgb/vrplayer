@@ -95,3 +95,4 @@ git push origin main
 - [2026-02-11 00:06:15] 第三轮入口解耦：`main` 禁止静态导入 `PanoViewer/vrMode/three`；列表路由不触发 `three-core`，three 仅在 scene 路由按需加载。
 - [2026-02-11 19:14:08] 第四轮网络与流畅性：引入图片分通道并发调度（`tile/pano/preload/ui`），CDN 探测并行竞速并默认 `1000ms` 超时，SW 支持跨域全景缓存，输入事件改为每帧聚合应用且默认不启用自动降载。
 - [2026-02-11 19:45:49] 中文乱码防回归：构建前必须先过 `npm run check:text`；禁止非 UTF-8 写回中文文案；品牌/信息/更多弹窗中文统一使用简体并在 chrome-devtools 快照复验。
+- [2026-02-11 20:33:40] 生命周期与按需加载：`PanoViewer` 在 `dispose()` 必须显式停止 RAF 并解绑 DOM 输入监听；信息/更多弹窗必须走动态 import（`src/ui/modals/appModals.ts`），禁止回退到入口内联重逻辑。

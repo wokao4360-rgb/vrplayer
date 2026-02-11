@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-02-11 19:47:53",
+  "generatedAt": "2026-02-11 20:29:48",
   "metrics": {
-    "indexJsKB": 79.23,
-    "panoViewerJsKB": 70.11,
+    "indexJsKB": 73.77,
+    "panoViewerJsKB": 70.71,
     "threeCoreJsKB": 501.39,
-    "totalJsKB": 980.26,
+    "totalJsKB": 981.94,
     "totalCssKB": 55.58
   },
   "topAssets": [
@@ -21,16 +21,16 @@
       "sizeKB": 101.63
     },
     {
-      "name": "index-Cos8uFQt.js",
+      "name": "index-WSGeQALx.js",
       "ext": ".js",
-      "sizeBytes": 81129,
-      "sizeKB": 79.23
+      "sizeBytes": 75537,
+      "sizeKB": 73.77
     },
     {
-      "name": "PanoViewer-BGVQNiGf.js",
+      "name": "PanoViewer-BIpMsy5Y.js",
       "ext": ".js",
-      "sizeBytes": 71796,
-      "sizeKB": 70.11
+      "sizeBytes": 72410,
+      "sizeKB": 70.71
     },
     {
       "name": "index-BfJu72vJ.css",
@@ -39,43 +39,43 @@
       "sizeKB": 55.58
     },
     {
-      "name": "editor-debug-DQwQ-F_m.js",
+      "name": "editor-debug-5l2Y-X-O.js",
       "ext": ".js",
       "sizeBytes": 56122,
       "sizeKB": 54.81
     },
     {
-      "name": "chat-community-CV8dPrhn.js",
+      "name": "chat-community-Br_nepnd.js",
       "ext": ".js",
       "sizeBytes": 39808,
       "sizeKB": 38.88
     },
     {
-      "name": "dock-panels-Bq13T4qN.js",
+      "name": "dock-panels-Cs9Sxynv.js",
       "ext": ".js",
       "sizeBytes": 26229,
       "sizeKB": 25.61
     },
     {
-      "name": "tile-ktx2-CaMYJFht.js",
+      "name": "tile-ktx2-DO6ohk0j.js",
       "ext": ".js",
-      "sizeBytes": 26041,
-      "sizeKB": 25.43
+      "sizeBytes": 26081,
+      "sizeKB": 25.47
     },
     {
-      "name": "Hotspots-CxlEKZO8.js",
+      "name": "Hotspots-bVfrAHPp.js",
       "ext": ".js",
       "sizeBytes": 8877,
       "sizeKB": 8.67
     },
     {
-      "name": "StructureView2D-B182XaP0.js",
+      "name": "StructureView2D-YNggYitX.js",
       "ext": ".js",
       "sizeBytes": 7679,
       "sizeKB": 7.5
     },
     {
-      "name": "dollhouseScene-DGl7gRyo.js",
+      "name": "dollhouseScene-Dybm0aKm.js",
       "ext": ".js",
       "sizeBytes": 7161,
       "sizeKB": 6.99

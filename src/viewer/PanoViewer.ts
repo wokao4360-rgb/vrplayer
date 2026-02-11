@@ -123,6 +123,9 @@ export class PanoViewer {
   private fallbackSphere: THREE.Mesh | null = null;
   private container: HTMLElement;
   private readonly handleWindowResize = () => this.handleResize();
+  private readonly domEventRemovers: Array<() => void> = [];
+  private animationFrameId: number | null = null;
+  private disposed = false;
   private frameListeners: Array<(dtMs: number) => void> = [];
   private nadirPatch: NadirPatch | null = null;
   private compassDisk: CompassDisk | null = null;
@@ -257,54 +260,89 @@ export class PanoViewer {
 
   private setupEvents(): void {
     const dom = this.renderer.domElement;
+    const addDomListener = (
+      type: string,
+      listener: EventListenerOrEventListenerObject,
+      options?: AddEventListenerOptions,
+    ) => {
+      dom.addEventListener(type, listener, options);
+      this.domEventRemovers.push(() => {
+        dom.removeEventListener(type, listener, options?.capture ?? false);
+      });
+    };
+
     // 鼠标/触摸拖拽
-    dom.addEventListener('mousedown', (e) => this.onPointerDown(e));
-    dom.addEventListener('mousemove', (e) => this.onPointerMove(e));
-    dom.addEventListener('mouseup', () => this.onPointerUp());
-    dom.addEventListener('mouseleave', () => this.onPointerUp());
-    
+    const onMouseDown = (e: Event) => this.onPointerDown(e as MouseEvent);
+    const onMouseMove = (e: Event) => this.onPointerMove(e as MouseEvent);
+    const onMouseUp = () => this.onPointerUp();
+    const onMouseLeave = () => this.onPointerUp();
+    addDomListener('mousedown', onMouseDown);
+    addDomListener('mousemove', onMouseMove);
+    addDomListener('mouseup', onMouseUp);
+    addDomListener('mouseleave', onMouseLeave);
+
     // 触摸事件
-    dom.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
-    dom.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
-    dom.addEventListener('touchend', () => this.onTouchEnd());
-    
+    const onTouchStart = (e: Event) => this.onTouchStart(e as TouchEvent);
+    const onTouchMove = (e: Event) => this.onTouchMove(e as TouchEvent);
+    const onTouchEnd = () => this.onTouchEnd();
+    addDomListener('touchstart', onTouchStart, { passive: false });
+    addDomListener('touchmove', onTouchMove, { passive: false });
+    addDomListener('touchend', onTouchEnd);
+
     // 滚轮缩放（桌面端）
-    dom.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
-    
+    const onWheel = (e: Event) => this.onWheel(e as WheelEvent);
+    addDomListener('wheel', onWheel, { passive: false });
+
     // 调试模式：双击（PC）或长按（移动端）显示调试信息
     if (this.debugMode) {
-      dom.addEventListener('dblclick', (e) => this.handleDebugClick(e.clientX, e.clientY));
-      
+      const onDebugDblClick = (e: Event) => {
+        const mouseEvent = e as MouseEvent;
+        this.handleDebugClick(mouseEvent.clientX, mouseEvent.clientY);
+      };
+      addDomListener('dblclick', onDebugDblClick);
+
       // 移动端长按
-      let touchStartTime = 0;
       let touchStartX = 0;
       let touchStartY = 0;
-      
-      dom.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-          touchStartTime = Date.now();
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-          
+
+      const onDebugTouchStart = (e: Event) => {
+        const touchEvent = e as TouchEvent;
+        if (touchEvent.touches.length === 1) {
+          touchStartX = touchEvent.touches[0].clientX;
+          touchStartY = touchEvent.touches[0].clientY;
           this.longPressTimer = window.setTimeout(() => {
             this.handleDebugClick(touchStartX, touchStartY);
           }, this.longPressThreshold);
         }
-      }, { passive: true });
-      
-      dom.addEventListener('touchmove', () => {
+      };
+      const onDebugTouchMove = () => {
         if (this.longPressTimer) {
           clearTimeout(this.longPressTimer);
           this.longPressTimer = null;
         }
-      }, { passive: true });
-      
-      dom.addEventListener('touchend', () => {
+      };
+      const onDebugTouchEnd = () => {
         if (this.longPressTimer) {
           clearTimeout(this.longPressTimer);
           this.longPressTimer = null;
         }
-      }, { passive: true });
+      };
+
+      addDomListener('touchstart', onDebugTouchStart, { passive: true });
+      addDomListener('touchmove', onDebugTouchMove, { passive: true });
+      addDomListener('touchend', onDebugTouchEnd, { passive: true });
+    }
+  }
+
+  private clearDomEvents(): void {
+    for (const removeListener of this.domEventRemovers) {
+      removeListener();
+    }
+    this.domEventRemovers.length = 0;
+
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
     }
   }
   
@@ -1096,7 +1134,8 @@ export class PanoViewer {
   }
 
   private animate(): void {
-    requestAnimationFrame(() => this.animate());
+    if (this.disposed) return;
+    this.animationFrameId = requestAnimationFrame(() => this.animate());
     const now = performance.now();
     const dtMs = this.lastFrameTimeMs ? now - this.lastFrameTimeMs : 16.7;
     this.updatePerformanceGuard(dtMs);
@@ -1224,6 +1263,7 @@ export class PanoViewer {
     for (const listener of this.frameListeners) {
       listener(dtMs);
     }
+    if (this.disposed) return;
     this.renderer.render(this.scene, this.camera);
   }
   private lastFrameTimeMs: number | null = null;
@@ -1495,6 +1535,16 @@ export class PanoViewer {
   }
 
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.removePickModeListeners();
+    this.clearDomEvents();
+
     if (this.tilePano) {
       this.tilePano.dispose();
       this.tilePano = null;
@@ -1525,6 +1575,7 @@ export class PanoViewer {
       this.groundHeading.dispose();
       this.groundHeading = null;
     }
+    this.frameListeners = [];
     this.renderer.dispose();
     window.removeEventListener('resize', this.handleWindowResize);
   }

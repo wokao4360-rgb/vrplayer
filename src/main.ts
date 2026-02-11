@@ -41,9 +41,7 @@ import type { FcChatConfig } from './services/fcChatClient';
 import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
 import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/fullscreen';
-import { mountModal, type MountedModal } from './ui/Modal';
-import { getPreferredQuality, setPreferredQuality, type QualityLevel } from './utils/qualityPreference';
-import { isTouchDevice, isMouseDevice } from './utils/deviceDetect';
+import type { MountedModal } from './ui/Modal';
 import './ui/uiRefresh.css';
 
 /**
@@ -199,6 +197,7 @@ class App {
   private vrModeModulePromise: Promise<VrModeModule> | null = null;
   private vrModeInitialized = false;
   private externalImageModulePromise: Promise<typeof import('./utils/externalImage')> | null = null;
+  private appModalsModulePromise: Promise<typeof import('./ui/modals/appModals')> | null = null;
 
   constructor() {
     const appElement = document.getElementById('app');
@@ -301,6 +300,13 @@ class App {
       this.vrModeModulePromise = import('./utils/vrMode');
     }
     return this.vrModeModulePromise;
+  }
+
+  private loadAppModalsModule(): Promise<typeof import('./ui/modals/appModals')> {
+    if (!this.appModalsModulePromise) {
+      this.appModalsModulePromise = import('./ui/modals/appModals');
+    }
+    return this.appModalsModulePromise;
   }
 
   private async ensureVrModeInitialized(): Promise<VrModeModule> {
@@ -804,8 +810,12 @@ class App {
                 this.guideTray.setVisible(true);
               }
             },
-            onOpenInfo: () => this.openInfoModal(),
-            onOpenSettings: () => this.openSettingsModal(),
+            onOpenInfo: () => {
+              void this.openInfoModal();
+            },
+            onOpenSettings: () => {
+              void this.openSettingsModal();
+            },
             sceneId: scene.id,
             sceneName: scene.name,
             museum: museum,
@@ -1533,47 +1543,20 @@ class App {
   }
 
   /**
-   * 搴曢儴銆屼俊鎭€嶅脊绐?
+   * 底部“信息”弹窗（按需加载）
    */
-  private openInfoModal(): void {
-    // 纭繚鍗曚緥锛氬宸插瓨鍦ㄥ厛鍏抽棴
+  private async openInfoModal(): Promise<void> {
     this.infoModalMounted?.close();
     this.infoModalMounted = null;
 
-    const museumName = this.currentMuseum?.name || '-';
-    const sceneName = this.currentScene?.name || '-';
-
-    const content = document.createElement('div');
-    content.className = 'vr-modal-info-list';
-    content.innerHTML = `
-      <div><span class="vr-modal-info-row-label">展馆</span><span>${museumName}</span></div>
-      <div><span class="vr-modal-info-row-label">场景</span><span>${sceneName}</span></div>
-      <div><span class="vr-modal-info-row-label">采集日期</span><span>2025-12-27</span></div>
-      <div class="vr-modal-info-copyright">
-        <button type="button" role="button" class="vr-modal-info-copyright-btn">© 2025 鼎虎清源</button>
-      </div>
-    `;
-
-    // 搴曢儴鐗堟潈鏂囨湰鐐瑰嚮浜嬩欢锛氬厛鍏抽棴淇℃伅寮圭獥锛屽啀鎵撳紑鈥滈紟铏庢竻婧愨€濆脊绐?
-    const copyrightBtn = content.querySelector('.vr-modal-info-copyright-btn') as HTMLButtonElement;
-    if (copyrightBtn) {
-      copyrightBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // 鍏堝叧闂俊鎭脊绐楋紝鍐嶆墦寮€榧庤檸娓呮簮锛岄伩鍏嶅眰绾ч伄鎸?
-        if (this.infoModalMounted) {
-          this.infoModalMounted.close();
-        }
-        setTimeout(() => {
-          this.openDingHuQingYuan();
-        }, 0);
-      });
-    }
-
-    this.infoModalMounted = mountModal({
-      title: '信息',
-      contentEl: content,
-      onClose: () => {
+    const { openInfoModal } = await this.loadAppModalsModule();
+    this.infoModalMounted = openInfoModal({
+      museumName: this.currentMuseum?.name || '-',
+      sceneName: this.currentScene?.name || '-',
+      onOpenBrand: () => {
+        this.openDingHuQingYuan();
+      },
+      onDockTabClose: () => {
         this.infoModalMounted = null;
         window.dispatchEvent(
           new CustomEvent('vr:dock-tab-close', {
@@ -1647,186 +1630,19 @@ class App {
   }
 
   /**
-   * 搴曢儴銆岃缃€嶅脊绐?
+   * 底部“更多”弹窗（按需加载）
    */
-  private openSettingsModal(): void {
-    // 纭繚鍗曚緥锛氬宸插瓨鍦ㄥ厛鍏抽棴
+  private async openSettingsModal(): Promise<void> {
     this.settingsModalMounted?.close();
     this.settingsModalMounted = null;
 
-    const isTouch = isTouchDevice();
-    const isMouse = isMouseDevice();
-    const currentQuality = getPreferredQuality();
-
-    const container = document.createElement('div');
-    container.className = 'vr-modal-settings-list';
-
-    // 鐢昏川鍒囨崲
-    const qualityLabel = document.createElement('div');
-    qualityLabel.className = 'vr-modal-settings-item-label';
-    qualityLabel.textContent = '画质';
-
-    const qualityGroup = document.createElement('div');
-    qualityGroup.className = 'vr-modal-settings-quality';
-
-    const highBtn = document.createElement('button');
-    highBtn.className = 'vr-modal-settings-quality-btn';
-    highBtn.textContent = '高清';
-    highBtn.dataset.level = 'high';
-
-    const lowBtn = document.createElement('button');
-    lowBtn.className = 'vr-modal-settings-quality-btn';
-    lowBtn.textContent = '省流';
-    lowBtn.dataset.level = 'low';
-
-    const applyQualityActive = (level: QualityLevel) => {
-      highBtn.classList.toggle('is-active', level === 'high');
-      lowBtn.classList.toggle('is-active', level === 'low');
-    };
-
-    applyQualityActive(currentQuality);
-
-    const handleQualityClick = (level: QualityLevel) => {
-      if (!this.currentScene || !this.panoViewer) return;
-      const prev = getPreferredQuality();
-      if (prev === level) return;
-      setPreferredQuality(level);
-      applyQualityActive(level);
-      // 浣跨敤 preserveView 閲嶆柊鍔犺浇褰撳墠鍦烘櫙璧勬簮
-      this.panoViewer.loadScene(this.currentScene, { preserveView: true });
-    };
-
-    highBtn.addEventListener('click', () => handleQualityClick('high'));
-    lowBtn.addEventListener('click', () => handleQualityClick('low'));
-
-    qualityGroup.appendChild(highBtn);
-    qualityGroup.appendChild(lowBtn);
-
-    const qualityRow = document.createElement('div');
-    qualityRow.appendChild(qualityLabel);
-    qualityRow.appendChild(qualityGroup);
-
-    // 閲嶇疆瑙嗚
-    const resetLabel = document.createElement('div');
-    resetLabel.className = 'vr-modal-settings-item-label';
-    resetLabel.textContent = '视角';
-
-    const resetBtn = document.createElement('button');
-    resetBtn.className = 'vr-modal-settings-row-btn';
-    resetBtn.type = 'button';
-    resetBtn.textContent = '恢复初始视角';
-    resetBtn.addEventListener('click', () => {
-      if (!this.currentScene || !this.panoViewer) return;
-      const iv = this.currentScene.initialView || { yaw: 0, pitch: 0, fov: 75 };
-      const worldYaw = iv.yaw || 0;
-      const internalYaw = -worldYaw;
-      const pitch = iv.pitch || 0;
-      const fov = iv.fov ?? 75;
-      this.panoViewer.setView(internalYaw, pitch, fov);
-    });
-
-    const resetRow = document.createElement('div');
-    resetRow.appendChild(resetLabel);
-    resetRow.appendChild(resetBtn);
-
-    // VR 鐪奸暅
-    const vrLabel = document.createElement('div');
-    vrLabel.className = 'vr-modal-settings-item-label';
-    vrLabel.textContent = 'VR 眼镜';
-
-    const vrBtn = document.createElement('button');
-    vrBtn.className = 'vr-modal-settings-row-btn';
-    vrBtn.type = 'button';
-    vrBtn.textContent = 'VR 眼镜';
-
-    const syncVrBtnState = () => {
-      const active = this.panoViewer?.isVrModeEnabled() ?? false;
-      vrBtn.classList.toggle('is-on', active);
-    };
-
-    if (isTouch) {
-      syncVrBtnState();
-      vrBtn.addEventListener('click', async () => {
-        if (!this.panoViewer) return;
-        const viewerContainer = this.panoViewer.getDomElement();
-        await this.toggleVrModeFromUI(viewerContainer);
-        syncVrBtnState();
-      });
-    } else if (isMouse) {
-      vrBtn.classList.add('is-disabled');
-      const handler = () => {
-        showToast('移动端可体验此功能', 1500);
-      };
-      vrBtn.addEventListener('mouseenter', handler);
-      vrBtn.addEventListener('click', handler);
-    }
-
-    const vrRow = document.createElement('div');
-    vrRow.appendChild(vrLabel);
-    vrRow.appendChild(vrBtn);
-
-    // 缂╂斁鎺у埗
-    const zoomLabel = document.createElement('div');
-    zoomLabel.className = 'vr-modal-settings-item-label';
-    zoomLabel.textContent = '缩放';
-
-    const zoomGroup = document.createElement('div');
-    zoomGroup.className = 'vr-modal-settings-quality';
-    zoomGroup.style.gap = '8px';
-
-    const zoomOutBtn = document.createElement('button');
-    zoomOutBtn.className = 'vr-modal-settings-quality-btn';
-    zoomOutBtn.textContent = '缩小';
-    zoomOutBtn.style.minWidth = '70px';
-
-    const zoomInBtn = document.createElement('button');
-    zoomInBtn.className = 'vr-modal-settings-quality-btn';
-    zoomInBtn.textContent = '放大';
-    zoomInBtn.style.minWidth = '70px';
-
-    const handleZoomOut = () => {
-      if (!this.panoViewer) return;
-      const currentView = this.panoViewer.getCurrentView();
-      const newFov = Math.min(120, currentView.fov * 1.12);
-      this.panoViewer.setFov(newFov);
-    };
-
-    const handleZoomIn = () => {
-      if (!this.panoViewer) return;
-      const currentView = this.panoViewer.getCurrentView();
-      const newFov = Math.max(30, currentView.fov / 1.12);
-      this.panoViewer.setFov(newFov);
-    };
-
-    zoomOutBtn.addEventListener('click', handleZoomOut);
-    zoomInBtn.addEventListener('click', handleZoomIn);
-
-    zoomGroup.appendChild(zoomOutBtn);
-    zoomGroup.appendChild(zoomInBtn);
-
-    const zoomRow = document.createElement('div');
-    zoomRow.appendChild(zoomLabel);
-    zoomRow.appendChild(zoomGroup);
-
-    container.appendChild(qualityRow);
-    container.appendChild(resetRow);
-    container.appendChild(zoomRow);
-    container.appendChild(vrRow);
-
-    // 鎵撳紑"鏇村"鏃讹紝璁?Dock 娣″嚭
-    if (this.bottomDock) {
-      this.bottomDock.setMoreOpen(true);
-    }
-
-    this.settingsModalMounted = mountModal({
-      title: '更多',
-      contentEl: container,
-      panelClassName: 'vr-modal-settings',
-      onClose: () => {
-        // 鍏抽棴"鏇村"鏃讹紝鎭㈠ Dock
-        if (this.bottomDock) {
-          this.bottomDock.setMoreOpen(false);
-        }
+    const { openSettingsModal } = await this.loadAppModalsModule();
+    this.settingsModalMounted = openSettingsModal({
+      currentScene: this.currentScene,
+      panoViewer: this.panoViewer,
+      bottomDock: this.bottomDock,
+      onToggleVrMode: async (viewerContainer) => this.toggleVrModeFromUI(viewerContainer),
+      onDockTabClose: () => {
         this.settingsModalMounted = null;
         window.dispatchEvent(
           new CustomEvent('vr:dock-tab-close', {

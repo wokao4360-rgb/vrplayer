@@ -8,7 +8,7 @@ import type { SceneListPage } from './ui/SceneListPage';
 import type { Hotspots } from './ui/Hotspots';
 import type { VideoPlayer } from './ui/VideoPlayer';
 import { Loading } from './ui/Loading';
-import { ConfigErrorPanel } from './ui/ConfigErrorPanel';
+import type { ConfigErrorPanel } from './ui/ConfigErrorPanel';
 import type { DebugPanel } from './ui/DebugPanel';
 import type { ConfigStudio } from './ui/ConfigStudio';
 import { LoadStatus } from './types/loadStatus';
@@ -32,16 +32,14 @@ import { showPickMarker } from './ui/PickMarker';
 import { setLastPick } from './viewer/pickBus';
 import { initYieldClassManager } from './ui/yieldClassManager';
 import { initYieldPolicy } from './ui/uiYieldPolicy';
-import { interactionBus } from './ui/interactionBus';
 import { __VR_DEBUG__ } from './utils/debug';
-import { dumpVRState, resetVRUI } from './utils/debugHelper';
 import type { NorthCalibrationPanel } from './ui/NorthCalibrationPanel';
 import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
 import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/fullscreen';
 import type { MountedModal } from './ui/Modal';
-import { SceneUiRuntime } from './app/sceneUiRuntime';
-import { ChatRuntime } from './app/chatRuntime';
+import type { SceneUiRuntime } from './app/sceneUiRuntime';
+import type { ChatRuntime } from './app/chatRuntime';
 import './ui/uiRefresh.css';
 
 /**
@@ -57,21 +55,28 @@ import './ui/uiRefresh.css';
  * 鍒濆鍖栬皟璇曞伐鍏凤紙浠呭湪 debug=1 鏃跺惎鐢級
  */
 if (__VR_DEBUG__) {
-  // 鎸傝浇鐘舵€佸揩鐓у嚱鏁?
-  (window as any).__vrDump = () => {
-    const snapshot = dumpVRState();
-    console.debug('[VR State Snapshot]', snapshot);
-    return snapshot;
-  };
+  void Promise.all([import('./utils/debugHelper'), import('./ui/interactionBus')])
+    .then(([debugHelperModule, interactionBusModule]) => {
+      const { dumpVRState, resetVRUI } = debugHelperModule;
+      const { interactionBus } = interactionBusModule;
 
-  // 鎸傝浇涓€閿浣嶅嚱鏁?
-  (window as any).__vrResetUI = () => {
-    console.debug('[VR Reset UI] 姝ｅ湪娓呯悊鎵€鏈?UI 鐘舵€?..');
-    resetVRUI(interactionBus);
-    console.debug('[VR Reset UI] 娓呯悊瀹屾垚');
-  };
+      (window as any).__vrDump = () => {
+        const snapshot = dumpVRState();
+        console.debug('[VR State Snapshot]', snapshot);
+        return snapshot;
+      };
 
-  console.debug('[VR Debug] 璋冭瘯妯″紡宸插惎鐢ㄣ€備娇鐢?__vrDump() 鏌ョ湅鐘舵€侊紝浣跨敤 __vrResetUI() 澶嶄綅 UI');
+      (window as any).__vrResetUI = () => {
+        console.debug('[VR Reset UI] 姝ｅ湪娓呯悊鎵€鏈?UI 鐘舵€?..');
+        resetVRUI(interactionBus);
+        console.debug('[VR Reset UI] 娓呯悊瀹屾垚');
+      };
+
+      console.debug('[VR Debug] 璋冭瘯妯″紡宸插惎鐢ㄣ€備娇鐢?__vrDump() 鏌ョ湅鐘舵€侊紝浣跨敤 __vrResetUI() 澶嶄綅 UI');
+    })
+    .catch(() => {
+      // debug helper 按需加载失败时不阻断主流程
+    });
 }
 
 /**
@@ -196,6 +201,9 @@ class App {
   private vrModeInitialized = false;
   private externalImageModulePromise: Promise<typeof import('./utils/externalImage')> | null = null;
   private appModalsModulePromise: Promise<typeof import('./ui/modals/appModals')> | null = null;
+  private sceneUiRuntimeModulePromise: Promise<typeof import('./app/sceneUiRuntime')> | null = null;
+  private chatRuntimeModulePromise: Promise<typeof import('./app/chatRuntime')> | null = null;
+  private configErrorPanelModulePromise: Promise<typeof import('./ui/ConfigErrorPanel')> | null = null;
 
   constructor() {
     const appElement = document.getElementById('app');
@@ -307,6 +315,27 @@ class App {
     return this.appModalsModulePromise;
   }
 
+  private loadSceneUiRuntimeModule(): Promise<typeof import('./app/sceneUiRuntime')> {
+    if (!this.sceneUiRuntimeModulePromise) {
+      this.sceneUiRuntimeModulePromise = import('./app/sceneUiRuntime');
+    }
+    return this.sceneUiRuntimeModulePromise;
+  }
+
+  private loadChatRuntimeModule(): Promise<typeof import('./app/chatRuntime')> {
+    if (!this.chatRuntimeModulePromise) {
+      this.chatRuntimeModulePromise = import('./app/chatRuntime');
+    }
+    return this.chatRuntimeModulePromise;
+  }
+
+  private loadConfigErrorPanelModule(): Promise<typeof import('./ui/ConfigErrorPanel')> {
+    if (!this.configErrorPanelModulePromise) {
+      this.configErrorPanelModulePromise = import('./ui/ConfigErrorPanel');
+    }
+    return this.configErrorPanelModulePromise;
+  }
+
   private async ensureVrModeInitialized(): Promise<VrModeModule> {
     const vrMode = await this.loadVrModeModule();
     if (!this.vrModeInitialized) {
@@ -369,7 +398,7 @@ class App {
       
       // 妫€鏌ユ槸鍚︽槸閰嶇疆鏍￠獙閿欒
       if (error.validationErrors && Array.isArray(error.validationErrors)) {
-        this.showConfigErrorPanel(error.validationErrors);
+        await this.showConfigErrorPanel(error.validationErrors);
       } else {
         // 閰嶇疆鍔犺浇澶辫触锛坒etch/瑙ｆ瀽澶辫触锛?
         this.showError('加载配置失败，请刷新页面重试');
@@ -407,17 +436,18 @@ class App {
       
       // 妫€鏌ユ槸鍚︽槸閰嶇疆鏍￠獙閿欒
       if (error.validationErrors && Array.isArray(error.validationErrors)) {
-        this.showConfigErrorPanel(error.validationErrors);
+        await this.showConfigErrorPanel(error.validationErrors);
       } else {
       this.showError('加载配置失败，请刷新页面重试');
       }
     }
   }
 
-  private showConfigErrorPanel(errors: ValidationError[]): void {
+  private async showConfigErrorPanel(errors: ValidationError[]): Promise<void> {
     // 娓呯┖褰撳墠瑙嗗浘
     this.appElement.innerHTML = '';
-    
+    const { ConfigErrorPanel } = await this.loadConfigErrorPanelModule();
+
     const errorPanel = new ConfigErrorPanel(
       errors,
       () => {
@@ -702,7 +732,12 @@ class App {
       };
       updateDebugPanel();
     }
-    
+
+    const [{ ChatRuntime }, { SceneUiRuntime }] = await Promise.all([
+      this.loadChatRuntimeModule(),
+      this.loadSceneUiRuntimeModule(),
+    ]);
+
     this.chatRuntime = new ChatRuntime();
     this.chatRuntime.updateContext({
       museum,

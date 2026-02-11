@@ -97,3 +97,4 @@ git push origin main
 - [2026-02-11 19:45:49] 中文乱码防回归：构建前必须先过 `npm run check:text`；禁止非 UTF-8 写回中文文案；品牌/信息/更多弹窗中文统一使用简体并在 chrome-devtools 快照复验。
 - [2026-02-11 20:33:40] 生命周期与按需加载：`PanoViewer` 在 `dispose()` 必须显式停止 RAF 并解绑 DOM 输入监听；信息/更多弹窗必须走动态 import（`src/ui/modals/appModals.ts`），禁止回退到入口内联重逻辑。
 - [2026-02-11 21:31:40] 第七轮收口：场景 UI 装配必须走 `SceneUiRuntime` 分层（核心/次级/观测）；聊天必须通过 `ChatRuntime` 在“社区 tab 首次点击”后按需初始化，禁止恢复全局首交互预热监听。
+- [2026-02-11 21:53:13] 入口瘦身补充：`main.ts` 禁止静态依赖 `ConfigErrorPanel`、`SceneUiRuntime`、`ChatRuntime` 与 debug helper；这些模块必须按路径/条件动态加载，确保 `index` 主包保持在 65kB 以下。

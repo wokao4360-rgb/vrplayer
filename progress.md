@@ -172,3 +172,16 @@
 - 已按第七轮 SOP 发布：`git checkout main` -> `git pull --rebase --autostash origin main` -> `npm run build` -> `robocopy .\\dist .\\docs /MIR` -> `git add -A`（排除用户本地 `AGENTS.md`）-> `git commit` -> `git push origin main`。
 - 发布提交：`eb353cc`。
 - 远端状态：`origin/main` 已对齐到 `eb353cc`。
+
+## 2026-02-11 21:53:13
+- 按“补充收口”继续执行：`main.ts` 将 `ConfigErrorPanel`、`SceneUiRuntime`、`ChatRuntime`、debug helper 迁移为按需动态加载，移除入口静态依赖。
+- 重新构建验证：`npm run check:text`、`npm run build`、`npm run perf:baseline` 全通过。
+- 新体积结果：`index` 主包降至 `57.16kB`（已明显低于 `<=65kB` 目标）。
+- `dist/index.html` 复核：仅保留入口脚本与样式，不再 preload `scene-runtime`。
+
+## 2026-02-11 21:53:13
+- `chrome-devtools` 证据采样完成（`?museum=wangding&scene=memorial_wall&v=8`）：
+  - snapshot：标题、底部导航、信息弹窗中文显示正常（简体中文）。
+  - network：未点击“社区”前无 `chat-community`；点击“社区”后首次出现 `chat-community-*.js`。
+  - network：点击“导览”后首次出现 `GuideTray-*.js` 与 `VideoPlayer-*.js`。
+  - console：仅剩非阻断 warning/issue（meta deprecate + form field id/name）。

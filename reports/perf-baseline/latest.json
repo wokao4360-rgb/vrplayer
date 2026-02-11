@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-02-11 21:35:03",
+  "generatedAt": "2026-02-11 21:55:27",
   "metrics": {
-    "indexJsKB": 77.95,
+    "indexJsKB": 57.16,
     "panoViewerJsKB": 69.2,
     "threeRendererJsKB": 501.39,
     "threeMathJsKB": 2.28,
     "threeRenderMathCombinedKB": 503.68,
-    "totalJsKB": 986.52,
+    "totalJsKB": 989.05,
     "totalCssKB": 55.58
   },
   "topAssets": [
@@ -23,16 +23,16 @@
       "sizeKB": 101.64
     },
     {
-      "name": "index-DInc35Wk.js",
-      "ext": ".js",
-      "sizeBytes": 79818,
-      "sizeKB": 77.95
-    },
-    {
-      "name": "PanoViewer-CPb5FQ96.js",
+      "name": "PanoViewer-arbOrilV.js",
       "ext": ".js",
       "sizeBytes": 70861,
       "sizeKB": 69.2
+    },
+    {
+      "name": "index-CE53-grs.js",
+      "ext": ".js",
+      "sizeBytes": 58535,
+      "sizeKB": 57.16
     },
     {
       "name": "index-BfJu72vJ.css",
@@ -41,46 +41,46 @@
       "sizeKB": 55.58
     },
     {
-      "name": "editor-debug-Dz10SSgE.js",
+      "name": "editor-debug-BeG_Tzu9.js",
       "ext": ".js",
-      "sizeBytes": 56122,
-      "sizeKB": 54.81
+      "sizeBytes": 56163,
+      "sizeKB": 54.85
     },
     {
-      "name": "chat-community-C6ZbaM52.js",
+      "name": "chat-community-Cmxv6vIZ.js",
       "ext": ".js",
       "sizeBytes": 39808,
       "sizeKB": 38.88
     },
     {
-      "name": "dock-panels-CO9QQMe_.js",
+      "name": "dock-panels-lDpZTwaP.js",
       "ext": ".js",
       "sizeBytes": 26237,
       "sizeKB": 25.62
     },
     {
-      "name": "tile-ktx2-DPKiKnrw.js",
+      "name": "tile-ktx2-Cqx0FSA5.js",
       "ext": ".js",
       "sizeBytes": 26118,
       "sizeKB": 25.51
     },
     {
-      "name": "Hotspots-D1eUDWHC.js",
+      "name": "scene-runtime-CEf9Rwvc.js",
+      "ext": ".js",
+      "sizeBytes": 9432,
+      "sizeKB": 9.21
+    },
+    {
+      "name": "Hotspots-D0fpW1pi.js",
       "ext": ".js",
       "sizeBytes": 8318,
       "sizeKB": 8.12
     },
     {
-      "name": "StructureView2D--Q7Gxr9k.js",
+      "name": "StructureView2D-BIXavimJ.js",
       "ext": ".js",
       "sizeBytes": 7679,
       "sizeKB": 7.5
-    },
-    {
-      "name": "dollhouseScene-B0yu9WMj.js",
-      "ext": ".js",
-      "sizeBytes": 7169,
-      "sizeKB": 7
     }
   ]
 }

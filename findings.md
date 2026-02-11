@@ -139,3 +139,25 @@
 - 发布 commit：`eb353cc`。
 - 发布链路：`dist -> docs -> commit -> push` 已完成。
 - 本次按用户分工未执行 Cloudflare 部署侧 commit 对齐核验（用户自行线上目视验收）。
+
+## 第七轮补充收口发现（2026-02-11 21:53:13）
+1. `main.ts` 仍存在三个可继续瘦身的入口静态依赖：
+   - `ConfigErrorPanel`（仅配置错误分支使用）
+   - `SceneUiRuntime` / `ChatRuntime`（仅场景路径需要）
+   - debug helper（仅 `debug=1` 使用）
+2. 这些依赖不属于“首屏必需执行链路”，迁移为动态加载后可直接降低主包体积与入口执行负担。
+
+## 第七轮补充收口结果（2026-02-11 21:53:13）
+1. 入口瘦身落地：
+   - `ConfigErrorPanel` 改为按需 `import()`
+   - `SceneUiRuntime/ChatRuntime` 改为场景路径按需加载
+   - debug helper 改为 `debug=1` 时动态加载
+2. 量化结果：
+   - `index` 主包：`77.95kB -> 57.16kB`（下降约 26.67%）
+   - 已满足并超出本轮 `index <= 65kB` 目标
+3. 构建与证据：
+   - `npm run check:text`、`npm run build`、`npm run perf:baseline` 全通过
+   - chrome-devtools 复验通过：社区/导览均为“点击后首次加载”
+4. 中文显示复验：
+   - 标题、底部导航、信息弹窗文案为正常简体中文
+   - 未观察到用户反馈的弹窗中文乱码复现

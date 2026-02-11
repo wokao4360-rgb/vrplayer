@@ -26,6 +26,12 @@ export default defineConfig({
         onlyExplicitManualChunks: true,
         manualChunks(id) {
           if (
+            id.includes('/src/app/sceneUiRuntime') ||
+            id.includes('/src/app/chatRuntime')
+          ) {
+            return 'scene-runtime';
+          }
+          if (
             id.includes('/src/viewer/picking') ||
             id.includes('/src/viewer/spatialProjection') ||
             id.includes('/src/viewer/createCompassTexture')
@@ -76,7 +82,6 @@ export default defineConfig({
     open: true,
   },
 });
-
 
 
 

@@ -223,3 +223,14 @@
   - 点击“三维模型”后首次请求 `structure3d-runtime-BBIptQ-6.js`；
   - Console 仅剩历史非阻断 warning/issue（无新增阻断错误）。
 - 当前待执行：按 SOP 发布到 `main`（本次提交包含 `AGENTS.md`）。
+
+## 2026-02-12 00:31:57
+- 按 SOP 完成第九轮发布：
+  - `git checkout main`
+  - `git pull --rebase --autostash origin main`
+  - `npm run build`
+  - `robocopy dist -> docs /MIR`
+  - `git add -A`（包含 `AGENTS.md`）
+  - `git commit` + `git push origin main`
+- 发布提交：`499ed3f0049f9b7643e13cc37ea98da8592fd47f`。
+- 远端核对：`origin/main` 已对齐到同一 commit。

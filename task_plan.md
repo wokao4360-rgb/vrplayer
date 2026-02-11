@@ -5,7 +5,7 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 
 ## 时间
 - 创建时间：2026-02-11 18:51:14
-- 最新更新：2026-02-12 00:24:13
+- 最新更新：2026-02-12 00:31:57
 
 ## 已完成基线
 - 第一轮：入口依赖瘦身、Dock 惰性化、CDN 后台探测、关键生命周期清理。
@@ -92,4 +92,4 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 - [x] 阶段2（P1）：预热改为预算化调度（`WarmupScheduler` + `sceneUiRuntime` 分档触发）
 - [x] 阶段3（P1）：中文乱码全链路守卫（`check-encoding` + 文案源统一 + build 前置校验）
 - [x] 阶段4：构建验证 + `chrome-devtools` 证据采样（`snapshot + network + console`）
-- [ ] 阶段5：按 SOP 发布第九轮（`dist -> docs -> commit -> push`，本次包含 `AGENTS.md`）
+- [x] 阶段5：按 SOP 发布第九轮（`dist -> docs -> commit -> push`，本次包含 `AGENTS.md`）

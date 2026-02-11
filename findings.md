@@ -134,3 +134,8 @@
    - network：未点社区前无 `chat-community`，点击社区后首次加载；
    - network：未点导览前无 `GuideTray/VideoPlayer`，点击导览后首次加载；
    - console：仅非阻断项，无新增阻断错误。
+
+## 第七轮发布确认（2026-02-11 21:36:22）
+- 发布 commit：`eb353cc`。
+- 发布链路：`dist -> docs -> commit -> push` 已完成。
+- 本次按用户分工未执行 Cloudflare 部署侧 commit 对齐核验（用户自行线上目视验收）。

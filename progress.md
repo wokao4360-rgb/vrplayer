@@ -167,3 +167,8 @@
   - 点击“社区”后首次出现 `chat-community-C6ZbaM52.js` 与 `store-B83L8bDT.js`。
   - 未点击“导览”前不请求 `GuideTray/VideoPlayer`；点击“导览”后首次加载 `GuideTray-DA1_STCM.js` 与 `VideoPlayer-CyQLSIuS.js`。
   - console 仅保留非阻断项（meta deprecate + 表单字段 issue），无新增阻断错误。
+
+## 2026-02-11 21:36:22
+- 已按第七轮 SOP 发布：`git checkout main` -> `git pull --rebase --autostash origin main` -> `npm run build` -> `robocopy .\\dist .\\docs /MIR` -> `git add -A`（排除用户本地 `AGENTS.md`）-> `git commit` -> `git push origin main`。
+- 发布提交：`eb353cc`。
+- 远端状态：`origin/main` 已对齐到 `eb353cc`。

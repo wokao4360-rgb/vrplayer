@@ -1,4 +1,4 @@
-# VR 全景 Web 播放器（vrplayer）
+﻿# VR 全景 Web 播放器（vrplayer）
 
 基于 Three.js 的全景 Web 播放器，支持多馆多场景、热点导航、地图导览与低清到高清渐进加载。
 
@@ -90,7 +90,7 @@ git push origin main
 - [2026-02-01 11:30:00] 大陆网络下资源失败优先检查 CDN 可达性与回源逻辑，不要先判断为渲染逻辑故障。
 - [2026-02-01 11:40:00] 每次宣称“修复成立”前，至少做一次 chrome-devtools 的页面快照 + Network/Console 采样。
 - [2026-02-08 23:45:00] 三馆学伴上下文修复：请求体必须携带 `sessionId + history/messages + context.historyLength`；聊天面板销毁重建后从 `localStorage` 恢复消息与会话，避免每条消息都被后端视作新会话。
-
-- [2026-02-10 22:15:09] ���������ܱ�����Լ��أ�editor/debug/structure3d/north-calibration/dock-panels ���ڴ���ʱ import()��chat-community ���������ɼ��� idle ��ʼ������ֹ�ص���ھ�̬��������
-- [2026-02-10 23:08:18] �ڶ������ܹ���`TileMeshPano/KTX2Loader` ���밴�趯̬���أ���ֹ�� `three-extras` �������� preload����������Ϊ�׽����������أ����� idle Ԥ�ȣ���Service Worker ��Ԥ����ǲ���Դ��`/config.json` ���� network-only �Ա������ó¾ɡ�
-- [2026-02-11 00:06:15] ���������ܹ���main ��ڽ�ֹ��̬���� PanoViewer/vrMode �� three ���ģ�飻���б�/�����б�·�ɲ��ô��� three-core ����three ���� scene ·�ɰ�����أ������б�ҳ��ʵ��Ӧ����������ļ������⽫���ģ�����ʽ���������������
+- [2026-02-10 22:15:09] 首屏链路约束：`editor/debug/structure3d/north-calibration/dock-panels` 必须按需 `import()`；`chat-community` 不得首屏静态加载，改为场景可见后按策略触发。
+- [2026-02-10 23:08:18] 第二轮性能收口：`TileMeshPano/KTX2Loader` 按需加载；禁止 `three-extras` 进入 `index` preload；聊天改为首交互触发；Service Worker 仅壳层预缓存，`/config.json` 保持 `network-only`。
+- [2026-02-11 00:06:15] 第三轮入口解耦：`main` 禁止静态导入 `PanoViewer/vrMode/three`；列表路由不触发 `three-core`，three 仅在 scene 路由按需加载。
+- [2026-02-11 19:14:08] 第四轮网络与流畅性：引入图片分通道并发调度（`tile/pano/preload/ui`），CDN 探测并行竞速并默认 `1000ms` 超时，SW 支持跨域全景缓存，输入事件改为每帧聚合应用且默认不启用自动降载。

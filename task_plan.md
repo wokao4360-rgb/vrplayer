@@ -1,56 +1,43 @@
 ﻿# task_plan.md
 
-## 浠诲姟
-VRPlayer 棣栬疆楂?ROI 鍏ㄤ粨浼樺寲锛堟€ц兘浼樺厛 + 鍏抽敭绋冲畾鎬т慨澶嶏級
-
-## 鏃堕棿
-- 鍒涘缓鏃堕棿: 2026-02-10 21:46:36
-- 鏈€鏂版洿鏂? 2026-02-10 22:15:09
-
-## 闃舵鐘舵€?
-- [x] 闃舵1 鍏ュ彛渚濊禆鐦﹁韩锛坄main.ts` 鍔ㄦ€佸姞杞?`editor/debug/structure3d/north-calibration/chat`锛?
-- [x] 闃舵2 Dock 闈㈡澘鎯版€у寲锛坄DockPanels.tsx` 闈㈡澘 loader锛沗BottomDock.tsx` 鎸夐渶鍔犺浇 `DockPanels`锛?
-- [x] 闃舵3 Dollhouse 闄嶈€︼紙`Dollhouse3DPanel.tsx` 鍔ㄦ€佸姞杞?`DollhouseScene` + token 闃插苟鍙戯級
-- [x] 闃舵4 CDN 鎺㈡祴鍘婚樆濉烇紙`assetResolver.ts` 缂撳瓨涓婃鎴愬姛 CDN + TTL + 鍚庡彴澶嶆帰娴嬶紱`main.ts` 涓嶉樆濉炵瓑寰咃級
-- [x] 闃舵5 鍏抽敭绋冲畾鎬т慨澶嶏紙鍏ㄥ眬鐩戝惉涓?RAF 鐢熷懡鍛ㄦ湡娓呯悊锛?
-- [x] 闃舵6 鏋勫缓鎷嗗寘锛坄vite.config.ts` manualChunks + `onlyExplicitManualChunks`锛?
-- [x] 闃舵7 鍙戝竷锛坄dist -> docs -> commit -> push`锛?
-
-## 绾︽潫
-- 浠呬慨鏀?`src/**`銆乣README.md`銆佽鍒掕褰曟枃浠躲€?
-- 涓嶆墜鏀?`dist/**`銆乣docs/**`銆?
-- 缁撹鍓嶅繀椤绘湁鏋勫缓涓?`chrome-devtools` 璇佹嵁閲囨牱锛坰napshot + network/console锛夈€?
-
-## 第二轮任务
-VRPlayer 第二轮深入优化（首屏链路再瘦身 + 稳定性收口）
+## 任务
+VRPlayer 第四轮深入优化（在“全速渲染 + 不降画质”前提下，提升首屏与整体网络访问速度）
 
 ## 时间
-- 创建时间: 2026-02-10 22:46:15
-- 最新更新: 2026-02-10 23:08:18
+- 创建时间：2026-02-11 18:51:14
+- 最新更新：2026-02-11 19:15:19
 
-## 阶段状态
-- [x] 阶段0 规划文件与 memory 关键节点记录
-- [x] 阶段1 去除 `three-extras` 首屏链路（`TileMeshPano/KTX2Loader` 动态加载）
-- [x] 阶段2 聊天改为首交互触发（移除 idle 自动预热）
-- [x] 阶段3 场景 UI 二段式挂载（LOW_READY 后异步加载）
-- [x] 阶段4 SW 壳层预缓存 + `/config.json` 新鲜度保护
-- [x] 阶段5 `PanoViewer/StructureView3D` resize 监听成对清理
-- [x] 阶段6 构建与拆包验证（主包体积与 preload 结果）
-- [x] 阶段7 发布（`dist -> docs -> commit -> push`）
+## 已完成基线
+- 第一轮：入口依赖瘦身、Dock 惰性化、CDN 后台探测、关键生命周期清理。
+- 第二轮：KTX2/three-extras 按需化、聊天首交互触发、SW 壳层预缓存、发布上线。
+- 第三轮：main 入口深度解耦、SceneListPage 拆分、路由级按需加载、发布上线。
 
-## 第三轮任务（深入优化）
-VRPlayer 第三轮深入优化（入口解耦 + 路由级按需加载 + VR 模块去静态依赖）
+## 第四轮阶段状态
+- [x] 阶段0：规划文件中文化与编码治理（清理乱码/控制字符，统一简体中文记录）
+- [x] 阶段1（P0）：图片请求调度器落地（分通道并发：tile/pano/preload/ui）
+- [x] 阶段2（P1）：CDN 探测并行竞速 + 默认超时收敛到 1000ms
+- [x] 阶段3（P1）：SW 跨域全景缓存对齐（保持 /config.json network-only）
+- [x] 阶段4（P2）：输入事件聚合到每帧应用，保持全速渲染并默认关闭自动节流降载
+- [x] 阶段5：构建验证 + chrome-devtools 证据采样
+- [ ] 阶段6：按 SOP 发布（dist -> docs -> commit -> push）
 
-## 时间
-- 创建时间: 2026-02-11 00:06:15
-- 最新更新: 2026-02-11 00:06:15
+## 约束
+- 不降帧率，不降画质，渲染循环保持全速。
+- 不手改 dist/**、docs/**。
+- 所有“修复成立”结论必须有 MCP 证据（snapshot + network/console）。
 
-## 阶段状态
-- [x] 阶段1 入口解耦：main.ts 抽离 SceneList 页面实现到 SceneListPage 模块
-- [x] 阶段2 路由级按需：PanoViewer/TopRightControls/BrandMark/StructureView2D 改懒加载
-- [x] 阶段3 类型去耦：LoadStatus 下沉到 src/types/loadStatus.ts
-- [x] 阶段4 VR 去静态依赖：vrMode 模块改按需初始化
-- [x] 阶段5 预加载策略：移除 HTML 对 three-core/three-extras 的 modulepreload
-- [x] 阶段6 证据化验证：chrome-devtools snapshot + network + console
-- [x] 阶段7 发布（dist -> docs -> commit -> push）
+## 关键决策
+| 决策 | 原因 |
+|---|---|
+| 引入分通道并发调度器 | 解除全局并发=2 的瓶颈，提升全景与瓦片爬升速度 |
+| CDN probe 并行化 | 缩短可用 CDN 选路时间，弱网下更快可用 |
+| SW 支持跨域全景缓存 | 提升回访命中与跨域资源复用 |
+| 事件增量每帧应用 | 降低高频输入导致的主线程抖动，提升流畅性 |
+| 默认关闭自动 tile 节流 | 满足“全速渲染、不降载”要求 |
 
+## 风险与应对
+| 风险 | 应对 |
+|---|---|
+| 并发提高导致弱网抖动 | 按设备档位区分并发上限（桌面/移动） |
+| 跨域缓存不可见头部 | 允许 opaque 响应缓存，仅限全景资源路径 |
+| 调整输入链路引发交互回归 | 用 chrome-devtools 做交互与网络双采样回归 |

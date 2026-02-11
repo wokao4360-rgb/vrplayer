@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-const CACHE_VERSION = 'v7-20260210-shell-precache';
+const CACHE_VERSION = 'v8-20260211-cross-origin-pano-cache';
 const RUNTIME_CACHE = `vr-runtime-${CACHE_VERSION}`;
 const SHELL_CACHE = `vr-shell-${CACHE_VERSION}`;
 
@@ -9,6 +9,10 @@ function isConfigRequest(pathname) {
 
 function isShellAssetPath(pathname) {
   return pathname.endsWith('.js') || pathname.endsWith('.css');
+}
+
+function isPanoAssetPath(pathname) {
+  return pathname.includes('/assets/panos/');
 }
 
 function getScopeBaseUrl() {
@@ -96,34 +100,34 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
+  const sameOrigin = url.origin === self.location.origin;
 
   const pathname = url.pathname;
-  const isPano =
-    pathname.startsWith('/assets/panos/tiles/') ||
-    pathname.startsWith('/assets/panos/') ||
-    pathname.endsWith('manifest.json');
-  const isStatic =
-    pathname.endsWith('.js') ||
-    pathname.endsWith('.css') ||
-    pathname.endsWith('.wasm') ||
-    pathname.endsWith('.ktx2') ||
-    pathname.endsWith('.jpg') ||
-    pathname.endsWith('.png') ||
-    pathname.endsWith('.webp') ||
-    pathname.endsWith('.json');
+  const isPano = isPanoAssetPath(pathname);
+  const isStaticSameOrigin =
+    sameOrigin &&
+    (
+      pathname.endsWith('.js') ||
+      pathname.endsWith('.css') ||
+      pathname.endsWith('.wasm') ||
+      pathname.endsWith('.ktx2') ||
+      pathname.endsWith('.jpg') ||
+      pathname.endsWith('.png') ||
+      pathname.endsWith('.webp') ||
+      pathname.endsWith('.json')
+    );
 
-  if (isConfigRequest(pathname)) {
+  if (sameOrigin && isConfigRequest(pathname)) {
     event.respondWith(networkOnly(req));
     return;
   }
 
-  if (isPano || isStatic) {
-    event.respondWith(staleWhileRevalidate(req));
+  if (isPano || isStaticSameOrigin) {
+    event.respondWith(staleWhileRevalidate(req, { allowOpaque: !sameOrigin && isPano }));
     return;
   }
 
-  if (req.mode === 'navigate') {
+  if (sameOrigin && req.mode === 'navigate') {
     event.respondWith(networkFirst(req));
   }
 });
@@ -148,12 +152,20 @@ async function matchFromCaches(req) {
   return runtimeCache.match(req);
 }
 
-async function staleWhileRevalidate(req) {
+function shouldCacheResponse(res, allowOpaque = false) {
+  if (!res) return false;
+  if (res.status === 200) return true;
+  if (allowOpaque && res.type === 'opaque') return true;
+  return false;
+}
+
+async function staleWhileRevalidate(req, options = {}) {
+  const allowOpaque = options.allowOpaque === true;
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await matchFromCaches(req);
   const networkPromise = fetch(req)
     .then((res) => {
-      if (res && res.status === 200) {
+      if (shouldCacheResponse(res, allowOpaque)) {
         cache.put(req, res.clone());
       }
       return res;

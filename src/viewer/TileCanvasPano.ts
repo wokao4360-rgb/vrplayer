@@ -490,6 +490,7 @@ export class TileCanvasPano {
         timeoutMs: 12000,
         retries: 1,
         priority: info.priority,
+        channel: 'tile',
       });
       this.ctx.drawImage(fetched, x, y, tileW, tileH);
       fetched.close?.();

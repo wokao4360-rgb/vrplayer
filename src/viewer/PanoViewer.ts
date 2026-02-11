@@ -154,6 +154,7 @@ export class PanoViewer {
   private renderSource: 'none' | 'fallback' | 'low' | 'tiles' = 'none';
   private perfSamples: number[] = [];
   private perfMode: 'normal' | 'throttle' = 'normal';
+  private allowTilePerfThrottle = false;
   private perfLastChangeAt = 0;
   private renderSwitchReason = '';
   private clearedCount = 0;
@@ -192,6 +193,9 @@ export class PanoViewer {
   private lastFov: number = 75;
   private isViewChanging: boolean = false;
   private viewChangeThreshold: number = 0.5; // 瑙嗚鍙樺寲闃堝€硷紙搴︼級
+  private pendingYawDelta = 0;
+  private pendingPitchDelta = 0;
+  private hasPendingViewDelta = false;
 
   // VR 模式标记（需用拖拽控制）
   private vrModeEnabled = false;
@@ -200,6 +204,7 @@ export class PanoViewer {
     this.container = container;
     this.debugMode = debugMode;
     this.renderProfile = this.detectRenderProfile();
+    this.allowTilePerfThrottle = this.detectTileThrottleEnabled();
     // 创建场景
     this.scene = new THREE.Scene();
     
@@ -334,20 +339,10 @@ export class PanoViewer {
     const deltaX = e.clientX - this.lastMouseX;
     const deltaY = e.clientY - this.lastMouseY;
     
-    this.yaw += deltaX * 0.5;
-    this.pitch += deltaY * 0.5;
-    this.pitch = Math.max(-90, Math.min(90, this.pitch));
+    this.queueViewDelta(deltaX * 0.5, deltaY * 0.5);
     
     this.lastMouseX = e.clientX;
     this.lastMouseY = e.clientY;
-    
-    this.updateCamera();
-    
-    // 调试模式：实时更新调试面板
-    if (this.debugMode && this.onDebugClick) {
-      const view = this.getCurrentView();
-      this.onDebugClick(this.lastMouseX, this.lastMouseY, view.yaw, view.pitch, view.fov);
-    }
   }
 
   private onPointerUp(): void {
@@ -393,14 +388,10 @@ export class PanoViewer {
       const deltaX = e.touches[0].clientX - this.lastMouseX;
       const deltaY = e.touches[0].clientY - this.lastMouseY;
       
-      this.yaw += deltaX * 0.5;
-      this.pitch += deltaY * 0.5;
-      this.pitch = Math.max(-90, Math.min(90, this.pitch));
+      this.queueViewDelta(deltaX * 0.5, deltaY * 0.5);
       
       this.lastMouseX = e.touches[0].clientX;
       this.lastMouseY = e.touches[0].clientY;
-      
-      this.updateCamera();
     } else if (e.touches.length === 2 && this.isPinching) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -443,6 +434,21 @@ export class PanoViewer {
     const z = Math.cos(pitchRad) * Math.cos(yawRad);
     
     this.camera.lookAt(x, y, z);
+  }
+
+  private queueViewDelta(yawDelta: number, pitchDelta: number): void {
+    this.pendingYawDelta += yawDelta;
+    this.pendingPitchDelta += pitchDelta;
+    this.hasPendingViewDelta = true;
+  }
+
+  private applyPendingViewDelta(): void {
+    if (!this.hasPendingViewDelta) return;
+    this.yaw += this.pendingYawDelta;
+    this.pitch = Math.max(-90, Math.min(90, this.pitch + this.pendingPitchDelta));
+    this.pendingYawDelta = 0;
+    this.pendingPitchDelta = 0;
+    this.hasPendingViewDelta = false;
   }
 
   /**
@@ -672,6 +678,7 @@ export class PanoViewer {
         allowFetchFallback: false,
         priority: 'high',
         imageOrientation: 'flipY',
+        channel: 'pano',
       });
 
       // 转为 THREE.Texture
@@ -738,6 +745,7 @@ export class PanoViewer {
         allowFetchFallback: false,
         priority: 'high',
         imageOrientation: 'flipY',
+        channel: 'pano',
       });
 
       // 转为 THREE.Texture
@@ -779,6 +787,7 @@ export class PanoViewer {
           allowFetchFallback: false,
           priority: 'low',
           imageOrientation: 'flipY',
+          channel: 'pano',
         });
         
         // 转为 THREE.Texture
@@ -1003,6 +1012,8 @@ export class PanoViewer {
     const fps = 1000 / Math.max(1, dtMs);
     this.perfSamples.push(fps);
     if (this.perfSamples.length > 30) this.perfSamples.shift();
+    if (!this.allowTilePerfThrottle) return;
+
     const avg = this.perfSamples.reduce((a, b) => a + b, 0) / this.perfSamples.length;
     const now = performance.now();
     if (avg < 28 && this.perfMode === 'normal' && now - this.perfLastChangeAt > 2000) {
@@ -1090,6 +1101,9 @@ export class PanoViewer {
     const dtMs = this.lastFrameTimeMs ? now - this.lastFrameTimeMs : 16.7;
     this.updatePerformanceGuard(dtMs);
     this.lastFrameTimeMs = now;
+
+    // 输入高频事件只累计增量，在每帧统一应用，减少主线程抖动
+    this.applyPendingViewDelta();
     
     // 检查视角变化（用于 UI 自动定位）
     const view = this.getCurrentView();
@@ -1547,6 +1561,15 @@ export class PanoViewer {
     return RenderProfile.Enhanced;
   }
 
+  private detectTileThrottleEnabled(): boolean {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('tileThrottle') === '1';
+    } catch {
+      return false;
+    }
+  }
+
   private fallbackToLegacy(sceneData: Scene, tilesConfig?: { fallbackPano?: string; fallbackPanoLow?: string }): void {
     const fallbackScene: Scene = {
       ...sceneData,
@@ -1586,6 +1609,7 @@ export class PanoViewer {
         allowFetchFallback: true,
         priority: 'high',
         imageOrientation: 'flipY',
+        channel: 'pano',
       });
       const texture = new THREE.CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);

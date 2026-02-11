@@ -115,31 +115,15 @@ export class PreloadManager {
           return; // token 过期，忽略
         }
         
-        // 使用 Image 预取（原生加载，不用 fetch）
-        // 导入代理 URL 工具
-        const { toProxiedImageUrl } = await import('../utils/externalImage');
-        const proxiedUrl = toProxiedImageUrl(url);
-        
-        await new Promise<void>((resolve, reject) => {
-          const img = new Image();
-          img.referrerPolicy = 'no-referrer';
-          img.crossOrigin = 'anonymous';
-          img.decoding = 'async';
-          img.loading = 'lazy';
-          img.onload = () => {
-            // 再次检查 token
-            if (token === this.currentToken) {
-              resolve();
-            }
-          };
-          img.onerror = () => {
-            // 预取失败也无所谓，静默忽略
-            // 再次检查 token
-            if (token === this.currentToken) {
-              resolve(); // 即使失败也 resolve，避免阻塞队列
-            }
-          };
-          img.src = proxiedUrl;
+        // 预取失败不阻塞主流程，仍通过 finally 释放并发槽
+        const { loadExternalImageElement } = await import('../utils/externalImage');
+        await loadExternalImageElement(url, {
+          timeoutMs: 10000,
+          retries: 0,
+          referrerPolicy: 'no-referrer',
+          crossOrigin: 'anonymous',
+          priority: 'low',
+          channel: 'preload',
         });
       } catch (error) {
         // 吞掉所有错误，不污染控制台
@@ -182,7 +166,6 @@ export class PreloadManager {
     this.fetchedUrls.clear();
   }
 }
-
 
 
 

@@ -1,49 +1,40 @@
-# findings.md
+﻿# findings.md
 
-## 2026-02-10 21:46:36 基线
-- `main.ts` 入口存在多处可选功能静态耦合，导致首屏依赖链偏重。
-- `DockPanels.tsx` 和 `Dollhouse3DPanel.tsx` 存在可选模块静态引入。
-- CDN 探测仅有 probe，无“上次成功节点缓存”。
-- 多处全局监听与 RAF 缺少统一清理。
+## 需求与约束（本轮）
+- 目标：继续优化首屏和整体网络访问速度。
+- 硬约束：不降帧率、不降画质，渲染循环保持全速。
+- 工程约束：`docs/**` 仅通过 `dist -> docs` 生成，不手改。
+- 验证约束：结论前必须有 MCP 证据（snapshot + network/console）。
 
-## 2026-02-10 22:15:09 本轮关键发现与结果
-- 首屏入口主包已明显下降：`dist/assets/index-QqKJpH12.js` 为 `223.77 kB`（minified）。
-- `index.html` 仅保留 `three-core` 与 `three-extras` 的 modulepreload；`editor-debug/chat-community/dock-panels` 不再首屏预拉取。
-- `chat-community` 仍按“场景可见后 idle 初始化”触发自动加载（非阻塞首屏，但会在空闲时请求）。
-- `dock-panels` 已验证按触发加载：首次打开社区或切到 3D 结构图时才请求。
-- `editor-debug` 已验证仅在 `?debug=1` / `?editor=1` 触发请求。
-- MCP 采样中无新的运行时错误；仅保留已有警告（`apple-mobile-web-app-capable`、`favicon 404`、表单可访问性提示）。
+## 关键发现
+1. `externalImage.ts` 原实现是全局并发硬编码 2，会限制瓦片与全景并发拉取能力。
+2. `assetResolver.ts` 之前探测默认 1800ms，且链路可进一步并行化提速。
+3. `sw.js` 之前只处理同源请求，跨域 CDN 全景资源无法进入 SW 缓存链路。
+4. `PanoViewer` 高速拖拽时，输入事件线程频繁直接更新相机，存在主线程抖动空间。
 
-## 2026-02-10 22:20:43 发布验证
-- 发布提交：`588dfbb4fe435c30966aa0466c6038b9aaf84d1c`，已推送到 `origin/main`。
-- 远端 `main` HEAD 与本地 HEAD 一致。
-- 页面资源已切换到新构建：`https://wokao4360-rgb.github.io/vrplayer/` 返回 `assets/index-QqKJpH12.js`。
+## 技术决策（已实施）
+| 决策 | 实施点 | 预期收益 |
+|---|---|---|
+| 分通道并发调度 | `src/utils/imageRequestScheduler.ts` + 调用链接入 | 解除全局并发瓶颈，提升清晰度爬升速度 |
+| probe 并行竞速 + 缩时 | `src/utils/assetResolver.ts` + `public/config.json` | 更快选出可用 CDN，弱网首屏更稳 |
+| SW 跨域全景缓存对齐 | `public/sw.js` | 回访加载更快，跨域资源可复用 |
+| 输入增量每帧应用 | `src/viewer/PanoViewer.ts` | 降低输入抖动，提升交互流畅性 |
+| 默认不自动节流降载 | `src/viewer/PanoViewer.ts` | 满足“全速渲染，不降载”策略 |
 
-## 2026-02-10 23:08:18 �ڶ��ֹؼ���������
-- ���������`dist/assets/index-DVqOpICs.js` = `180.66 kB`��Ŀ�� `<= 210 kB` ��ɣ���
-- ���� preload��`dist/index.html` ������ `three-core`�����Ƴ� `three-extras` Ԥ���ء�
-- `TileMeshPano` �� `KTX2Loader` ��Ϊ���趯̬���أ��� KTX2 ������`scene=gate`�������в����� `three-extras` / `tile-ktx2`��
-- �����Ϊ�׽���������`scene=gate` ��ʼ���󲻺� `chat-community`���״ε��������� `assets/chat-community-*.js`��
-- Dock ��屣�ְ��裺��������������״����� `assets/dock-panels-*.js`��
-- `?debug=1` / `?editor=1` ���ڶ�Ӧģʽ���� `assets/editor-debug-*.js`��
-- �ȶ����޸���`PanoViewer.ts` �� `StructureView3D.ts` �� `resize` ������Ϊ�־����ã�`add/remove` �ɶ�������
-- SW ���Ը��£������ǲ�Ԥ���棨index + js/css����`/config.json` ��ʽ�� network-only����д��ǲ㻺�棩��
+## Context7 依据
+- Vite：`build.modulePreload.resolveDependencies` 支持按 hostType 过滤 preload 依赖。
+- Vite：动态 import 的依赖预取由 Vite 重写处理，可通过配置精细控制。
+- MDN：Service Worker 可缓存跨域 `opaque` 响应，但应采用可刷新的缓存策略。
 
-## 2026-02-10 23:25:52 ֱ��������֤
-- PR �ѹرգ�https://github.com/wokao4360-rgb/vrplayer/pull/1����
-- �����ύ��`43c3287`��
-- ���ϲ���ȷ�ϣ���ҳ�ű� hash ���� `assets/index-DVqOpICs.js`����ʾ Pages �Ѳ��𵽱��β��
+## 风险与验证重点
+1. 并发提高后弱网设备是否抖动：重点看 network waterfall 与 console 错误增长。
+2. 跨域缓存是否污染非目标资源：仅允许全景路径进入该策略。
+3. 输入链路变更是否影响交互精度：重点采样拖拽与切场景流畅性。
 
-## 2026-02-11 00:06:15 �����������Ż��ؼ�����
-- �������������½���dist/assets/index-CGaPg6Yv.js = 77.03 kB����һ��Ϊ 180.66 kB����
-- dist/index.html ���� modulepreload��three-core ������ HTML ����ǿ��Ԥ����
-- ·�ɼ�������Ϊ��֤��
-  - �����б�·�ɣ�?museum=wangding�������� index + css + config + TitleBar + SceneListPage + ����ͼ���������� 	hree-core��
-  - ����·�ɣ�?museum=wangding&scene=gate�������� PanoViewer + three-core��
-- VR ģ�����ȥ��̬������rMode.ts ��Ϊ���� import �����״��� VR ʱ��ʼ�������������ڶ� three �ľ�̬��ϡ�
-- �ؼ����ܻع����ͨ����snapshot �ɼ�����/�б� UI ������console ��ʣ��ʷ���棨apple mobile meta/favcion 404��������������ʱ����
-
-## 2026-02-11 00:10:50 �����ַ����벿��ȷ��
-- �����ύ��90cf3298056dcdcb20ab51a2dfd8459a135578da��main����
-- GitHub Actions: pages build and deployment �Ը� SHA ״̬ completed/success��
-- ������������ڽű���index-CGaPg6Yv.js��https://wokao4360-rgb.github.io/vrplayer/����
+## 验证结果（2026-02-11 19:15:19）
+1. 构建通过：`npm run build` 无编译错误。
+2. `dist/index.html` 已不包含 `three-extras` 预加载。
+3. chrome-devtools 证据：
+   - 未交互前未请求 `chat-community` chunk；
+   - 首次点击“导览”后才请求 `chat-community` 与 `store`；
+   - Console 无新的阻断错误。

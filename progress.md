@@ -1,62 +1,58 @@
-# progress.md
+ï»¿# progress.md
 
-## 2026-02-10 21:46:36
-- åˆ›å»º `task_plan.md` / `findings.md` / `progress.md`ã€‚
-- è¿›å…¥åˆ†é˜¶æ®µå®žæ–½ã€‚
+## 2026-02-11 18:57:19
+- ç¡®è®¤è¿›å…¥æ‰§è¡Œæ¨¡å¼ï¼Œåˆ†æ”¯ä¸º `main`ï¼Œå·¥ä½œåŒºå¹²å‡€ã€‚
+- æŒ‰ç”¨æˆ·è¦æ±‚å¼€å§‹å®žæ–½è®¡åˆ’ï¼Œå¹¶è¦æ±‚æ‰§è¡Œè¿‡ç¨‹ä¸­ä½¿ç”¨ Context7ã€‚
 
-## 2026-02-10 22:00:12
-- å®Œæˆå…¥å£åŠ¨æ€åŠ è½½æ”¹é€ ï¼ˆ`ConfigStudio`ã€`DebugPanel`ã€`StructureView3D`ã€`NorthCalibrationPanel`ã€`FcChatPanel/FcChatClient`ï¼‰ã€‚
-- å®Œæˆç¨³å®šæ€§ä¿®å¤ï¼ˆç›‘å¬å™¨ä¸Ž RAF æ¸…ç†ï¼‰ã€‚
+## 2026-02-11 18:59:03
+- ä½¿ç”¨ Context7 èŽ·å– Vite æ–‡æ¡£ä¾æ®ï¼š`build.modulePreload.resolveDependencies` ä¸Ž `manualChunks` ç›¸å…³è¯´æ˜Žã€‚
+- ä½¿ç”¨ Context7 èŽ·å– MDN ä¾æ®ï¼šService Worker å¯¹è·¨åŸŸ opaque å“åº”ç¼“å­˜ç­–ç•¥è¦ç‚¹ã€‚
 
-## 2026-02-10 22:08:27
-- å®Œæˆ `DockPanels.tsx` å¼‚æ­¥é¢æ¿åŠ è½½ä¸Ž `Dollhouse3DPanel.tsx` åŠ¨æ€åœºæ™¯åŠ è½½ã€‚
-- å®Œæˆ `assetResolver.ts` ä¸Šæ¬¡æˆåŠŸ CDN ç¼“å­˜ + TTL + åŽå°å¤æŽ¢æµ‹ã€‚
+## 2026-02-11 19:02:10
+- æ–°å¢ž `src/utils/imageRequestScheduler.ts`ï¼Œå®žçŽ°åˆ†é€šé“å¹¶å‘è°ƒåº¦ï¼š`tile/pano/preload/ui`ã€‚
+- å¹¶å‘æ¡£ä½é‡‡ç”¨â€œç¨³ä¸­æ±‚å¿«â€ï¼šæ¡Œé¢ï¼ˆ6/3/2/4ï¼‰ä¸Žç§»åŠ¨ï¼ˆ4/2/1/2ï¼‰å·®å¼‚åŒ–ç­–ç•¥ã€‚
 
-## 2026-02-10 22:12:54
-- ä¿®å¤ `main.ts` è¯­æ³•æ–­ç‚¹ä¸Žå¼‚å¸¸æ³¨é‡Šå—ï¼Œæ¢å¤å¯æž„å»ºçŠ¶æ€ã€‚
-- `npm run build` é€šè¿‡ã€‚
+## 2026-02-11 19:03:21
+- é‡å†™ `src/utils/externalImage.ts`ï¼šç§»é™¤å…¨å±€å¹¶å‘=2ï¼Œæ”¹ä¸ºæŒ‰é€šé“è°ƒåº¦ã€‚
+- `ExternalImageLoadOptions` æ–°å¢ž `channel`ï¼Œå¹¶ä¿æŒåŽŸæœ‰è¶…æ—¶/é‡è¯•/fetch fallback è¡Œä¸ºã€‚
 
-## 2026-02-10 22:15:09
-- é‡æž„ `BottomDock.tsx` ä¸ºæŒ‰éœ€åŠ è½½ `DockPanels`ï¼Œä¿®æ­£ optional chunk é¦–å±é¢„æ‹‰å–ã€‚
-- è°ƒæ•´ `vite.config.ts`ï¼ˆ`onlyExplicitManualChunks` + æ‰‹å·¥åˆ†åŒ…ï¼‰ã€‚
-- å®Œæˆå¤šè½® `chrome-devtools` è¯æ®é‡‡æ ·ï¼ˆnormal/debug/editor/community/map/dollhouse/structure3dï¼‰ã€‚
-- å¾…æ‰§è¡Œï¼š`dist -> docs -> commit -> push` å‘å¸ƒé“¾è·¯ã€‚
+## 2026-02-11 19:03:56
+- æŽ¥å…¥è°ƒç”¨é“¾è·¯ï¼š
+  - `src/viewer/PanoViewer.ts` åŠ å…¥ `channel: 'pano'`
+  - `src/viewer/TileCanvasPano.ts`ã€`src/viewer/TileMeshPano.ts` åŠ å…¥ `channel: 'tile'`
+  - `src/ui/preloadManager.ts` æ”¹ä¸ºé€šè¿‡ `loadExternalImageElement(..., channel: 'preload')`
 
-## 2026-02-10 22:20:43
-- å·²æ‰§è¡Œå‘å¸ƒé“¾è·¯ï¼š`git pull --rebase`ï¼ˆé€šè¿‡ï¼‰â†’ `npm run build`ï¼ˆé€šè¿‡ï¼‰â†’ `robocopy dist docs /MIR`ï¼ˆé€šè¿‡ï¼‰â†’ `git commit` â†’ `git push`ã€‚
-- å‘å¸ƒæäº¤ï¼š`588dfbb4fe435c30966aa0466c6038b9aaf84d1c`ã€‚
-- è¿œç«¯åˆ†æ”¯å·²å¯¹é½è¯¥æäº¤ï¼›`https://wokao4360-rgb.github.io/vrplayer/` å·²è¿”å›žæ–°å“ˆå¸Œ `index-QqKJpH12.js`ã€‚
+## 2026-02-11 19:04:31
+- `src/utils/assetResolver.ts`ï¼šCDN probe æ”¹å¹¶è¡Œç«žé€Ÿï¼Œé»˜è®¤è¶…æ—¶ç”± 1800ms æ”¶æ•›ä¸º 1000msã€‚
+- `public/config.json`ï¼š`assetCdn.probeTimeoutMs` åŒæ­¥è°ƒæ•´ä¸º 1000ã€‚
 
-## 2026-02-10 22:53:11
-- Íê³É `PanoViewer.ts` / `TileMeshPano.ts` ²ð·Ö£º`TileMeshPano` Óë `KTX2Loader` ¸ÄÎª¶¯Ì¬¼ÓÔØ¡£
-- Íê³É `main.ts` Ê×½»»¥ÁÄÌì´¥·¢ÓëÇåÀíÂß¼­£¬ÒÆ³ý³¡¾° idle ×Ô¶¯Ô¤ÈÈÁÄÌì¡£
+## 2026-02-11 19:04:58
+- `public/sw.js`ï¼š
+  - å‡çº§ `CACHE_VERSION`
+  - æ”¯æŒè·¨åŸŸå…¨æ™¯èµ„æºç¼“å­˜
+  - å¯¹è·¨åŸŸå…¨æ™¯è¯·æ±‚å…è®¸ç¼“å­˜ opaque å“åº”
+  - ç»§ç»­ä¿æŒ `/config.json` network-only
 
-## 2026-02-10 23:02:47
-- Íê³É `main.ts` ¶þ¶ÎÊ½ UI ¹ÒÔØ£º`VideoPlayer/GuideTray/SceneGuideDrawer/BottomDock/TopModeTabs/Hotspots/QualityIndicator` ÔÚ LOW_READY ºóÒì²½¼ÓÔØ¡£
-- Íê³É `StructureView3D.ts` Óë `PanoViewer.ts` resize ¼àÌý³É¶Ô½â°ó¡£
-- Íê³É `public/sw.js` ¿Ç²ãÔ¤»º´æÓë `/config.json` ÐÂÏÊ¶È²ßÂÔ¡£
+## 2026-02-11 19:05:13
+- `src/viewer/PanoViewer.ts`ï¼š
+  - è¾“å…¥äº‹ä»¶æ”¹ä¸ºâ€œå¢žé‡ç´¯è®¡ + æ¯å¸§åº”ç”¨â€
+  - é»˜è®¤å…³é—­è‡ªåŠ¨ tile èŠ‚æµé™è½½ï¼ˆä»… `?tileThrottle=1` æ—¶å¯ç”¨ï¼‰
+  - ä¿æŒ RAF å…¨é€Ÿæ¸²æŸ“
+- é‡æ–°æ•´ç† `task_plan.md/progress.md/findings.md` ä¸ºç®€ä½“ä¸­æ–‡å¯è¯»å†…å®¹ã€‚
 
-## 2026-02-10 23:08:18
-- `npm run build` Í¨¹ý£»Ö÷°ü½µÖÁ `180.66 kB`£¬`dist/index.html` ÒÑÎÞ `three-extras` preload¡£
-- Íê³É chrome-devtools Ö¤¾Ý²ÉÑù£ºnormal/debug/editor + Ê×½»»¥ÁÄÌì + community ÀÁ¼ÓÔØ + ·Ç KTX2 ³¡¾°ÎÞ `three-extras` ÇëÇó¡£
-- ´ýÖ´ÐÐ£º·¢²¼Á´Â· `dist -> docs -> commit -> push`¡£
+## å¾…æ‰§è¡Œ
+- è¿è¡Œ `npm run build` éªŒè¯ TypeScript ä¸Žæ‰“åŒ…ç»“æžœã€‚
+- ä½¿ç”¨ chrome-devtools åš snapshot + network + console è¯æ®é‡‡æ ·ã€‚
+- å¦‚éªŒè¯é€šè¿‡ï¼Œæ‰§è¡Œå‘å¸ƒ SOPï¼ˆdist -> docs -> commit -> pushï¼‰ã€‚
 
-## 2026-02-10 23:25:52
-- °´ÓÃ»§ÒªÇó¹Ø±Õ PR #1£¨²»×ß PR ºÏ²¢£©£¬²¢Ö±½ÓÉÏÏß¡£
-- `main` ÒÑ fast-forward ºÏÈëÓÅ»¯Ìá½» `78d2e06`¡£
-- Ö´ÐÐ·¢²¼Á´Â·£º`npm run build` -> `robocopy .\\dist .\\docs /MIR` -> Ìá½» `43c3287` -> `git push origin main`¡£
-- Ô¶¶Ë `origin/main` ÒÑ¶ÔÆë `43c3287`£¬ÏßÉÏ `https://wokao4360-rgb.github.io/vrplayer/` ÒÑ´Ó `index-QqKJpH12.js` ¸üÐÂµ½ `index-DVqOpICs.js`¡£
+## 2026-02-11 19:15:19
+- æ‰§è¡Œ `npm run build`ï¼Œæž„å»ºæˆåŠŸï¼›å…³é”®äº§ç‰©ï¼š`index-CQkzrWWN.js 77.43kB`ã€`PanoViewer-V7D8Ehe8.js 71.21kB`ã€`three-core 513.43kB`ã€‚
+- å¤æ ¸ `dist/index.html`ï¼šæ—  `three-extras` çš„ `modulepreload`ã€‚
+- é€šè¿‡ `chrome-devtools` å®Œæˆ `snapshot + network + console` é‡‡æ ·ï¼š
+  - æœªäº¤äº’å‰æ—  `chat-community` è¯·æ±‚ï¼›
+  - ç‚¹å‡»â€œå¯¼è§ˆâ€åŽå‡ºçŽ° `chat-community-BRM8ZAeZ.js` ä¸Ž `store-B83L8bDT.js`ï¼›
+  - console ä»…å‰©éžé˜»æ–­ warning/issueï¼ˆæ— æŒç»­å¢žé•¿åž‹é”™è¯¯ï¼‰ã€‚
 
-## 2026-02-11 00:06:15
-- Ö´ÐÐµÚÈýÂÖÉîÈëÖØ¹¹£ºmain.ts Èë¿Ú½âñî + ³¡¾°/ÁÐ±íÂ·ÓÉ¼¶ÀÁ¼ÓÔØ¡£
-- ÐÂÔö src/ui/SceneListPage.ts£¬½«³¡¾°ÁÐ±íÒ³ÃæäÖÈ¾ÓëÑùÊ½´Ó main.ts ²ð³ö¡£
-- ÐÂÔö src/types/loadStatus.ts£¬PanoViewer/QualityIndicator/main ¸ÄÎªÒÀÀµ¹²ÏíÀàÐÍ£¬Ïû³ý UI ·´ÏòñîºÏ¡£
-- rMode ¸Ä°´Ðè¼ÓÔØ³õÊ¼»¯£¬É¾³ýÈë¿Ú¾²Ì¬ÒÀÀµ£¬ÑéÖ¤ ?museum=wangding Â·ÓÉ²»ÔÙÇëÇó 	hree-core¡£
-- Íê³É chrome-devtools Ö¤¾Ý²ÉÑù£ºsnapshot + network + console ¸²¸Ç³¡¾°Â·ÓÉÓëÁÐ±íÂ·ÓÉ¡£
-- µ±Ç°´ýÖ´ÐÐ£ºÊÇ·ñ°´ SOP ·¢²¼£¨dist -> docs -> commit -> push£©¡£
-
-## 2026-02-11 00:10:50
-- Ö´ÐÐ·¢²¼ SOP£ºgit pull --rebase --autostash -> 
-pm run build -> obocopy dist docs /MIR -> git commit -> git push¡£
-- ·¢²¼ commit£º90cf329£¬Ô¶¶Ë origin/main ÒÑ¶ÔÆë¡£
-- Pages ²¿ÊðÈ·ÈÏ£ºworkflow completed/success£¬ÏßÉÏ·µ»Ø index-CGaPg6Yv.js¡£
+## 2026-02-11 19:15:19
+- ä¿®å¤ `README.md` æŒä¹…åŒ–è®°å½•ä¹±ç å¹¶ç»Ÿä¸€ä¸º UTF-8ï¼›è¡¥å……ç¬¬å››è½®ä¼˜åŒ–ç»“è®ºæ¡ç›®ï¼ˆå«å®Œæ•´æ—¶é—´æˆ³ï¼‰ã€‚
+- å½“å‰å¾…æ‰§è¡Œï¼šæŒ‰ SOP å‘å¸ƒï¼ˆ`dist -> docs -> commit -> push`ï¼‰ã€‚

@@ -445,6 +445,7 @@ export class TileMeshPano {
         retries: 1,
         allowFetchFallback: true,
         priority,
+        channel: 'tile',
       });
     }
     const texture = new THREE.Texture(bmp);

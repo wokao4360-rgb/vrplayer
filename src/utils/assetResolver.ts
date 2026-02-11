@@ -43,7 +43,7 @@ type CachedBaseUrlRecord = {
 const DEFAULT_INCLUDE_PREFIXES = ['/assets/panos/'];
 const DEFAULT_EXCLUDE_PREFIXES: string[] = [];
 const DEFAULT_PROBE_PATH = '/config.json';
-const DEFAULT_PROBE_TIMEOUT_MS = 1800;
+const DEFAULT_PROBE_TIMEOUT_MS = 1000;
 const CDN_CACHE_KEY = 'vrplayer.assetCdn.lastSuccess';
 const CDN_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
@@ -256,6 +256,38 @@ async function probeBaseUrl(
   }
 }
 
+async function raceProbeBaseUrls(cfg: RuntimeAssetCdnConfig, token: number): Promise<string | null> {
+  if (cfg.baseUrls.length === 0) return null;
+
+  const tasks = cfg.baseUrls.map(async (baseUrl) => {
+    const ok = await probeBaseUrl(baseUrl, cfg, token);
+    if (!ok) throw new Error(`probe failed: ${baseUrl}`);
+    return baseUrl;
+  });
+
+  const promiseAny = (Promise as PromiseConstructor & {
+    any?: (values: Iterable<string | PromiseLike<string>>) => Promise<string>;
+  }).any;
+  if (typeof promiseAny === 'function') {
+    try {
+      return await promiseAny.call(Promise, tasks);
+    } catch {
+      return null;
+    }
+  }
+
+  // Promise.any 兜底：旧环境并行执行后取首个成功结果
+  const results = await Promise.all(
+    tasks.map((task) =>
+      task
+        .then((baseUrl) => ({ ok: true, baseUrl }))
+        .catch(() => ({ ok: false, baseUrl: null as string | null })),
+    ),
+  );
+  const hit = results.find((result) => result.ok && typeof result.baseUrl === 'string');
+  return hit?.baseUrl ?? null;
+}
+
 function startProbeIfNeeded(force = false): void {
   const cfg = runtimeConfig;
   if (!cfg || !cfg.enabled) return;
@@ -271,16 +303,15 @@ function startProbeIfNeeded(force = false): void {
   const token = ++probeToken;
 
   probePromise = (async () => {
-    for (const baseUrl of cfg.baseUrls) {
-      const ok = await probeBaseUrl(baseUrl, cfg, token);
-      if (token !== probeToken) return;
-      if (ok) {
-        selectedBaseUrl = baseUrl;
-        persistCachedBaseUrl(baseUrl, cfg);
-        probeState = 'ok';
-        return;
-      }
+    const winner = await raceProbeBaseUrls(cfg, token);
+    if (token !== probeToken) return;
+    if (winner) {
+      selectedBaseUrl = winner;
+      persistCachedBaseUrl(winner, cfg);
+      probeState = 'ok';
+      return;
     }
+
     if (token !== probeToken) return;
     selectedBaseUrl = null;
     clearCachedBaseUrl();

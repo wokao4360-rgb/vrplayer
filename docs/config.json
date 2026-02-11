@@ -9,7 +9,7 @@
       "https://github.cnxiaobai.com/https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs"
     ],
     "probePath": "/config.json",
-    "probeTimeoutMs": 1800
+    "probeTimeoutMs": 1000
   },
   "fcChat": {
     "endpoint": "https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/",

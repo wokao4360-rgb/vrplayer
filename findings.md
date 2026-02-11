@@ -91,3 +91,7 @@
    - snapshot：信息/更多弹窗文案正常简体中文；
    - network：`appModals-*.js` 仅在点击对应 tab 后出现；
    - console：仅保留历史非阻断 warning，无新增阻断错误。
+
+## 第六轮发布确认（2026-02-11 20:37:26）
+- 发布 commit：`86c2cb1`。
+- 发布内容：`PanoViewer` 生命周期收口 + 弹窗按需加载 + docs 构建产物同步。

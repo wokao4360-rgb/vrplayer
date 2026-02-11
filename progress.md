@@ -117,3 +117,7 @@
   - 首次点击“信息”后才请求 `assets/appModals-*.js`，按需加载生效；
   - “更多”弹窗中文显示正常；
   - 场景来回切换后 console 未出现新增持续增长型错误。
+
+## 2026-02-11 20:37:26
+- 已按 SOP 发布第六轮：`git checkout main` -> `git pull --rebase --autostash origin main` -> `npm run build` -> `robocopy .\\dist .\\docs /MIR` -> `git add -A` -> `git commit` -> `git push origin main`。
+- 发布提交：`86c2cb1`。

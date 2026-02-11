@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import { ClampToEdgeWrapping, Group, LinearFilter, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, sRGBEncoding, Texture, Vector3, WebGLRenderer } from 'three';
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
@@ -13,8 +13,8 @@ type TileInfo = {
   state: TileState;
   priority: 'low' | 'high';
   priorityRank?: number;
-  texture?: THREE.Texture;
-  mesh?: THREE.Mesh;
+  texture?: Texture;
+  mesh?: Mesh;
   lastUsed: number;
   failCount: number;
   retryTimer?: number;
@@ -22,15 +22,15 @@ type TileInfo = {
 
 type Ktx2LoaderLike = {
   setTranscoderPath: (path: string) => void;
-  detectSupport: (renderer: THREE.WebGLRenderer) => void;
+  detectSupport: (renderer: WebGLRenderer) => void;
   setWorkerLimit: (limit: number) => void;
   dispose: () => void;
-  _createTexture: (buffer: ArrayBuffer) => Promise<THREE.Texture>;
+  _createTexture: (buffer: ArrayBuffer) => Promise<Texture>;
 };
 
 export class TileMeshPano {
   private manifest: TileManifest | null = null;
-  private group: THREE.Group | null = null;
+  private group: Group | null = null;
   private pendingLow: TileInfo[] = [];
   private pendingHigh: TileInfo[] = [];
   private activeLoads = 0;
@@ -67,8 +67,8 @@ export class TileMeshPano {
   private static readonly TWO_PI = Math.PI * 2;
 
   constructor(
-    private scene: THREE.Scene,
-    private renderer: THREE.WebGLRenderer,
+    private scene: Scene,
+    private renderer: WebGLRenderer,
     private onFirstDraw: () => void,
     private onHighReady: () => void
   ) {}
@@ -104,7 +104,7 @@ export class TileMeshPano {
     if (this.group) {
       this.scene.remove(this.group);
     }
-    this.group = new THREE.Group();
+    this.group = new Group();
     this.group.renderOrder = 1;
     this.scene.add(this.group);
 
@@ -133,7 +133,7 @@ export class TileMeshPano {
       t.texture?.dispose();
       if (t.mesh) {
         t.mesh.geometry.dispose();
-        (t.mesh.material as THREE.MeshBasicMaterial).dispose();
+        (t.mesh.material as MeshBasicMaterial).dispose();
       }
     });
     this.tilesMap.clear();
@@ -147,7 +147,7 @@ export class TileMeshPano {
     }
   }
 
-  update(camera: THREE.PerspectiveCamera): void {
+  update(camera: PerspectiveCamera): void {
     if (!this.manifest || !this.highestLevel) return;
     const now = performance.now();
     if (now - this.lastUpdate < 150) return;
@@ -202,7 +202,7 @@ export class TileMeshPano {
     this.runLru(now);
   }
 
-  prime(camera: THREE.PerspectiveCamera): void {
+  prime(camera: PerspectiveCamera): void {
     if (!this.manifest || !this.highestLevel) return;
     camera.updateMatrixWorld(true);
     const now = performance.now();
@@ -377,7 +377,7 @@ export class TileMeshPano {
     }, delayMs);
   }
 
-  private async fetchTileTexture(info: TileInfo): Promise<THREE.Texture> {
+  private async fetchTileTexture(info: TileInfo): Promise<Texture> {
     const baseUrl = `${this.manifest!.baseUrl}/z${info.z}/${info.col}_${info.row}`;
     const ktx2Url = `${baseUrl}.ktx2`;
     const jpgUrl = `${baseUrl}.jpg`;
@@ -396,7 +396,7 @@ export class TileMeshPano {
     return texture;
   }
 
-  private async loadKtx2Texture(url: string, priority: 'low' | 'high'): Promise<THREE.Texture> {
+  private async loadKtx2Texture(url: string, priority: 'low' | 'high'): Promise<Texture> {
     const init: RequestInit = {
       mode: 'cors',
       cache: 'default',
@@ -411,9 +411,9 @@ export class TileMeshPano {
     // KTX2 压缩纹理不依赖纹理阶段翻转，方向由统一 UV 链路控制。
     texture.flipY = false;
     if ('colorSpace' in texture) {
-      (texture as any).colorSpace = THREE.SRGBColorSpace;
+      (texture as any).colorSpace = SRGBColorSpace;
     } else {
-      (texture as any).encoding = THREE.sRGBEncoding;
+      (texture as any).encoding = sRGBEncoding;
     }
     texture.needsUpdate = true;
     return texture;
@@ -432,7 +432,7 @@ export class TileMeshPano {
     return loader;
   }
 
-  private async loadJpgTexture(url: string, priority: 'low' | 'high'): Promise<THREE.Texture> {
+  private async loadJpgTexture(url: string, priority: 'low' | 'high'): Promise<Texture> {
     let bmp: ImageBitmap | null = null;
     try {
       bmp = await decodeImageBitmapInWorker(url, { timeoutMs: 12000, priority });
@@ -448,18 +448,18 @@ export class TileMeshPano {
         channel: 'tile',
       });
     }
-    const texture = new THREE.Texture(bmp);
+    const texture = new Texture(bmp);
     // JPG 分片与 KTX2 统一为“纹理不翻转，几何 UV 决定方向”。
     texture.flipY = false;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
+    texture.wrapS = ClampToEdgeWrapping;
+    texture.wrapT = ClampToEdgeWrapping;
+    texture.minFilter = LinearFilter;
+    texture.magFilter = LinearFilter;
     texture.generateMipmaps = false;
     if ('colorSpace' in texture) {
-      (texture as any).colorSpace = THREE.SRGBColorSpace;
+      (texture as any).colorSpace = SRGBColorSpace;
     } else {
-      (texture as any).encoding = THREE.sRGBEncoding;
+      (texture as any).encoding = sRGBEncoding;
     }
     texture.needsUpdate = true;
     return texture;
@@ -485,14 +485,14 @@ export class TileMeshPano {
     const level = this.manifest.levels.find((l) => l.z === info.z);
     if (!level) return;
     const geom = this.buildTileGeometry(level, info.col, info.row);
-    const mat = new THREE.MeshBasicMaterial({
+    const mat = new MeshBasicMaterial({
       map: info.texture,
       // 开启深度测试/写入，避免前后半球同时可见造成“双球叠加”。
       depthWrite: true,
       depthTest: true,
     });
     mat.toneMapped = false;
-    const mesh = new THREE.Mesh(geom, mat);
+    const mesh = new Mesh(geom, mat);
     mesh.renderOrder = info.priority === 'high' ? 3 : 2;
     mesh.frustumCulled = false;
     info.mesh = mesh;
@@ -541,14 +541,14 @@ export class TileMeshPano {
     if (!info.mesh) return;
     info.mesh.parent?.remove(info.mesh);
     info.mesh.geometry.dispose();
-    const mat = info.mesh.material as THREE.MeshBasicMaterial;
+    const mat = info.mesh.material as MeshBasicMaterial;
     if (mat.map && mat.map === info.texture) {
       mat.map.dispose();
     }
     mat.dispose();
   }
 
-  private buildTileGeometry(level: TileLevel, col: number, row: number): THREE.SphereGeometry {
+  private buildTileGeometry(level: TileLevel, col: number, row: number): SphereGeometry {
     const radius = 500;
     const phiLength = (Math.PI * 2) / level.cols;
     const thetaLength = Math.PI / level.rows;
@@ -557,7 +557,7 @@ export class TileMeshPano {
     const thetaStart = row * thetaLength;
     const widthSegments = Math.max(4, Math.round(64 / level.cols));
     const heightSegments = Math.max(4, Math.round(32 / level.rows));
-    const geom = new THREE.SphereGeometry(
+    const geom = new SphereGeometry(
       radius,
       widthSegments,
       heightSegments,
@@ -600,19 +600,19 @@ export class TileMeshPano {
   }
 
   private computeNeededTiles(
-    camera: THREE.PerspectiveCamera,
+    camera: PerspectiveCamera,
     level: TileLevel,
     options: { marginDeg?: number; expandNeighbors?: boolean } = {}
   ): Array<{ col: number; row: number; rank: number }> {
     const { yaw, pitch } = this.getViewAngles(camera);
-    const fovRad = THREE.MathUtils.degToRad(camera.fov);
-    const margin = THREE.MathUtils.degToRad(options.marginDeg ?? 20);
+    const fovRad = MathUtils.degToRad(camera.fov);
+    const margin = MathUtils.degToRad(options.marginDeg ?? 20);
     const halfV = fovRad / 2 + margin;
     const halfH = (fovRad * camera.aspect) / 2 + margin;
     const minYaw = this.normAngle(yaw - halfH);
     const maxYaw = this.normAngle(yaw + halfH);
-    const minPitch = THREE.MathUtils.clamp(pitch - halfV, -Math.PI / 2, Math.PI / 2);
-    const maxPitch = THREE.MathUtils.clamp(pitch + halfV, -Math.PI / 2, Math.PI / 2);
+    const minPitch = MathUtils.clamp(pitch - halfV, -Math.PI / 2, Math.PI / 2);
+    const maxPitch = MathUtils.clamp(pitch + halfV, -Math.PI / 2, Math.PI / 2);
 
     const colsRange = this.yawToCols(minYaw, maxYaw, level.cols);
     const centerCol = this.yawToCols(yaw - 1e-6, yaw + 1e-6, level.cols)[0] ?? 0;
@@ -676,7 +676,7 @@ export class TileMeshPano {
     });
   }
 
-  private reprioritizeLowQueue(camera: THREE.PerspectiveCamera): void {
+  private reprioritizeLowQueue(camera: PerspectiveCamera): void {
     if (!this.lowLevel || this.pendingLow.length < 2) return;
     const needed = this.computeNeededTiles(camera, this.lowLevel);
     if (needed.length === 0) return;
@@ -698,7 +698,7 @@ export class TileMeshPano {
     });
   }
 
-  private seedHighPreload(camera: THREE.PerspectiveCamera): void {
+  private seedHighPreload(camera: PerspectiveCamera): void {
     if (this.prefetchSeeded || !this.manifest || !this.highestLevel) return;
     this.prefetchSeeded = true;
     const { yaw: baseYaw, pitch: basePitch } = this.getViewAngles(camera);
@@ -778,8 +778,8 @@ export class TileMeshPano {
     return Math.abs(this.normAngle(a - b));
   }
 
-  private getViewAngles(camera: THREE.PerspectiveCamera): { yaw: number; pitch: number } {
-    const dir = new THREE.Vector3();
+  private getViewAngles(camera: PerspectiveCamera): { yaw: number; pitch: number } {
+    const dir = new Vector3();
     camera.getWorldDirection(dir);
     return {
       yaw: -Math.atan2(dir.x, dir.z),
@@ -799,11 +799,12 @@ export class TileMeshPano {
       t.texture?.dispose();
       if (t.mesh) {
         t.mesh.geometry.dispose();
-        (t.mesh.material as THREE.MeshBasicMaterial).dispose();
+        (t.mesh.material as MeshBasicMaterial).dispose();
         this.group?.remove(t.mesh);
       }
       this.tilesMap.delete(`${t.z}_${t.col}_${t.row}`);
     }
   }
 }
+
 

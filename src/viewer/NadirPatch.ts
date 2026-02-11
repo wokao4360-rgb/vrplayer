@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import { AxesHelper, CanvasTexture, CircleGeometry, CylinderGeometry, DoubleSide, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, Sprite, SpriteMaterial, SRGBColorSpace, Vector3 } from 'three';
 import { createCompassTexture } from './createCompassTexture';
 import { __VR_DEBUG__ } from '../utils/debug';
 
@@ -14,15 +14,15 @@ function smoothstep01(x: number): number {
 }
 
 export class NadirPatch {
-  private mesh: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
-  private needleMesh: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshBasicMaterial> | null = null;
-  private texture: THREE.CanvasTexture;
+  private mesh: Mesh<CircleGeometry, MeshBasicMaterial>;
+  private needleMesh: Mesh<CylinderGeometry, MeshBasicMaterial> | null = null;
+  private texture: CanvasTexture;
   private radius: number;
   private opacity = 0;
   private northYaw = 0; // 世界北方向（度），相对于全景图纹理的正前方
-  private debugHelper: THREE.AxesHelper | null = null;
+  private debugHelper: AxesHelper | null = null;
   // 如视模型：独立的文字sprite（每个文字朝向圆心）
-  private labelSprites: Map<string, THREE.Sprite> = new Map();
+  private labelSprites: Map<string, Sprite> = new Map();
   private patchRadius: number = 0;
 
   // 低头阈值（越小越"低头"）
@@ -35,28 +35,28 @@ export class NadirPatch {
   private debugFrameCount = 0;
   private isDebugVisible = true; // 调试开关：按键 N 切换
 
-  constructor(scene: THREE.Scene, sphereRadius: number) {
+  constructor(scene: Scene, sphereRadius: number) {
     this.radius = sphereRadius;
 
     // patch 尺寸：覆盖脚底/三脚架区域（可按需要微调）
     const patchRadius = sphereRadius * 0.18;
     this.patchRadius = patchRadius;
 
-    const geom = new THREE.CircleGeometry(patchRadius, 96);
+    const geom = new CircleGeometry(patchRadius, 96);
     // CircleGeometry 默认在 XY 平面，法线 +Z；我们要水平放置并朝向相机（相机在原点，低头看 -Y）
     geom.rotateX(Math.PI / 2); // 让法线指向 -Y（从原点往下看能看到"正面"）
 
     this.texture = createCompassTexture(512);
-    const mat = new THREE.MeshBasicMaterial({
+    const mat = new MeshBasicMaterial({
       map: this.texture,
       transparent: true,
       opacity: 0,
       depthTest: false,
       depthWrite: false,
-      side: THREE.DoubleSide,
+      side: DoubleSide,
     });
 
-    this.mesh = new THREE.Mesh(geom, mat);
+    this.mesh = new Mesh(geom, mat);
     this.mesh.name = 'NadirPatch-compass-disk'; // 标记名称，方便调试定位
     // 贴在球体底部内侧，稍微抬起一点避免 Z-fighting
     this.mesh.position.set(0, -sphereRadius + 0.5, 0);
@@ -70,17 +70,17 @@ export class NadirPatch {
     // 创建指针（needle）
     const needleRadius = patchRadius * 0.008; // 指针宽度
     const needleHeight = patchRadius * 0.35; // 指针长度（从中心到边缘）
-    const needleGeom = new THREE.CylinderGeometry(needleRadius, needleRadius, needleHeight, 8);
+    const needleGeom = new CylinderGeometry(needleRadius, needleRadius, needleHeight, 8);
     needleGeom.rotateX(Math.PI / 2); // 水平放置（Z轴方向）
     needleGeom.translate(0, 0, needleHeight / 2); // 将原点移到圆柱底部（中心）
-    const needleMat = new THREE.MeshBasicMaterial({
+    const needleMat = new MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
       opacity: 0.9,
       depthTest: false,
       depthWrite: false,
     });
-    this.needleMesh = new THREE.Mesh(needleGeom, needleMat);
+    this.needleMesh = new Mesh(needleGeom, needleMat);
     this.needleMesh.name = 'NadirPatch-compass-needle';
     // 指针位置：在盘面中心，稍微抬起避免 z-fighting
     this.needleMesh.position.set(0, -sphereRadius + 0.51, 0);
@@ -99,7 +99,7 @@ export class NadirPatch {
       mat.color.setHex(0x00ffff); // 青色标记
 
       // 添加 AxesHelper
-      this.debugHelper = new THREE.AxesHelper(patchRadius * 0.5);
+      this.debugHelper = new AxesHelper(patchRadius * 0.5);
       this.debugHelper.position.copy(this.mesh.position);
       this.debugHelper.renderOrder = 10001;
       scene.add(this.debugHelper);
@@ -143,7 +143,7 @@ export class NadirPatch {
     this.northYaw = yaw;
   }
 
-  update(_camera: THREE.PerspectiveCamera, view: ViewAngles, dtMs: number): void {
+  update(_camera: PerspectiveCamera, view: ViewAngles, dtMs: number): void {
     // 统一旋转规则：盘面按 -northYaw 旋转，指针按 cameraYaw 旋转
     // 总角度 = diskDeg + needleDeg = -northYaw + cameraYaw
     // 当 cameraYaw == northYaw 时，总角度 = 0，指针指向盘面 N
@@ -153,7 +153,7 @@ export class NadirPatch {
     const northYawDeg = this.northYaw ?? 0;
     
     // 盘面基准：让贴图的 N 对齐世界北
-    const meshRotationY = THREE.MathUtils.degToRad(-northYawDeg);
+    const meshRotationY = MathUtils.degToRad(-northYawDeg);
     this.mesh.rotation.y = meshRotationY;
     
     // 纹理不再旋转（文字已移到独立sprite）
@@ -166,7 +166,7 @@ export class NadirPatch {
     
     // 指针表示相机朝向（相对纹理 0 的 yaw）
     if (this.needleMesh) {
-      this.needleMesh.rotation.y = THREE.MathUtils.degToRad(cameraYawDeg);
+      this.needleMesh.rotation.y = MathUtils.degToRad(cameraYawDeg);
     }
 
     // 调试：旋转监控（每 30 帧打印一次）
@@ -203,13 +203,13 @@ export class NadirPatch {
     this.mesh.visible = shouldShow;
     if (this.needleMesh) {
       this.needleMesh.visible = shouldShow;
-      const needleMat = this.needleMesh.material as THREE.MeshBasicMaterial;
+      const needleMat = this.needleMesh.material as MeshBasicMaterial;
       needleMat.opacity = this.opacity * 0.9;
     }
     // 更新文字sprite的可见性和透明度
     this.labelSprites.forEach((sprite) => {
       sprite.visible = shouldShow;
-      const spriteMat = sprite.material as THREE.SpriteMaterial;
+      const spriteMat = sprite.material as SpriteMaterial;
       spriteMat.opacity = this.opacity * 0.85;
     });
     if (this.debugHelper) {
@@ -220,7 +220,7 @@ export class NadirPatch {
   /**
    * 创建文字sprite（如视模型：每个文字朝向圆心）
    */
-  private createLabelSprites(scene: THREE.Scene, patchRadius: number, sphereRadius: number): void {
+  private createLabelSprites(scene: Scene, patchRadius: number, sphereRadius: number): void {
     const labels = [
       { text: '北', baseAngle: 0 },
       { text: '东', baseAngle: 270 }, // 东（右）
@@ -252,11 +252,11 @@ export class NadirPatch {
       ctx.fillText(text, size / 2, size / 2);
       ctx.restore();
 
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace as any;
+      const texture = new CanvasTexture(canvas);
+      texture.colorSpace = SRGBColorSpace as any;
       texture.needsUpdate = true;
 
-      const spriteMaterial = new THREE.SpriteMaterial({
+      const spriteMaterial = new SpriteMaterial({
         map: texture,
         transparent: true,
         opacity: 0,
@@ -264,7 +264,7 @@ export class NadirPatch {
         depthWrite: false,
       });
 
-      const sprite = new THREE.Sprite(spriteMaterial);
+      const sprite = new Sprite(spriteMaterial);
       sprite.name = `NadirPatch-label-${text}`;
       
       // 初始位置在盘面中心（稍后通过updateLabelSprites更新）
@@ -302,7 +302,7 @@ export class NadirPatch {
 
       // 计算文字在圆周上的位置（相对于盘面中心）
       const labelRadius = this.patchRadius * 0.56; // 文字距离圆心的距离
-      const labelAngleRad = THREE.MathUtils.degToRad(labelAngle);
+      const labelAngleRad = MathUtils.degToRad(labelAngle);
       
       // 盘面中心位置
       const centerY = -this.radius + 0.5;
@@ -322,12 +322,12 @@ export class NadirPatch {
       // sprite默认朝向相机，但我们需要让文字"正面"朝向相机
       // 在XY平面内，从sprite位置指向圆心的角度 = labelAngle + 180
       // 使用lookAt让sprite朝向相机（原点）
-      const cameraPos = new THREE.Vector3(0, 0, 0); // 相机在原点
+      const cameraPos = new Vector3(0, 0, 0); // 相机在原点
       sprite.lookAt(cameraPos);
     });
   }
 
-  dispose(scene: THREE.Scene): void {
+  dispose(scene: Scene): void {
     scene.remove(this.mesh);
     this.mesh.geometry.dispose();
     this.mesh.material.dispose();
@@ -352,6 +352,8 @@ export class NadirPatch {
     }
   }
 }
+
+
 
 
 

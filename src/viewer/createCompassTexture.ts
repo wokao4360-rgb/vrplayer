@@ -1,13 +1,13 @@
-import * as THREE from 'three';
+import { CanvasTexture, SRGBColorSpace } from 'three';
 
-export function createCompassTexture(size = 512): THREE.CanvasTexture {
+export function createCompassTexture(size = 512): CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     // 兜底：创建一个空纹理
-    const fallback = new THREE.CanvasTexture(canvas);
+    const fallback = new CanvasTexture(canvas);
     fallback.needsUpdate = true;
     return fallback;
   }
@@ -74,8 +74,8 @@ export function createCompassTexture(size = 512): THREE.CanvasTexture {
   ctx.closePath();
   ctx.stroke();
 
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace as any;
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace as any;
   // 设置纹理中心点和旋转，确保文字方向正确
   texture.center.set(0.5, 0.5);
   texture.rotation = 0;
@@ -83,7 +83,6 @@ export function createCompassTexture(size = 512): THREE.CanvasTexture {
   texture.needsUpdate = true;
   return texture;
 }
-
 
 
 

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { Camera, MathUtils, Raycaster, Vector2 } from 'three';
 
 /**
  * 屏幕坐标转 NDC（标准化设备坐标）
@@ -31,12 +31,12 @@ export function screenToNDC(
 export function getYawPitchFromNDC(
   ndcX: number,
   ndcY: number,
-  camera: THREE.Camera,
+  camera: Camera,
   sphereRadius: number = 500
 ): { yaw: number; pitch: number } | null {
   // 创建射线
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+  const raycaster = new Raycaster();
+  raycaster.setFromCamera(new Vector2(ndcX, ndcY), camera);
 
   // 直接使用 ray.direction（归一化向量）计算 yaw/pitch，不依赖球体相交
   const dir = raycaster.ray.direction;
@@ -49,12 +49,11 @@ export function getYawPitchFromNDC(
 
   // 计算 pitch（仰俯角）：arcsin(y)，范围 [-90, 90]
   const pitchRad = Math.asin(Math.max(-1, Math.min(1, normalized.y)));
-  const pitch = THREE.MathUtils.radToDeg(pitchRad);
+  const pitch = MathUtils.radToDeg(pitchRad);
 
   // 计算 yaw（水平角）：atan2(x, z)，范围 [-180, 180]
   const yawRad = Math.atan2(normalized.x, normalized.z);
-  const yaw = THREE.MathUtils.radToDeg(yawRad);
+  const yaw = MathUtils.radToDeg(yawRad);
 
   return { yaw, pitch };
 }
-

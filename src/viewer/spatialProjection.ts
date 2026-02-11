@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import { MathUtils, PerspectiveCamera, Vector3 } from 'three';
 
 /**
  * 将 yaw/pitch 角度转换为世界空间中的单位向量
@@ -6,15 +6,15 @@ import * as THREE from 'three';
  * @param pitch 俯仰角（度），0 为水平，向下为正
  * @returns 单位向量（世界空间）
  */
-export function yawPitchToVector3(yaw: number, pitch: number): THREE.Vector3 {
-  const yawRad = THREE.MathUtils.degToRad(yaw);
-  const pitchRad = THREE.MathUtils.degToRad(pitch);
+export function yawPitchToVector3(yaw: number, pitch: number): Vector3 {
+  const yawRad = MathUtils.degToRad(yaw);
+  const pitchRad = MathUtils.degToRad(pitch);
 
   const x = Math.cos(pitchRad) * Math.sin(yawRad);
   const y = Math.sin(pitchRad);
   const z = Math.cos(pitchRad) * Math.cos(yawRad);
 
-  return new THREE.Vector3(x, y, z);
+  return new Vector3(x, y, z);
 }
 
 /**
@@ -25,23 +25,23 @@ export function yawPitchToVector3(yaw: number, pitch: number): THREE.Vector3 {
  * @returns 屏幕坐标和可见性
  */
 export function projectToScreen(
-  worldPos: THREE.Vector3,
-  camera: THREE.PerspectiveCamera,
+  worldPos: Vector3,
+  camera: PerspectiveCamera,
   dom: HTMLElement
 ): { x: number; y: number; visible: boolean } {
   // 检查是否在相机后方
-  const camPos = new THREE.Vector3();
-  const camDir = new THREE.Vector3();
+  const camPos = new Vector3();
+  const camDir = new Vector3();
   camera.getWorldPosition(camPos);
   camera.getWorldDirection(camDir);
   
-  const toPoint = new THREE.Vector3().copy(worldPos).sub(camPos);
+  const toPoint = new Vector3().copy(worldPos).sub(camPos);
   if (toPoint.dot(camDir) <= 0) {
     return { x: 0, y: 0, visible: false };
   }
 
   // 投影到 NDC（归一化设备坐标）
-  const ndc = new THREE.Vector3().copy(worldPos).project(camera);
+  const ndc = new Vector3().copy(worldPos).project(camera);
   
   // 检查是否在视锥体内
   const inFrustum = 
@@ -74,7 +74,7 @@ export function projectToScreen(
 export function yawPitchToScreen(
   yaw: number,
   pitch: number,
-  camera: THREE.PerspectiveCamera,
+  camera: PerspectiveCamera,
   dom: HTMLElement,
   radius: number = 500
 ): { x: number; y: number; visible: boolean } {

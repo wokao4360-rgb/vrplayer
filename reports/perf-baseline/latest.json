@@ -1,36 +1,38 @@
 {
-  "generatedAt": "2026-02-11 20:29:48",
+  "generatedAt": "2026-02-11 21:35:03",
   "metrics": {
-    "indexJsKB": 73.77,
-    "panoViewerJsKB": 70.71,
-    "threeCoreJsKB": 501.39,
-    "totalJsKB": 981.94,
+    "indexJsKB": 77.95,
+    "panoViewerJsKB": 69.2,
+    "threeRendererJsKB": 501.39,
+    "threeMathJsKB": 2.28,
+    "threeRenderMathCombinedKB": 503.68,
+    "totalJsKB": 986.52,
     "totalCssKB": 55.58
   },
   "topAssets": [
     {
-      "name": "three-core-0fX1SOzE.js",
+      "name": "three-renderer-toiwjbvW.js",
       "ext": ".js",
       "sizeBytes": 513426,
       "sizeKB": 501.39
     },
     {
-      "name": "three-extras-9r4FsFIk.js",
+      "name": "three-extras-3VrNSzCK.js",
       "ext": ".js",
-      "sizeBytes": 104074,
-      "sizeKB": 101.63
+      "sizeBytes": 104078,
+      "sizeKB": 101.64
     },
     {
-      "name": "index-WSGeQALx.js",
+      "name": "index-DInc35Wk.js",
       "ext": ".js",
-      "sizeBytes": 75537,
-      "sizeKB": 73.77
+      "sizeBytes": 79818,
+      "sizeKB": 77.95
     },
     {
-      "name": "PanoViewer-BIpMsy5Y.js",
+      "name": "PanoViewer-CPb5FQ96.js",
       "ext": ".js",
-      "sizeBytes": 72410,
-      "sizeKB": 70.71
+      "sizeBytes": 70861,
+      "sizeKB": 69.2
     },
     {
       "name": "index-BfJu72vJ.css",
@@ -39,46 +41,46 @@
       "sizeKB": 55.58
     },
     {
-      "name": "editor-debug-5l2Y-X-O.js",
+      "name": "editor-debug-Dz10SSgE.js",
       "ext": ".js",
       "sizeBytes": 56122,
       "sizeKB": 54.81
     },
     {
-      "name": "chat-community-Br_nepnd.js",
+      "name": "chat-community-C6ZbaM52.js",
       "ext": ".js",
       "sizeBytes": 39808,
       "sizeKB": 38.88
     },
     {
-      "name": "dock-panels-Cs9Sxynv.js",
+      "name": "dock-panels-CO9QQMe_.js",
       "ext": ".js",
-      "sizeBytes": 26229,
-      "sizeKB": 25.61
+      "sizeBytes": 26237,
+      "sizeKB": 25.62
     },
     {
-      "name": "tile-ktx2-DO6ohk0j.js",
+      "name": "tile-ktx2-DPKiKnrw.js",
       "ext": ".js",
-      "sizeBytes": 26081,
-      "sizeKB": 25.47
+      "sizeBytes": 26118,
+      "sizeKB": 25.51
     },
     {
-      "name": "Hotspots-bVfrAHPp.js",
+      "name": "Hotspots-D1eUDWHC.js",
       "ext": ".js",
-      "sizeBytes": 8877,
-      "sizeKB": 8.67
+      "sizeBytes": 8318,
+      "sizeKB": 8.12
     },
     {
-      "name": "StructureView2D-YNggYitX.js",
+      "name": "StructureView2D--Q7Gxr9k.js",
       "ext": ".js",
       "sizeBytes": 7679,
       "sizeKB": 7.5
     },
     {
-      "name": "dollhouseScene-Dybm0aKm.js",
+      "name": "dollhouseScene-B0yu9WMj.js",
       "ext": ".js",
-      "sizeBytes": 7161,
-      "sizeKB": 6.99
+      "sizeBytes": 7169,
+      "sizeKB": 7
     }
   ]
 }

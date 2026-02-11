@@ -7,6 +7,7 @@ import { getIcon } from './icons';
 type BottomDockOptions = {
   initialTab?: DockTabKey;
   onGuideClick?: () => void;
+  onOpenCommunity?: () => void;
   onOpenInfo?: () => void;
   onOpenSettings?: () => void;
   sceneId?: string;
@@ -46,6 +47,7 @@ export class BottomDock {
   private destroyed = false;
   private activeTabs: Set<DockTabKey>;
   private onGuideClick?: () => void;
+  private onOpenCommunity?: () => void;
   private onOpenInfo?: () => void;
   private onOpenSettings?: () => void;
   private initialTab: DockTabKey;
@@ -64,6 +66,7 @@ export class BottomDock {
   constructor(options: BottomDockOptions = {}) {
     this.activeTabs = new Set<DockTabKey>();
     this.onGuideClick = options.onGuideClick;
+    this.onOpenCommunity = options.onOpenCommunity;
     this.onOpenInfo = options.onOpenInfo;
     this.onOpenSettings = options.onOpenSettings;
     this.initialTab = options.initialTab || 'guide';
@@ -111,6 +114,9 @@ export class BottomDock {
         }
 
         if (tab.key === 'community') {
+          if (this.onOpenCommunity) {
+            this.onOpenCommunity();
+          }
           this.setTabActive('community', true);
           return;
         }

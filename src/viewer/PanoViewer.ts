@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+﻿import { ACESFilmicToneMapping, CanvasTexture, ClampToEdgeWrapping, LinearFilter, LinearMipmapLinearFilter, MathUtils, Mesh, MeshBasicMaterial, NoToneMapping, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, sRGBEncoding, Texture, type TextureFilter, type ToneMapping, WebGLRenderer } from 'three';
 import type { Scene, InitialView } from '../types/config';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { LoadStatus } from '../types/loadStatus';
@@ -32,8 +32,8 @@ type LoadMetrics = {
 
 type TilePano = {
   load: (manifest: TileManifest, options?: { fallbackVisible?: boolean }) => Promise<void>;
-  prime: (camera: THREE.PerspectiveCamera) => void;
-  update: (camera: THREE.PerspectiveCamera) => void;
+  prime: (camera: PerspectiveCamera) => void;
+  update: (camera: PerspectiveCamera) => void;
   dispose: () => void;
   getStatus: () => any;
   setPerformanceMode?: (mode: 'normal' | 'throttle') => void;
@@ -49,7 +49,7 @@ enum RenderProfile {
 type RenderPreset = {
   renderer: {
     pixelRatio: number;
-    toneMapping: THREE.ToneMapping;
+    toneMapping: ToneMapping;
     toneMappingExposure: number;
     output: 'srgb';
     clearColor?: { color: number; alpha: number };
@@ -59,8 +59,8 @@ type RenderPreset = {
   };
   texture: {
     anisotropyLimit: number;
-    minFilter: THREE.TextureFilter;
-    magFilter: THREE.TextureFilter;
+    minFilter: TextureFilter;
+    magFilter: TextureFilter;
     generateMipmaps: boolean;
     colorSpace: 'srgb';
   };
@@ -71,7 +71,7 @@ const RENDER_PRESETS: Record<RenderProfile, RenderPreset> = {
   [RenderProfile.Original]: {
     renderer: {
       pixelRatio: Math.min((window.devicePixelRatio || 1), 2),
-      toneMapping: THREE.NoToneMapping,
+      toneMapping: NoToneMapping,
       toneMappingExposure: 1.0,
       output: 'srgb',
       clearColor: undefined,
@@ -81,8 +81,8 @@ const RENDER_PRESETS: Record<RenderProfile, RenderPreset> = {
     },
     texture: {
       anisotropyLimit: 8,
-      minFilter: THREE.LinearMipmapLinearFilter,
-      magFilter: THREE.LinearFilter,
+      minFilter: LinearMipmapLinearFilter,
+      magFilter: LinearFilter,
       generateMipmaps: true,
       colorSpace: 'srgb',
     },
@@ -91,7 +91,7 @@ const RENDER_PRESETS: Record<RenderProfile, RenderPreset> = {
   [RenderProfile.Enhanced]: {
     renderer: {
       pixelRatio: Math.min(window.devicePixelRatio, 2),
-      toneMapping: THREE.ACESFilmicToneMapping,
+      toneMapping: ACESFilmicToneMapping,
       toneMappingExposure: 0.95,
       output: 'srgb',
       clearColor: { color: 0x000000, alpha: 1 },
@@ -101,8 +101,8 @@ const RENDER_PRESETS: Record<RenderProfile, RenderPreset> = {
     },
     texture: {
       anisotropyLimit: 12,
-      minFilter: THREE.LinearMipmapLinearFilter,
-      magFilter: THREE.LinearFilter,
+      minFilter: LinearMipmapLinearFilter,
+      magFilter: LinearFilter,
       generateMipmaps: true,
       colorSpace: 'srgb',
     },
@@ -115,12 +115,12 @@ const RENDER_PRESETS: Record<RenderProfile, RenderPreset> = {
  * 璧勬簮鍔犺浇绛栫暐锛? * - thumb: 缂╃暐鍥撅紝鐢ㄤ簬鍒楄〃/棰勮锛堜笉鍦ㄦ澶勫姞杞斤級
  * - panoLow: 浣庢竻鍏ㄦ櫙鍥撅紝棣栧睆蹇€熷姞杞斤紙浼樺厛锛? * - pano: 楂樻竻鍏ㄦ櫙鍥撅紝鍚庡彴鍔犺浇鍚庢棤缂濇浛鎹? * - video: 瑙嗛璧勬簮锛岀偣鍑荤儹鐐瑰悗鎵嶅姞杞斤紙涓嶅湪姝ゅ鍔犺浇锛? */
 export class PanoViewer {
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
-  private sphere: THREE.Mesh | null = null;
+  private scene: Scene;
+  private camera: PerspectiveCamera;
+  private renderer: WebGLRenderer;
+  private sphere: Mesh | null = null;
   private tilePano: TilePano | null = null;
-  private fallbackSphere: THREE.Mesh | null = null;
+  private fallbackSphere: Mesh | null = null;
   private container: HTMLElement;
   private readonly handleWindowResize = () => this.handleResize();
   private readonly domEventRemovers: Array<() => void> = [];
@@ -209,10 +209,10 @@ export class PanoViewer {
     this.renderProfile = this.detectRenderProfile();
     this.allowTilePerfThrottle = this.detectTileThrottleEnabled();
     // 创建场景
-    this.scene = new THREE.Scene();
+    this.scene = new Scene();
     
     // 创建相机
-    this.camera = new THREE.PerspectiveCamera(
+    this.camera = new PerspectiveCamera(
       RENDER_PRESETS[this.renderProfile].camera.defaultFov,
       container.clientWidth / container.clientHeight,
       0.1,
@@ -221,7 +221,7 @@ export class PanoViewer {
     this.camera.position.set(0, 0, 0);
     this.fov = RENDER_PRESETS[this.renderProfile].camera.defaultFov;
     // 创建渲染器
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer = new WebGLRenderer({ antialias: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.applyRendererProfile();
     container.appendChild(this.renderer.domElement);
@@ -464,8 +464,8 @@ export class PanoViewer {
   }
 
   private updateCamera(): void {
-    const yawRad = THREE.MathUtils.degToRad(this.yaw);
-    const pitchRad = THREE.MathUtils.degToRad(this.pitch);
+    const yawRad = MathUtils.degToRad(this.yaw);
+    const pitchRad = MathUtils.degToRad(this.pitch);
     
     const x = Math.cos(pitchRad) * Math.sin(yawRad);
     const y = Math.sin(pitchRad);
@@ -515,7 +515,7 @@ export class PanoViewer {
       this.scene.remove(this.sphere);
       if (this.sphere.geometry) this.sphere.geometry.dispose();
       if (this.sphere.material && 'map' in this.sphere.material) {
-        const material = this.sphere.material as THREE.MeshBasicMaterial;
+        const material = this.sphere.material as MeshBasicMaterial;
         if (material.map) material.map.dispose();
         material.dispose();
       }
@@ -568,7 +568,7 @@ export class PanoViewer {
 
     //
     // 创建几何体
-    const geometry = new THREE.SphereGeometry(500, 64, 64);
+    const geometry = new SphereGeometry(500, 64, 64);
     geometry.scale(-1, 1, 1); // 内表面
 
     // 瓦片优先：若配置了 panoTiles，则走瓦片加载，失败时自动回退到传统全景
@@ -694,7 +694,7 @@ export class PanoViewer {
    * @param isLowRes 鏄惁涓轰綆娓呭浘锛堢敤浜庣姸鎬佹爣璁帮級
    */
   private async loadSingleTexture(
-    geometry: THREE.SphereGeometry,
+    geometry: SphereGeometry,
     url: string,
     isLowRes: boolean
   ): Promise<void> {
@@ -719,20 +719,20 @@ export class PanoViewer {
         channel: 'pano',
       });
 
-      // 转为 THREE.Texture
-      const texture = new THREE.CanvasTexture(imageBitmap);
+      // 转为 Texture
+      const texture = new CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
       this.warnIfNotPanoAspect(texture, url);
 
       // 纯全景链路在解码阶段翻转，纹理阶段不再翻转，避免重复翻转导致倒立。
       texture.flipY = false;
-      texture.wrapS = THREE.ClampToEdgeWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.wrapS = ClampToEdgeWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
       texture.needsUpdate = true;
       // --- end fix ---
       
-      const material = new THREE.MeshBasicMaterial({ map: texture });
-      this.sphere = new THREE.Mesh(geometry, material);
+      const material = new MeshBasicMaterial({ map: texture });
+      this.sphere = new Mesh(geometry, material);
       this.scene.add(this.sphere);
       this.setRenderSource(isLowRes ? 'low' : 'tiles', isLowRes ? 'panoLow 可见' : 'pano 可见');
       
@@ -765,7 +765,7 @@ export class PanoViewer {
    * 澶辫触鍏滃簳绛栫暐锛?   * - 浣庢竻鍥惧け璐ワ細灏濊瘯鍔犺浇楂樻竻鍥?   * - 楂樻竻鍥惧け璐ワ細淇濈暀浣庢竻鍥撅紝鏍囪涓洪檷绾фā寮忥紙涓嶈Е鍙戦敊璇洖璋冿紝涓嶅奖鍝嶇敤鎴蜂綋楠岋級
    */
   private async loadProgressiveTextures(
-    geometry: THREE.SphereGeometry,
+    geometry: SphereGeometry,
     panoLowUrl: string,
     panoUrl: string
   ): Promise<void> {
@@ -786,20 +786,20 @@ export class PanoViewer {
         channel: 'pano',
       });
 
-      // 转为 THREE.Texture
-      const lowTexture = new THREE.CanvasTexture(lowImageBitmap);
+      // 转为 Texture
+      const lowTexture = new CanvasTexture(lowImageBitmap);
       this.applyTextureSettings(lowTexture);
       this.warnIfNotPanoAspect(lowTexture, panoLowUrl);
       
       // 纯全景链路在解码阶段翻转，纹理阶段不再翻转，避免重复翻转导致倒立。
       lowTexture.flipY = false;
-      lowTexture.wrapS = THREE.ClampToEdgeWrapping;
-      lowTexture.wrapT = THREE.ClampToEdgeWrapping;
+      lowTexture.wrapS = ClampToEdgeWrapping;
+      lowTexture.wrapT = ClampToEdgeWrapping;
       lowTexture.needsUpdate = true;
         // --- end fix ---
       
-      const material = new THREE.MeshBasicMaterial({ map: lowTexture });
-      this.sphere = new THREE.Mesh(geometry, material);
+      const material = new MeshBasicMaterial({ map: lowTexture });
+      this.sphere = new Mesh(geometry, material);
       this.scene.add(this.sphere);
       this.setRenderSource('low', 'panoLow 可见');
       
@@ -828,15 +828,15 @@ export class PanoViewer {
           channel: 'pano',
         });
         
-        // 转为 THREE.Texture
-        const highTexture = new THREE.CanvasTexture(highImageBitmap);
+        // 转为 Texture
+        const highTexture = new CanvasTexture(highImageBitmap);
         this.applyTextureSettings(highTexture);
         this.warnIfNotPanoAspect(highTexture, panoUrl);
         
         // 纯全景链路在解码阶段翻转，纹理阶段不再翻转，避免重复翻转导致倒立。
         highTexture.flipY = false;
-        highTexture.wrapS = THREE.ClampToEdgeWrapping;
-        highTexture.wrapT = THREE.ClampToEdgeWrapping;
+        highTexture.wrapS = ClampToEdgeWrapping;
+        highTexture.wrapT = ClampToEdgeWrapping;
         highTexture.needsUpdate = true;
           // --- end fix ---
         
@@ -845,7 +845,7 @@ export class PanoViewer {
         
         // 替换纹理
         if (this.sphere && this.sphere.material && 'map' in this.sphere.material) {
-          const material = this.sphere.material as THREE.MeshBasicMaterial;
+          const material = this.sphere.material as MeshBasicMaterial;
           // 释放旧纹理
           if (material.map) {
             material.map.dispose();
@@ -1280,7 +1280,7 @@ export class PanoViewer {
 
   /**
    * 鏆撮湶鐩告満锛氱敤浜庡皢 world position 鎶曞奖鍒板睆骞曪紙DOM Overlay 鐑偣锛?   */
-  getCamera(): THREE.PerspectiveCamera {
+  getCamera(): PerspectiveCamera {
     return this.camera;
   }
 
@@ -1516,7 +1516,7 @@ export class PanoViewer {
 
   /**
    * 濡傛灉鍏ㄦ櫙鍥炬瘮渚嬩笉鏄?2:1锛屾墦鍗拌鍛婁絾涓嶉樆濉炲姞杞?   */
-  private warnIfNotPanoAspect(texture: THREE.Texture, url: string): void {
+  private warnIfNotPanoAspect(texture: Texture, url: string): void {
     if (!texture.image) return;
     const image: any = texture.image;
     const width = image.width;
@@ -1554,7 +1554,7 @@ export class PanoViewer {
       this.scene.remove(this.sphere);
       if (this.sphere.geometry) this.sphere.geometry.dispose();
       if (this.sphere.material && 'map' in this.sphere.material) {
-        const material = this.sphere.material as THREE.MeshBasicMaterial;
+        const material = this.sphere.material as MeshBasicMaterial;
         if (material.map) material.map.dispose();
         material.dispose();
       }
@@ -1586,9 +1586,9 @@ export class PanoViewer {
     const preset = RENDER_PRESETS[this.renderProfile];
     this.renderer.setPixelRatio(preset.renderer.pixelRatio);
     if ('outputColorSpace' in this.renderer) {
-      (this.renderer as any).outputColorSpace = THREE.SRGBColorSpace;
+      (this.renderer as any).outputColorSpace = SRGBColorSpace;
     } else {
-      (this.renderer as any).outputEncoding = THREE.sRGBEncoding;
+      (this.renderer as any).outputEncoding = sRGBEncoding;
     }
     this.renderer.toneMapping = preset.renderer.toneMapping;
     this.renderer.toneMappingExposure = preset.renderer.toneMappingExposure;
@@ -1652,7 +1652,7 @@ export class PanoViewer {
     this.renderSwitchReason = reason;
   }
 
-  private async showFallbackTexture(url: string, geometry: THREE.SphereGeometry, isLow: boolean): Promise<void> {
+  private async showFallbackTexture(url: string, geometry: SphereGeometry, isLow: boolean): Promise<void> {
     try {
       const imageBitmap = await loadExternalImageBitmap(url, {
         timeoutMs: 15000,
@@ -1662,20 +1662,20 @@ export class PanoViewer {
         imageOrientation: 'flipY',
         channel: 'pano',
       });
-      const texture = new THREE.CanvasTexture(imageBitmap);
+      const texture = new CanvasTexture(imageBitmap);
       this.applyTextureSettings(texture);
       // 纯全景链路在解码阶段翻转，纹理阶段不再翻转，避免重复翻转导致倒立。
       texture.flipY = false;
-      texture.wrapS = THREE.ClampToEdgeWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.wrapS = ClampToEdgeWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
       texture.needsUpdate = true;
 
-      const material = new THREE.MeshBasicMaterial({
+      const material = new MeshBasicMaterial({
         map: texture,
         depthWrite: false,
         depthTest: false,
       });
-      const mesh = new THREE.Mesh(geometry.clone(), material);
+      const mesh = new Mesh(geometry.clone(), material);
       mesh.renderOrder = 0;
       this.fallbackSphere = mesh;
       this.scene.add(mesh);
@@ -1695,7 +1695,7 @@ export class PanoViewer {
   private clearFallback(): void {
     if (this.fallbackSphere) {
       if (this.fallbackSphere.geometry) this.fallbackSphere.geometry.dispose();
-      const mat = this.fallbackSphere.material as THREE.MeshBasicMaterial;
+      const mat = this.fallbackSphere.material as MeshBasicMaterial;
       if (mat.map) mat.map.dispose();
       mat.dispose();
       this.scene.remove(this.fallbackSphere);
@@ -1703,7 +1703,7 @@ export class PanoViewer {
     }
   }
 
-  private applyTextureSettings(texture: THREE.Texture): void {
+  private applyTextureSettings(texture: Texture): void {
     const preset = RENDER_PRESETS[this.renderProfile];
     const maxAniso = (this.renderer.capabilities as any).getMaxAnisotropy
       ? this.renderer.capabilities.getMaxAnisotropy()
@@ -1713,9 +1713,9 @@ export class PanoViewer {
     texture.magFilter = preset.texture.magFilter;
     texture.generateMipmaps = preset.texture.generateMipmaps;
     if ('colorSpace' in texture) {
-      (texture as any).colorSpace = THREE.SRGBColorSpace;
+      (texture as any).colorSpace = SRGBColorSpace;
     } else {
-      (texture as any).encoding = THREE.sRGBEncoding;
+      (texture as any).encoding = sRGBEncoding;
     }
     texture.needsUpdate = true;
 
@@ -1733,3 +1733,4 @@ export class PanoViewer {
     }
   }
 }
+

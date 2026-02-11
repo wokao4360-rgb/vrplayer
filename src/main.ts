@@ -36,12 +36,12 @@ import { interactionBus } from './ui/interactionBus';
 import { __VR_DEBUG__ } from './utils/debug';
 import { dumpVRState, resetVRUI } from './utils/debugHelper';
 import type { NorthCalibrationPanel } from './ui/NorthCalibrationPanel';
-import type { FcChatPanel } from './ui/FcChatPanel';
-import type { FcChatConfig } from './services/fcChatClient';
 import { initFullscreenState } from './utils/fullscreenState';
 import { clearAllToasts } from './ui/toast';
 import { requestFullscreenBestEffort, exitFullscreenBestEffort } from './ui/fullscreen';
 import type { MountedModal } from './ui/Modal';
+import { SceneUiRuntime } from './app/sceneUiRuntime';
+import { ChatRuntime } from './app/chatRuntime';
 import './ui/uiRefresh.css';
 
 /**
@@ -170,22 +170,20 @@ class App {
   private northCalibrationPanel: NorthCalibrationPanel | null = null;
   private currentMuseum: Museum | null = null;
   private currentScene: Scene | null = null;
+  private sceneUiRuntime: SceneUiRuntime | null = null;
+  private chatRuntime: ChatRuntime | null = null;
   private hasBoundFullscreenEvents = false;
   private mode: AppViewMode = 'tour';
   private isStructureOverlayOpen = false; // 缁撴瀯鍥?涓夌淮妯″瀷overlay鏄惁鎵撳紑
   private structureView2D: StructureView2D | null = null;
   private structureView3D: StructureView3D | null = null;
-  private fcChatPanel: FcChatPanel | null = null;
   private infoModalMounted: MountedModal | null = null;
   private settingsModalMounted: MountedModal | null = null;
   private handlePopState: (() => void) | null = null;
   private handlePickEvent: ((e: Event) => void) | null = null;
   private handlePickModeEvent: ((e: Event) => void) | null = null;
-  private handleMetricsEvent: ((e: Event) => void) | null = null;
   private debugPanelRafId: number | null = null;
   private structure3DLoadToken = 0;
-  private chatInitToken = 0;
-  private chatFirstInteractionHandler: (() => void) | null = null;
   private panoViewerModulePromise: Promise<typeof import('./viewer/PanoViewer')> | null = null;
   private topRightControlsModulePromise: Promise<typeof import('./ui/TopRightControls')> | null = null;
   private brandMarkModulePromise: Promise<typeof import('./ui/BrandMark')> | null = null;
@@ -705,207 +703,81 @@ class App {
       updateDebugPanel();
     }
     
-    let deferredUiMounted = false;
-    let deferredUiLoading = false;
-    const mountDeferredSceneUI = async () => {
-      if (deferredUiMounted || deferredUiLoading) return;
-      if (!this.panoViewer) return;
-      if (!this.currentScene || this.currentScene.id !== scene.id) return;
-      deferredUiLoading = true;
+    this.chatRuntime = new ChatRuntime();
+    this.chatRuntime.updateContext({
+      museum,
+      scene,
+      fcChatConfig: this.config?.fcChat,
+    });
 
-      try {
-        const [
-          { VideoPlayer },
-          { GuideTray },
-          { SceneGuideDrawer },
-          { BottomDock },
-          { TopModeTabs },
-          { Hotspots },
-          { QualityIndicator },
-        ] = await Promise.all([
-          import('./ui/VideoPlayer'),
-          import('./ui/GuideTray'),
-          import('./ui/SceneGuideDrawer'),
-          import('./ui/BottomDock'),
-          import('./ui/TopModeTabs'),
-          import('./ui/Hotspots'),
-          import('./ui/QualityIndicator'),
-        ]);
+    this.sceneUiRuntime = new SceneUiRuntime({
+      appElement: this.appElement,
+      viewerContainer,
+      museum,
+      scene,
+      initialMode: this.mode,
+      getPanoViewer: () => this.panoViewer,
+      getCurrentSceneId: () => this.currentScene?.id ?? null,
+      onModeChange: (mode) => {
+        this.setMode(mode);
+      },
+      onEnterScene: (sceneId) => {
+        navigateToScene(museum.id, sceneId);
+      },
+      onOpenInfo: () => {
+        void this.openInfoModal();
+      },
+      onOpenSettings: () => {
+        void this.openSettingsModal();
+      },
+      onOpenCommunity: () => {
+        void this.chatRuntime?.ensureInit();
+      },
+    });
 
-        if (deferredUiMounted) return;
-        if (!this.panoViewer) return;
-        if (!this.currentScene || this.currentScene.id !== scene.id) return;
-        deferredUiMounted = true;
+    const syncSceneUiRuntimeRefs = () => {
+      this.bottomDock = this.sceneUiRuntime?.getBottomDock() ?? null;
+      this.topModeTabs = this.sceneUiRuntime?.getTopModeTabs() ?? null;
+      this.hotspots = this.sceneUiRuntime?.getHotspots() ?? null;
+      this.videoPlayer = this.sceneUiRuntime?.getVideoPlayer() ?? null;
+      this.guideTray = this.sceneUiRuntime?.getGuideTray() ?? null;
+      this.sceneGuideDrawer = this.sceneUiRuntime?.getSceneGuideDrawer() ?? null;
+      this.qualityIndicator = this.sceneUiRuntime?.getQualityIndicator() ?? null;
+    };
 
-        // 鍒涘缓瑙嗛鎾斁鍣?- 闄嶇骇淇濇姢
-        try {
-          this.videoPlayer = new VideoPlayer();
-          this.appElement.appendChild(this.videoPlayer.getElement());
-        } catch (err) {
+    let coreUiRequested = false;
+    const ensureCoreSceneUi = () => {
+      if (coreUiRequested) return;
+      coreUiRequested = true;
+      void this.sceneUiRuntime
+        ?.mountCore()
+        .then(() => {
+          syncSceneUiRuntimeRefs();
+        })
+        .catch((err) => {
           if (__VR_DEBUG__) {
-            console.debug('[showScene] VideoPlayer 创建失败，已跳过', err);
+            console.debug('[showScene] 核心场景 UI 创建失败，已跳过', err);
           }
-          this.videoPlayer = null;
-        }
-
-        // 鏂?UI锛氬瑙堣交閲忛瑙堟潯锛堟3锛? 闄嶇骇淇濇姢
-        try {
-          this.guideTray = new GuideTray({
-            museumId: museum.id,
-            currentSceneId: scene.id,
-            scenes: museum.scenes,
-            onSceneClick: (sceneId) => {
-              navigateToScene(museum.id, sceneId);
-            },
-            onMoreClick: () => {
-              if (!this.sceneGuideDrawer) {
-                try {
-                  this.sceneGuideDrawer = new SceneGuideDrawer({
-                    museumId: museum.id,
-                    currentSceneId: scene.id,
-                    scenes: museum.scenes,
-                    onClose: () => {
-                      // no-op
-                    },
-                  });
-                  this.appElement.appendChild(this.sceneGuideDrawer.getElement());
-                } catch (err) {
-                  if (__VR_DEBUG__) {
-                    console.debug('[GuideTray] SceneGuideDrawer 创建失败:', err);
-                  }
-                }
-              }
-              if (this.guideTray) {
-                this.guideTray.setVisible(false);
-              }
-              if (this.sceneGuideDrawer) {
-                this.sceneGuideDrawer.open();
-              }
-            },
-            onClose: () => {
-              if (this.guideTray) {
-                this.guideTray.setVisible(false);
-              }
-              window.dispatchEvent(
-                new CustomEvent('vr:dock-tab-close', {
-                  detail: { tab: 'guide' },
-                }),
-              );
-            },
-          });
-          this.guideTray.setVisible(false);
-          this.appElement.appendChild(this.guideTray.getElement());
-        } catch (err) {
-          if (__VR_DEBUG__) {
-            console.debug('[showScene] GuideTray 创建失败，已跳过', err);
-          }
-          this.guideTray = null;
-        }
-
-        // 鏂?UI锛氬簳閮?Dock锛堝瑙?tab 鎵撳紑鎶藉眽锛? 闄嶇骇淇濇姢
-        try {
-          this.bottomDock = new BottomDock({
-            onGuideClick: () => {
-              if (this.guideTray) {
-                this.guideTray.setVisible(true);
-              }
-            },
-            onOpenInfo: () => {
-              void this.openInfoModal();
-            },
-            onOpenSettings: () => {
-              void this.openSettingsModal();
-            },
-            sceneId: scene.id,
-            sceneName: scene.name,
-            museum: museum,
-            scenes: museum.scenes,
-            currentSceneId: scene.id,
-          });
-          this.appElement.appendChild(this.bottomDock.getElement());
-        } catch (err) {
-          if (__VR_DEBUG__) {
-            console.debug('[showScene] BottomDock 创建失败，已跳过', err);
-          }
-          this.bottomDock = null;
-        }
-
-        // 鏂?UI锛氶《閮ㄦā寮忓垏鎹ab锛堝瑙嗛鏍硷級- 闄嶇骇淇濇姢
-        try {
-          this.topModeTabs = new TopModeTabs({
-            initialMode: this.mode,
-            onModeChange: (mode) => {
-              this.setMode(mode);
-            },
-          });
-          this.appElement.appendChild(this.topModeTabs.getElement());
-        } catch (err) {
-          if (__VR_DEBUG__) {
-            console.debug('[showScene] TopModeTabs 创建失败，已跳过', err);
-          }
-          this.topModeTabs = null;
-        }
-
-        // 鍒涘缓鐑偣锛圖OM Overlay锛氭瘡甯ц窡闅?camera 鎶曞奖锛? 闄嶇骇淇濇姢
-        try {
-          const sceneNameMap = new Map(museum.scenes.map((s) => [s.id, s.name]));
-          this.hotspots = new Hotspots(this.panoViewer, scene.hotspots, {
-            resolveSceneName: (sceneId) => sceneNameMap.get(sceneId),
-            onEnterScene: (sceneId) => {
-              navigateToScene(museum.id, sceneId);
-            },
-            museumId: museum.id,
-          });
-          viewerContainer.appendChild(this.hotspots.getElement());
-        } catch (err) {
-          if (__VR_DEBUG__) {
-            console.debug('[showScene] Hotspots 创建失败，已跳过', err);
-          }
-          this.hotspots = null;
-        }
-
-        // 鍒涘缓娓呮櫚搴︾姸鎬佹寚绀哄櫒 - 闄嶇骇淇濇姢
-        try {
-          this.qualityIndicator = new QualityIndicator();
-          this.appElement.appendChild(this.qualityIndicator.getElement());
-          if (this.panoViewer) {
-            this.qualityIndicator.updateStatus(this.panoViewer.getLoadStatus());
-          }
-        } catch (err) {
-          if (__VR_DEBUG__) {
-            console.debug('[showScene] QualityIndicator 创建失败，已跳过', err);
-          }
-          this.qualityIndicator = null;
-        }
-        if (this.handleMetricsEvent) {
-          window.removeEventListener('vr:metrics', this.handleMetricsEvent);
-          this.handleMetricsEvent = null;
-        }
-        this.handleMetricsEvent = (event: Event) => {
-          if (!this.qualityIndicator) return;
-          const detail = (event as CustomEvent).detail || {};
-          this.qualityIndicator.updateMetrics(detail);
-        };
-        window.addEventListener('vr:metrics', this.handleMetricsEvent);
-      } finally {
-        deferredUiLoading = false;
-      }
+        });
     };
 
     // 璁剧疆鍔犺浇鐘舵€佸彉鍖栧洖璋?
     this.panoViewer.setOnStatusChange((status) => {
-      if (this.qualityIndicator) {
-        this.qualityIndicator.updateStatus(status);
-      }
+      this.sceneUiRuntime?.handleStatusChange(status);
+      syncSceneUiRuntimeRefs();
+
       if (
-        !deferredUiMounted &&
+        !coreUiRequested &&
         (status === LoadStatus.LOW_READY ||
           status === LoadStatus.HIGH_READY ||
           status === LoadStatus.DEGRADED)
       ) {
         window.setTimeout(() => {
-          void mountDeferredSceneUI();
+          ensureCoreSceneUi();
         }, 0);
+      }
+      if (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED) {
+        this.sceneUiRuntime?.scheduleObserverMount();
       }
       if (
         status === LoadStatus.LOW_READY ||
@@ -918,7 +790,7 @@ class App {
 
     // 鍔犺浇鍦烘櫙
     this.panoViewer.setOnLoad(() => {
-      void mountDeferredSceneUI();
+      ensureCoreSceneUi();
       this.loading.hide();
       // 鍏ㄦ櫙鍔犺浇鎴愬姛鍚庯紝娓呴櫎浠讳綍 UI 閿欒閬僵锛堜絾淇濈暀 config 閿欒锛?
       this.hideUIError();
@@ -953,9 +825,6 @@ class App {
     
     // 璁剧疆鍦烘櫙鏁版嵁锛堢敤浜?GroundNavDots锛?
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
-
-    // 鍒涘缓鑱婂ぉ闈㈡澘锛堝浼?闂瓟锛夛細改为首交互触发，避免首屏空闲预热占用
-    this.setupChatOnFirstInteraction(museum, scene);
   }
 
   private async mountTopRightControls(viewerContainer: HTMLElement, scene: Scene, devMode: boolean): Promise<void> {
@@ -1025,79 +894,6 @@ class App {
     }
   }
 
-  private setupChatOnFirstInteraction(museum: Museum, scene: Scene): void {
-    this.chatInitToken += 1;
-    this.clearChatFirstInteractionListeners();
-
-    const fcChatConfig = this.config?.fcChat;
-    if (!fcChatConfig?.endpoint || !fcChatConfig.endpoint.trim()) {
-      return;
-    }
-
-    const chatToken = this.chatInitToken;
-    const trigger = () => {
-      this.clearChatFirstInteractionListeners();
-      void this.initChatPanel(chatToken, fcChatConfig, museum, scene);
-    };
-
-    this.chatFirstInteractionHandler = trigger;
-    window.addEventListener('pointerdown', trigger, { passive: true });
-    window.addEventListener('touchstart', trigger, { passive: true });
-    window.addEventListener('keydown', trigger);
-  }
-
-  private async initChatPanel(
-    chatToken: number,
-    fcChatConfig: FcChatConfig,
-    museum: Museum,
-    scene: Scene
-  ): Promise<void> {
-    if (chatToken !== this.chatInitToken) return;
-    if (!this.currentScene || this.currentScene.id !== scene.id) return;
-
-    try {
-      const [{ FcChatPanel }, { FcChatClient }] = await Promise.all([
-        import('./ui/FcChatPanel'),
-        import('./services/fcChatClient'),
-      ]);
-      if (chatToken !== this.chatInitToken) return;
-      if (!this.currentScene || this.currentScene.id !== scene.id) return;
-
-      const clientConfig: FcChatConfig = {
-        endpoint: fcChatConfig.endpoint,
-        authToken: fcChatConfig.authToken,
-        timeoutMs: 15000,
-      };
-      const client = new FcChatClient(clientConfig);
-
-      if (this.fcChatPanel) {
-        this.fcChatPanel.remove();
-        this.fcChatPanel = null;
-      }
-
-      this.fcChatPanel = new FcChatPanel(client, {
-        museumId: museum.id,
-        sceneId: scene.id,
-        sceneTitle: scene.name,
-        museumName: museum.name,
-        url: window.location.href,
-      });
-    } catch (err) {
-      if (__VR_DEBUG__) {
-        console.debug('[showScene] FcChatPanel 创建失败，已跳过', err);
-      }
-      this.fcChatPanel = null;
-    }
-  }
-
-  private clearChatFirstInteractionListeners(): void {
-    if (!this.chatFirstInteractionHandler) return;
-    window.removeEventListener('pointerdown', this.chatFirstInteractionHandler);
-    window.removeEventListener('touchstart', this.chatFirstInteractionHandler);
-    window.removeEventListener('keydown', this.chatFirstInteractionHandler);
-    this.chatFirstInteractionHandler = null;
-  }
-
   /**
    * 棰勫姞杞戒笅涓€涓満鏅殑缂╃暐鍥?
    * 璧勬簮绫诲瀷锛歵humb锛堢敤浜庡垪琛?棰勮锛?
@@ -1128,8 +924,6 @@ class App {
 
   private clearView(): void {
     // 娓呯悊鎵€鏈夌粍浠?
-    this.chatInitToken += 1;
-    this.clearChatFirstInteractionListeners();
     this.structure3DLoadToken += 1;
 
     if (this.handlePickEvent) {
@@ -1140,14 +934,26 @@ class App {
       window.removeEventListener('vr:pickmode', this.handlePickModeEvent);
       this.handlePickModeEvent = null;
     }
-    if (this.handleMetricsEvent) {
-      window.removeEventListener('vr:metrics', this.handleMetricsEvent);
-      this.handleMetricsEvent = null;
-    }
     if (this.debugPanelRafId !== null) {
       cancelAnimationFrame(this.debugPanelRafId);
       this.debugPanelRafId = null;
     }
+
+    if (this.chatRuntime) {
+      this.chatRuntime.dispose();
+      this.chatRuntime = null;
+    }
+    if (this.sceneUiRuntime) {
+      this.sceneUiRuntime.dispose();
+      this.sceneUiRuntime = null;
+    }
+    this.bottomDock = null;
+    this.topModeTabs = null;
+    this.hotspots = null;
+    this.videoPlayer = null;
+    this.guideTray = null;
+    this.sceneGuideDrawer = null;
+    this.qualityIndicator = null;
 
     if (this.panoViewer) {
       this.panoViewer.dispose();
@@ -1169,11 +975,6 @@ class App {
       this.northCalibrationPanel = null;
     }
 
-    if (this.topModeTabs) {
-      this.topModeTabs.getElement().remove();
-      this.topModeTabs = null;
-    }
-
     if (this.sceneTitleEl) {
       this.sceneTitleEl.remove();
       this.sceneTitleEl = null;
@@ -1182,21 +983,6 @@ class App {
     if (this.brandMark) {
       this.brandMark.remove();
       this.brandMark = null;
-    }
-
-    if (this.bottomDock) {
-      this.bottomDock.remove();
-      this.bottomDock = null;
-    }
-
-    if (this.guideTray) {
-      this.guideTray.remove();
-      this.guideTray = null;
-    }
-
-    if (this.sceneGuideDrawer) {
-      this.sceneGuideDrawer.remove();
-      this.sceneGuideDrawer = null;
     }
 
     if (this.museumList) {
@@ -1209,16 +995,6 @@ class App {
       this.sceneListPage = null;
     }
     
-    if (this.hotspots) {
-      this.hotspots.remove();
-      this.hotspots = null;
-    }
-    
-    if (this.videoPlayer) {
-      this.videoPlayer.remove();
-      this.videoPlayer = null;
-    }
-    
     if (this.debugPanel) {
       this.debugPanel.remove();
       this.debugPanel = null;
@@ -1229,12 +1005,6 @@ class App {
       this.configStudio = null;
     }
     
-    if (this.qualityIndicator) {
-      this.qualityIndicator.remove();
-      this.qualityIndicator = null;
-    }
-
-
     // 娓呯悊缁撴瀯鍥?涓夌淮妯″瀷overlay
     if (this.structureView2D) {
       const element = this.structureView2D.getElement();
@@ -1251,11 +1021,6 @@ class App {
       this.structureView3D = null;
     }
     this.isStructureOverlayOpen = false;
-
-    if (this.fcChatPanel) {
-      this.fcChatPanel.remove();
-      this.fcChatPanel = null;
-    }
 
     // 閲嶇疆 mode锛堝埛鏂板悗鍥炲埌 tour锛?
     this.mode = 'tour';

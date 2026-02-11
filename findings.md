@@ -95,3 +95,42 @@
 ## 第六轮发布确认（2026-02-11 20:37:26）
 - 发布 commit：`86c2cb1`。
 - 发布内容：`PanoViewer` 生命周期收口 + 弹窗按需加载 + docs 构建产物同步。
+
+## 第七轮新增发现（2026-02-11 21:31:40）
+1. `main.ts` 在第六轮后仍承载场景 UI 装配细节，导致“首屏路径与可选路径”边界不清晰，不利于继续压缩首屏请求。
+2. 聊天采用“首交互监听”会在非目标操作（任意键盘/触摸）提前加载 `chat-community`，与“用户显式触发才加载”目标冲突。
+3. `three` 命名空间导入在大文件中会放大依赖可见范围，不利于后续按职责拆包与长期维护。
+4. 原 `perf-baseline` 脚本仅识别 `three-core`，在新拆包命名下会出现指标盲区，需要同步更新统计口径。
+
+## 第七轮实施结果（2026-02-11 21:31:40）
+1. 结构解耦（P0）：
+   - 新增 `src/app/sceneUiRuntime.ts`，将场景 UI 装配拆为三层：
+     - 核心层（`LOW_READY`）：`BottomDock`、`TopModeTabs`、`Hotspots`
+     - 次级层（用户导览触发）：`GuideTray`、`SceneGuideDrawer`、`VideoPlayer`
+     - 观测层（`HIGH_READY/DEGRADED` + idle）：`QualityIndicator`
+   - `main.ts` 保留路由与场景装配，移除大段内联 UI 装配。
+2. 聊天触发收口（P1）：
+   - 新增 `src/app/chatRuntime.ts`，统一聊天初始化与销毁。
+   - 删除首交互全局监听，改为点击“社区”tab 后首次初始化聊天。
+3. three 导入与拆包（P0）：
+   - 9 个关键文件从 `import * as THREE` 改为按需命名导入。
+   - `vite.config.ts` 拆包更新为 `three-renderer` + `three-math`，并继续过滤 HTML 级 preload。
+4. 指标与脚本同步（P1）：
+   - `scripts/perf-baseline.mjs` 新增 `three-renderer/three-math/three 合计` 指标，避免新命名下出现 `N/A`。
+
+## 第七轮验收证据（2026-02-11 21:31:40）
+1. 构建链路：
+   - `npm run check:text`：通过
+   - `npm run build`：通过
+   - `npm run perf:baseline`：通过
+2. 体积数据（最新）：
+   - `index`: `77.95kB`
+   - `PanoViewer`: `69.2kB`
+   - `three-renderer`: `501.39kB`
+   - `three-math`: `2.28kB`
+   - three 合计：`503.68kB`
+3. chrome-devtools（`?museum=wangding&scene=memorial_wall`）：
+   - snapshot：页面中文文案显示正常；
+   - network：未点社区前无 `chat-community`，点击社区后首次加载；
+   - network：未点导览前无 `GuideTray/VideoPlayer`，点击导览后首次加载；
+   - console：仅非阻断项，无新增阻断错误。

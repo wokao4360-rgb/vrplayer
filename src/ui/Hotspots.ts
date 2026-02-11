@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import { PerspectiveCamera, Vector3 } from 'three';
 import type { SceneHotspot } from '../types/config';
 import type { PanoViewer } from '../viewer/PanoViewer';
 import { yawPitchToScreen } from '../viewer/spatialProjection';
@@ -28,7 +28,7 @@ abstract class BaseDomHotspot<T extends HotspotBaseData> {
   protected contentEl: HTMLElement;
   protected tooltipEl: HTMLDivElement;
   protected labelEl: HTMLDivElement | null = null;
-  protected worldPos: THREE.Vector3;
+  protected worldPos: Vector3;
   protected radius = 500; // 与 PanoViewer 的 SphereGeometry 半径一致
   private tooltipTimer: number | null = null;
 
@@ -102,7 +102,7 @@ abstract class BaseDomHotspot<T extends HotspotBaseData> {
   /**
    * 每帧调用：根据 camera 和 DOM 更新屏幕位置；超出视野自动隐藏
    */
-  updateScreenPosition(camera: THREE.PerspectiveCamera, dom: HTMLElement): void {
+  updateScreenPosition(camera: PerspectiveCamera, dom: HTMLElement): void {
     const result = yawPitchToScreen(this.data.yaw, this.data.pitch, camera, dom, this.radius);
     
     if (!result.visible) {
@@ -402,4 +402,5 @@ export class Hotspots {
     this.element.remove();
   }
 }
+
 

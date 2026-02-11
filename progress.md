@@ -121,3 +121,49 @@
 ## 2026-02-11 20:37:26
 - 已按 SOP 发布第六轮：`git checkout main` -> `git pull --rebase --autostash origin main` -> `npm run build` -> `robocopy .\\dist .\\docs /MIR` -> `git add -A` -> `git commit` -> `git push origin main`。
 - 发布提交：`86c2cb1`。
+
+## 2026-02-11 21:12:08
+- 使用 Context7 拉取 Vite 文档依据：确认 `build.modulePreload.resolveDependencies` 可按 `hostType=html` 过滤预加载依赖，并结合 `manualChunks` 控制动态 import 拆包边界。
+
+## 2026-02-11 21:19:47
+- 新增 `src/app/sceneUiRuntime.ts`：将场景 UI 改为三层运行时装配。
+  - 核心层：`BottomDock`、`TopModeTabs`、`Hotspots`（`LOW_READY` 后挂载）
+  - 次级层：`GuideTray`、`SceneGuideDrawer`、`VideoPlayer`（用户触发导览时按需加载）
+  - 观测层：`QualityIndicator`（`HIGH_READY/DEGRADED` 后 idle 挂载）
+- 新增 `src/app/chatRuntime.ts`：聊天改为上下文化运行时，`ensureInit()` 仅在触发时初始化并带场景 token 失效保护。
+- `src/ui/BottomDock.tsx` 新增 `onOpenCommunity` 回调并在点击“社区”时触发。
+- `src/main.ts` 完成接线：移除首交互聊天监听，切换为“社区 tab 首次点击初始化聊天”。
+
+## 2026-02-11 21:24:31
+- 完成 three 命名导入改造（去除 `import * as THREE`）：
+  - `src/viewer/picking.ts`
+  - `src/viewer/spatialProjection.ts`
+  - `src/viewer/createCompassTexture.ts`
+  - `src/viewer/NadirPatch.ts`
+  - `src/ui/Hotspots.ts`
+  - `src/viewer/TileCanvasPano.ts`
+  - `src/viewer/TileMeshPano.ts`
+  - `src/viewer/PanoViewer.ts`
+  - `src/viewer/dollhouseScene.ts`
+- `vite.config.ts` 更新拆包：
+  - 新增 `three-math`
+  - `three-core` 更名为 `three-renderer`
+  - HTML 预加载过滤扩展为 `three-extras/three-renderer/three-math`
+
+## 2026-02-11 21:27:19
+- 构建验证通过：`npm run check:text`、`npm run build`、`npm run perf:baseline` 全通过。
+- 新基线：
+  - `index`: `77.95kB`
+  - `PanoViewer`: `69.2kB`
+  - `three-renderer`: `501.39kB`
+  - `three-math`: `2.28kB`
+  - three 合计：`503.68kB`
+- `dist/index.html` 复核：无 `three-extras` / `three-renderer` / `three-math` 的 HTML 级 preload。
+
+## 2026-02-11 21:31:40
+- chrome-devtools 证据采样完成（`snapshot + network + console`）：
+  - 首屏快照中文正常（标题/底部导航/顶部模式/品牌）。
+  - 未点击“社区”前，network 不存在 `chat-community` 请求。
+  - 点击“社区”后首次出现 `chat-community-C6ZbaM52.js` 与 `store-B83L8bDT.js`。
+  - 未点击“导览”前不请求 `GuideTray/VideoPlayer`；点击“导览”后首次加载 `GuideTray-DA1_STCM.js` 与 `VideoPlayer-CyQLSIuS.js`。
+  - console 仅保留非阻断项（meta deprecate + 表单字段 issue），无新增阻断错误。

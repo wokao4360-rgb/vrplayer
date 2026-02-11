@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+﻿import { AmbientLight, BoxGeometry, DirectionalLight, Mesh, MeshStandardMaterial, PerspectiveCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer } from 'three';
 import type { Scene, Museum } from '../types/config';
 import { emitSceneFocus, onSceneFocus, type SceneFocusEvent } from '../ui/sceneLinkBus';
 
@@ -7,12 +7,12 @@ import { emitSceneFocus, onSceneFocus, type SceneFocusEvent } from '../ui/sceneL
  * 用于生成和渲染空间概览的三维图
  */
 export class DollhouseScene {
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
+  private scene: Scene;
+  private camera: PerspectiveCamera;
+  private renderer: WebGLRenderer;
   private container: HTMLElement;
   private controls: any; // OrbitControls (动态导入)
-  private sceneNodes: Map<string, THREE.Mesh> = new Map();
+  private sceneNodes: Map<string, Mesh> = new Map();
   private currentSceneId: string | null = null;
   private animationId: number | null = null;
   private museumId: string;
@@ -21,7 +21,7 @@ export class DollhouseScene {
   private onSceneClick?: (museumId: string, sceneId: string) => void;
   private unsubscribeFocus: (() => void) | null = null;
   private hoveredSceneId: string | null = null;
-  private focusAnimation: { target: THREE.Vector3; start: THREE.Vector3; progress: number } | null = null;
+  private focusAnimation: { target: Vector3; start: Vector3; progress: number } | null = null;
   private handleWindowResize: (() => void) | null = null;
 
   constructor(
@@ -40,11 +40,11 @@ export class DollhouseScene {
     this.onSceneClick = onSceneClick;
 
     // 创建场景
-    this.scene = new THREE.Scene();
+    this.scene = new Scene();
     this.scene.background = null; // 透明背景
 
     // 创建相机
-    this.camera = new THREE.PerspectiveCamera(
+    this.camera = new PerspectiveCamera(
       50,
       container.clientWidth / container.clientHeight,
       0.1,
@@ -54,7 +54,7 @@ export class DollhouseScene {
     this.camera.lookAt(0, 0, 0);
 
     // 创建渲染器
-    this.renderer = new THREE.WebGLRenderer({ 
+    this.renderer = new WebGLRenderer({ 
       antialias: true,
       alpha: true // 透明背景
     });
@@ -91,7 +91,7 @@ export class DollhouseScene {
       if (targetNode) {
         const targetPos = targetNode.position.clone();
         // 计算相机目标位置（稍微后退和抬高）
-        const cameraTarget = new THREE.Vector3(
+        const cameraTarget = new Vector3(
           targetPos.x * 0.3,
           targetPos.y + 3,
           targetPos.z + 8
@@ -125,11 +125,11 @@ export class DollhouseScene {
 
   private setupLighting(): void {
     // 环境光
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new AmbientLight(0xffffff, 0.6);
     this.scene.add(ambientLight);
 
     // 方向光
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    const directionalLight = new DirectionalLight(0xffffff, 0.4);
     directionalLight.position.set(5, 10, 5);
     this.scene.add(directionalLight);
   }
@@ -232,13 +232,13 @@ export class DollhouseScene {
     scene: Scene,
     position: { x: number; y: number; z: number },
     isCurrent: boolean
-  ): THREE.Mesh {
+  ): Mesh {
     // 创建几何体（Box 或 Plane）
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const geometry = new BoxGeometry(1, 1, 1);
     
     // 创建材质（低饱和、半透明）
     const baseColor = isCurrent ? 0x4a90e2 : 0x888888;
-    const material = new THREE.MeshStandardMaterial({
+    const material = new MeshStandardMaterial({
       color: baseColor,
       opacity: isCurrent ? 0.8 : 0.5,
       transparent: true,
@@ -246,7 +246,7 @@ export class DollhouseScene {
       roughness: 0.7,
     });
 
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new Mesh(geometry, material);
     mesh.position.set(position.x, position.y, position.z);
     mesh.userData = { sceneId: scene.id, sceneName: scene.name };
 
@@ -301,7 +301,7 @@ export class DollhouseScene {
       if (mesh.userData.isCurrent) {
         const pulse = Math.sin(time * 2) * 0.1 + 1;
         mesh.scale.set(pulse * 1.2, pulse * 1.2, pulse * 1.2);
-        const material = mesh.material as THREE.MeshStandardMaterial;
+        const material = mesh.material as MeshStandardMaterial;
         material.opacity = 0.6 + Math.sin(time * 2) * 0.2;
       }
     });
@@ -351,12 +351,12 @@ export class DollhouseScene {
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
+    const raycaster = new Raycaster();
+    raycaster.setFromCamera(new Vector2(x, y), this.camera);
 
     const intersects = raycaster.intersectObjects(Array.from(this.sceneNodes.values()));
     if (intersects.length > 0) {
-      const mesh = intersects[0].object as THREE.Mesh;
+      const mesh = intersects[0].object as Mesh;
       const sceneId = mesh.userData.sceneId;
       
       // 点击前先 emit focus（虽然 router 也会发，但这里确保立即响应）
@@ -382,14 +382,14 @@ export class DollhouseScene {
     const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
+    const raycaster = new Raycaster();
+    raycaster.setFromCamera(new Vector2(x, y), this.camera);
 
     const intersects = raycaster.intersectObjects(Array.from(this.sceneNodes.values()));
     
     // 重置所有节点的 hover 状态
     this.sceneNodes.forEach((mesh) => {
-      const material = mesh.material as THREE.MeshStandardMaterial;
+      const material = mesh.material as MeshStandardMaterial;
       if (!mesh.userData.isCurrent) {
         material.opacity = 0.5;
       }
@@ -397,8 +397,8 @@ export class DollhouseScene {
 
     // 设置 hover 节点
     if (intersects.length > 0) {
-      const mesh = intersects[0].object as THREE.Mesh;
-      const material = mesh.material as THREE.MeshStandardMaterial;
+      const mesh = intersects[0].object as Mesh;
+      const material = mesh.material as MeshStandardMaterial;
       const sceneId = mesh.userData.sceneId;
       
       if (!mesh.userData.isCurrent) {
@@ -484,6 +484,7 @@ export class DollhouseScene {
     }
   }
 }
+
 
 
 

@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+﻿import { CanvasTexture, ClampToEdgeWrapping, LinearFilter, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, sRGBEncoding, Vector3 } from 'three';
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
@@ -24,8 +24,8 @@ export class TileCanvasPano {
   private manifest: TileManifest | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
-  private texture: THREE.CanvasTexture | null = null;
-  private mesh: THREE.Mesh | null = null;
+  private texture: CanvasTexture | null = null;
+  private mesh: Mesh | null = null;
   private pendingLow: TileInfo[] = [];
   private pendingHigh: TileInfo[] = [];
   private activeLoads = 0;
@@ -58,7 +58,7 @@ export class TileCanvasPano {
   private prefetchSeeded = false;
 
   constructor(
-    private scene: THREE.Scene,
+    private scene: Scene,
     private onFirstDraw: () => void,
     private onHighReady: () => void,
     maxTextureSize = 0
@@ -114,24 +114,24 @@ export class TileCanvasPano {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    this.texture = new THREE.CanvasTexture(this.canvas);
+    this.texture = new CanvasTexture(this.canvas);
     // Canvas 2D 与球面 UV 以 WebGL 纹理坐标对齐，禁止二次翻转。
     this.texture.flipY = false;
-    this.texture.wrapS = THREE.ClampToEdgeWrapping;
-    this.texture.wrapT = THREE.ClampToEdgeWrapping;
-    this.texture.minFilter = THREE.LinearFilter;
-    this.texture.magFilter = THREE.LinearFilter;
+    this.texture.wrapS = ClampToEdgeWrapping;
+    this.texture.wrapT = ClampToEdgeWrapping;
+    this.texture.minFilter = LinearFilter;
+    this.texture.magFilter = LinearFilter;
     this.texture.generateMipmaps = false;
     if ('colorSpace' in this.texture) {
-      (this.texture as any).colorSpace = THREE.SRGBColorSpace;
+      (this.texture as any).colorSpace = SRGBColorSpace;
     } else {
-      (this.texture as any).encoding = THREE.sRGBEncoding;
+      (this.texture as any).encoding = sRGBEncoding;
     }
     this.texture.needsUpdate = true;
 
-    const geom = new THREE.SphereGeometry(500, 64, 64);
+    const geom = new SphereGeometry(500, 64, 64);
     geom.scale(-1, 1, 1);
-    const mat = new THREE.MeshBasicMaterial({
+    const mat = new MeshBasicMaterial({
       map: this.texture,
       transparent: true,
       opacity: 0,
@@ -139,7 +139,7 @@ export class TileCanvasPano {
       depthTest: false,
     });
     mat.toneMapped = false;
-    this.mesh = new THREE.Mesh(geom, mat);
+    this.mesh = new Mesh(geom, mat);
     this.mesh.renderOrder = 1;
     this.mesh.frustumCulled = false;
     this.scene.add(this.mesh);
@@ -184,14 +184,14 @@ export class TileCanvasPano {
     this.tilesMap.clear();
     if (this.mesh) {
       if (this.mesh.geometry) this.mesh.geometry.dispose();
-      const mat = this.mesh.material as THREE.MeshBasicMaterial;
-      if (mat.map) (mat.map as THREE.CanvasTexture).dispose();
+      const mat = this.mesh.material as MeshBasicMaterial;
+      if (mat.map) (mat.map as CanvasTexture).dispose();
       mat.dispose();
       this.scene.remove(this.mesh);
     }
   }
 
-  update(camera: THREE.PerspectiveCamera): void {
+  update(camera: PerspectiveCamera): void {
     if (!this.manifest || !this.highestLevel || !this.ctx) return;
     const now = performance.now();
     if (now - this.lastUpdate < 150) return;
@@ -245,7 +245,7 @@ export class TileCanvasPano {
     this.runLru(now);
   }
 
-  prime(camera: THREE.PerspectiveCamera): void {
+  prime(camera: PerspectiveCamera): void {
     if (!this.manifest || !this.highestLevel || !this.ctx) return;
     camera.updateMatrixWorld(true);
     const now = performance.now();
@@ -502,7 +502,7 @@ export class TileCanvasPano {
       this.tilesVisible = true;
       this.onFirstDraw();
     }
-    const mat = this.mesh?.material as THREE.MeshBasicMaterial;
+    const mat = this.mesh?.material as MeshBasicMaterial;
     if (mat) {
       mat.opacity = 1;
       mat.needsUpdate = true;
@@ -514,19 +514,19 @@ export class TileCanvasPano {
   }
 
   private computeNeededTiles(
-    camera: THREE.PerspectiveCamera,
+    camera: PerspectiveCamera,
     level: TileLevel,
     options: { marginDeg?: number; expandNeighbors?: boolean } = {}
   ): Array<{ col: number; row: number; rank: number }> {
     const { yaw, pitch } = this.getViewAngles(camera);
-    const fovRad = THREE.MathUtils.degToRad(camera.fov);
-    const margin = THREE.MathUtils.degToRad(options.marginDeg ?? 20);
+    const fovRad = MathUtils.degToRad(camera.fov);
+    const margin = MathUtils.degToRad(options.marginDeg ?? 20);
     const halfV = fovRad / 2 + margin;
     const halfH = (fovRad * camera.aspect) / 2 + margin;
     const minYaw = this.normAngle(yaw - halfH);
     const maxYaw = this.normAngle(yaw + halfH);
-    const minPitch = THREE.MathUtils.clamp(pitch - halfV, -Math.PI / 2, Math.PI / 2);
-    const maxPitch = THREE.MathUtils.clamp(pitch + halfV, -Math.PI / 2, Math.PI / 2);
+    const minPitch = MathUtils.clamp(pitch - halfV, -Math.PI / 2, Math.PI / 2);
+    const maxPitch = MathUtils.clamp(pitch + halfV, -Math.PI / 2, Math.PI / 2);
 
     const colsRange = this.yawToCols(minYaw, maxYaw, level.cols);
     const centerCol = this.yawToCols(yaw - 1e-6, yaw + 1e-6, level.cols)[0] ?? 0;
@@ -591,7 +591,7 @@ export class TileCanvasPano {
     });
   }
 
-  private reprioritizeLowQueue(camera: THREE.PerspectiveCamera): void {
+  private reprioritizeLowQueue(camera: PerspectiveCamera): void {
     if (!this.lowLevel || this.pendingLow.length < 2) return;
     const needed = this.computeNeededTiles(camera, this.lowLevel);
     if (needed.length === 0) return;
@@ -613,7 +613,7 @@ export class TileCanvasPano {
     });
   }
 
-  private seedHighPreload(camera: THREE.PerspectiveCamera): void {
+  private seedHighPreload(camera: PerspectiveCamera): void {
     if (this.prefetchSeeded || !this.manifest || !this.highestLevel) return;
     this.prefetchSeeded = true;
     const { yaw: baseYaw, pitch: basePitch } = this.getViewAngles(camera);
@@ -677,8 +677,8 @@ export class TileCanvasPano {
     return Math.abs(this.normAngle(a - b));
   }
 
-  private getViewAngles(camera: THREE.PerspectiveCamera): { yaw: number; pitch: number } {
-    const dir = new THREE.Vector3();
+  private getViewAngles(camera: PerspectiveCamera): { yaw: number; pitch: number } {
+    const dir = new Vector3();
     camera.getWorldDirection(dir);
     return {
       yaw: -Math.atan2(dir.x, dir.z),
@@ -702,4 +702,5 @@ export class TileCanvasPano {
     }
   }
 }
+
 

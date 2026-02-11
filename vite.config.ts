@@ -10,7 +10,10 @@ export default defineConfig({
       resolveDependencies: (_url, deps, { hostType }) => {
         if (hostType === 'html') {
           return deps.filter(
-            (dep) => !dep.includes('three-extras-') && !dep.includes('three-core-'),
+            (dep) =>
+              !dep.includes('three-extras-') &&
+              !dep.includes('three-renderer-') &&
+              !dep.includes('three-math-'),
           );
         }
         return deps;
@@ -23,6 +26,13 @@ export default defineConfig({
         onlyExplicitManualChunks: true,
         manualChunks(id) {
           if (
+            id.includes('/src/viewer/picking') ||
+            id.includes('/src/viewer/spatialProjection') ||
+            id.includes('/src/viewer/createCompassTexture')
+          ) {
+            return 'three-math';
+          }
+          if (
             id.includes('/src/viewer/TileMeshPano') ||
             id.includes('three/examples/jsm/loaders/KTX2Loader')
           ) {
@@ -32,7 +42,7 @@ export default defineConfig({
             return 'three-extras';
           }
           if (id.includes('/node_modules/three/')) {
-            return 'three-core';
+            return 'three-renderer';
           }
           if (
             id.includes('/src/ui/ConfigStudio') ||
@@ -66,8 +76,6 @@ export default defineConfig({
     open: true,
   },
 });
-
-
 
 
 

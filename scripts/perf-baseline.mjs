@@ -32,7 +32,8 @@ function readAssetStats() {
 
   const indexEntry = entries.find((e) => /^index-.*\.js$/.test(e.name)) || null;
   const panoViewerEntry = entries.find((e) => /^PanoViewer-.*\.js$/.test(e.name)) || null;
-  const threeCoreEntry = entries.find((e) => /^three-core-.*\.js$/.test(e.name)) || null;
+  const threeRendererEntry = entries.find((e) => /^three-renderer-.*\.js$/.test(e.name)) || null;
+  const threeMathEntry = entries.find((e) => /^three-math-.*\.js$/.test(e.name)) || null;
 
   const totalJsBytes = entries.filter((e) => e.ext === '.js').reduce((sum, e) => sum + e.sizeBytes, 0);
   const totalCssBytes = entries.filter((e) => e.ext === '.css').reduce((sum, e) => sum + e.sizeBytes, 0);
@@ -42,7 +43,15 @@ function readAssetStats() {
     metrics: {
       indexJsKB: indexEntry ? indexEntry.sizeKB : null,
       panoViewerJsKB: panoViewerEntry ? panoViewerEntry.sizeKB : null,
-      threeCoreJsKB: threeCoreEntry ? threeCoreEntry.sizeKB : null,
+      threeRendererJsKB: threeRendererEntry ? threeRendererEntry.sizeKB : null,
+      threeMathJsKB: threeMathEntry ? threeMathEntry.sizeKB : null,
+      threeRenderMathCombinedKB: Number(
+        (
+          ((threeRendererEntry ? threeRendererEntry.sizeBytes : 0) +
+            (threeMathEntry ? threeMathEntry.sizeBytes : 0)) /
+          1024
+        ).toFixed(2),
+      ),
       totalJsKB: Number((totalJsBytes / 1024).toFixed(2)),
       totalCssKB: Number((totalCssBytes / 1024).toFixed(2)),
     },
@@ -59,7 +68,9 @@ function main() {
   console.log(`- 生成时间: ${report.generatedAt}`);
   console.log(`- index 主包: ${report.metrics.indexJsKB ?? 'N/A'} kB`);
   console.log(`- PanoViewer: ${report.metrics.panoViewerJsKB ?? 'N/A'} kB`);
-  console.log(`- three-core: ${report.metrics.threeCoreJsKB ?? 'N/A'} kB`);
+  console.log(`- three-renderer: ${report.metrics.threeRendererJsKB ?? 'N/A'} kB`);
+  console.log(`- three-math: ${report.metrics.threeMathJsKB ?? 'N/A'} kB`);
+  console.log(`- three 合计: ${report.metrics.threeRenderMathCombinedKB ?? 'N/A'} kB`);
   console.log(`- JS 总量: ${report.metrics.totalJsKB} kB`);
   console.log(`- CSS 总量: ${report.metrics.totalCssKB} kB`);
 }

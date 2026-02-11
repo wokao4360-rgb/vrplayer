@@ -1,11 +1,11 @@
 ﻿# task_plan.md
 
 ## 任务
-VRPlayer 第六轮深入优化（P0 生命周期治理 + P1 首屏入口继续瘦身）
+VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 
 ## 时间
 - 创建时间：2026-02-11 18:51:14
-- 最新更新：2026-02-11 20:37:26
+- 最新更新：2026-02-11 21:31:40
 
 ## 已完成基线
 - 第一轮：入口依赖瘦身、Dock 惰性化、CDN 后台探测、关键生命周期清理。
@@ -35,6 +35,16 @@ VRPlayer 第六轮深入优化（P0 生命周期治理 + P1 首屏入口继续�
 - [x] 阶段2（P1）：`main.ts` 信息/更多弹窗模块拆分并按需动态加载
 - [x] 阶段3：构建验证 + chrome-devtools 证据采样
 - [x] 阶段4：按 SOP 发布第六轮改动
+
+## 第七轮阶段状态（本次）
+- [x] 阶段0（P0）：`main.ts` 场景 UI 装配从内联迁移到 `SceneUiRuntime`（核心层/次级层/观测层）
+- [x] 阶段1（P0）：聊天初始化迁移到 `ChatRuntime`，并改为“社区 tab 首次点击触发”
+- [x] 阶段2（P0）：`BottomDock` 新增 `onOpenCommunity` 回调接口并接入主链路
+- [x] 阶段3（P0）：`picking/spatialProjection/createCompassTexture/Hotspots/NadirPatch/TileCanvasPano/TileMeshPano/PanoViewer/dollhouseScene` 改为 three 按需命名导入
+- [x] 阶段4（P1）：`vite.config.ts` 更新拆包策略（`three-renderer/three-math`）并过滤 HTML preload
+- [x] 阶段5：`npm run check:text` + `npm run build` + `npm run perf:baseline` 验证通过
+- [x] 阶段6：chrome-devtools 证据采样（snapshot + network + console）
+- [ ] 阶段7：按 SOP 发布第七轮（dist -> docs -> commit -> push）
 
 ## 约束
 - 不降帧率，不降画质，渲染循环保持全速。

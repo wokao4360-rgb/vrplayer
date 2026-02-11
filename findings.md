@@ -63,3 +63,9 @@
 ## 守卫校验记录（2026-02-11 19:47:53）
 - `check:text` 已在构建前生效，成功拦截一次文档中的乱码样例串。
 - 处理后 `npm run build` 与 `npm run perf:baseline` 均通过，说明守卫链路可用。
+
+## 第五轮发布确认（2026-02-11 19:50:57）
+- 发布 commit：`6f8560426a8b25ea58138cfb3d2576bbe3511726`。
+- 远端 `origin/main` 已对齐该 commit。
+- 线上主页已切换新入口：`index-Cos8uFQt.js`。
+- 线上 `config.json` 已切换为修复后的封面：`/assets/panos/gate-nail.jpg`。

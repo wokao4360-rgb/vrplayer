@@ -93,3 +93,9 @@
 - `npm run build` 首次被 `check:text` 拦截：`findings.md` 中记录了“乱码样例串”导致误报。
 - 已将示例文本改为中性描述后重跑构建，`check:text + vite build` 全部通过。
 - 重新生成性能基线：`reports/perf-baseline/latest.json`（时间戳 `2026-02-11 19:47:53`）。
+
+## 2026-02-11 19:50:57
+- 按发布 SOP 完成第五轮上线：`npm run build` -> `robocopy .\\dist .\\docs /MIR` -> `git add -A` -> `git commit` -> `git push origin main`。
+- 发布提交：`6f8560426a8b25ea58138cfb3d2576bbe3511726`。
+- 远端对齐：`origin/main` 已指向同一提交。
+- Pages 轮询确认：线上已切换到 `index-Cos8uFQt.js`，且 `/config.json` 的 `museums[0].cover=/assets/panos/gate-nail.jpg`，发布生效。

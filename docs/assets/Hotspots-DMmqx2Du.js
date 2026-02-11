@@ -1,4 +1,4 @@
-var I=Object.defineProperty;var S=(i,e,o)=>e in i?I(i,e,{enumerable:!0,configurable:!0,writable:!0,value:o}):i[e]=o;var a=(i,e,o)=>S(i,typeof e!="symbol"?e+"":e,o);import{y as k}from"./three-math-BTl9b1HC.js";import{s as y,p as b,o as L}from"./index-CE53-grs.js";import"./three-renderer-toiwjbvW.js";function T(){return`
+var I=Object.defineProperty;var S=(i,e,o)=>e in i?I(i,e,{enumerable:!0,configurable:!0,writable:!0,value:o}):i[e]=o;var a=(i,e,o)=>S(i,typeof e!="symbol"?e+"":e,o);import{y as k}from"./three-math-BTl9b1HC.js";import{s as y,p as b,o as L}from"./index-eWkhSg8A.js";import"./three-renderer-toiwjbvW.js";function T(){return`
 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="2" />
   <path d="M16.2 16.2 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>

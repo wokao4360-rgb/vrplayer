@@ -768,7 +768,14 @@ class App {
       onOpenCommunity: () => {
         void this.chatRuntime?.ensureInit();
       },
+      onWarmupFeatures: async () => {
+        await Promise.allSettled([
+          this.loadAppModalsModule(),
+          this.chatRuntime?.warmup() ?? Promise.resolve(),
+        ]);
+      },
     });
+    await this.sceneUiRuntime.ensureQualityIndicatorMounted();
 
     const syncSceneUiRuntimeRefs = () => {
       this.bottomDock = this.sceneUiRuntime?.getBottomDock() ?? null;
@@ -812,7 +819,7 @@ class App {
         }, 0);
       }
       if (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED) {
-        this.sceneUiRuntime?.scheduleObserverMount();
+        this.sceneUiRuntime?.scheduleFeatureWarmup();
       }
       if (
         status === LoadStatus.LOW_READY ||

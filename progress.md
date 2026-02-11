@@ -185,3 +185,19 @@
   - network：未点击“社区”前无 `chat-community`；点击“社区”后首次出现 `chat-community-*.js`。
   - network：点击“导览”后首次出现 `GuideTray-*.js` 与 `VideoPlayer-*.js`。
   - console：仅剩非阻断 warning/issue（meta deprecate + form field id/name）。
+
+## 2026-02-11 22:55:46
+- 新一轮交互体验优化已完成实现：
+  - `src/app/sceneUiRuntime.ts`：新增“高清就绪后后台预热”逻辑，预热 `GuideTray/VideoPlayer/SceneGuideDrawer/DockPanels/CommunityPanel`。
+  - `src/app/chatRuntime.ts`：新增 `warmup()`，仅预热聊天模块，不创建面板实例。
+  - `src/main.ts`：接入 `onWarmupFeatures`，在高清就绪后预热 `appModals` 和聊天模块。
+  - `src/main.ts`：场景运行时创建后立即挂载质量指示器，避免错过低清状态。
+  - `src/ui/QualityIndicator.ts`：加入低清状态最短可见时长（低清加载 500ms、低清就绪 1200ms）。
+
+## 2026-02-11 22:55:46
+- 构建验证通过：`npm run check:text`、`npm run build`、`npm run perf:baseline`。
+- 新基线：`index` 约 `57.31kB`（保持在目标线以内）。
+- `chrome-devtools` 证据采样（`?museum=wangding&scene=memorial_wall&v=11`）：
+  - 首屏快照无“打开三馆学伴”头像按钮。
+  - 点击“社区”后才出现“打开三馆学伴”按钮与学伴浮窗。
+  - 未点击按钮前网络已出现 `GuideTray/VideoPlayer/SceneGuideDrawer/dock-panels/chat-community/appModals`，说明“高清后后台预热”生效。

@@ -14,8 +14,13 @@ export class QualityIndicator {
   private currentStatus: LoadStatus = LoadStatus.LOADING_LOW;
   private autoHideTimer: number | null = null;
   private maxVisibleTimer: number | null = null;
+  private pendingStatusTimer: number | null = null;
   private readonly maxVisibleMs = 10000;
   private readonly readyHideMs = 2500;
+  private readonly lowLoadingMinVisibleMs = 500;
+  private readonly lowReadyMinVisibleMs = 1200;
+  private lowLoadingShownAt = 0;
+  private lowReadyShownAt = 0;
   private metricsText = '';
 
   constructor() {
@@ -35,7 +40,28 @@ export class QualityIndicator {
       return;
     }
 
+    if (this.pendingStatusTimer) {
+      clearTimeout(this.pendingStatusTimer);
+      this.pendingStatusTimer = null;
+    }
+
+    const delayMs = this.getTransitionDelay(status);
+    if (delayMs > 0) {
+      this.pendingStatusTimer = window.setTimeout(() => {
+        this.pendingStatusTimer = null;
+        this.updateStatus(status);
+      }, delayMs);
+      return;
+    }
+
+    const now = Date.now();
     this.currentStatus = status;
+    if (status === LoadStatus.LOADING_LOW) {
+      this.lowLoadingShownAt = now;
+    }
+    if (status === LoadStatus.LOW_READY) {
+      this.lowReadyShownAt = now;
+    }
     this.render();
 
     if (this.autoHideTimer) {
@@ -68,6 +94,31 @@ export class QualityIndicator {
         this.hide();
       }, this.readyHideMs);
     }
+  }
+
+  private getTransitionDelay(nextStatus: LoadStatus): number {
+    const now = Date.now();
+
+    if (this.currentStatus === LoadStatus.LOADING_LOW && nextStatus !== LoadStatus.LOADING_LOW) {
+      const elapsed = now - this.lowLoadingShownAt;
+      if (this.lowLoadingShownAt > 0 && elapsed < this.lowLoadingMinVisibleMs) {
+        return this.lowLoadingMinVisibleMs - elapsed;
+      }
+    }
+
+    if (
+      this.currentStatus === LoadStatus.LOW_READY &&
+      (nextStatus === LoadStatus.LOADING_HIGH ||
+        nextStatus === LoadStatus.HIGH_READY ||
+        nextStatus === LoadStatus.DEGRADED)
+    ) {
+      const elapsed = now - this.lowReadyShownAt;
+      if (this.lowReadyShownAt > 0 && elapsed < this.lowReadyMinVisibleMs) {
+        return this.lowReadyMinVisibleMs - elapsed;
+      }
+    }
+
+    return 0;
   }
 
   updateMetrics(metrics: {
@@ -176,6 +227,9 @@ export class QualityIndicator {
     }
     if (this.maxVisibleTimer) {
       clearTimeout(this.maxVisibleTimer);
+    }
+    if (this.pendingStatusTimer) {
+      clearTimeout(this.pendingStatusTimer);
     }
     this.element.remove();
   }

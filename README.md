@@ -98,3 +98,4 @@ git push origin main
 - [2026-02-11 20:33:40] 生命周期与按需加载：`PanoViewer` 在 `dispose()` 必须显式停止 RAF 并解绑 DOM 输入监听；信息/更多弹窗必须走动态 import（`src/ui/modals/appModals.ts`），禁止回退到入口内联重逻辑。
 - [2026-02-11 21:31:40] 第七轮收口：场景 UI 装配必须走 `SceneUiRuntime` 分层（核心/次级/观测）；聊天必须通过 `ChatRuntime` 在“社区 tab 首次点击”后按需初始化，禁止恢复全局首交互预热监听。
 - [2026-02-11 21:53:13] 入口瘦身补充：`main.ts` 禁止静态依赖 `ConfigErrorPanel`、`SceneUiRuntime`、`ChatRuntime` 与 debug helper；这些模块必须按路径/条件动态加载，确保 `index` 主包保持在 65kB 以下。
+- [2026-02-11 22:55:46] 交互体验约束：导览/社区/信息/更多模块在 `HIGH_READY/DEGRADED` 后必须后台预热（只导入不实例化）；“三馆学伴”头像只能在点击“社区”后出现；低清提示链路必须可见（`LOADING_LOW/LOW_READY` 不可被瞬时吞没）。

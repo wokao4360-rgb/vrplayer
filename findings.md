@@ -161,3 +161,30 @@
 4. 中文显示复验：
    - 标题、底部导航、信息弹窗文案为正常简体中文
    - 未观察到用户反馈的弹窗中文乱码复现
+
+## 第八轮新增发现（2026-02-11 22:55:46）
+1. 当前“点击后才动态加载”策略虽然减轻首屏，但会把模块解析成本集中到首次点击，导览/社区/信息/更多会出现体感卡顿。
+2. 低清状态提示在快网环境下容易被后续状态快速覆盖，用户主观上会感知“低清提示消失”。
+3. “三馆学伴”浮窗由 `FcChatPanel` 实例化时创建，因此必须严格控制在社区显式触发后才初始化，避免首屏干扰。
+
+## 第八轮实施结果（2026-02-11 22:55:46）
+1. 高清后后台预热（不实例化 UI）：
+   - `SceneUiRuntime` 在 `HIGH_READY/DEGRADED` 后预热导览/社区相关模块；
+   - `ChatRuntime.warmup()` 仅导入模块，不创建 `FcChatPanel`；
+   - `main.ts` 同步预热 `appModals`（信息/更多）。
+2. 低清提示恢复：
+   - 场景运行时启动后立即挂载质量指示器；
+   - `QualityIndicator` 增加低清状态最短展示时长，降低被瞬时覆盖概率。
+3. 学伴头像展示时机：
+   - 首屏不创建聊天面板；
+   - 仅点击“社区”后调用 `ensureInit()`，再显示头像与面板。
+
+## 第八轮验收证据（2026-02-11 22:55:46）
+1. 构建与基线：
+   - `npm run check:text` 通过
+   - `npm run build` 通过
+   - `npm run perf:baseline` 通过（`index ≈ 57.31kB`）
+2. chrome-devtools：
+   - 首屏 snapshot：无学伴头像浮窗；
+   - 点击社区后 snapshot：出现“打开三馆学伴”按钮；
+   - network：在未点击前已加载 `GuideTray/VideoPlayer/SceneGuideDrawer/dock-panels/chat-community/appModals`，确认后台预热已生效。

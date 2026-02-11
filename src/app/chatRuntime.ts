@@ -17,10 +17,26 @@ export class ChatRuntime {
   private contextToken = 0;
   private initPromise: Promise<void> | null = null;
   private panel: FcChatPanel | null = null;
+  private chatModulesPromise: Promise<{
+    FcChatPanel: typeof import('../ui/FcChatPanel').FcChatPanel;
+    FcChatClient: typeof import('../services/fcChatClient').FcChatClient;
+  }> | null = null;
 
   updateContext(context: ChatContext): void {
     this.context = context;
     this.contextToken += 1;
+  }
+
+  async warmup(): Promise<void> {
+    const context = this.context;
+    if (!context || !hasValidEndpoint(context.fcChatConfig)) {
+      return;
+    }
+    try {
+      await this.loadChatModules();
+    } catch {
+      // 预热失败不阻断主流程，点击“社区”时仍会再尝试
+    }
   }
 
   async ensureInit(): Promise<void> {
@@ -38,10 +54,7 @@ export class ChatRuntime {
 
     const token = this.contextToken;
     const pending = (async () => {
-      const [{ FcChatPanel }, { FcChatClient }] = await Promise.all([
-        import('../ui/FcChatPanel'),
-        import('../services/fcChatClient'),
-      ]);
+      const { FcChatPanel, FcChatClient } = await this.loadChatModules();
       if (token !== this.contextToken) {
         return;
       }
@@ -81,5 +94,21 @@ export class ChatRuntime {
     this.initPromise = null;
     this.panel?.remove();
     this.panel = null;
+  }
+
+  private loadChatModules(): Promise<{
+    FcChatPanel: typeof import('../ui/FcChatPanel').FcChatPanel;
+    FcChatClient: typeof import('../services/fcChatClient').FcChatClient;
+  }> {
+    if (!this.chatModulesPromise) {
+      this.chatModulesPromise = Promise.all([
+        import('../ui/FcChatPanel'),
+        import('../services/fcChatClient'),
+      ]).then(([panelModule, clientModule]) => ({
+        FcChatPanel: panelModule.FcChatPanel,
+        FcChatClient: clientModule.FcChatClient,
+      }));
+    }
+    return this.chatModulesPromise;
   }
 }

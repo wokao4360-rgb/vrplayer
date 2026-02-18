@@ -6,7 +6,8 @@
       "/assets/panos/"
     ],
     "baseUrls": [
-      "https://github.cnxiaobai.com/https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs"
+      "https://github.cnxiaobai.com/https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs",
+      "https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs"
     ],
     "probePath": "/config.json",
     "probeTimeoutMs": 1000

@@ -229,3 +229,30 @@
 - 发布 commit：`499ed3f0049f9b7643e13cc37ea98da8592fd47f`。
 - 发布链路：`dist -> docs -> commit -> push` 已完成。
 - 本次按用户要求，`AGENTS.md` 已随同代码一并上线。
+
+## 第十轮新增发现（2026-02-19 00:18:39）
+1. Orchestrator 控制台“总请求数”只统计真实上游模型请求；本地文件读写与普通 MCP 调用不会计入该指标。
+2. `assetCdn.baseUrls` 只有单一路径时，跨境链路波动会拉高首屏探测抖动风险，尤其大陆网络环境下更明显。
+3. 线上 hash 资源仍存在可优化空间：`_headers` 未覆盖 `/assets/*.js` 与 `/assets/*.css` 时，回访会触发更多协商请求。
+4. 预热逻辑应按“交互收益优先级”调度；社区链路不应和导览/信息抢同一波预热预算。
+5. `src/main.ts` 仍存在用户可见乱码字符串（pick toast），会直接影响交互可信度，必须优先修复。
+
+## 第十轮已实施决策（进行中）
+1. CDN 主备：`public/config.json` 增加海外回退 baseUrl。
+2. CDN 缓存：`assetResolver` 成功节点缓存 TTL 提升到 24h，减少重复探测开销。
+3. 缓存头：`public/_headers` 增加 hash 资源的 immutable 缓存策略。
+4. 预热队列：`WarmupScheduler` 支持优先级，`SceneUiRuntime` 按 high/normal/low 排序执行。
+5. 中文守卫：修复用户可见乱码并增强 `check-text` 规则，构建前阻断回退。
+
+## 第十轮验证结论（2026-02-19 00:21:52）
+1. 构建链路通过：`check:encoding`、`check:text`、`build`、`perf:baseline` 全部通过。
+2. 性能基线：
+   - `index-*.js = 58.42kB`（保持低位）；
+   - `three-renderer = 459.82kB`；
+   - `JS 总量 = 1459.12kB`。
+3. 浏览器证据（chrome-devtools）：
+   - 已确认双路 CDN probe 同时执行，符合“国内主 + 海外回退”策略。
+   - 预热顺序符合优先级策略：导览相关模块先于社区模块加载。
+4. 已知非阻断项：
+   - `<meta name=\"apple-mobile-web-app-capable\">` deprecate warning；
+   - 本地预览 `favicon.ico` 404（不影响生产功能）。

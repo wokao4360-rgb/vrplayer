@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-02-12 00:26:25",
+  "generatedAt": "2026-02-19 00:19:57",
   "metrics": {
-    "indexJsKB": 58.43,
+    "indexJsKB": 58.42,
     "panoViewerJsKB": 65.6,
     "threeRendererJsKB": 459.82,
     "threeMathJsKB": null,
     "threeRenderMathCombinedKB": 459.82,
-    "totalJsKB": 1458.82,
+    "totalJsKB": 1459.12,
     "totalCssKB": 55.58
   },
   "topAssets": [
     {
-      "name": "three.module-Brkpord5.js",
+      "name": "three.module-BpE9LMaq.js",
       "ext": ".js",
       "sizeBytes": 513408,
       "sizeKB": 501.38
@@ -23,22 +23,22 @@
       "sizeKB": 459.82
     },
     {
-      "name": "three-extras-F77eSNTx.js",
+      "name": "three-extras-DfqxZlMR.js",
       "ext": ".js",
-      "sizeBytes": 104070,
-      "sizeKB": 101.63
+      "sizeBytes": 104095,
+      "sizeKB": 101.66
     },
     {
-      "name": "PanoViewer-tVEm8XCm.js",
+      "name": "PanoViewer-rC7hG_gB.js",
       "ext": ".js",
       "sizeBytes": 67176,
       "sizeKB": 65.6
     },
     {
-      "name": "index-CntEWe8z.js",
+      "name": "index-DLhNDJoj.js",
       "ext": ".js",
-      "sizeBytes": 59830,
-      "sizeKB": 58.43
+      "sizeBytes": 59827,
+      "sizeKB": 58.42
     },
     {
       "name": "index-BfJu72vJ.css",
@@ -47,37 +47,37 @@
       "sizeKB": 55.58
     },
     {
-      "name": "editor-debug-Dy3AxbKg.js",
+      "name": "editor-debug-D9jxoLrU.js",
       "ext": ".js",
       "sizeBytes": 56163,
       "sizeKB": 54.85
     },
     {
-      "name": "chat-community-C7AQ4g7Y.js",
+      "name": "chat-community-Bh7n16cj.js",
       "ext": ".js",
       "sizeBytes": 39802,
       "sizeKB": 38.87
     },
     {
-      "name": "tile-ktx2-ilAKl5fw.js",
+      "name": "tile-ktx2-C_kom5yP.js",
       "ext": ".js",
-      "sizeBytes": 26120,
-      "sizeKB": 25.51
+      "sizeBytes": 26093,
+      "sizeKB": 25.48
     },
     {
-      "name": "dock-panels-BDqLbesR.js",
+      "name": "dock-panels-cjWIZ9lO.js",
       "ext": ".js",
       "sizeBytes": 18329,
       "sizeKB": 17.9
     },
     {
-      "name": "scene-runtime-B080iYiH.js",
+      "name": "scene-runtime-CJZphrUS.js",
       "ext": ".js",
-      "sizeBytes": 11066,
-      "sizeKB": 10.81
+      "sizeBytes": 11224,
+      "sizeKB": 10.96
     },
     {
-      "name": "structure3d-runtime-BBIptQ-6.js",
+      "name": "structure3d-runtime-IYB4uYxD.js",
       "ext": ".js",
       "sizeBytes": 10817,
       "sizeKB": 10.56

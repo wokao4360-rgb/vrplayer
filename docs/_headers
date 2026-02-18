@@ -6,3 +6,12 @@
 
 /assets/external/*
   Cache-Control: public, max-age=31536000, immutable, no-transform
+
+/assets/*.js
+  Cache-Control: public, max-age=31536000, immutable, no-transform
+
+/assets/*.css
+  Cache-Control: public, max-age=31536000, immutable, no-transform
+
+/assets/*.worker.js
+  Cache-Control: public, max-age=31536000, immutable, no-transform

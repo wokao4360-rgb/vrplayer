@@ -45,7 +45,7 @@ const DEFAULT_EXCLUDE_PREFIXES: string[] = [];
 const DEFAULT_PROBE_PATH = '/config.json';
 const DEFAULT_PROBE_TIMEOUT_MS = 1000;
 const CDN_CACHE_KEY = 'vrplayer.assetCdn.lastSuccess';
-const CDN_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const CDN_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 let runtimeConfig: RuntimeAssetCdnConfig | null = null;
 let selectedBaseUrl: string | null = null;

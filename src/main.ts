@@ -596,7 +596,7 @@ class App {
       const { x, y, yaw, pitch } = evt.detail;
       // 淇濆瓨鍒板叏灞€缂撳瓨锛堜緵 ConfigStudio 浣跨敤锛?
       setLastPick({ yaw, pitch, ts: Date.now() });
-      showToast(`宸插鍒?yaw: ${yaw.toFixed(2)}, pitch: ${pitch.toFixed(2)}`);
+      showToast(`已复制 yaw: ${yaw.toFixed(2)}, pitch: ${pitch.toFixed(2)}`);
       if (this.panoViewer) {
         const viewerEl = this.panoViewer.getDomElement();
         showPickMarker(viewerEl, x, y);

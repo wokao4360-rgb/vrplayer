@@ -8,7 +8,7 @@ import type { GuideTray } from '../ui/GuideTray';
 import type { SceneGuideDrawer } from '../ui/SceneGuideDrawer';
 import type { QualityIndicator } from '../ui/QualityIndicator';
 import { LoadStatus } from '../types/loadStatus';
-import { WarmupScheduler } from './warmupScheduler';
+import { WarmupScheduler, type WarmupQueueTask } from './warmupScheduler';
 
 type SceneUiRuntimeOptions = {
   appElement: HTMLElement;
@@ -236,14 +236,15 @@ export class SceneUiRuntime {
       return;
     }
     this.featureWarmupStarted = true;
-    this.warmupScheduler.schedule([
-      () => this.loadVideoPlayerModule(),
-      () => this.loadGuideTrayModule(),
-      () => this.loadSceneGuideDrawerModule(),
-      () => this.loadDockPanelsModule(),
-      () => this.loadCommunityPanelModule(),
-      () => Promise.resolve(this.options.onWarmupFeatures?.()),
-    ], startMode);
+    const tasks: WarmupQueueTask[] = [
+      { task: () => this.loadGuideTrayModule(), priority: 'high' },
+      { task: () => this.loadSceneGuideDrawerModule(), priority: 'high' },
+      { task: () => this.loadVideoPlayerModule(), priority: 'high' },
+      { task: () => Promise.resolve(this.options.onWarmupFeatures?.()), priority: 'normal' },
+      { task: () => this.loadDockPanelsModule(), priority: 'normal' },
+      { task: () => this.loadCommunityPanelModule(), priority: 'low' },
+    ];
+    this.warmupScheduler.schedule(tasks, startMode);
   }
 
   handleStatusChange(status: LoadStatus): void {

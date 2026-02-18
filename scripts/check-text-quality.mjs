@@ -45,6 +45,9 @@ const mojibakePatterns = [
   '銆',
   '鈥',
   '鈫',
+  '宸插鍒',
+  '鍒濆',
+  '鍏ㄦ櫙',
 ];
 
 function walk(dir) {

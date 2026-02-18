@@ -93,3 +93,11 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 - [x] 阶段3（P1）：中文乱码全链路守卫（`check-encoding` + 文案源统一 + build 前置校验）
 - [x] 阶段4：构建验证 + `chrome-devtools` 证据采样（`snapshot + network + console`）
 - [x] 阶段5：按 SOP 发布第九轮（`dist -> docs -> commit -> push`，本次包含 `AGENTS.md`）
+
+## 第十轮阶段状态（本次）
+- [x] 阶段0（P0）：大陆访问链路收口，`assetCdn.baseUrls` 增加海外回退
+- [x] 阶段1（P0）：静态资源缓存策略增强，`_headers` 增加 hash `js/css/worker` 长缓存
+- [x] 阶段2（P0）：预热调度改为优先级队列（导览/信息优先，社区次级）
+- [x] 阶段3（P1）：修复用户可见 pick 提示乱码，并补充文本守卫特征
+- [ ] 阶段4：构建验证 + chrome-devtools 证据采样
+- [ ] 阶段5：按 SOP 发布第十轮（`dist -> docs -> commit -> push`）

@@ -234,3 +234,28 @@
   - `git commit` + `git push origin main`
 - 发布提交：`499ed3f0049f9b7643e13cc37ea98da8592fd47f`。
 - 远端核对：`origin/main` 已对齐到同一 commit。
+
+## 2026-02-19 00:18:39
+- 按“大陆优先 + 速度第一”开始第十轮执行，已完成 P0 主改动：
+  - `public/config.json`：`assetCdn.baseUrls` 新增 `raw.githubusercontent.com` 作为海外回退。
+  - `src/utils/assetResolver.ts`：成功 CDN 缓存 TTL 从 12h 提升到 24h。
+  - `public/_headers`：新增 `/assets/*.js`、`/assets/*.css`、`/assets/*.worker.js` 的 immutable 长缓存。
+  - `src/app/warmupScheduler.ts`：增加预热任务优先级（high/normal/low）。
+  - `src/app/sceneUiRuntime.ts`：预热顺序调整为导览/信息优先，社区预热降级到低优先级。
+  - `src/main.ts`：修复 pick 成功提示乱码为“已复制 yaw/pitch”。
+  - `scripts/check-text-quality.mjs`：补充乱码特征，防止同类回归。
+- Orchestrator 计数核验：已主动调用 `route_task`，`/admin/api/stats` 返回 `requestsTotal=7`（非 5）。
+- 当前待执行：`check/build/perf` + `chrome-devtools` 证据采样 + 发布。
+
+## 2026-02-19 00:21:52
+- 验证完成：
+  - `npm run check:encoding` 通过；
+  - `npm run check:text` 通过；
+  - `npm run build` 通过；
+  - `npm run perf:baseline` 通过（`index=58.42kB`，`three-renderer=459.82kB`）。
+- `chrome-devtools` 采样完成（本地 `http://127.0.0.1:4173/?museum=wangding&scene=memorial_wall`）：
+  - snapshot：页面中文文案正常，底部功能可见；
+  - network：已出现双路 CDN probe（`github.cnxiaobai` + `raw.githubusercontent`）；
+  - network：预热优先模块先加载（`GuideTray/SceneGuideDrawer/VideoPlayer` 在社区模块前完成请求）；
+  - console：仅剩 `apple-mobile-web-app-capable` deprecate 与本地 `favicon 404`（非阻断）。
+- 当前待执行：按 SOP 发布第十轮改动（排除 `AGENTS.md/README.md/.gitignore`）。

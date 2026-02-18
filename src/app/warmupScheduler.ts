@@ -1,5 +1,11 @@
 ﻿type WarmupTask = () => Promise<unknown> | unknown;
 type WarmupStartMode = 'idle' | 'immediate';
+type WarmupPriority = 'high' | 'normal' | 'low';
+
+export type WarmupQueueTask = {
+  task: WarmupTask;
+  priority?: WarmupPriority;
+};
 
 type WarmupBudget = {
   maxConcurrent: number;
@@ -55,13 +61,16 @@ export class WarmupScheduler {
   private idleHandle: IdleHandle | null = null;
   private timerHandle: number | null = null;
 
-  schedule(tasks: WarmupTask[], startMode: WarmupStartMode = 'idle'): void {
+  schedule(tasks: WarmupQueueTask[], startMode: WarmupStartMode = 'idle'): void {
     if (this.disposed || this.started || tasks.length === 0) {
       return;
     }
 
     this.started = true;
-    this.queue = tasks.slice();
+    this.queue = tasks
+      .slice()
+      .sort((a, b) => this.priorityWeight(a.priority) - this.priorityWeight(b.priority))
+      .map((item) => item.task);
 
     if (startMode === 'immediate') {
       this.pump();
@@ -135,4 +144,10 @@ export class WarmupScheduler {
         });
     }
   }
+  private priorityWeight(priority: WarmupPriority | undefined): number {
+    if (priority === 'high') return 0;
+    if (priority === 'low') return 2;
+    return 1;
+  }
 }
+

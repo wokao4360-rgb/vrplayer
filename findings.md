@@ -256,3 +256,8 @@
 4. 已知非阻断项：
    - `<meta name=\"apple-mobile-web-app-capable\">` deprecate warning；
    - 本地预览 `favicon.ico` 404（不影响生产功能）。
+
+## 2026-02-19 16:42:28
+- 第十轮增量优化：去除场景初始化的阻塞等待（移除 wait sceneUiRuntime.ensureQualityIndicatorMounted()）。
+- 预热策略收敛：自动预热仅保留导览/信息相关模块，不再自动预热 dock-panels/community/chat。
+- 目标结果：减少首屏与高清爬升阶段的网络争抢，社区链路改为“点击后再加载”。

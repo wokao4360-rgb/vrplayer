@@ -680,13 +680,9 @@ class App {
         void this.chatRuntime?.ensureInit();
       },
       onWarmupFeatures: async () => {
-        await Promise.allSettled([
-          this.loadAppModalsModule(),
-          this.chatRuntime?.warmup() ?? Promise.resolve(),
-        ]);
+        await this.loadAppModalsModule();
       },
     });
-    await this.sceneUiRuntime.ensureQualityIndicatorMounted();
     const syncSceneUiRuntimeRefs = () => {
       this.bottomDock = this.sceneUiRuntime?.getBottomDock() ?? null;
       this.topModeTabs = this.sceneUiRuntime?.getTopModeTabs() ?? null;

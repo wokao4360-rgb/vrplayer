@@ -259,3 +259,8 @@
   - network：预热优先模块先加载（`GuideTray/SceneGuideDrawer/VideoPlayer` 在社区模块前完成请求）；
   - console：仅剩 `apple-mobile-web-app-capable` deprecate 与本地 `favicon 404`（非阻断）。
 - 当前待执行：按 SOP 发布第十轮改动（排除 `AGENTS.md/README.md/.gitignore`）。
+
+## 2026-02-19 16:42:28
+- 第十轮增量优化：去除场景初始化的阻塞等待（移除 wait sceneUiRuntime.ensureQualityIndicatorMounted()）。
+- 预热策略收敛：自动预热仅保留导览/信息相关模块，不再自动预热 dock-panels/community/chat。
+- 目标结果：减少首屏与高清爬升阶段的网络争抢，社区链路改为“点击后再加载”。

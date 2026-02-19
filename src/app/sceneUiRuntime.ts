@@ -66,8 +66,6 @@ export class SceneUiRuntime {
   private guideTrayModulePromise: Promise<typeof import('../ui/GuideTray')> | null = null;
   private sceneGuideDrawerModulePromise: Promise<typeof import('../ui/SceneGuideDrawer')> | null = null;
   private qualityIndicatorModulePromise: Promise<typeof import('../ui/QualityIndicator')> | null = null;
-  private dockPanelsModulePromise: Promise<typeof import('../ui/DockPanels')> | null = null;
-  private communityPanelModulePromise: Promise<typeof import('../ui/community/CommunityPanel')> | null = null;
 
   constructor(options: SceneUiRuntimeOptions) {
     this.options = options;
@@ -99,10 +97,6 @@ export class SceneUiRuntime {
 
   getQualityIndicator(): QualityIndicator | null {
     return this.qualityIndicator;
-  }
-
-  async ensureQualityIndicatorMounted(): Promise<void> {
-    await this.mountObserver();
   }
 
   async mountCore(): Promise<void> {
@@ -241,15 +235,20 @@ export class SceneUiRuntime {
       { task: () => this.loadSceneGuideDrawerModule(), priority: 'high' },
       { task: () => this.loadVideoPlayerModule(), priority: 'high' },
       { task: () => Promise.resolve(this.options.onWarmupFeatures?.()), priority: 'normal' },
-      { task: () => this.loadDockPanelsModule(), priority: 'normal' },
-      { task: () => this.loadCommunityPanelModule(), priority: 'low' },
     ];
     this.warmupScheduler.schedule(tasks, startMode);
   }
 
   handleStatusChange(status: LoadStatus): void {
     this.qualityIndicator?.updateStatus(status);
-    if (!this.observerMounted && !this.observerMounting && !this.disposed) {
+    if (
+      !this.observerMounted &&
+      !this.observerMounting &&
+      !this.disposed &&
+      (status === LoadStatus.LOW_READY ||
+        status === LoadStatus.HIGH_READY ||
+        status === LoadStatus.DEGRADED)
+    ) {
       void this.mountObserver();
     }
     if (status === LoadStatus.HIGH_READY) {
@@ -395,20 +394,6 @@ export class SceneUiRuntime {
       this.qualityIndicatorModulePromise = import('../ui/QualityIndicator');
     }
     return this.qualityIndicatorModulePromise;
-  }
-
-  private loadDockPanelsModule(): Promise<typeof import('../ui/DockPanels')> {
-    if (!this.dockPanelsModulePromise) {
-      this.dockPanelsModulePromise = import('../ui/DockPanels');
-    }
-    return this.dockPanelsModulePromise;
-  }
-
-  private loadCommunityPanelModule(): Promise<typeof import('../ui/community/CommunityPanel')> {
-    if (!this.communityPanelModulePromise) {
-      this.communityPanelModulePromise = import('../ui/community/CommunityPanel');
-    }
-    return this.communityPanelModulePromise;
   }
 
   private isAlive(): boolean {

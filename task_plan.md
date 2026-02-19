@@ -101,3 +101,8 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 - [x] 阶段3（P1）：修复用户可见 pick 提示乱码，并补充文本守卫特征
 - [ ] 阶段4：构建验证 + chrome-devtools 证据采样
 - [ ] 阶段5：按 SOP 发布第十轮（`dist -> docs -> commit -> push`）
+
+## 2026-02-19 16:42:28
+- 第十轮增量优化：去除场景初始化的阻塞等待（移除 wait sceneUiRuntime.ensureQualityIndicatorMounted()）。
+- 预热策略收敛：自动预热仅保留导览/信息相关模块，不再自动预热 dock-panels/community/chat。
+- 目标结果：减少首屏与高清爬升阶段的网络争抢，社区链路改为“点击后再加载”。

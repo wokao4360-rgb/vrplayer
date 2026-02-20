@@ -49,6 +49,7 @@ function buildPayload(
     .map((item) => ({
       role: item.role === "assistant" ? "assistant" : "user",
       content: typeof item.text === "string" ? item.text.trim() : "",
+      text: typeof item.text === "string" ? item.text.trim() : "",
     }))
     .filter((item) => !!item.content);
 
@@ -60,6 +61,11 @@ function buildPayload(
   if (normalizedHistory.length > 0) {
     payload.history = normalizedHistory;
     payload.messages = normalizedHistory;
+    // 兼容部分后端只识别 text 字段的历史格式
+    payload.chatHistory = normalizedHistory.map((item) => ({
+      role: item.role,
+      text: item.text,
+    }));
   }
   if (ctx && typeof ctx === "object") {
     payload.context = {

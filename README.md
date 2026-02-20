@@ -3,6 +3,7 @@
 基于 Three.js 的全景 Web 播放器，支持多馆多场景、热点导航、地图导览与低清到高清渐进加载。
 
 协作硬规则以 `AGENTS.md` 为准；本 README 只保留项目使用说明与持久化要点。
+memory 写入相关请先读：`MEMORY_WRITE_FIRST.md`。
 
 ---
 
@@ -99,3 +100,65 @@ git push origin main
 - [2026-02-11 21:31:40] 第七轮收口：场景 UI 装配必须走 `SceneUiRuntime` 分层（核心/次级/观测）；聊天必须通过 `ChatRuntime` 在“社区 tab 首次点击”后按需初始化，禁止恢复全局首交互预热监听。
 - [2026-02-11 21:53:13] 入口瘦身补充：`main.ts` 禁止静态依赖 `ConfigErrorPanel`、`SceneUiRuntime`、`ChatRuntime` 与 debug helper；这些模块必须按路径/条件动态加载，确保 `index` 主包保持在 65kB 以下。
 - [2026-02-11 22:55:46] 交互体验约束：导览/社区/信息/更多模块在 `HIGH_READY/DEGRADED` 后必须后台预热（只导入不实例化）；“三馆学伴”头像只能在点击“社区”后出现；低清提示链路必须可见（`LOADING_LOW/LOW_READY` 不可被瞬时吞没）。
+- [2026-02-13 16:22:14] 用户网络环境关键约束（大陆 + Karing VPN）：OpenCode 使用 `ChatGPT Pro/Plus (browser)` 登录时，若 `Karing` 未开启 `TUN`，会出现“浏览器授权成功但 OpenCode 端 token exchange 失败（常见 403）”；开启 `TUN` 并授予系统代理权限后可稳定登录。后续凡遇 OpenCode/ChatGPT/Codex 相关认证或网络异常，优先按“`TUN` 状态 + 本地回调/代理链路”排查。
+- [2026-02-18 22:15:43] 自动化制作旅行视频时，`Pixabay/Pexels` 直链在命令行常出现 `403`；需要稳定批量拉取时优先用 `Wikimedia/Wikipedia API` 获取可下载素材，再本地离线渲染，避免导出阶段因远程资源失败中断。
+- [2026-02-19 00:05:00] Memory “写不进去”首要根因通常不是“没读文档”，而是鉴权不完整（`insufficient_scope` / 未带可写权限）。固定写法：`POST http://127.0.0.1:8000/api/memories` + 请求头 `Authorization: Bearer $env:MCP_API_KEY` + `Content-Type: application/json; charset=utf-8`，并在写入前执行 `chcp 65001` 与 `$env:PYTHONUTF8=1`。每次会话先查 `/api/health/detailed` 确认 `database_path` 后再写。
+- [2026-02-20 13:35:00] Memory 中文防乱码最终规则：禁止 PowerShell 直接字符串 `-Body` 写 `/api/memories`；统一使用 `python scripts/memory_write_safe.py --content-b64 ... --verify-roundtrip`（脚本内部 `ensure_ascii=True`，请求体全 ASCII，服务端解码后回读校验完全一致）。会话前必须跑 `python scripts/memory_selftest_utf8.py`。
+- [2026-02-20 13:36:30] 终端/插件通道可能在“进入进程前”把内联中文参数替换为 `?`；因此写 Memory 时不要把中文直接拼进命令行，必须先转 `UTF-8 bytes -> Base64` 再传 `--content-b64`。
+- [2026-02-20 21:10:00] 三馆学伴会话记忆兼容修复：`fcChat` 请求体历史项同时携带 `content + text`，并补充 `chatHistory`（`role + text`）以兼容后端不同解析口径；聊天错误文案统一为 `请求失败：<msg>`，避免模板串显示异常。
+
+---
+
+## 会话复盘（OpenCode 登录坑）
+
+记录时间：`2026-02-13 21:43:17`
+
+本段用于沉淀一次完整排障过程，便于后续快速复用。
+
+### 1) 问题现象（用户侧）
+
+- `2026-02-13 15:xx:xx`：在 OpenCode 选择 `ChatGPT Pro/Plus (browser)` 登录。
+- 浏览器回调页显示 `Authorization Successful`，地址形如 `http://localhost:1455/auth/callback?...`。
+- OpenCode 客户端同时报错：`Token exchange failed: 403 at exchangeCodeForTokens`。
+- 结论：不是“浏览器未登录”，而是“客户端拿到 code 后换 token 失败”。
+
+### 2) 关键环境事实（必须长期记忆）
+
+- 用户网络环境：大陆网络 + `Karing` VPN。
+- 默认状态：`Karing` 未开启 `TUN`。
+- 触发条件：未开 `TUN` 时，浏览器流程可成功，但 OpenCode 端 token 交换高概率失败（403）。
+- 修复条件：开启 `TUN` 并完成权限授权后，OpenCode `browser` 登录成功。
+
+### 3) 根因归纳（结合本次证据）
+
+- OAuth 是两段链路：
+- A 段：浏览器与 OpenAI 授权站点交互（可成功）。
+- B 段：OpenCode 本地进程与 token 端点交互（失败点）。
+- 未开 `TUN` 时，A 段可通不代表 B 段可通，导致“网页成功 + 客户端失败”的表象分裂。
+- 本次环境下，`TUN` 打通了 OpenCode 进程的实际网络路径后，B 段恢复正常。
+
+### 4) 固化后的成功 SOP（OpenCode + ChatGPT 登录）
+
+1. 启动 `Karing`，先授权系统代理权限。
+2. 打开 `TUN` 模式并确认生效。
+3. 打开 OpenCode，选择 `ChatGPT Pro/Plus (browser)`。
+4. 在浏览器完成工作区选择与授权。
+5. 返回 OpenCode 确认已登录。
+
+### 5) 失败时的第一排查顺序（按优先级）
+
+1. 先查 `Karing TUN` 是否开启且权限有效。
+2. 再查 localhost 回调链路（`localhost:1455`）是否被代理/安全软件干扰。
+3. 再查 OpenCode 版本与插件缓存是否过旧。
+4. 最后再看账号权限或工作区选择。
+
+### 6) 可复用范围（不仅限 OpenCode）
+
+- 同类报错关键词：`token exchange failed`、`403 forbidden`、`browser success but client failed`。
+- 可迁移到：Codex CLI / IDE 插件 / 其他本地应用 OAuth 回调场景。
+- 统一策略：优先判断“浏览器链路”和“本地进程链路”是否在同一代理路径。
+
+### 7) 本次会话产出（文档化结果）
+
+- 已在 `Agent Notes (Persistent)` 增加长期规则：`2026-02-13 16:22:14` 条目。
+- 已在本节保留完整复盘，供后续排障直接复用。

@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-02-19 16:36:08",
+  "generatedAt": "2026-02-20 21:06:12",
   "metrics": {
     "indexJsKB": 58.28,
     "panoViewerJsKB": 65.6,
     "threeRendererJsKB": 459.82,
     "threeMathJsKB": null,
     "threeRenderMathCombinedKB": 459.82,
-    "totalJsKB": 1458.96,
+    "totalJsKB": 1458.3,
     "totalCssKB": 55.58
   },
   "topAssets": [
@@ -29,13 +29,13 @@
       "sizeKB": 101.66
     },
     {
-      "name": "PanoViewer-B6oq-fdI.js",
+      "name": "PanoViewer-BCn8RUkW.js",
       "ext": ".js",
       "sizeBytes": 67176,
       "sizeKB": 65.6
     },
     {
-      "name": "index-BUakUZ_V.js",
+      "name": "index-I51ows0J.js",
       "ext": ".js",
       "sizeBytes": 59675,
       "sizeKB": 58.28
@@ -47,40 +47,40 @@
       "sizeKB": 55.58
     },
     {
-      "name": "editor-debug-_RFTQIzK.js",
+      "name": "editor-debug-CO6aaZSa.js",
       "ext": ".js",
       "sizeBytes": 56163,
       "sizeKB": 54.85
     },
     {
-      "name": "chat-community-DEPTv318.js",
+      "name": "chat-community-Bt5ZXlre.js",
       "ext": ".js",
-      "sizeBytes": 39802,
-      "sizeKB": 38.87
+      "sizeBytes": 39808,
+      "sizeKB": 38.88
     },
     {
-      "name": "tile-ktx2-Czhp3T9m.js",
+      "name": "tile-ktx2-BvPf2H7e.js",
       "ext": ".js",
       "sizeBytes": 26093,
       "sizeKB": 25.48
     },
     {
-      "name": "dock-panels-COhIMEb4.js",
+      "name": "dock-panels-D_S9uN6p.js",
       "ext": ".js",
       "sizeBytes": 18329,
       "sizeKB": 17.9
     },
     {
-      "name": "scene-runtime-CaENiQap.js",
-      "ext": ".js",
-      "sizeBytes": 11212,
-      "sizeKB": 10.95
-    },
-    {
-      "name": "structure3d-runtime-Ur3uCBkT.js",
+      "name": "structure3d-runtime-4BWPeLuK.js",
       "ext": ".js",
       "sizeBytes": 10817,
       "sizeKB": 10.56
+    },
+    {
+      "name": "scene-runtime-dZ6vS8UQ.js",
+      "ext": ".js",
+      "sizeBytes": 10529,
+      "sizeKB": 10.28
     }
   ]
 }

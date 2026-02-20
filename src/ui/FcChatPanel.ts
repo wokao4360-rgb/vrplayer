@@ -7,6 +7,11 @@ type ChatMsg = { role: Role; text: string };
 const MAX_HISTORY_MESSAGES = 40;
 const HISTORY_KEY_PREFIX = "fcchat_history_v2";
 const SESSION_KEY_PREFIX = "fcchat_session_v1";
+const PROFILE_KEY_PREFIX = "fcchat_profile_v1";
+
+type UserProfile = {
+  name?: string;
+};
 
 function buildScopedKey(prefix: string, museumId?: string): string {
   const scope = (museumId || "global").trim() || "global";
@@ -47,7 +52,9 @@ export class FcChatPanel {
   private fabButton: HTMLButtonElement | null = null;
   private historyStorageKey: string;
   private sessionStorageKey: string;
+  private profileStorageKey: string;
   private sessionId: string;
+  private profile: UserProfile = {};
 
   // FAB drag state
   private snapTimer: number | null = null;
@@ -70,7 +77,9 @@ export class FcChatPanel {
     this.context = context;
     this.historyStorageKey = buildScopedKey(HISTORY_KEY_PREFIX, context.museumId);
     this.sessionStorageKey = buildScopedKey(SESSION_KEY_PREFIX, context.museumId);
+    this.profileStorageKey = buildScopedKey(PROFILE_KEY_PREFIX, context.museumId);
     this.sessionId = this.loadSessionId();
+    this.profile = this.loadProfile();
 
     this.mount();
     this.injectStyles();
@@ -653,6 +662,42 @@ export class FcChatPanel {
     }
   }
 
+  private loadProfile(): UserProfile {
+    try {
+      const raw = localStorage.getItem(this.profileStorageKey);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return {};
+      const name = typeof parsed.name === "string" ? parsed.name.trim() : "";
+      return name ? { name } : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private persistProfile(): void {
+    try {
+      localStorage.setItem(this.profileStorageKey, JSON.stringify(this.profile));
+    } catch {
+      // ignore
+    }
+  }
+
+  private extractUserName(text: string): string | null {
+    const input = text.trim();
+    const m = input.match(/(?:我叫|我的名字是|叫我)\s*([A-Za-z0-9_\-\u4e00-\u9fa5]{1,20})/);
+    if (!m) return null;
+    const name = (m[1] || "").trim();
+    if (!name) return null;
+    if (/^(什么|啥|名字|呢|啊|呀)$/u.test(name)) return null;
+    return name || null;
+  }
+
+  private isAskUserName(text: string): boolean {
+    const input = text.replace(/\s+/g, "");
+    return /我叫什么|我的名字|记得我名字|你记得我是谁/.test(input);
+  }
+
   private restoreHistoryOrWelcome(): void {
     let restored = false;
     try {
@@ -878,9 +923,23 @@ export class FcChatPanel {
     this.input.value = "";
     this.addMessage("user", q);
 
+    const extractedName = this.extractUserName(q);
+    if (extractedName) {
+      this.profile.name = extractedName;
+      this.persistProfile();
+    }
+
+    if (this.isAskUserName(q) && this.profile.name) {
+      const answer = `你叫${this.profile.name}。我已经记住了。`;
+      this.addMessage("assistant", answer);
+      this.setBusy(false, "");
+      this.scrollToBottom();
+      return;
+    }
+
     // immediately show loading bubble (three dots animation)
     const { row: loadingRow, bubble: loadingBubble } = this.addAssistantBubbleLoading();
-    this.setBusy(true, "");
+    this.setBusy(true, "输出中...");
 
     try {
       const historyForRequest = this.messages.slice(-MAX_HISTORY_MESSAGES);
@@ -888,7 +947,7 @@ export class FcChatPanel {
 
       // replace loading bubble with empty bubble for typewriter
       const bubble = this.replaceLoadingWithEmpty(loadingRow);
-      this.setBusy(true, "输出中…");
+      this.setBusy(true, "输出中...");
       await this.typewriterRender(bubble, res.answer);
 
       this.messages.push({ role: "assistant", text: this.normalizeText(res.answer) });
@@ -904,8 +963,9 @@ export class FcChatPanel {
       if (bubble) {
         loadingRow.removeAttribute("data-loading");
         const msg = typeof e?.message === "string" ? e.message : String(e);
-        bubble.textContent = `请求失败：${msg}`;
-        this.messages.push({ role: "assistant", text: `请求失败：${msg}` });
+        const errText = `请求失败：${msg}`;
+        bubble.textContent = errText;
+        this.messages.push({ role: "assistant", text: errText });
         if (this.messages.length > MAX_HISTORY_MESSAGES) {
           this.messages = this.messages.slice(-MAX_HISTORY_MESSAGES);
         }
@@ -1288,3 +1348,4 @@ export class FcChatPanel {
     this.destroy();
   }
 }
+

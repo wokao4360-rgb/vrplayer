@@ -106,6 +106,7 @@ git push origin main
 - [2026-02-20 13:35:00] Memory 中文防乱码最终规则：禁止 PowerShell 直接字符串 `-Body` 写 `/api/memories`；统一使用 `python scripts/memory_write_safe.py --content-b64 ... --verify-roundtrip`（脚本内部 `ensure_ascii=True`，请求体全 ASCII，服务端解码后回读校验完全一致）。会话前必须跑 `python scripts/memory_selftest_utf8.py`。
 - [2026-02-20 13:36:30] 终端/插件通道可能在“进入进程前”把内联中文参数替换为 `?`；因此写 Memory 时不要把中文直接拼进命令行，必须先转 `UTF-8 bytes -> Base64` 再传 `--content-b64`。
 - [2026-02-20 21:10:00] 三馆学伴会话记忆兼容修复：`fcChat` 请求体历史项同时携带 `content + text`，并补充 `chatHistory`（`role + text`）以兼容后端不同解析口径；聊天错误文案统一为 `请求失败：<msg>`，避免模板串显示异常。
+- [2026-02-20 21:37:52] 三馆学伴事实回忆兜底：当用户追问“我今天干了什么/我刚才说了什么”时，前端必须先从本地会话历史直接回忆回复（`FcChatPanel` 本地分支），不要完全依赖后端 history 解析，避免再次出现“姓名可记住但事实失忆”。
 
 ---
 

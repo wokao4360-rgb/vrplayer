@@ -698,6 +698,48 @@ export class FcChatPanel {
     return /我叫什么|我的名字|记得我名字|你记得我是谁/.test(input);
   }
 
+  private normalizeForIntent(text: string): string {
+    return text
+      .replace(/\s+/g, "")
+      .replace(/[，。！？、,.!?；;：“”"'`（）()【】\[\]<>《》]/g, "")
+      .trim();
+  }
+
+  private isAskRecentActivity(text: string): boolean {
+    const input = this.normalizeForIntent(text);
+    return /(?:我|你)(?:今天|刚才|刚刚|上句|上一句|前面|之前)?(?:干了什么|做了什么|说了什么|讲了什么)|你还记得我(?:刚才|刚刚|之前|前面)?(?:说了什么|做了什么)/.test(
+      input
+    );
+  }
+
+  private shouldSkipRecallSource(text: string): boolean {
+    const input = this.normalizeForIntent(text);
+    if (!input) return true;
+    if (this.isAskUserName(text)) return true;
+    if (this.isAskRecentActivity(text)) return true;
+    return /^(?:你好|在吗|ok|好的|谢谢|嗯|哦)$/.test(input);
+  }
+
+  private buildRecentActivityAnswer(question: string): string | null {
+    if (!this.isAskRecentActivity(question)) return null;
+    const recentUserMessages = this.messages
+      .slice(0, -1)
+      .filter((msg) => msg.role === "user")
+      .map((msg) => this.normalizeText(msg.text))
+      .filter((text) => !this.shouldSkipRecallSource(text));
+
+    if (recentUserMessages.length === 0) {
+      return "你还没有说具体行程，你可以先告诉我一句，我会记住。";
+    }
+
+    const reversed = [...recentUserMessages].reverse();
+    const preferred =
+      reversed.find((text) => /(?:今天|刚才|刚刚|去了|参观|看了|吃了|做了|学习了|完成了|准备了)/.test(text)) || reversed[0];
+
+    const clipped = preferred.length > 120 ? `${preferred.slice(0, 120)}...` : preferred;
+    return `你刚才说的是：${clipped}`;
+  }
+
   private restoreHistoryOrWelcome(): void {
     let restored = false;
     try {
@@ -932,6 +974,14 @@ export class FcChatPanel {
     if (this.isAskUserName(q) && this.profile.name) {
       const answer = `你叫${this.profile.name}。我已经记住了。`;
       this.addMessage("assistant", answer);
+      this.setBusy(false, "");
+      this.scrollToBottom();
+      return;
+    }
+
+    const recentActivityAnswer = this.buildRecentActivityAnswer(q);
+    if (recentActivityAnswer) {
+      this.addMessage("assistant", recentActivityAnswer);
       this.setBusy(false, "");
       this.scrollToBottom();
       return;

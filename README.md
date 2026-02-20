@@ -80,6 +80,32 @@ git push origin main
 
 ---
 
+## Codex 宿主（可被插件访问）
+
+记录时间：`2026-02-20 22:02:50`
+
+本仓库新增了一个“宿主 MCP 服务”，用于让 Codex 插件把子任务统一委托到 AIClient Orchestrator（从而优先走 Gemini 池）。
+
+位置：
+- `tools/codex-host/server.mjs`
+- `tools/codex-host/README.md`
+
+脚本：
+- `npm run host:start`
+- `npm run host:selftest`
+
+本地健康接口：
+- `http://127.0.0.1:3220/health`
+- `http://127.0.0.1:3220/status`
+- `http://127.0.0.1:3220/recent`
+
+重要上下文（来自本次需求）：
+- Cursor 的 Codex 主会话 token 无法被外部强制切换为 Gemini。
+- 可行路径是“主会话继续用 Codex + 子任务外包给宿主（再交给 Orchestrator）”。
+- 宿主默认启用零参数自动分流，优先省 token。
+
+---
+
 ## Agent Notes (Persistent)
 
 - [2026-02-01 10:30:00] 全景方向稳定链路：`SphereGeometry.scale(-1,1,1)` + `texture.flipY = false`（低清/高清/瓦片统一）。
@@ -107,6 +133,8 @@ git push origin main
 - [2026-02-20 13:36:30] 终端/插件通道可能在“进入进程前”把内联中文参数替换为 `?`；因此写 Memory 时不要把中文直接拼进命令行，必须先转 `UTF-8 bytes -> Base64` 再传 `--content-b64`。
 - [2026-02-20 21:10:00] 三馆学伴会话记忆兼容修复：`fcChat` 请求体历史项同时携带 `content + text`，并补充 `chatHistory`（`role + text`）以兼容后端不同解析口径；聊天错误文案统一为 `请求失败：<msg>`，避免模板串显示异常。
 - [2026-02-20 21:37:52] 三馆学伴事实回忆兜底：当用户追问“我今天干了什么/我刚才说了什么”时，前端必须先从本地会话历史直接回忆回复（`FcChatPanel` 本地分支），不要完全依赖后端 history 解析，避免再次出现“姓名可记住但事实失忆”。
+- [2026-02-20 22:06:55] 三馆学伴记忆策略升级：禁止只做固定关键词问法匹配；回忆分支必须基于“历史消息语义打分（token overlap + 主语命中 + 近因权重）”选取候选句，确保“姥姥干了家务 -> 姥姥干了啥”这类改写问法也能命中同一会话记忆。
+- [2026-02-20 22:04:20] 新增 Codex 宿主 `tools/codex-host/server.mjs`：用于把 Codex 插件子任务转发到 AIClient Orchestrator。关键边界：Codex 主会话 token 不能外部强制改 Gemini；省 token 方案是“主会话保留 + 子任务外包 Gemini 优先分流”。
 
 ---
 

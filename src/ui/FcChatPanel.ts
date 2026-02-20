@@ -705,23 +705,72 @@ export class FcChatPanel {
       .trim();
   }
 
-  private isAskRecentActivity(text: string): boolean {
+  private isLikelyRecallQuestion(text: string): boolean {
     const input = this.normalizeForIntent(text);
-    return /(?:我|你)(?:今天|刚才|刚刚|上句|上一句|前面|之前)?(?:干了什么|做了什么|说了什么|讲了什么)|你还记得我(?:刚才|刚刚|之前|前面)?(?:说了什么|做了什么)/.test(
+    if (!input) return false;
+    const explicitCue = /还记得|记不记得|刚才|刚刚|之前|前面|上句|上一句|我说|我做|我干|我刚|我今天/.test(
       input
     );
+    if (explicitCue) return true;
+
+    const actionAsk = /干了啥|干了什么|做了啥|做了什么|说了啥|说了什么|讲了啥|讲了什么|去了哪|去了哪里|哪句话|哪一句|叫什么/.test(
+      input
+    );
+    if (!actionAsk) return false;
+
+    return /我|你|他|她|它|我们|你们|他们|姥姥|奶奶|爷爷|外婆|妈妈|爸爸|朋友|同学|老师|孩子/.test(
+      input
+    );
+  }
+
+  private buildRecallTokenSet(text: string): Set<string> {
+    const normalized = this.normalizeForIntent(text).toLowerCase();
+    const compact = normalized.replace(/[^a-z0-9\u4e00-\u9fa5]/g, "");
+    const set = new Set<string>();
+    if (!compact) return set;
+
+    const words = compact.match(/[a-z0-9]+|[\u4e00-\u9fa5]/g) || [];
+    for (const word of words) {
+      if (word) set.add(word);
+    }
+
+    if (compact.length <= 3) set.add(compact);
+    for (let i = 0; i < compact.length - 1; i++) {
+      set.add(compact.slice(i, i + 2));
+    }
+    return set;
+  }
+
+  private scoreTokenSimilarity(a: Set<string>, b: Set<string>): number {
+    if (a.size === 0 || b.size === 0) return 0;
+    let intersection = 0;
+    for (const token of a) {
+      if (b.has(token)) intersection++;
+    }
+    const union = a.size + b.size - intersection;
+    if (union <= 0) return 0;
+    return intersection / union;
+  }
+
+  private extractRecallSubject(question: string): string {
+    const input = this.normalizeForIntent(question);
+    const m = input.match(
+      /^(.{1,10}?)(?:干了啥|干了什么|做了啥|做了什么|说了啥|说了什么|讲了啥|讲了什么|去了哪|去了哪里|哪句话|哪一句|叫什么)$/
+    );
+    if (!m) return "";
+    return (m[1] || "").trim();
   }
 
   private shouldSkipRecallSource(text: string): boolean {
     const input = this.normalizeForIntent(text);
     if (!input) return true;
     if (this.isAskUserName(text)) return true;
-    if (this.isAskRecentActivity(text)) return true;
+    if (this.isLikelyRecallQuestion(text)) return true;
     return /^(?:你好|在吗|ok|好的|谢谢|嗯|哦)$/.test(input);
   }
 
-  private buildRecentActivityAnswer(question: string): string | null {
-    if (!this.isAskRecentActivity(question)) return null;
+  private buildRecallAnswer(question: string): string | null {
+    if (!this.isLikelyRecallQuestion(question)) return null;
     const recentUserMessages = this.messages
       .slice(0, -1)
       .filter((msg) => msg.role === "user")
@@ -732,12 +781,42 @@ export class FcChatPanel {
       return "你还没有说具体行程，你可以先告诉我一句，我会记住。";
     }
 
-    const reversed = [...recentUserMessages].reverse();
-    const preferred =
-      reversed.find((text) => /(?:今天|刚才|刚刚|去了|参观|看了|吃了|做了|学习了|完成了|准备了)/.test(text)) || reversed[0];
+    const questionTokens = this.buildRecallTokenSet(question);
+    const subject = this.extractRecallSubject(question);
+    let bestScore = 0;
+    let bestText = "";
 
-    const clipped = preferred.length > 120 ? `${preferred.slice(0, 120)}...` : preferred;
-    return `你刚才说的是：${clipped}`;
+    for (let i = recentUserMessages.length - 1; i >= 0; i--) {
+      const text = recentUserMessages[i];
+      const normalized = this.normalizeForIntent(text);
+      if (!normalized) continue;
+
+      const candidateTokens = this.buildRecallTokenSet(normalized);
+      let score = this.scoreTokenSimilarity(questionTokens, candidateTokens);
+
+      if (subject && normalized.includes(subject)) score += 0.35;
+      if (/(?:今天|刚才|刚刚|去了|参观|看了|吃了|做了|学习了|完成了|准备了|说了|讲了)/.test(normalized)) {
+        score += 0.08;
+      }
+      const distance = recentUserMessages.length - 1 - i;
+      score += Math.max(0, 0.12 - distance * 0.02);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestText = text;
+      }
+    }
+
+    const threshold = subject ? 0.18 : 0.28;
+    if (!bestText || bestScore < threshold) {
+      if (subject) {
+        return `你刚才还没提到“${subject}”做了什么，你可以再说一遍，我会记住。`;
+      }
+      return "我没抓到你前面那句具体内容，你可以再说一遍，我会直接记住。";
+    }
+
+    const clipped = bestText.length > 120 ? `${bestText.slice(0, 120)}...` : bestText;
+    return `你刚才提到：${clipped}`;
   }
 
   private restoreHistoryOrWelcome(): void {
@@ -979,9 +1058,9 @@ export class FcChatPanel {
       return;
     }
 
-    const recentActivityAnswer = this.buildRecentActivityAnswer(q);
-    if (recentActivityAnswer) {
-      this.addMessage("assistant", recentActivityAnswer);
+    const recallAnswer = this.buildRecallAnswer(q);
+    if (recallAnswer) {
+      this.addMessage("assistant", recallAnswer);
       this.setBusy(false, "");
       this.scrollToBottom();
       return;

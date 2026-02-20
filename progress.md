@@ -288,3 +288,28 @@
 - 已按 SOP 发布本次修复：`git pull --rebase --autostash origin main` -> `npm run build` -> `robocopy .\\dist .\\docs /MIR` -> `git commit` -> `git push origin main`。
 - 发布提交：`2aebdbfd6d81b0ccceed5203b231a639d3a23f46`。
 - 远端对齐：`origin/main` 已确认与本地 HEAD 一致。
+
+## 2026-02-20 22:04:05
+- 已补充图片上下文并落地“宿主可被 Codex 插件访问”：
+  - 新增 `tools/codex-host/server.mjs`（MCP 宿主，转发到 `aiclient-orchestrator`）。
+  - 新增 `tools/codex-host/README.md`（使用说明）。
+  - `package.json` 新增脚本：`host:start`、`host:selftest`。
+  - `README.md` 新增“Codex 宿主”说明与关键约束上下文。
+- 本机接入完成：
+  - 已更新 `C:\\Users\\Lenovo\\.codex\\config.toml`，添加 `mcp_servers.codex-host`。
+- 验证结果：
+  - `npm run host:selftest` 返回 `ok=true`。
+  - `http://127.0.0.1:3220/health` 可访问并返回上游健康状态。
+  - `chrome-devtools` 证据采样完成（snapshot + network，`/health 200`）。
+
+## 2026-02-20 22:06:55
+- 修复方向调整：放弃“固定关键词问法”回忆，改为语义打分回忆（`token overlap + 主语命中 + 近因权重`）。
+- `src/ui/FcChatPanel.ts` 新增/替换：
+  - `isLikelyRecallQuestion`
+  - `buildRecallTokenSet`
+  - `scoreTokenSimilarity`
+  - `extractRecallSubject`
+  - `buildRecallAnswer`
+- 实测场景通过：清空后输入“姥姥干了家务”，再问“姥姥干了啥”，回复“你刚才提到：姥姥干了家务”。
+- 网络采样结论：本轮会话仅 1 次聊天后端 `POST`（首句）；第二句回忆答复走本地分支，无新增聊天请求。
+- 约束保持：未点击“社区”前不显示学伴头像；点击“社区”后才初始化学伴入口。

@@ -113,6 +113,13 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 - 三馆学伴文案修复：聊天面板状态/错误文案统一简体中文，错误提示改为 请求失败：<msg>。
 - 约束保持：聊天入口仍为“点击社区后初始化”，未改回首屏显示头像。
 
+## 2026-02-20 22:03:10
+- [x] 补充图片上下文到仓库文档（Codex 主会话与子任务外包边界）
+- [x] 新建宿主服务 `tools/codex-host/server.mjs`（MCP + 本地 health/status）
+- [x] 新增 npm 脚本 `host:start` / `host:selftest`
+- [x] 将宿主接入本机 `C:\Users\Lenovo\.codex\config.toml`，供 Codex 插件直接访问
+- [x] 自测与证据化验收（self-test + health API + chrome-devtools snapshot/network）
+
 ## 2026-02-20 21:20:35
 - 新增三馆学伴前端兜底记忆：按馆持久化 profile(name)，识别“我叫xxx/我的名字是xxx/叫我xxx”。
 - 命中“我叫什么/我的名字/记得我名字”等问句时，本地直答，避免后端忽略 history 导致失忆。
@@ -124,3 +131,9 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 - [x] 阶段1（P0）：保持“点击社区后才显示学伴头像”的现有触发链路
 - [x] 阶段2：`npm run check:text` + `npm run build` + Playwright 复现采样验证
 - [x] 阶段3：按 SOP 发布本次增量（`dist -> docs -> commit -> push`）
+
+## 第十轮记忆修复增量（二次收口，2026-02-20 22:06:55）
+- [x] 阶段0（P0）：回忆逻辑从“固定问法匹配”升级为“语义打分检索”（token overlap + 主语命中 + 近因权重）
+- [x] 阶段1（P0）：覆盖改写问法（示例：`姥姥干了家务 -> 姥姥干了啥`）并保留社区后初始化约束
+- [x] 阶段2：`npm run check:text` + `npm run build` + Playwright 复现采样（snapshot + network + console）
+- [ ] 阶段3：按 SOP 发布本次二次收口（`dist -> docs -> commit -> push`）

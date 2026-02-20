@@ -280,6 +280,17 @@
 2. 用户实际诉求是“对刚说过的事实做即时回忆”，该能力可以在前端直接确定性实现，不必等待后端模型稳定支持。
 3. `chrome-devtools MCP` 当前会话不可用（`Transport closed`），本轮改为 Playwright 完成页面快照与网络/控制台采样。
 
+## 2026-02-20 22:03:35
+### 新发现
+1. 用户截图中的关键目标是“做一个可被 Codex 插件直接访问的宿主”，不是再做一层手工脚本流程。
+2. 真实约束已确认：Codex 插件主会话 token 无法外部强制改成 Gemini；可做的是把子任务转交宿主，再由宿主交给 Orchestrator 自动分流。
+3. 现有 `aiclient-orchestrator` 已具备完备路由能力，宿主只需提供“插件友好入口 + 健康观测 + 委托工具”即可落地。
+
+### 决策
+1. 新建 `tools/codex-host/server.mjs`，作为轻量 MCP 宿主，直接复用 Orchestrator 接口。
+2. 宿主默认 `use_cache=false`（便于用户直观看到真实消耗），并保留可配置开关。
+3. 同时暴露本地 HTTP 健康接口（`/health`、`/status`、`/recent`）用于快速验活和证据采样。
+
 ### 已落地修复
 1. `src/ui/FcChatPanel.ts` 新增 `isAskRecentActivity` 与 `buildRecentActivityAnswer`：
    - 识别“我今天干了什么/我刚才说了什么/你还记得我说了什么”等追问。
@@ -302,3 +313,29 @@
 1. 已执行 `dist -> docs -> commit -> push`。
 2. 发布 commit：`2aebdbfd6d81b0ccceed5203b231a639d3a23f46`。
 3. 远端 `origin/main` 已对齐到同一 commit。
+
+## 2026-02-20 22:06:55
+### 新发现
+1. “我今天干了什么”已修复，但用户真实问题是“同义改写问法仍失忆”，例如“姥姥干了家务 -> 姥姥干了啥”。
+2. 仅靠固定触发词会导致命中面窄，改写问法很容易漏掉并落回后端泛答。
+3. 因此回忆逻辑必须从“关键词硬匹配”升级为“历史候选打分检索”。
+
+### 已落地修复
+1. `src/ui/FcChatPanel.ts` 用 `buildRecallAnswer` 替换旧的固定问法分支：
+   - 判定回忆意图：`isLikelyRecallQuestion`
+   - 构建 token：`buildRecallTokenSet`
+   - 相似度：`scoreTokenSimilarity`
+   - 主语提取：`extractRecallSubject`
+   - 候选排序：`相似度 + 主语命中 + 近因权重`
+2. 低质量候选过滤仍保留：跳过问句本身/寒暄空话，避免回忆“你好/谢谢”。
+
+### 证据
+1. 构建验证：`npm run check:text`、`npm run build` 均通过。
+2. Playwright 复现（`snapshot`）：
+   - 输入“姥姥干了家务”
+   - 再问“姥姥干了啥”
+   - 返回“你刚才提到：姥姥干了家务”
+3. Playwright `network + console`：
+   - 本会话仅 1 条聊天后端 `POST`（首句）；
+   - 回忆句无新增聊天 `POST`，说明命中本地回忆分支；
+   - console 仅非阻断 warning（`apple-mobile-web-app-capable` deprecate）。

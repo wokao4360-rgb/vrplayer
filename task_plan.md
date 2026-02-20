@@ -123,4 +123,4 @@ VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
 - [x] 阶段0（P0）：`FcChatPanel` 增加“我今天干了什么/我刚才说了什么”本地回忆兜底分支
 - [x] 阶段1（P0）：保持“点击社区后才显示学伴头像”的现有触发链路
 - [x] 阶段2：`npm run check:text` + `npm run build` + Playwright 复现采样验证
-- [ ] 阶段3：按 SOP 发布本次增量（`dist -> docs -> commit -> push`）
+- [x] 阶段3：按 SOP 发布本次增量（`dist -> docs -> commit -> push`）

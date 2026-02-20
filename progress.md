@@ -283,3 +283,8 @@
 - 构建验证通过：`npm run check:text`、`npm run build`（含 `check:encoding`）均通过。
 - Playwright 复现通过：清空后输入“我今天吃了白茶，去了王鼎纪念馆”，再问“我今天干了什么”，回复“你刚才说的是：我今天吃了白茶，去了王鼎纪念馆”。
 - 兼容行为确认：未点“社区”前不显示学伴头像；点击“社区”后才出现学伴入口。
+
+## 2026-02-20 21:43:47
+- 已按 SOP 发布本次修复：`git pull --rebase --autostash origin main` -> `npm run build` -> `robocopy .\\dist .\\docs /MIR` -> `git commit` -> `git push origin main`。
+- 发布提交：`2aebdbfd6d81b0ccceed5203b231a639d3a23f46`。
+- 远端对齐：`origin/main` 已确认与本地 HEAD 一致。

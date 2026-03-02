@@ -1048,8 +1048,19 @@ export class PanoViewer {
       const status = this.tilePano.getStatus();
       const fallbackVisible = !!this.fallbackSphere;
       const tilesVisible = status.tilesVisible;
-      // 仅在瓦片低层已完整覆盖后再清理 fallback，避免“先清底图再出瓦片”的黑屏闪断。
-      const lowCoverageReady = status.lowReady;
+      // 仅在覆盖充分后再清理 fallback，避免“先清底图再出瓦片”的黑屏/撕裂闪断。
+      let lowCoverageReady = Boolean(status.lowReady);
+      const hasLowLevel = status.lowLevel !== '' && status.lowLevel !== null && status.lowLevel !== undefined;
+      if (!hasLowLevel) {
+        const maxLevelText = typeof status.maxLevel === 'string' ? status.maxLevel : '';
+        const match = /^(\d+)x(\d+)$/.exec(maxLevelText);
+        if (match) {
+          const totalHighTiles = Number(match[1]) * Number(match[2]);
+          lowCoverageReady = totalHighTiles > 0 && (status.tilesLoadedCount ?? 0) >= totalHighTiles;
+        } else {
+          lowCoverageReady = false;
+        }
+      }
       if (fallbackVisible && tilesVisible && lowCoverageReady) {
         this.tilesVisibleStableFrames += 1;
         if (this.tilesVisibleStableFrames >= 2) {

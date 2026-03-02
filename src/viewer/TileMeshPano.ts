@@ -87,6 +87,10 @@ export class TileMeshPano {
     this.lowLevel = lowCandidates.length
       ? lowCandidates.reduce((a, b) => (b.z > a.z ? b : a))
       : null;
+    // 有整图 fallback 时，跳过低层瓦片，避免低层/高层叠加造成过渡撕裂感。
+    if (this.fallbackVisible) {
+      this.lowLevel = null;
+    }
     this.lowReadyCount = 0;
     this.lowTotalCount = this.lowLevel ? this.lowLevel.cols * this.lowLevel.rows : 0;
     this.lowFullyReady = this.lowTotalCount === 0;
@@ -487,13 +491,16 @@ export class TileMeshPano {
     const geom = this.buildTileGeometry(level, info.col, info.row);
     const mat = new MeshBasicMaterial({
       map: info.texture,
-      // 开启深度测试/写入，避免前后半球同时可见造成“双球叠加”。
-      depthWrite: true,
-      depthTest: true,
+      transparent: true,
+      opacity: 1,
+      // 分层替换期间禁止深度竞争，避免“先错位后恢复”的撕裂观感。
+      depthWrite: false,
+      depthTest: false,
     });
     mat.toneMapped = false;
     const mesh = new Mesh(geom, mat);
-    mesh.renderOrder = info.priority === 'high' ? 3 : 2;
+    // 深度关闭后用 z 层级保证稳定覆盖顺序：高层永远在低层之上。
+    mesh.renderOrder = 10 + info.z;
     mesh.frustumCulled = false;
     info.mesh = mesh;
     this.group.add(mesh);
@@ -583,11 +590,16 @@ export class TileMeshPano {
     }
     const du = maxU - minU || 1;
     const dv = maxV - minV || 1;
+    const tileSize = Math.max(1, this.manifest?.tileSize ?? 1024);
+    const uvInsetU = 0.5 / tileSize;
+    const uvInsetV = 0.5 / tileSize;
     for (let i = 0; i < uvAttr.count; i += 1) {
       const u = uvAttr.getX(i);
       const v = uvAttr.getY(i);
-      const uu = (u - minU) / du;
-      const vv = (v - minV) / dv;
+      const uuRaw = (u - minU) / du;
+      const vvRaw = (v - minV) / dv;
+      const uu = MathUtils.clamp(uvInsetU + uuRaw * (1 - uvInsetU * 2), 0, 1);
+      const vv = MathUtils.clamp(uvInsetV + vvRaw * (1 - uvInsetV * 2), 0, 1);
       uvAttr.setXY(i, uu, 1 - vv);
     }
     uvAttr.needsUpdate = true;

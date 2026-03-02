@@ -76,6 +76,10 @@ export class TileCanvasPano {
     this.lowLevel = lowCandidates.length
       ? lowCandidates.reduce((a, b) => (b.z > a.z ? b : a))
       : null;
+    // 有整图 fallback 时，直接让高清瓦片覆盖底图，避免低层瓦片叠加造成过渡分层感。
+    if (this.fallbackVisible) {
+      this.lowLevel = null;
+    }
     this.lowReadyCount = 0;
     this.lowTotalCount = this.lowLevel ? this.lowLevel.cols * this.lowLevel.rows : 0;
     this.lowFullyReady = this.lowTotalCount === 0;

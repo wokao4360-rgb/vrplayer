@@ -93,11 +93,15 @@ git push origin main
 脚本：
 - `npm run host:start`
 - `npm run host:selftest`
+- `npm run host:team -- --task "<任务文本>"`
 
 本地健康接口：
 - `http://127.0.0.1:3220/health`
 - `http://127.0.0.1:3220/status`
 - `http://127.0.0.1:3220/recent`
+
+新增能力：
+- `host_team_execute`：主 Agent 自动拆解任务 -> 子任务并发执行 -> 自动汇总结果。
 
 重要上下文（来自本次需求）：
 - Cursor 的 Codex 主会话 token 无法被外部强制切换为 Gemini。
@@ -132,9 +136,58 @@ git push origin main
 - [2026-02-20 13:35:00] Memory 中文防乱码最终规则：禁止 PowerShell 直接字符串 `-Body` 写 `/api/memories`；统一使用 `python scripts/memory_write_safe.py --content-b64 ... --verify-roundtrip`（脚本内部 `ensure_ascii=True`，请求体全 ASCII，服务端解码后回读校验完全一致）。会话前必须跑 `python scripts/memory_selftest_utf8.py`。
 - [2026-02-20 13:36:30] 终端/插件通道可能在“进入进程前”把内联中文参数替换为 `?`；因此写 Memory 时不要把中文直接拼进命令行，必须先转 `UTF-8 bytes -> Base64` 再传 `--content-b64`。
 - [2026-02-20 21:10:00] 三馆学伴会话记忆兼容修复：`fcChat` 请求体历史项同时携带 `content + text`，并补充 `chatHistory`（`role + text`）以兼容后端不同解析口径；聊天错误文案统一为 `请求失败：<msg>`，避免模板串显示异常。
+- [2026-02-22 16:00:43] 开机启动口径统一：`127.0.0.1:3217/admin` 是 AIClient Orchestrator 控制台（旧后台）；`127.0.0.1:3220/admin/` 是 Codex Host v2 控制台（新后台）。启动脚本 `C:\Users\Lenovo\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\start-aiclient-orchestrator.cmd` 已改为开机同时拉起两者。
+- [2026-02-22 16:22:07] 开机自动启动已升级为四服务链路：`AIClient-2-API(3000)`、`Memory HTTP(8000)`、`AIClient Orchestrator(3217)`、`Codex Host(3220)`。统一入口仍为 `C:\Users\Lenovo\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\start-aiclient-orchestrator.cmd`，重启后无需手动逐个启动。
 - [2026-02-20 21:37:52] 三馆学伴事实回忆兜底：当用户追问“我今天干了什么/我刚才说了什么”时，前端必须先从本地会话历史直接回忆回复（`FcChatPanel` 本地分支），不要完全依赖后端 history 解析，避免再次出现“姓名可记住但事实失忆”。
 - [2026-02-20 22:06:55] 三馆学伴记忆策略升级：禁止只做固定关键词问法匹配；回忆分支必须基于“历史消息语义打分（token overlap + 主语命中 + 近因权重）”选取候选句，确保“姥姥干了家务 -> 姥姥干了啥”这类改写问法也能命中同一会话记忆。
 - [2026-02-20 22:04:20] 新增 Codex 宿主 `tools/codex-host/server.mjs`：用于把 Codex 插件子任务转发到 AIClient Orchestrator。关键边界：Codex 主会话 token 不能外部强制改 Gemini；省 token 方案是“主会话保留 + 子任务外包 Gemini 优先分流”。
+- [2026-02-21 16:59:30] Orchestrator 第一阶段升级已落地：`route/batch` 支持 `execution=concurrent|serial` 与 `concurrency(1-6)`；新增软闸门告警（`codex_light_mode` / `codex_share_high`）与接口 `GET /admin/api/alerts`、`GET /admin/api/routing/policy`；控制台新增“非 Codex 占比/软闸门告警”KPI 与并发/阈值配置项。默认策略：并发批量+软闸门仅告警不阻断。
+- [2026-02-21 17:12:56] 运维调用固定入口：单任务执行必须使用 `POST /admin/api/route/task`（`/admin/api/route` 为 404）；控制台“Cursor Codex 插件请求摘要”已做去噪截断，优先显示真实任务句，避免 IDE 背景上下文淹没关键信息。
+- [2026-02-21 17:55:03] 宿主并发编排基线：`host_team_execute`/`npm run host:team` 已支持“自动拆解 -> 并发子任务 -> 汇总”。默认 Gemini-first（planner/worker/merge 可分开指定），并发建议 `concurrency=2~4`，用于把轻中任务持续外包给 Gemini，降低 Codex 主会话消耗。
+- [2026-02-21 19:39:40] 宿主编排默认策略升级为 `quality-first-adaptive`：`planner=gemini`、`worker=codex`、`merge=gemini`；`planner/merge` 默认 deep 且在高复杂度下自动降为 balanced，`worker` 默认 deep 且仅在超大上下文下降级。返回结果 `settings` 新增各阶段模式决策原因，便于审计 token/质量权衡。
+- [2026-02-21 20:18:00] 宿主新增“上下文工程层”：`host_team_execute` 支持 `context_mode/context_files/context_max_chars/chat_history`，并提供 `host_context_preview` 预览 context packet。策略是先压缩聊天记录与重点文件，再拼接 AGENTS/README/package/git 摘要，避免把无关上下文整包灌入导致 token 爆炸。
+- [2026-02-21 20:48:00] 新增 Codex 插件可复制模板：`tools/codex-host/CODEX_PROMPTS.md`。包含标准双阶段（preview->execute）、省 token、重任务、高质量 UI 四套提示词，统一参数口径便于跨会话复用。
+- [2026-02-21 21:26:00] 宿主上下文聚焦支持“自然语言选文件”：新增 `focus_hint`（中文描述重点文件/模块）和自动文件推断。默认可不传 `context_files`；系统会从 `task/context/chat_history/focus_hint` 提取文件线索，并在 `settings.contextFile*` 字段回显“显式/推断/最终解析”结果用于审计。
+- [2026-02-21 22:18:30] 宿主能力扩展到“Project 插件同类工作流（v1）”：新增 `host_capabilities/host_files_find/host_file_read/host_shell_exec/host_skills_list/host_skill_read/host_task_autopilot`。可在 Codex 插件内直接做“查文件、读文件、查技能、读技能、跑命令、自动编排执行”闭环；文件索引改为 `git ls-files + rg --files` 合并，未跟踪文件也可被自然语言聚焦命中。
+- [2026-02-21 22:47:30] 宿主升级 `autopilot v2`：`host_task_autopilot` 先自动分类（搜索调研/UI设计/规范检查/Debug修复/通用实现）再决策执行路径，并返回推荐 skills/MCP 与执行理由；新增 `--autopilot-preview`（`npm run host:autopilot -- --task \"...\"`）用于“只看策略不执行”。默认继续 Gemini-first，复杂任务才提升到 Codex Worker。
+- [2026-02-21 23:52:00] Codex Host v2“四缺口”已落地：新增 `host_execute` 零参数主入口；团队流水线升级为 `research -> planner -> worker -> merge -> compaction` 并记录角色明细；引入本地持久化状态目录 `%USERPROFILE%/.codex/codex-host/state`（`history.jsonl/roles.jsonl/sessions.json/history-index.json`）；新增 `http://127.0.0.1:3220/admin/` 及接口 `/admin/api/overview|history|models|roles|compact`，支持模型明细、无限分页历史、会话压缩与术语解释。
+- [2026-02-22 17:51:50] Codex Host v3 已上线：接入 GSD 直嵌规划增强与 Claude MEM 侧车适配（可选），新增 MCP 工具 `host_integrations_status` / `host_memory_retrieve_preview` / `host_strategy_explain`，并扩展后台接口 `/admin/api/integrations`、`/admin/api/context-evidence`、`/admin/api/cost-breakdown`。`3220/admin` 控制台新增“集成健康、成本拆解、上下文证据”面板，支持真实消耗与估算节省双列审计。
+- [2026-02-22 18:36:30] Codex Host v3 控制台文案已统一为可读中文；历史任务与“上下文证据详情”均可展开查看角色明细（Research/Planner/Worker/Merge/Compaction 的状态、provider、model、token、耗时、说明）。
+- [2026-02-22 18:36:30] Compaction 固定为本地阶段：`provider=local`、`model=session-compactor-v1`、`token=0`，用于会话压缩快照持久化；GSD 与 Claude MEM 不直接执行 compaction。
+- [2026-02-22 19:25:00] Memory HTTP 出现 `insufficient_scope` 的高频根因是“当前会话进程未加载 `MCP_API_KEY`（重启后常见）”，即使服务端健康也会写入失败。固定做法：把 `MCP_API_KEY` 写入 User 级环境变量（或每次会话显式设置），并在写入请求中始终携带 `Authorization: Bearer $env:MCP_API_KEY`。
+- [2026-02-22 23:24:12] 平台导入脚本写入 `D:\AIClient-2-API\configs\provider_pools.json` 后，若 `host:platforms:show` 仍显示未配置，优先判定为 AIClient 进程未刷新配置缓存；固定做法改为 `npm run host:platforms:import:restart` 一步完成“导入+重启+再探测”。iFlow 显示 `Usage query not supported by this provider` 仅表示“不提供额度查询接口”，不代表接入失败；成功判据是 `configured=yes + accounts>=1 + models>0`。
+- [2026-02-22 23:58:40] 多平台接入校验补充：Groq/SiliconFlow/Zhipu/ModelScope/iFlow/讯飞均可直连 OpenAI 兼容 `chat/completions`；Cerebras 当前返回 `402 payment_required`（账号需充值后可调用）。`xfyun-maas` 的 `/models` 非 OpenAI 标准 JSON，平台能力页已加回退逻辑：当模型探测为空时展示 `checkModelName`（当前 `xopglm5`），避免控制台出现“已配置但无模型可见”。
+- [2026-02-23 09:30:14] 平台接入新增 `google-ai-studio` 与 `wisdom-gate`：`host:platforms:import:restart` 现可直接导入这两个平台（默认 Base URL 分别为 `https://generativelanguage.googleapis.com/v1beta/openai` 与 `https://wisdom-gate.juheapi.com/v1`），并在 `host:platforms:show` / `3220/admin` 中显示模型列表。
+- [2026-02-23 09:30:14] 新增命令 `npm run host:platforms:probe-limits`：对已接入 OpenAI 兼容平台执行 `/models + /chat/completions` 实测，输出速率限制响应头（如 Groq `x-ratelimit-*`）与真实调用状态，避免把“无额度接口”误判为“接入失败”。
+- [2026-02-23 09:30:14] `claude-mem-sidecar` 默认运行口径固化为“开机即启用”：用户级环境变量已写入 `HOST_CLAUDE_MEM_ENABLED=true`、`HOST_CLAUDE_MEM_BASE_URL=http://127.0.0.1:37777`；若控制台显示关闭，优先执行 `start-local-stack.ps1` 并调用 `/admin/api/integrations/reload` 刷新健康状态。
+- [2026-02-23 09:57:05] 平台额度探测补充：`groq` 与 `wisdom-gate` 已接入“速率头轻量探测”并反映到 `provider-capabilities`（`usageProbeOk=1/1`）；可在 `host:platforms:show` 与 `3220/admin/api/models?refreshUsage=1` 看到 reset hints。`wisdom-gate` 默认探测模型已固定为 `gpt-5-nano`，避免 `gpt-5` 权限不足导致探测失败。
+- [2026-02-23 11:17:45] 平台探测升级：`host:platforms:probe-limits` 改为“多模型探测”模式（`wisdom-gate` 默认探测 8 个模型，输出每个模型的 HTTP 状态与错误摘要），不再只测单模型；新增 `npm run host:platforms:show:full` 可打印完整模型列表。`codex-host` 的 `3220/admin` 也已取消平台模型 `slice(20)` 截断，展开可查看完整示例。
+- [2026-02-23 12:35:02] 平台下线记录：按用户要求移除 `Cerebras API` 与 `Google AI Studio API`（`provider_pools.json` 已删除对应节点，`host:platforms:show` 显示两者 `configured=no`）。若 Orchestrator 顶部仍显示“连接异常”，首要排查 `openai-codex-oauth` 健康状态（当前 `No healthy provider found`），与上述两平台下线无关。
+- [2026-02-23 13:36:32] Codex Host 路由自动调优入口已固化：新增脚本 `npm run host:router:autotune:preview` 与 `npm run host:router:autotune:apply`，用于把 Orchestrator 运行配置自动收敛到“Gemini 优先、省 token、复杂任务保留 Codex”的默认策略。
+- [2026-02-23 13:36:32] `tools/codex-host/README.md` 与 `tools/codex-host/CODEX_PROMPTS.md` 已重写为 UTF-8 简体中文版本；调用口径统一为自然语言零参数，不再要求手写 `task/context_files` 参数格式。
+- [2026-02-23 15:35:34] worker-hard 路由短路修复：`decideHardWorkerProvider()` 不再把“高复杂度本身”视作强制 Codex 条件；仅当命中高风险信号（如 `rollback/deadlock/线上故障`）才强制 Codex。高复杂普通任务将按策略先试 `gemini deep`，失败子任务再自动回退 Codex deep。
+- [2026-02-23 17:03:30] Codex Host v3.1 控制台补齐“角色模型矩阵 / 平台评分榜 / 回退轨迹 / 配额可见性说明”，并新增后端接口 `/admin/api/model-matrix`、`/admin/api/provider-scores`、`/admin/api/benchmark/run-once`、`/admin/api/benchmark/manual-probe`、`/admin/api/providers/prune`。若 3220 页面仍显示旧版本或新接口 404，首要判因是 `codex-host` 进程未重启加载新代码，固定做法是先重启 `npm run host:start` 再刷新页面。
+- [2026-02-23 17:20:48] 路由复杂度评分已补齐中文工程信号（重构/并发/事务/回滚/压测/安全/迁移等）与结构特征（行数/分点），并加入“只回复/一句话/润色”降权；验收口径固定为：轻任务应命中 `worker_normal`，复杂工程任务应命中 `worker_hard`，避免复杂中文任务被误判为低复杂度。
+- [2026-02-25 21:25:17] Memory 永久档案治理补充：`contextctl` 已支持 `-Action memory-tag-hash`（`-Hashes/-HashFile/-HashReason`）并在 `monthly-maintain` 自动读取 `C:\Users\Lenovo\.codex\context-hub\governance\manual_archive_hashes.txt` 做队列化非破坏式打标；队列文件解析已兼容 UTF-8 BOM，避免注释首行被误识别为 hash。
+- [2026-02-23 18:26:02] Benchmark 关键细节已固化：`host_benchmark_run_once` 支持 `samples_per_role=1~12`（默认 8）；修复未传 `providers` 时误生成 `providerFilter=["unknown"]` 导致学习空跑的问题。控制台“学习一次”改为“单角色 8 样本 / 全角色 2 样本”，用于兼顾定标质量与 token 成本。
+- [2026-02-24 09:47:58] Codex Host v4 评分与全平台基准已落地：评分改为“按角色权重 + 稳定性惩罚 + 同分裁决（success->quality->latency->cost->samples->priority）”；新增 `GET /admin/api/model-families`、`POST /admin/api/benchmark/run-mainstream`、MCP 工具 `host_model_families` 与 `host_benchmark_run_mainstream`；控制台新增“当前模型家族池、角色评分全榜单、Gemini/Codex 不可用回退链”；`google-ai-studio` 与 `cerebras` 保持排除态。
+- [2026-02-24 11:26:35] 全局上下文治理收口：`aiclient-orchestrator` 切换为 `C:\Users\Lenovo\.codex\tools\orchestrator-launcher.mjs` 启动入口，`start-local-stack.ps1` 同步改为 launcher 优先并保留回退；`context-hub` 新增 `global/TOOL_CANONICAL_SOURCES.json` 与 `CONTEXT_ROUTING.json`，明确 `global/projects/*/source_mirror` 为 `archive-only`（不作为运行真源、不作为默认上下文读取源）。
+- [2026-02-24 13:30:39] Codex Host v4 补丁：`run-mainstream/run-once` 新增 `include_unhealthy`（默认 false，仅健康平台进入基准；必要时可显式 true 纳入不健康平台），并修复 `host_team_execute.focus_hint` 的乱码 schema 文案，避免控制台/接口描述污染。
+- [2026-02-24 13:56:02] Codex Host v4 控制台“学习一次”已参数化：新增 `样本/角色`、`延续上次学习`、`纳入不健康平台` 三个可视开关；自动样本策略固定为“全角色=2、单角色=8”，并透传到 `POST /admin/api/benchmark/run-mainstream`，用于兼顾省 token 与可控压测。
+- [2026-02-24 14:51:21] Codex Host v4 CLI 直达链路已固化：新增 `npm run host:model-families`、`npm run host:provider-scores`、`npm run host:benchmark:mainstream`、`npm run host:benchmark:once`，用于无 UI 场景下直接完成“家族池查看 / 评分榜查看 / 主流压测 / 角色学习”闭环。
+- [2026-02-24 16:15:17] Codex Host v4 收口补丁：移除“非 Codex 占比 >=80%”硬约束（默认 `HOST_ENFORCE_NON_CODEX_TARGET=false`，仅监控展示占比），同时保留页面 KPI；新增成本基线接口 `GET/POST /admin/api/cost-baseline` 与窗口对比（真实消耗/估算节省/净消耗/命中率变化）；成本拆解新增“上下文命中率”量化字段（总命中/记忆命中/文件命中）；修复 `3220/admin` 顶栏“北京时间”和初始化失败提示的乱码文案。
+- [2026-02-24 20:48:44] v4 持续执行口径固化：`host:v4-progress` 当前 `overallReady=true`（5/5 角色候选与区分度达标）；全量基准建议采用“分角色短批次 + continue_from_last=true”避免前台长时超时；控制台验收仍按 `chrome-devtools` 快照 + Network（`/admin/api/overview`、`/admin/api/model-families`、`/admin/api/provider-scores`、`/admin/api/v4-progress` 均 200）作为修复成立证据。
+- [2026-02-24 23:47:44] v4 进度假性未达标修复：`buildV4ProgressPayload` 改为以“非冷却角色榜候选”计算 Top5 区分度，不再强制与健康候选池做键交集过滤；健康池仅保留用于候选阈值自适应。修复后 `merge` 不再被误判 `0/2`，`/admin/api/v4-progress` 与 CLI `host:v4-progress` 均恢复 `overallReady=true`（runCount=37）。
+- [2026-02-25 15:10:50] v4 评分与榜单口径更新：角色评分已去除“时间分”权重（`latency=0`，权重回收到 `quality`），榜单改为“全量模型同榜 + 全量角色榜（不再默认 top60 截断）”；`worker_normal` 纳入 `gpt5/claude` 家族候选。新增 worker 安全闸：`run-mainstream` 中若 worker 位出现“非 gpt5/gemini/claude”模型综合分超过 `gpt-5.3-codex`，基准任务会自动中止并返回原因。`wisdom-gate/groq` 的额度探测对临时 `overloaded/429/5xx` 已改为“降级展示（不爆红）”。
+- [2026-02-25 15:26:40] `wisdom-gate` 额度探测新增“配额受限软降级”：当返回 `insufficient fund / quota exceeded / 余额不足` 时，不再标记为硬失败红爆，而是记为“可达但当前 key 额度受限（degraded）”；保留原始错误到 `usageProbe.raw.message` 供控制台解释。
+- [2026-02-26 16:08:33] 上下文工程运维口径补充：`contextctl` 新增 `ops-health`（真源/服务/记忆自检/评估新鲜度/控制字符）与 `resolve-error`（按 ErrorCode 非破坏式收敛 pending/captured）；`02-收工.ps1` 默认执行 `ops-health`（可 `-SkipOpsHealth`）。PowerShell 写文档时避免使用“反引号+数字”组合（如 `` `02``），否则会写入 NUL 控制字符并引发隐性乱码。
+- [2026-02-26 17:28:30] `ops-health` 巡检范围已扩展到全局治理关键文档：`governance/CONTEXT_ENGINE_MASTER_PLAN_v3.md`、`todo/USER_RETURN_BRIEF.md`、`todo/AUTO_EXECUTION_LOG.latest.md`。后续以 `ops-health` 作为“文档健康 + 服务健康”统一门禁，防止治理文档损坏漏检。
+- [2026-02-26 19:13:20] `monthly-maintain` 运行时禁止把实时输出文件写在 `C:\Users\Lenovo\.codex\context-hub` 根目录；备份阶段会打包该目录，若输出文件被占用会触发 `BACKUP_FAILED`。固定做法：直接读取标准输出，或写到 context-hub 目录外的临时文件。
+- [2026-02-26 19:27:20] 告警治理口径：`monthly-maintain` 与 `ops-health` 失败路径统一写入 `governance/alerts.jsonl`，并刷新 `todo/ALERTS.latest.md`；默认“告警开启、自动冻结关闭”，先可观测再逐步加硬约束。
+- [2026-02-27 11:46:51] 自动化登录风控经验（可能结论）：`chrome-devtools MCP` 驱动窗口在部分站点更容易被识别为自动化（可能出现“Chrome 正受到自动测试软件的控制”提示），Google/Cloudflare 等登录敏感链路触发风控概率更高；`playwright MCP` 在当前环境测试中未出现该提示，登录页可达性更高。该结论为经验性，后续需按站点与会话复验。
+- [2026-02-27 11:49:20] 外部聊天桥接质量口径补充：`codex-session` 历史会话中顶层 `turn_context/compacted/session_state/task_*` 事件必须归类为 `system`，否则会导致 `kept_by_role.unknown` 虚高并降低跨聊天复盘可读性。当前修复后 `external_chat_bridge.latest.json` 的 `unknown_role_ratio=0`，可作为 start-session 轻量注入的默认质量阈值。
+- [2026-02-27 11:58:45] 上下文证据入口补充：`import-chat` 需固定输出 `parse_stats`（`json_decode_errors/non_object_records/blank_lines/total_skipped`），`ops-health` 固定展示 `bridge_quality`（unknown/dropped/parse_skipped），`pack/session_capsule` 固定输出 `evidence_refs.reports[]`（latest 报告路径）。目标是新会话首轮先证据再结论，减少人工路径回忆成本。
+- [2026-03-02 22:04:30] KTX 过渡稳定策略：当场景已显示 fallback 整图时，跳过低层瓦片（如 z2）仅加载最高层；`TileMeshPano` 关闭 `depthWrite/depthTest` 并按 `z` 固定 `renderOrder`；fallback 只在最高层瓦片全量就绪后清理，避免加载过程中出现错位/撕裂感。
 
 ---
 
@@ -191,3 +244,8 @@ git push origin main
 
 - 已在 `Agent Notes (Persistent)` 增加长期规则：`2026-02-13 16:22:14` 条目。
 - 已在本节保留完整复盘，供后续排障直接复用。
+- [2026-02-26 17:40:30] 上下文工程巡检补充：`ops-health` 已将“文本异常守卫（断词/受损拼写）”纳入门禁，除 `control_char_count` 外新增 `text_anomaly_count`；后续以二者同时为 0 作为文档健康基线。
+- [2026-02-26 18:26:20] 上下文巡检规则升级：文本异常守卫规则已外置到 `C:\Users\Lenovo\.codex\context-hub\governance\text_anomaly_rules.v1.json`，`ops-health` 采用“规则文件优先+默认回退”执行，控制面文件同步纳入巡检。
+- [2026-02-26 18:31:20] `ops-health` 报告增强：除 `text_anomaly_count` 外，`ops_health.latest.md` 现输出 `Text Anomaly Hits` 明细，异常定位无需二次查询。
+- [2026-02-26 18:38:10] 周报脚本兼容性修复：`memory_rollup_weekly.py` 已兼容 `valid_from/last_verified`，避免 `weekly-review` 在 curated 数据下误报 `count=0`。
+- [2026-02-26 19:05:10] 周复盘巡检增强：`weekly-review` 固定输出 `weekly_review.latest.md`，`ops-health` 新增 weekly 新鲜度门禁与 `Stale Reports` 明细，周报链路可被自动监控。

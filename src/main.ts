@@ -693,6 +693,7 @@ class App {
       this.qualityIndicator = this.sceneUiRuntime?.getQualityIndicator() ?? null;
     };
     let coreUiRequested = false;
+    let chatInitRequested = false;
     const ensureCoreSceneUi = () => {
       if (coreUiRequested) return;
       coreUiRequested = true;
@@ -723,6 +724,15 @@ class App {
       }
       if (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED) {
         this.sceneUiRuntime?.scheduleFeatureWarmup(status === LoadStatus.HIGH_READY ? 'immediate' : 'idle');
+      }
+      if (
+        !chatInitRequested &&
+        (status === LoadStatus.LOW_READY ||
+          status === LoadStatus.HIGH_READY ||
+          status === LoadStatus.DEGRADED)
+      ) {
+        chatInitRequested = true;
+        void this.chatRuntime?.ensureInit();
       }
       if (
         status === LoadStatus.LOW_READY ||

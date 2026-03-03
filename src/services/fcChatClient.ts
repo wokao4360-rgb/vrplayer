@@ -7,6 +7,7 @@ export type FcChatContext = {
   sceneId?: string;
   sceneTitle?: string;
   url?: string;
+  userMemory?: string[];
 };
 
 export type FcChatHistoryItem = {
@@ -53,7 +54,23 @@ function buildPayload(
     }))
     .filter((item) => !!item.content);
 
-  const payload: AnyObj = { question };
+  const normalizedMemory = Array.isArray(ctx?.userMemory)
+    ? ctx.userMemory
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter((item) => !!item)
+        .slice(-30)
+    : [];
+
+  let promptQuestion = question;
+  if (normalizedMemory.length > 0) {
+    const memoryLines = normalizedMemory
+      .slice(-8)
+      .map((item, index) => `${index + 1}. ${item}`)
+      .join("\n");
+    promptQuestion = `${question}\n\n【用户已提供信息（按时间）】\n${memoryLines}\n\n请优先依据以上用户信息回答；若问题涉及“我刚才/今天说了什么”，请直接基于这些信息作答，不要回答“你不记得”或“你没有记忆功能”。`;
+  }
+
+  const payload: AnyObj = { question: promptQuestion, rawQuestion: question };
   if (sessionId) {
     payload.sessionId = sessionId;
     payload.conversationId = sessionId;
@@ -76,6 +93,8 @@ function buildPayload(
       url: ctx.url || "",
       sessionId: sessionId || "",
       historyLength: normalizedHistory.length,
+      userMemory: normalizedMemory,
+      userMemoryLength: normalizedMemory.length,
     };
   }
   return payload;

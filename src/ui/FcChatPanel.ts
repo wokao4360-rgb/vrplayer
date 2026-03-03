@@ -5,13 +5,10 @@ type Role = "assistant" | "user";
 type ChatMsg = { role: Role; text: string };
 
 const MAX_HISTORY_MESSAGES = 40;
+const MAX_USER_MEMORY_ITEMS = 120;
 const HISTORY_KEY_PREFIX = "fcchat_history_v2";
 const SESSION_KEY_PREFIX = "fcchat_session_v1";
-const PROFILE_KEY_PREFIX = "fcchat_profile_v1";
-
-type UserProfile = {
-  name?: string;
-};
+const USER_MEMORY_KEY_PREFIX = "fcchat_user_memory_v1";
 
 function buildScopedKey(prefix: string, museumId?: string): string {
   const scope = (museumId || "global").trim() || "global";
@@ -52,9 +49,9 @@ export class FcChatPanel {
   private fabButton: HTMLButtonElement | null = null;
   private historyStorageKey: string;
   private sessionStorageKey: string;
-  private profileStorageKey: string;
+  private userMemoryStorageKey: string;
   private sessionId: string;
-  private profile: UserProfile = {};
+  private userMemory: string[] = [];
 
   // FAB drag state
   private snapTimer: number | null = null;
@@ -77,9 +74,9 @@ export class FcChatPanel {
     this.context = context;
     this.historyStorageKey = buildScopedKey(HISTORY_KEY_PREFIX, context.museumId);
     this.sessionStorageKey = buildScopedKey(SESSION_KEY_PREFIX, context.museumId);
-    this.profileStorageKey = buildScopedKey(PROFILE_KEY_PREFIX, context.museumId);
+    this.userMemoryStorageKey = buildScopedKey(USER_MEMORY_KEY_PREFIX, context.museumId);
     this.sessionId = this.loadSessionId();
-    this.profile = this.loadProfile();
+    this.userMemory = this.loadUserMemory();
 
     this.mount();
     this.injectStyles();
@@ -630,11 +627,13 @@ export class FcChatPanel {
   private clear() {
     this.stopTyping(true);
     this.messages = [];
+    this.userMemory = [];
     this.list.innerHTML = "";
     this.statusLine.textContent = "";
     this.sessionId = generateSessionId();
     this.persistSessionId();
     this.persistMessages();
+    this.persistUserMemory();
     this.ensureWelcome();
   }
 
@@ -662,161 +661,48 @@ export class FcChatPanel {
     }
   }
 
-  private loadProfile(): UserProfile {
+  private loadUserMemory(): string[] {
     try {
-      const raw = localStorage.getItem(this.profileStorageKey);
-      if (!raw) return {};
+      const raw = localStorage.getItem(this.userMemoryStorageKey);
+      if (!raw) return [];
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== "object") return {};
-      const name = typeof parsed.name === "string" ? parsed.name.trim() : "";
-      return name ? { name } : {};
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map((item) => (typeof item === "string" ? this.normalizeText(item).trim() : ""))
+        .filter((item) => !!item)
+        .slice(-MAX_USER_MEMORY_ITEMS);
     } catch {
-      return {};
+      return [];
     }
   }
 
-  private persistProfile(): void {
+  private persistUserMemory(): void {
     try {
-      localStorage.setItem(this.profileStorageKey, JSON.stringify(this.profile));
+      localStorage.setItem(
+        this.userMemoryStorageKey,
+        JSON.stringify(this.userMemory.slice(-MAX_USER_MEMORY_ITEMS))
+      );
     } catch {
       // ignore
     }
   }
 
-  private extractUserName(text: string): string | null {
-    const input = text.trim();
-    const m = input.match(/(?:我叫|我的名字是|叫我)\s*([A-Za-z0-9_\-\u4e00-\u9fa5]{1,20})/);
-    if (!m) return null;
-    const name = (m[1] || "").trim();
-    if (!name) return null;
-    if (/^(什么|啥|名字|呢|啊|呀)$/u.test(name)) return null;
-    return name || null;
-  }
-
-  private isAskUserName(text: string): boolean {
-    const input = text.replace(/\s+/g, "");
-    return /我叫什么|我的名字|记得我名字|你记得我是谁/.test(input);
-  }
-
-  private normalizeForIntent(text: string): string {
-    return text
-      .replace(/\s+/g, "")
-      .replace(/[，。！？、,.!?；;：“”"'`（）()【】\[\]<>《》]/g, "")
-      .trim();
-  }
-
-  private isLikelyRecallQuestion(text: string): boolean {
-    const input = this.normalizeForIntent(text);
-    if (!input) return false;
-    const explicitCue = /还记得|记不记得|刚才|刚刚|之前|前面|上句|上一句|我说|我做|我干|我刚|我今天/.test(
-      input
-    );
-    if (explicitCue) return true;
-
-    const actionAsk = /干了啥|干了什么|做了啥|做了什么|说了啥|说了什么|讲了啥|讲了什么|去了哪|去了哪里|哪句话|哪一句|叫什么/.test(
-      input
-    );
-    if (!actionAsk) return false;
-
-    return /我|你|他|她|它|我们|你们|他们|姥姥|奶奶|爷爷|外婆|妈妈|爸爸|朋友|同学|老师|孩子/.test(
-      input
-    );
-  }
-
-  private buildRecallTokenSet(text: string): Set<string> {
-    const normalized = this.normalizeForIntent(text).toLowerCase();
-    const compact = normalized.replace(/[^a-z0-9\u4e00-\u9fa5]/g, "");
-    const set = new Set<string>();
-    if (!compact) return set;
-
-    const words = compact.match(/[a-z0-9]+|[\u4e00-\u9fa5]/g) || [];
-    for (const word of words) {
-      if (word) set.add(word);
+  private rememberUserMessage(text: string): void {
+    const normalized = this.normalizeText(text).trim();
+    if (!normalized) return;
+    if (this.userMemory[this.userMemory.length - 1] === normalized) return;
+    this.userMemory.push(normalized);
+    if (this.userMemory.length > MAX_USER_MEMORY_ITEMS) {
+      this.userMemory = this.userMemory.slice(-MAX_USER_MEMORY_ITEMS);
     }
-
-    if (compact.length <= 3) set.add(compact);
-    for (let i = 0; i < compact.length - 1; i++) {
-      set.add(compact.slice(i, i + 2));
-    }
-    return set;
+    this.persistUserMemory();
   }
 
-  private scoreTokenSimilarity(a: Set<string>, b: Set<string>): number {
-    if (a.size === 0 || b.size === 0) return 0;
-    let intersection = 0;
-    for (const token of a) {
-      if (b.has(token)) intersection++;
-    }
-    const union = a.size + b.size - intersection;
-    if (union <= 0) return 0;
-    return intersection / union;
-  }
-
-  private extractRecallSubject(question: string): string {
-    const input = this.normalizeForIntent(question);
-    const m = input.match(
-      /^(.{1,10}?)(?:干了啥|干了什么|做了啥|做了什么|说了啥|说了什么|讲了啥|讲了什么|去了哪|去了哪里|哪句话|哪一句|叫什么)$/
-    );
-    if (!m) return "";
-    return (m[1] || "").trim();
-  }
-
-  private shouldSkipRecallSource(text: string): boolean {
-    const input = this.normalizeForIntent(text);
-    if (!input) return true;
-    if (this.isAskUserName(text)) return true;
-    if (this.isLikelyRecallQuestion(text)) return true;
-    return /^(?:你好|在吗|ok|好的|谢谢|嗯|哦)$/.test(input);
-  }
-
-  private buildRecallAnswer(question: string): string | null {
-    if (!this.isLikelyRecallQuestion(question)) return null;
-    const recentUserMessages = this.messages
-      .slice(0, -1)
-      .filter((msg) => msg.role === "user")
-      .map((msg) => this.normalizeText(msg.text))
-      .filter((text) => !this.shouldSkipRecallSource(text));
-
-    if (recentUserMessages.length === 0) {
-      return "你还没有说具体行程，你可以先告诉我一句，我会记住。";
-    }
-
-    const questionTokens = this.buildRecallTokenSet(question);
-    const subject = this.extractRecallSubject(question);
-    let bestScore = 0;
-    let bestText = "";
-
-    for (let i = recentUserMessages.length - 1; i >= 0; i--) {
-      const text = recentUserMessages[i];
-      const normalized = this.normalizeForIntent(text);
-      if (!normalized) continue;
-
-      const candidateTokens = this.buildRecallTokenSet(normalized);
-      let score = this.scoreTokenSimilarity(questionTokens, candidateTokens);
-
-      if (subject && normalized.includes(subject)) score += 0.35;
-      if (/(?:今天|刚才|刚刚|去了|参观|看了|吃了|做了|学习了|完成了|准备了|说了|讲了)/.test(normalized)) {
-        score += 0.08;
-      }
-      const distance = recentUserMessages.length - 1 - i;
-      score += Math.max(0, 0.12 - distance * 0.02);
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestText = text;
-      }
-    }
-
-    const threshold = subject ? 0.18 : 0.28;
-    if (!bestText || bestScore < threshold) {
-      if (subject) {
-        return `你刚才还没提到“${subject}”做了什么，你可以再说一遍，我会记住。`;
-      }
-      return "我没抓到你前面那句具体内容，你可以再说一遍，我会直接记住。";
-    }
-
-    const clipped = bestText.length > 120 ? `${bestText.slice(0, 120)}...` : bestText;
-    return `你刚才提到：${clipped}`;
+  private buildRequestContext(): FcChatContext {
+    return {
+      ...this.context,
+      userMemory: this.userMemory.slice(-30),
+    };
   }
 
   private restoreHistoryOrWelcome(): void {
@@ -846,6 +732,15 @@ export class FcChatPanel {
     if (!restored) {
       this.ensureWelcome();
       this.persistMessages();
+    }
+
+    if (this.userMemory.length === 0 && this.messages.length > 0) {
+      this.userMemory = this.messages
+        .filter((msg) => msg.role === "user")
+        .map((msg) => this.normalizeText(msg.text).trim())
+        .filter((text) => !!text)
+        .slice(-MAX_USER_MEMORY_ITEMS);
+      this.persistUserMemory();
     }
   }
 
@@ -1044,35 +939,15 @@ export class FcChatPanel {
     this.input.value = "";
     this.addMessage("user", q);
 
-    const extractedName = this.extractUserName(q);
-    if (extractedName) {
-      this.profile.name = extractedName;
-      this.persistProfile();
-    }
-
-    if (this.isAskUserName(q) && this.profile.name) {
-      const answer = `你叫${this.profile.name}。我已经记住了。`;
-      this.addMessage("assistant", answer);
-      this.setBusy(false, "");
-      this.scrollToBottom();
-      return;
-    }
-
-    const recallAnswer = this.buildRecallAnswer(q);
-    if (recallAnswer) {
-      this.addMessage("assistant", recallAnswer);
-      this.setBusy(false, "");
-      this.scrollToBottom();
-      return;
-    }
-
+    this.rememberUserMessage(q);
     // immediately show loading bubble (three dots animation)
     const { row: loadingRow, bubble: loadingBubble } = this.addAssistantBubbleLoading();
     this.setBusy(true, "输出中...");
 
     try {
       const historyForRequest = this.messages.slice(-MAX_HISTORY_MESSAGES);
-      const res = await this.client.ask(q, this.context, historyForRequest, this.sessionId);
+      const contextForRequest = this.buildRequestContext();
+      const res = await this.client.ask(q, contextForRequest, historyForRequest, this.sessionId);
 
       // replace loading bubble with empty bubble for typewriter
       const bubble = this.replaceLoadingWithEmpty(loadingRow);

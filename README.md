@@ -140,6 +140,7 @@ git push origin main
 - [2026-02-22 16:22:07] 开机自动启动已升级为四服务链路：`AIClient-2-API(3000)`、`Memory HTTP(8000)`、`AIClient Orchestrator(3217)`、`Codex Host(3220)`。统一入口仍为 `C:\Users\Lenovo\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\start-aiclient-orchestrator.cmd`，重启后无需手动逐个启动。
 - [2026-02-20 21:37:52] 三馆学伴事实回忆兜底：当用户追问“我今天干了什么/我刚才说了什么”时，前端必须先从本地会话历史直接回忆回复（`FcChatPanel` 本地分支），不要完全依赖后端 history 解析，避免再次出现“姓名可记住但事实失忆”。
 - [2026-02-20 22:06:55] 三馆学伴记忆策略升级：禁止只做固定关键词问法匹配；回忆分支必须基于“历史消息语义打分（token overlap + 主语命中 + 近因权重）”选取候选句，确保“姥姥干了家务 -> 姥姥干了啥”这类改写问法也能命中同一会话记忆。
+- [2026-03-03 13:25:00] 三馆学伴记忆链路改造：移除 `FcChatPanel` 前端“正则/过滤回忆拦截回复”分支，避免误判生成固定话术；改为请求体同时携带 `context.userMemory` 与 `question` 内嵌的“用户已提供信息”提示，确保后端在“你还记得我今天做了什么吗”这类追问中可基于会话事实作答；`清空` 按钮会同步清空 `userMemory`，防止旧会话串线。
 - [2026-02-20 22:04:20] 新增 Codex 宿主 `tools/codex-host/server.mjs`：用于把 Codex 插件子任务转发到 AIClient Orchestrator。关键边界：Codex 主会话 token 不能外部强制改 Gemini；省 token 方案是“主会话保留 + 子任务外包 Gemini 优先分流”。
 - [2026-02-21 16:59:30] Orchestrator 第一阶段升级已落地：`route/batch` 支持 `execution=concurrent|serial` 与 `concurrency(1-6)`；新增软闸门告警（`codex_light_mode` / `codex_share_high`）与接口 `GET /admin/api/alerts`、`GET /admin/api/routing/policy`；控制台新增“非 Codex 占比/软闸门告警”KPI 与并发/阈值配置项。默认策略：并发批量+软闸门仅告警不阻断。
 - [2026-02-21 17:12:56] 运维调用固定入口：单任务执行必须使用 `POST /admin/api/route/task`（`/admin/api/route` 为 404）；控制台“Cursor Codex 插件请求摘要”已做去噪截断，优先显示真实任务句，避免 IDE 背景上下文淹没关键信息。

@@ -745,6 +745,10 @@ class App {
     // 鍔犺浇鍦烘櫙
     this.panoViewer.setOnLoad(() => {
       ensureCoreSceneUi();
+      if (!chatInitRequested) {
+        chatInitRequested = true;
+        void this.chatRuntime?.ensureInit();
+      }
       this.loading.hide();
       // 鍏ㄦ櫙鍔犺浇鎴愬姛鍚庯紝娓呴櫎浠讳綍 UI 閿欒閬僵锛堜絾淇濈暀 config 閿欒锛?
       this.hideUIError();

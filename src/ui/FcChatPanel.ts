@@ -33,8 +33,11 @@ export class FcChatPanel {
   private input!: HTMLInputElement;
   private sendBtn!: HTMLButtonElement;
   private clearBtn!: HTMLButtonElement;
+  private recallBtn!: HTMLButtonElement;
   private closeBtn!: HTMLButtonElement;
   private statusLine!: HTMLDivElement;
+  private quickActions!: HTMLDivElement;
+  private recallPanel!: HTMLDivElement;
 
   private dragging = false;
   private dragOffsetX = 0;
@@ -52,6 +55,7 @@ export class FcChatPanel {
   private userMemoryStorageKey: string;
   private sessionId: string;
   private userMemory: string[] = [];
+  private recallOpen = false;
 
   // FAB drag state
   private snapTimer: number | null = null;
@@ -124,6 +128,14 @@ export class FcChatPanel {
     this.clearBtn.textContent = "清空";
     this.clearBtn.addEventListener("click", () => this.clear());
 
+    this.recallBtn = document.createElement("button");
+    this.recallBtn.className = "fcchat-btn fcchat-btn-ghost";
+    this.recallBtn.type = "button";
+    this.recallBtn.textContent = "回顾";
+    this.recallBtn.setAttribute("aria-label", "查看会话回顾");
+    this.recallBtn.setAttribute("aria-pressed", "false");
+    this.recallBtn.addEventListener("click", () => this.toggleRecallPanel());
+
     this.closeBtn = document.createElement("button");
     this.closeBtn.className = "fcchat-btn fcchat-btn-ghost fcchat-close";
     this.closeBtn.type = "button";
@@ -132,6 +144,7 @@ export class FcChatPanel {
     this.closeBtn.addEventListener("click", () => this.toggle());
 
     headerRight.appendChild(this.clearBtn);
+    headerRight.appendChild(this.recallBtn);
     headerRight.appendChild(this.closeBtn);
 
     const headerRow = document.createElement("div");
@@ -146,8 +159,34 @@ export class FcChatPanel {
     disclaimer.textContent = "提示：AI 可能会出错，内容仅供参考；请以现场展陈/讲解为准。";
     this.header.appendChild(disclaimer);
 
+    this.quickActions = document.createElement("div");
+    this.quickActions.className = "fcchat-quick-actions";
+    const quickActionDefs = [
+      { label: "回顾上文", prompt: "请先简要回顾我们刚才的对话重点，再继续回答。" },
+      { label: "我刚才说了什么？", prompt: "我刚才说了什么？" },
+      { label: "你刚才说了什么？", prompt: "你刚才说了什么？" },
+    ];
+    quickActionDefs.forEach((item) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "fcchat-chip";
+      btn.textContent = item.label;
+      btn.addEventListener("click", () => {
+        this.input.value = item.prompt;
+        if (!this.isOpen) this.show();
+        if (!this.isMobile) this.input.focus();
+      });
+      this.quickActions.appendChild(btn);
+    });
+    this.header.appendChild(this.quickActions);
+
     this.body = document.createElement("div");
     this.body.className = "fcchat-body";
+
+    this.recallPanel = document.createElement("div");
+    this.recallPanel.className = "fcchat-recall-panel";
+    this.recallPanel.hidden = true;
+    this.body.appendChild(this.recallPanel);
 
     this.list = document.createElement("div");
     this.list.className = "fcchat-list";
@@ -208,6 +247,7 @@ export class FcChatPanel {
     if (!this.isOpen) return;
     this.isOpen = false;
     this.stopTyping(true);
+    this.toggleRecallPanel(false);
     this.root.style.display = "none";
     this.root.classList.remove('fcchat-open');
     // 更新 FAB 状态：悬挂隐藏
@@ -635,6 +675,7 @@ export class FcChatPanel {
     this.persistMessages();
     this.persistUserMemory();
     this.ensureWelcome();
+    this.renderRecallPanel();
   }
 
   private loadSessionId(): string {
@@ -698,10 +739,39 @@ export class FcChatPanel {
     this.persistUserMemory();
   }
 
-  private buildRequestContext(): FcChatContext {
+  private buildRequestContext(currentQuestion?: string): FcChatContext {
+    const normalizedQuestion = this.normalizeText(currentQuestion || "").trim();
+    let memory = this.userMemory.slice();
+    if (normalizedQuestion && memory[memory.length - 1] === normalizedQuestion) {
+      memory = memory.slice(0, -1);
+    }
+
+    const recentTurns = this.messages
+      .slice(-8)
+      .map((msg) => ({
+        role: msg.role,
+        text: this.normalizeText(msg.text).trim(),
+      }))
+      .filter((msg) => !!msg.text);
+
+    const latestUser = [...this.messages]
+      .reverse()
+      .find(
+        (msg) =>
+          msg.role === "user" &&
+          !!this.normalizeText(msg.text).trim() &&
+          this.normalizeText(msg.text).trim() !== normalizedQuestion
+      );
+    const latestAssistant = [...this.messages]
+      .reverse()
+      .find((msg) => msg.role === "assistant" && !!this.normalizeText(msg.text).trim());
+
     return {
       ...this.context,
-      userMemory: this.userMemory.slice(-30),
+      userMemory: memory.slice(-30),
+      lastUserUtterance: latestUser ? this.normalizeText(latestUser.text).trim() : "",
+      lastAssistantReply: latestAssistant ? this.normalizeText(latestAssistant.text).trim() : "",
+      recentTurns,
     };
   }
 
@@ -742,6 +812,8 @@ export class FcChatPanel {
         .slice(-MAX_USER_MEMORY_ITEMS);
       this.persistUserMemory();
     }
+
+    this.renderRecallPanel();
   }
 
   private renderMessages(): void {
@@ -758,6 +830,7 @@ export class FcChatPanel {
       this.list.appendChild(row);
     }
     this.scrollToBottom();
+    this.renderRecallPanel();
   }
 
   private persistMessages(): void {
@@ -804,6 +877,62 @@ export class FcChatPanel {
     this.list.appendChild(row);
     this.scrollToBottom();
     this.persistMessages();
+    this.renderRecallPanel();
+  }
+
+  private toggleRecallPanel(next?: boolean): void {
+    const willOpen = typeof next === "boolean" ? next : !this.recallOpen;
+    this.recallOpen = willOpen;
+    this.recallPanel.hidden = !willOpen;
+    this.recallBtn.setAttribute("aria-pressed", willOpen ? "true" : "false");
+    this.recallBtn.classList.toggle("is-active", willOpen);
+    if (willOpen) {
+      this.renderRecallPanel();
+    }
+  }
+
+  private renderRecallPanel(): void {
+    if (!this.recallPanel) return;
+    this.recallPanel.innerHTML = "";
+    const turns = this.messages
+      .map((msg) => ({
+        role: msg.role,
+        text: this.normalizeText(msg.text).trim(),
+      }))
+      .filter((msg) => !!msg.text)
+      .slice(-12)
+      .reverse();
+
+    if (turns.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "fcchat-recall-empty";
+      empty.textContent = "暂无可回顾内容，先聊一句吧。";
+      this.recallPanel.appendChild(empty);
+      return;
+    }
+
+    turns.forEach((msg) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = `fcchat-recall-card ${msg.role === "user" ? "is-user" : "is-assistant"}`;
+
+      const roleLabel = document.createElement("span");
+      roleLabel.className = "fcchat-recall-role";
+      roleLabel.textContent = msg.role === "user" ? "你" : "学伴";
+
+      const text = document.createElement("span");
+      text.className = "fcchat-recall-text";
+      text.textContent = msg.text.length > 96 ? `${msg.text.slice(0, 96)}...` : msg.text;
+
+      card.appendChild(roleLabel);
+      card.appendChild(text);
+      card.addEventListener("click", () => {
+        this.input.value = msg.text;
+        if (!this.isOpen) this.show();
+        if (!this.isMobile) this.input.focus();
+      });
+      this.recallPanel.appendChild(card);
+    });
   }
 
   // create assistant bubble with loading dots
@@ -939,14 +1068,14 @@ export class FcChatPanel {
     this.input.value = "";
     this.addMessage("user", q);
 
-    this.rememberUserMessage(q);
     // immediately show loading bubble (three dots animation)
-    const { row: loadingRow, bubble: loadingBubble } = this.addAssistantBubbleLoading();
+    const { row: loadingRow } = this.addAssistantBubbleLoading();
     this.setBusy(true, "输出中...");
 
     try {
       const historyForRequest = this.messages.slice(-MAX_HISTORY_MESSAGES);
-      const contextForRequest = this.buildRequestContext();
+      const contextForRequest = this.buildRequestContext(q);
+      this.rememberUserMessage(q);
       const res = await this.client.ask(q, contextForRequest, historyForRequest, this.sessionId);
 
       // replace loading bubble with empty bubble for typewriter
@@ -959,6 +1088,7 @@ export class FcChatPanel {
         this.messages = this.messages.slice(-MAX_HISTORY_MESSAGES);
       }
       this.persistMessages();
+      this.renderRecallPanel();
 
       this.setBusy(false, "");
     } catch (e: any) {
@@ -974,6 +1104,7 @@ export class FcChatPanel {
           this.messages = this.messages.slice(-MAX_HISTORY_MESSAGES);
         }
         this.persistMessages();
+        this.renderRecallPanel();
       }
       this.setBusy(false, "");
     }
@@ -987,20 +1118,45 @@ export class FcChatPanel {
     style.id = "fcchat-style";
     style.textContent = `
       .fcchat-root{
+        --fcchat-paper: #f7f3e8;
+        --fcchat-paper-soft: #fbf8f1;
+        --fcchat-ink: #1f2a37;
+        --fcchat-ink-soft: #415164;
+        --fcchat-border: rgba(77, 56, 34, 0.18);
+        --fcchat-accent: #2f5fae;
+        --fcchat-accent-strong: #1f4f9d;
+        --fcchat-assistant: #e8edf4;
+        --fcchat-assistant-border: rgba(31, 79, 157, 0.16);
+        --fcchat-chip-bg: rgba(45, 84, 140, 0.08);
+        --fcchat-chip-border: rgba(45, 84, 140, 0.2);
+        --fcchat-shadow: 0 18px 44px rgba(26, 36, 56, 0.26);
         position: fixed;
         z-index: 99999;
         width: 420px;
-        height: 520px;
+        height: 560px;
         display: flex;
         flex-direction: column;
-        border-radius: 14px;
-        background: #fff;
-        box-shadow: 0 14px 50px rgba(0,0,0,.18);
+        border-radius: 18px;
+        background:
+          radial-gradient(120% 100% at 0% 0%, rgba(255, 255, 255, 0.86) 0%, transparent 42%),
+          linear-gradient(145deg, var(--fcchat-paper-soft) 0%, var(--fcchat-paper) 100%);
+        box-shadow: var(--fcchat-shadow);
+        border: 1px solid var(--fcchat-border);
         overflow: hidden;
         resize: both;
         min-width: 320px;
         min-height: 360px;
         transform: none;
+        opacity: 0;
+        animation: fcchat-panel-in 360ms cubic-bezier(.2,.8,.2,1) forwards;
+        font-family: var(--vr-font-chat-body, var(--vr-font-ui));
+      }
+      .fcchat-root.fcchat-open{
+        opacity: 1;
+      }
+      @keyframes fcchat-panel-in{
+        from{ opacity: 0; transform: translate3d(0, 10px, 0) scale(0.98); }
+        to{ opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
       }
 
       .fcchat-header{
@@ -1008,9 +1164,10 @@ export class FcChatPanel {
         display:flex;
         flex-direction: column;
         justify-content:center;
-        padding: 10px 12px;
-        border-bottom: 1px solid rgba(0,0,0,.06);
-        background: #f8fafc;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--fcchat-border);
+        background:
+          linear-gradient(160deg, rgba(255,255,255,0.82) 0%, rgba(238,230,214,0.74) 100%);
         cursor: move;
         user-select: none;
       }
@@ -1020,9 +1177,11 @@ export class FcChatPanel {
         justify-content:space-between;
       }
       .fcchat-title{
-        font-size: 15px;
-        font-weight: 700;
-        color: #111827;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: var(--fcchat-ink);
+        font-family: var(--vr-font-chat-title, var(--vr-font-ui));
       }
       .fcchat-header-right{
         display:flex;
@@ -1032,9 +1191,41 @@ export class FcChatPanel {
       .fcchat-disclaimer{
         margin-top: 6px;
         font-size: 12px;
-        line-height: 1.3;
-        opacity: 0.7;
-        color: #6b7280;
+        line-height: 1.45;
+        color: var(--fcchat-ink-soft);
+        opacity: 0.82;
+      }
+
+      .fcchat-quick-actions{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow-x: auto;
+        padding-top: 8px;
+        scrollbar-width: thin;
+      }
+      .fcchat-quick-actions::-webkit-scrollbar{
+        height: 4px;
+      }
+      .fcchat-chip{
+        height: 30px;
+        border-radius: 9999px;
+        border: 1px solid var(--fcchat-chip-border);
+        background: var(--fcchat-chip-bg);
+        color: var(--fcchat-accent-strong);
+        font-size: 12px;
+        padding: 0 12px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: transform 160ms cubic-bezier(.2,.8,.2,1), box-shadow 160ms cubic-bezier(.2,.8,.2,1), background 160ms cubic-bezier(.2,.8,.2,1);
+      }
+      .fcchat-chip:hover{
+        transform: translateY(-1px);
+        background: rgba(45, 84, 140, 0.14);
+        box-shadow: 0 4px 12px rgba(20, 44, 82, 0.15);
+      }
+      .fcchat-chip:active{
+        transform: translateY(0);
       }
 
       .fcchat-body{
@@ -1042,90 +1233,179 @@ export class FcChatPanel {
         display:flex;
         flex-direction: column;
         min-height: 0;
-        background: #ffffff;
+        background:
+          radial-gradient(120% 100% at 100% 0%, rgba(241, 237, 228, 0.75) 0%, transparent 50%),
+          linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(246, 243, 236, 0.78) 100%);
+      }
+      .fcchat-recall-panel{
+        max-height: 156px;
+        overflow: auto;
+        border-bottom: 1px dashed var(--fcchat-border);
+        background: rgba(255, 255, 255, 0.55);
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .fcchat-recall-empty{
+        font-size: 12px;
+        color: var(--fcchat-ink-soft);
+        opacity: 0.9;
+      }
+      .fcchat-recall-card{
+        width: 100%;
+        border: 1px solid var(--fcchat-border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.86);
+        text-align: left;
+        padding: 8px 10px;
+        cursor: pointer;
+        transition: transform 150ms cubic-bezier(.2,.8,.2,1), box-shadow 150ms cubic-bezier(.2,.8,.2,1), border-color 150ms cubic-bezier(.2,.8,.2,1);
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .fcchat-recall-card:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(31, 79, 157, 0.14);
+        border-color: rgba(31, 79, 157, 0.28);
+      }
+      .fcchat-recall-role{
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        color: var(--fcchat-accent-strong);
+        opacity: 0.9;
+      }
+      .fcchat-recall-card.is-user .fcchat-recall-role{
+        color: #2665c3;
+      }
+      .fcchat-recall-card.is-assistant .fcchat-recall-role{
+        color: #8b5a2b;
+      }
+      .fcchat-recall-text{
+        font-size: 13px;
+        color: var(--fcchat-ink);
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
       }
       .fcchat-list{
         flex: 1;
         overflow: auto;
-        padding: 12px;
+        padding: 14px 14px 10px 14px;
         display:flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
         -webkit-overflow-scrolling: touch;
       }
 
-      .fcchat-row{ display:flex; }
+      .fcchat-row{
+        display:flex;
+        animation: fcchat-bubble-in 220ms cubic-bezier(.2,.8,.2,1);
+      }
       .fcchat-row.is-user{ justify-content:flex-end; }
       .fcchat-row.is-assistant{ justify-content:flex-start; }
+      @keyframes fcchat-bubble-in{
+        from{ opacity: 0; transform: translate3d(0, 6px, 0); }
+        to{ opacity: 1; transform: translate3d(0, 0, 0); }
+      }
 
       .fcchat-bubble{
-        max-width: 72%;
-        padding: 8px 10px;
-        border-radius: 12px;
-        font-size: 13px;
-        line-height: 1.45;
+        max-width: 80%;
+        padding: 11px 13px;
+        border-radius: 14px;
+        font-size: 17px;
+        line-height: 1.62;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         word-break: break-word;
+        border: 1px solid transparent;
       }
       .bubble-user{
-        background: #2563eb;
+        background: linear-gradient(145deg, var(--fcchat-accent) 0%, #256cd5 100%);
         color:#fff;
-        border-top-right-radius: 6px;
+        border-top-right-radius: 5px;
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.24);
       }
       .bubble-assistant{
-        background: #eef2f7;
-        color:#111827;
-        border-top-left-radius: 6px;
+        background: linear-gradient(150deg, rgba(255, 255, 255, 0.95) 0%, var(--fcchat-assistant) 100%);
+        color: var(--fcchat-ink);
+        border-top-left-radius: 5px;
+        border-color: var(--fcchat-assistant-border);
       }
 
       .fcchat-status{
-        padding: 6px 12px 0 12px;
+        padding: 6px 14px 0 14px;
         font-size: 12px;
-        color: #6b7280;
+        color: var(--fcchat-ink-soft);
         min-height: 18px;
       }
 
       .fcchat-inputbar{
         display:flex;
         gap: 10px;
-        padding: 10px;
-        border-top: 1px solid rgba(0,0,0,.06);
-        background: #fff;
+        padding: 12px;
+        border-top: 1px solid var(--fcchat-border);
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(6px);
       }
       .fcchat-input{
         flex:1;
-        height: 36px;
-        border-radius: 10px;
-        border: 1px solid rgba(0,0,0,.12);
-        padding: 0 10px;
-        font-size: 13px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--fcchat-border);
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--fcchat-ink);
+        padding: 0 12px;
+        font-size: 16px;
         outline:none;
       }
       .fcchat-input:focus{
-        border-color: rgba(37,99,235,.55);
-        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+        border-color: rgba(31,79,157,.45);
+        box-shadow: 0 0 0 3px rgba(31,79,157,.14);
       }
 
       .fcchat-btn{
-        height: 36px;
+        height: 44px;
         border-radius: 10px;
-        border: 1px solid transparent;
+        border: 1px solid var(--fcchat-border);
         padding: 0 12px;
-        font-size: 13px;
+        font-size: 14px;
         cursor:pointer;
         user-select:none;
+        transition: transform 150ms cubic-bezier(.2,.8,.2,1), box-shadow 150ms cubic-bezier(.2,.8,.2,1), background 150ms cubic-bezier(.2,.8,.2,1);
       }
       .fcchat-btn:disabled{ opacity:.6; cursor:not-allowed; }
-      .fcchat-btn-primary{ background:#2563eb; color:#fff; }
+      .fcchat-btn-primary{
+        min-width: 84px;
+        background: linear-gradient(150deg, var(--fcchat-accent) 0%, var(--fcchat-accent-strong) 100%);
+        color:#fff;
+        border-color: transparent;
+        box-shadow: 0 8px 16px rgba(31, 79, 157, 0.25);
+      }
+      .fcchat-btn-primary:hover{
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(31, 79, 157, 0.3);
+      }
+      .fcchat-btn-primary:active{
+        transform: translateY(0);
+      }
       .fcchat-btn-ghost{
-        background: transparent;
-        color: #111827;
-        border-color: rgba(0,0,0,.10);
+        background: rgba(255,255,255,.66);
+        color: var(--fcchat-ink);
+        border-color: var(--fcchat-border);
         height: 30px;
         padding: 0 10px;
         border-radius: 10px;
         font-size: 12px;
+      }
+      .fcchat-btn-ghost:hover{
+        background: rgba(255,255,255,.9);
+      }
+      .fcchat-btn-ghost.is-active{
+        color: #fff;
+        background: linear-gradient(145deg, var(--fcchat-accent), var(--fcchat-accent-strong));
+        border-color: transparent;
       }
       .fcchat-close{
         width: 30px;
@@ -1134,7 +1414,6 @@ export class FcChatPanel {
         line-height: 28px;
       }
 
-      /* 默认：横屏 / 桌面 / 平板 */
       .fcchat-fab{
         position: fixed;
         z-index: 99999;
@@ -1153,16 +1432,15 @@ export class FcChatPanel {
         cursor: pointer;
         opacity: 1;
         pointer-events: auto;
-        box-shadow: 0 4px 16px rgba(37,99,235,.4);
+        box-shadow: 0 8px 20px rgba(31, 79, 157, 0.36);
         padding: 0;
-        transition: opacity 200ms ease, box-shadow 200ms ease, transform 200ms ease;
-        animation: fcchat-idle 3.8s ease-in-out infinite;
-        touch-action: none; /* 关键：禁止浏览器把手势当滚动/缩放 */
+        transition: opacity 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+        animation: fcchat-idle 3.6s ease-in-out infinite;
+        touch-action: none;
         -webkit-user-select: none;
         user-select: none;
         -webkit-touch-callout: none;
       }
-      /* 竖屏手机：靠近全屏按钮 */
       @media (max-width: 768px) and (orientation: portrait){
         .fcchat-fab{
           top: calc(env(safe-area-inset-top, 0px) + 88px);
@@ -1171,8 +1449,8 @@ export class FcChatPanel {
         }
       }
       .fcchat-fab:hover{
-        box-shadow: 0 6px 20px rgba(37,99,235,.5);
-        transform: scale(1.05);
+        box-shadow: 0 10px 24px rgba(31, 79, 157, 0.42);
+        transform: scale(1.06);
       }
       .fcchat-fab:active{
         transform: scale(0.98);
@@ -1182,104 +1460,36 @@ export class FcChatPanel {
         height: 44px;
         display: block;
       }
-      /* 拖拽状态 */
       .fcchat-fab.fcchat-dragging{
         transition: none !important;
         cursor: grabbing;
-        animation: none !important; /* 拖拽时停止 idle 动画 */
+        animation: none !important;
       }
-      /* 贴边动画状态 */
       .fcchat-fab.fcchat-snapping{
         transition: left 220ms cubic-bezier(0.2, 0.9, 0.2, 1), top 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
       }
-      /* 悬挂隐藏状态：半隐藏在屏幕外 */
       .fcchat-fab.fcchat-docked{
-        transform: translateX(26px);
+        transform: translateX(14px);
+        animation: none;
       }
       .fcchat-fab.fcchat-docked:hover{
-        transform: translateX(26px) scale(1.05);
+        transform: translateX(10px) scale(1.05);
       }
-      /* 打开状态：降低透明度避免遮挡 */
       body.fcchat-open .fcchat-fab{
-        opacity: 0.6;
+        opacity: 0.72;
       }
       @keyframes fcchat-idle{
-        0%, 75%{
+        0%, 68%{
           transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
         }
-        77%{
-          transform: translate3d(0, -12px, 0) scale(1.12) rotate(5deg);
+        74%{
+          transform: translate3d(0, -10px, 0) scale(1.12) rotate(4deg);
         }
-        79%{
-          transform: translate3d(0, -4px, 0) scale(1.06) rotate(-3deg);
-        }
-        81%{
-          transform: translate3d(0, -10px, 0) scale(1.10) rotate(4deg);
-        }
-        83%{
+        80%{
           transform: translate3d(0, -2px, 0) scale(1.04) rotate(-2deg);
         }
-        85%{
-          transform: translate3d(0, -8px, 0) scale(1.08) rotate(3deg);
-        }
         87%, 100%{
           transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
-        }
-      }
-      /* 悬挂隐藏状态下的动画需要叠加 translateX */
-      .fcchat-fab.fcchat-docked{
-        animation: fcchat-idle-docked 3.8s ease-in-out infinite;
-      }
-      @keyframes fcchat-idle-docked{
-        0%, 75%{
-          transform: translateX(26px) translate3d(0, 0, 0) scale(1) rotate(0deg);
-        }
-        77%{
-          transform: translateX(26px) translate3d(0, -12px, 0) scale(1.12) rotate(5deg);
-        }
-        79%{
-          transform: translateX(26px) translate3d(0, -4px, 0) scale(1.06) rotate(-3deg);
-        }
-        81%{
-          transform: translateX(26px) translate3d(0, -10px, 0) scale(1.10) rotate(4deg);
-        }
-        83%{
-          transform: translateX(26px) translate3d(0, -2px, 0) scale(1.04) rotate(-2deg);
-        }
-        85%{
-          transform: translateX(26px) translate3d(0, -8px, 0) scale(1.08) rotate(3deg);
-        }
-        87%, 100%{
-          transform: translateX(26px) translate3d(0, 0, 0) scale(1) rotate(0deg);
-        }
-      }
-      /* 移动端悬挂隐藏动画 */
-      @media (max-width: 768px), (pointer: coarse){
-        .fcchat-fab.fcchat-docked{
-          animation: fcchat-idle-docked-mobile 3.8s ease-in-out infinite;
-        }
-        @keyframes fcchat-idle-docked-mobile{
-          0%, 75%{
-            transform: translateX(20px) translate3d(0, 0, 0) scale(1) rotate(0deg);
-          }
-          77%{
-            transform: translateX(20px) translate3d(0, -12px, 0) scale(1.12) rotate(5deg);
-          }
-          79%{
-            transform: translateX(20px) translate3d(0, -4px, 0) scale(1.06) rotate(-3deg);
-          }
-          81%{
-            transform: translateX(20px) translate3d(0, -10px, 0) scale(1.10) rotate(4deg);
-          }
-          83%{
-            transform: translateX(20px) translate3d(0, -2px, 0) scale(1.04) rotate(-2deg);
-          }
-          85%{
-            transform: translateX(20px) translate3d(0, -8px, 0) scale(1.08) rotate(3deg);
-          }
-          87%, 100%{
-            transform: translateX(20px) translate3d(0, 0, 0) scale(1) rotate(0deg);
-          }
         }
       }
 
@@ -1290,8 +1500,8 @@ export class FcChatPanel {
           bottom: 0 !important;
           top: auto !important;
           width: 100vw !important;
-          height: min(75vh, 680px) !important;
-          border-radius: 16px 16px 0 0 !important;
+          height: min(82vh, 760px) !important;
+          border-radius: 18px 18px 0 0 !important;
           resize: none !important;
           min-width: 0 !important;
           min-height: 0 !important;
@@ -1309,9 +1519,22 @@ export class FcChatPanel {
           width: 40px;
           height: 40px;
         }
-        /* 移动端悬挂隐藏 */
         .fcchat-fab.fcchat-docked{
-          transform: translateX(20px);
+          transform: translateX(10px);
+        }
+        .fcchat-title{
+          font-size: 20px;
+        }
+        .fcchat-bubble{
+          font-size: 15px;
+          line-height: 1.58;
+          max-width: 88%;
+        }
+        .fcchat-input{
+          font-size: 16px;
+        }
+        .fcchat-recall-panel{
+          max-height: 138px;
         }
       }
 
@@ -1339,6 +1562,28 @@ export class FcChatPanel {
       @keyframes fcchat-typing-bounce{
         0%, 80%, 100%{ transform: scale(0.8); opacity: 0.5; }
         40%{ transform: scale(1); opacity: 1; }
+      }
+
+      .fcchat-first-hint{
+        position: fixed;
+        z-index: 99998;
+        transform: translate(-100%, -50%);
+        max-width: 260px;
+        border-radius: 14px;
+        border: 1px solid var(--fcchat-border);
+        background: linear-gradient(140deg, rgba(255,255,255,0.95), rgba(245, 240, 230, 0.95));
+        color: var(--fcchat-ink);
+        padding: 10px 12px;
+        font-size: 13px;
+        line-height: 1.45;
+        box-shadow: 0 10px 24px rgba(20, 30, 50, 0.22);
+        pointer-events: none;
+        opacity: 1;
+        transition: opacity 280ms ease, transform 280ms ease;
+      }
+      .fcchat-first-hint.is-hide{
+        opacity: 0;
+        transform: translate(calc(-100% - 6px), -50%);
       }
     `;
     document.head.appendChild(style);

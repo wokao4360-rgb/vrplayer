@@ -141,6 +141,8 @@ git push origin main
 - [2026-02-20 21:37:52] 三馆学伴事实回忆兜底：当用户追问“我今天干了什么/我刚才说了什么”时，前端必须先从本地会话历史直接回忆回复（`FcChatPanel` 本地分支），不要完全依赖后端 history 解析，避免再次出现“姓名可记住但事实失忆”。
 - [2026-02-20 22:06:55] 三馆学伴记忆策略升级：禁止只做固定关键词问法匹配；回忆分支必须基于“历史消息语义打分（token overlap + 主语命中 + 近因权重）”选取候选句，确保“姥姥干了家务 -> 姥姥干了啥”这类改写问法也能命中同一会话记忆。
 - [2026-03-03 13:25:00] 三馆学伴记忆链路改造：移除 `FcChatPanel` 前端“正则/过滤回忆拦截回复”分支，避免误判生成固定话术；改为请求体同时携带 `context.userMemory` 与 `question` 内嵌的“用户已提供信息”提示，确保后端在“你还记得我今天做了什么吗”这类追问中可基于会话事实作答；`清空` 按钮会同步清空 `userMemory`，防止旧会话串线。
+- [2026-03-03 14:08:54] 三馆学伴“原话复述”修复：`fcChatClient` 对“复述助手内容”请求改为先按问题主题关键词重排 `assistantRecentReplies`（`候选1=最相关`，不再固定最新），并在上送 `context.userMemory` 时剔除“我刚才说了什么/回顾上下文”等元问题噪音，避免把“最近一次回忆回答”误当成待复述原话。
+- [2026-03-03 21:13:34] 三馆学伴会话口径收敛：`fcChatClient` 停止基于“回忆/复述”正则改写用户问题，统一改为“原问直传 + 结构化上下文（`lastUserUtterance/lastAssistantReply/recentTurns`）”；`FcChatPanel` 新增“回顾卡片 + 快捷提问”可视化入口，并在场景加载 3.5s 后增加 `chatRuntime.ensureInit()` 兜底触发，避免首屏未显示学伴头像。
 - [2026-02-20 22:04:20] 新增 Codex 宿主 `tools/codex-host/server.mjs`：用于把 Codex 插件子任务转发到 AIClient Orchestrator。关键边界：Codex 主会话 token 不能外部强制改 Gemini；省 token 方案是“主会话保留 + 子任务外包 Gemini 优先分流”。
 - [2026-02-21 16:59:30] Orchestrator 第一阶段升级已落地：`route/batch` 支持 `execution=concurrent|serial` 与 `concurrency(1-6)`；新增软闸门告警（`codex_light_mode` / `codex_share_high`）与接口 `GET /admin/api/alerts`、`GET /admin/api/routing/policy`；控制台新增“非 Codex 占比/软闸门告警”KPI 与并发/阈值配置项。默认策略：并发批量+软闸门仅告警不阻断。
 - [2026-02-21 17:12:56] 运维调用固定入口：单任务执行必须使用 `POST /admin/api/route/task`（`/admin/api/route` 为 404）；控制台“Cursor Codex 插件请求摘要”已做去噪截断，优先显示真实任务句，避免 IDE 背景上下文淹没关键信息。
@@ -189,6 +191,7 @@ git push origin main
 - [2026-02-27 11:49:20] 外部聊天桥接质量口径补充：`codex-session` 历史会话中顶层 `turn_context/compacted/session_state/task_*` 事件必须归类为 `system`，否则会导致 `kept_by_role.unknown` 虚高并降低跨聊天复盘可读性。当前修复后 `external_chat_bridge.latest.json` 的 `unknown_role_ratio=0`，可作为 start-session 轻量注入的默认质量阈值。
 - [2026-02-27 11:58:45] 上下文证据入口补充：`import-chat` 需固定输出 `parse_stats`（`json_decode_errors/non_object_records/blank_lines/total_skipped`），`ops-health` 固定展示 `bridge_quality`（unknown/dropped/parse_skipped），`pack/session_capsule` 固定输出 `evidence_refs.reports[]`（latest 报告路径）。目标是新会话首轮先证据再结论，减少人工路径回忆成本。
 - [2026-03-02 22:04:30] KTX 过渡稳定策略：当场景已显示 fallback 整图时，跳过低层瓦片（如 z2）仅加载最高层；`TileMeshPano` 关闭 `depthWrite/depthTest` 并按 `z` 固定 `renderOrder`；fallback 只在最高层瓦片全量就绪后清理，避免加载过程中出现错位/撕裂感。
+- [2026-03-03 21:00:00] 网页会话注入链路补充：`codex-host` 已支持 `web_context`（CLI: `--web-context-file/--web-context-source/...`）自动执行 `import-chat -> 标准化 context packet -> host_execute/host_team_execute 注入`；默认 `isolate=true` 时会使用隔离 `sessionId` 且 compaction 默认关闭，避免污染当前窗口上下文。若导入 JSON 带 BOM 会触发 `import-chat` 解析失败，需使用 UTF-8 无 BOM（或先转码）。
 
 ---
 

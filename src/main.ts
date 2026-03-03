@@ -694,6 +694,21 @@ class App {
     };
     let coreUiRequested = false;
     let chatInitRequested = false;
+    let chatInitFallbackTimer: number | null = window.setTimeout(() => {
+      if (chatInitRequested) return;
+      chatInitRequested = true;
+      void this.chatRuntime?.ensureInit();
+      if (__VR_DEBUG__) {
+        console.debug('[showScene] chat init fallback triggered');
+      }
+    }, 3500);
+
+    const clearChatInitFallback = () => {
+      if (chatInitFallbackTimer == null) return;
+      window.clearTimeout(chatInitFallbackTimer);
+      chatInitFallbackTimer = null;
+    };
+
     const ensureCoreSceneUi = () => {
       if (coreUiRequested) return;
       coreUiRequested = true;
@@ -732,6 +747,7 @@ class App {
           status === LoadStatus.DEGRADED)
       ) {
         chatInitRequested = true;
+        clearChatInitFallback();
         void this.chatRuntime?.ensureInit();
       }
       if (
@@ -747,8 +763,10 @@ class App {
       ensureCoreSceneUi();
       if (!chatInitRequested) {
         chatInitRequested = true;
+        clearChatInitFallback();
         void this.chatRuntime?.ensureInit();
       }
+      clearChatInitFallback();
       this.loading.hide();
       // 鍏ㄦ櫙鍔犺浇鎴愬姛鍚庯紝娓呴櫎浠讳綍 UI 閿欒閬僵锛堜絾淇濈暀 config 閿欒锛?
       this.hideUIError();
@@ -757,6 +775,7 @@ class App {
       this.preloadNextScene(museum, scene);
     });
     this.panoViewer.setOnError((error) => {
+      clearChatInitFallback();
       console.error('加载场景失败:', error);
       this.loading.hide();
       this.showError('加载全景图失败，请检查网络连接');

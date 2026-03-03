@@ -8,6 +8,9 @@ export type FcChatContext = {
   sceneTitle?: string;
   url?: string;
   userMemory?: string[];
+  lastUserUtterance?: string;
+  lastAssistantReply?: string;
+  recentTurns?: FcChatHistoryItem[];
 };
 
 export type FcChatHistoryItem = {
@@ -22,6 +25,10 @@ export type FcChatConfig = {
 };
 
 type AnyObj = Record<string, any>;
+const MAX_CONTEXT_TURN_CHARS = 1600;
+const MAX_CONTEXT_LAST_USER_CHARS = 800;
+const MAX_CONTEXT_LAST_ASSISTANT_CHARS = 3200;
+const MAX_CONTEXT_HISTORY_ITEMS = 20;
 
 function safeJsonParse(text: string): any | null {
   try {
@@ -40,6 +47,10 @@ function normalizeEndpoint(endpoint: string): string {
   return endpoint.endsWith("/") ? endpoint : endpoint + "/";
 }
 
+function normalizeComparableText(text: string): string {
+  return (text || "").replace(/\s+/g, "").trim();
+}
+
 function buildPayload(
   question: string,
   ctx?: FcChatContext,
@@ -54,23 +65,61 @@ function buildPayload(
     }))
     .filter((item) => !!item.content);
 
+  const normalizedQuestionForCompare = normalizeComparableText(question);
   const normalizedMemory = Array.isArray(ctx?.userMemory)
     ? ctx.userMemory
         .map((item) => (typeof item === "string" ? item.trim() : ""))
         .filter((item) => !!item)
+        .filter((item) => normalizeComparableText(item) !== normalizedQuestionForCompare)
         .slice(-30)
     : [];
 
-  let promptQuestion = question;
-  if (normalizedMemory.length > 0) {
-    const memoryLines = normalizedMemory
-      .slice(-8)
-      .map((item, index) => `${index + 1}. ${item}`)
-      .join("\n");
-    promptQuestion = `${question}\n\n【用户已提供信息（按时间）】\n${memoryLines}\n\n请优先依据以上用户信息回答；若问题涉及“我刚才/今天说了什么”，请直接基于这些信息作答，不要回答“你不记得”或“你没有记忆功能”。`;
+  const clipText = (text: string, max: number): string => {
+    const trimmed = text.trim();
+    if (trimmed.length <= max) return trimmed;
+    return `${trimmed.slice(0, max)}...`;
+  };
+
+  let previousUserUtterance = "";
+  let skippedCurrentUserQuestion = false;
+  for (let i = normalizedHistory.length - 1; i >= 0; i--) {
+    const item = normalizedHistory[i];
+    if (item.role !== "user" || !item.text) continue;
+    const comparable = normalizeComparableText(item.text);
+    if (!skippedCurrentUserQuestion && comparable === normalizedQuestionForCompare) {
+      skippedCurrentUserQuestion = true;
+      continue;
+    }
+    previousUserUtterance = item.text;
+    break;
   }
 
-  const payload: AnyObj = { question: promptQuestion, rawQuestion: question };
+  let previousAssistantReply = "";
+  for (let i = normalizedHistory.length - 1; i >= 0; i--) {
+    const item = normalizedHistory[i];
+    if (item.role === "assistant" && item.text) {
+      previousAssistantReply = item.text;
+      break;
+    }
+  }
+
+  const recentTurns = normalizedHistory
+    .slice(-8)
+    .map((item) => ({
+      role: item.role,
+      text: clipText(item.text, MAX_CONTEXT_TURN_CHARS),
+      content: clipText(item.text, MAX_CONTEXT_TURN_CHARS),
+    }));
+
+  const contextHistory = normalizedHistory
+    .slice(-MAX_CONTEXT_HISTORY_ITEMS)
+    .map((item) => ({
+      role: item.role,
+      text: clipText(item.text, MAX_CONTEXT_TURN_CHARS),
+      content: clipText(item.text, MAX_CONTEXT_TURN_CHARS),
+    }));
+
+  const payload: AnyObj = { question, rawQuestion: question };
   if (sessionId) {
     payload.sessionId = sessionId;
     payload.conversationId = sessionId;
@@ -78,13 +127,14 @@ function buildPayload(
   if (normalizedHistory.length > 0) {
     payload.history = normalizedHistory;
     payload.messages = normalizedHistory;
-    // 兼容部分后端只识别 text 字段的历史格式
+    // Keep a text-only history shape for backends that only read `text`.
     payload.chatHistory = normalizedHistory.map((item) => ({
       role: item.role,
       text: item.text,
     }));
   }
   if (ctx && typeof ctx === "object") {
+    const contextRecentTurns = Array.isArray(ctx.recentTurns) ? ctx.recentTurns : [];
     payload.context = {
       museumId: ctx.museumId || "",
       museumName: ctx.museumName || "",
@@ -95,6 +145,28 @@ function buildPayload(
       historyLength: normalizedHistory.length,
       userMemory: normalizedMemory,
       userMemoryLength: normalizedMemory.length,
+      lastUserUtterance:
+        (ctx?.lastUserUtterance || previousUserUtterance)
+          ? clipText(ctx?.lastUserUtterance || previousUserUtterance, MAX_CONTEXT_LAST_USER_CHARS)
+          : "",
+      lastAssistantReply:
+        (ctx?.lastAssistantReply || previousAssistantReply)
+          ? clipText(ctx?.lastAssistantReply || previousAssistantReply, MAX_CONTEXT_LAST_ASSISTANT_CHARS)
+          : "",
+      recentTurns:
+        contextRecentTurns.length > 0
+          ? contextRecentTurns.slice(-8).map((item) => ({
+              role: item.role === "assistant" ? "assistant" : "user",
+              text: clipText(typeof item.text === "string" ? item.text : "", MAX_CONTEXT_TURN_CHARS),
+              content: clipText(typeof item.text === "string" ? item.text : "", MAX_CONTEXT_TURN_CHARS),
+            }))
+          : recentTurns,
+      history: contextHistory,
+      messages: contextHistory,
+      chatHistory: contextHistory.map((item) => ({
+        role: item.role,
+        text: item.text,
+      })),
     };
   }
   return payload;
@@ -219,3 +291,4 @@ export class FcChatClient {
     }
   }
 }
+

@@ -210,7 +210,7 @@ function extractAnswerOrError(json: any): { ok: true; answer: string; model?: st
     }
   }
 
-  return { ok: false, msg: "bad response" };
+  return { ok: false, msg: "服务返回异常数据" };
 }
 
 export class FcChatClient {
@@ -261,9 +261,10 @@ export class FcChatClient {
 
       // If server returns non-JSON, treat as error text
       if (!json) {
-        // HTTP status hint
-        const msg = text ? `bad response: ${text}` : `http ${resp.status}`;
-        throw new Error(msg);
+        if (!resp.ok) {
+          throw new Error(`服务暂不可用（HTTP ${resp.status}）`);
+        }
+        throw new Error("服务返回异常数据");
       }
 
       const parsed = extractAnswerOrError(json);
@@ -280,8 +281,11 @@ export class FcChatClient {
       }
 
       // other business errors
-      const detail = parsed.code ? `${parsed.msg} (code=${parsed.code})` : parsed.msg;
-      throw new Error(detail || "request failed");
+      const detailRaw = parsed.code ? `${parsed.msg} (code=${parsed.code})` : parsed.msg;
+      const detail = detailRaw && detailRaw.toLowerCase().includes("bad response")
+        ? "服务返回异常数据"
+        : detailRaw;
+      throw new Error(detail || "请求失败");
     } catch (e: any) {
       // AbortError
       if (e?.name === "AbortError") throw new Error(`timeout (${this.timeoutMs}ms)`);

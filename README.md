@@ -144,6 +144,7 @@ git push origin main
 - [2026-03-03 14:08:54] 三馆学伴“原话复述”修复：`fcChatClient` 对“复述助手内容”请求改为先按问题主题关键词重排 `assistantRecentReplies`（`候选1=最相关`，不再固定最新），并在上送 `context.userMemory` 时剔除“我刚才说了什么/回顾上下文”等元问题噪音，避免把“最近一次回忆回答”误当成待复述原话。
 - [2026-03-03 21:13:34] 三馆学伴会话口径收敛：`fcChatClient` 停止基于“回忆/复述”正则改写用户问题，统一改为“原问直传 + 结构化上下文（`lastUserUtterance/lastAssistantReply/recentTurns`）”；`FcChatPanel` 新增“回顾卡片 + 快捷提问”可视化入口，并在场景加载 3.5s 后增加 `chatRuntime.ensureInit()` 兜底触发，避免首屏未显示学伴头像。
 - [2026-03-03 21:46:15] 三馆学伴记忆完整性修复：`fcChatClient` 的 `context` 需同时携带 `recentTurns/history/messages/chatHistory`（历史项含 `text + content` 双字段）并提高 `lastAssistantReply` 长度上限；仅传短裁剪 `recentTurns` 时，后端会更易误判“没有可复述原话”。
+- [2026-03-04 12:49:05] 三馆学伴 UI 交互约束：快捷提示词行应放在输入框上方（`fcchat-composer`），且 `fcchat-recall-panel` 必须显式声明 `[hidden]{display:none!important}`；否则会出现“回顾面板与主聊天列表上下重复显示”。
 - [2026-02-20 22:04:20] 新增 Codex 宿主 `tools/codex-host/server.mjs`：用于把 Codex 插件子任务转发到 AIClient Orchestrator。关键边界：Codex 主会话 token 不能外部强制改 Gemini；省 token 方案是“主会话保留 + 子任务外包 Gemini 优先分流”。
 - [2026-02-21 16:59:30] Orchestrator 第一阶段升级已落地：`route/batch` 支持 `execution=concurrent|serial` 与 `concurrency(1-6)`；新增软闸门告警（`codex_light_mode` / `codex_share_high`）与接口 `GET /admin/api/alerts`、`GET /admin/api/routing/policy`；控制台新增“非 Codex 占比/软闸门告警”KPI 与并发/阈值配置项。默认策略：并发批量+软闸门仅告警不阻断。
 - [2026-02-21 17:12:56] 运维调用固定入口：单任务执行必须使用 `POST /admin/api/route/task`（`/admin/api/route` 为 404）；控制台“Cursor Codex 插件请求摘要”已做去噪截断，优先显示真实任务句，避免 IDE 背景上下文淹没关键信息。

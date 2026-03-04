@@ -178,8 +178,6 @@ export class FcChatPanel {
       });
       this.quickActions.appendChild(btn);
     });
-    this.header.appendChild(this.quickActions);
-
     this.body = document.createElement("div");
     this.body.className = "fcchat-body";
 
@@ -217,9 +215,14 @@ export class FcChatPanel {
     inputBar.appendChild(this.input);
     inputBar.appendChild(this.sendBtn);
 
+    const composer = document.createElement("div");
+    composer.className = "fcchat-composer";
+    composer.appendChild(this.quickActions);
+    composer.appendChild(inputBar);
+
     this.root.appendChild(this.header);
     this.root.appendChild(this.body);
-    this.root.appendChild(inputBar);
+    this.root.appendChild(composer);
 
     document.body.appendChild(this.root);
 
@@ -883,11 +886,16 @@ export class FcChatPanel {
   private toggleRecallPanel(next?: boolean): void {
     const willOpen = typeof next === "boolean" ? next : !this.recallOpen;
     this.recallOpen = willOpen;
+    this.body.classList.toggle("is-recall-open", willOpen);
     this.recallPanel.hidden = !willOpen;
+    this.list.hidden = willOpen;
+    this.statusLine.hidden = willOpen;
     this.recallBtn.setAttribute("aria-pressed", willOpen ? "true" : "false");
     this.recallBtn.classList.toggle("is-active", willOpen);
     if (willOpen) {
       this.renderRecallPanel();
+    } else {
+      this.scrollToBottom();
     }
   }
 
@@ -1062,6 +1070,10 @@ export class FcChatPanel {
     const q = this.input.value.trim();
     if (!q) return;
 
+    if (this.recallOpen) {
+      this.toggleRecallPanel(false);
+    }
+
     // if currently typing, force flush and stop before next request
     this.stopTyping(true);
 
@@ -1196,12 +1208,21 @@ export class FcChatPanel {
         opacity: 0.82;
       }
 
+      .fcchat-composer{
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 12px 12px;
+        border-top: 1px solid var(--fcchat-border);
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(6px);
+      }
       .fcchat-quick-actions{
         display: flex;
         align-items: center;
         gap: 8px;
         overflow-x: auto;
-        padding-top: 8px;
+        padding: 0;
         scrollbar-width: thin;
       }
       .fcchat-quick-actions::-webkit-scrollbar{
@@ -1237,6 +1258,15 @@ export class FcChatPanel {
           radial-gradient(120% 100% at 100% 0%, rgba(241, 237, 228, 0.75) 0%, transparent 50%),
           linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(246, 243, 236, 0.78) 100%);
       }
+      .fcchat-body.is-recall-open .fcchat-recall-panel{
+        flex: 1;
+        max-height: none;
+        border-bottom: none;
+      }
+      .fcchat-body.is-recall-open .fcchat-list,
+      .fcchat-body.is-recall-open .fcchat-status{
+        display: none;
+      }
       .fcchat-recall-panel{
         max-height: 156px;
         overflow: auto;
@@ -1246,6 +1276,9 @@ export class FcChatPanel {
         display: flex;
         flex-direction: column;
         gap: 8px;
+      }
+      .fcchat-recall-panel[hidden]{
+        display: none !important;
       }
       .fcchat-recall-empty{
         font-size: 12px;
@@ -1344,10 +1377,10 @@ export class FcChatPanel {
       .fcchat-inputbar{
         display:flex;
         gap: 10px;
-        padding: 12px;
-        border-top: 1px solid var(--fcchat-border);
-        background: rgba(255, 255, 255, 0.72);
-        backdrop-filter: blur(6px);
+        padding: 0;
+        border-top: 0;
+        background: transparent;
+        backdrop-filter: none;
       }
       .fcchat-input{
         flex:1;

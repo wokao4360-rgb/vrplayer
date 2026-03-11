@@ -1172,7 +1172,11 @@ class App {
 new App();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    const scopeUrl = new URL('./', window.location.href);
+    const swUrl = new URL('sw.js', scopeUrl);
+    navigator.serviceWorker.register(swUrl.toString(), {
+      scope: scopeUrl.pathname,
+    }).catch(() => {
       // ????????????
     });
   });

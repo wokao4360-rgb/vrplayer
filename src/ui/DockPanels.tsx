@@ -112,7 +112,12 @@ export class DockPanels {
   }
 
   private async ensureMapPanel(sceneId: string): Promise<MapPanelLike | null> {
-    if (!this.museum || !this.scenes || this.scenes.length === 0) {
+    if (
+      !this.museum ||
+      !this.scenes ||
+      this.scenes.length === 0 ||
+      !this.museum.map?.image
+    ) {
       return null;
     }
     if (!this.mapPanel) {
@@ -192,6 +197,14 @@ export class DockPanels {
         `;
         return;
       }
+      if (!this.museum?.map?.image) {
+        this.disposeMapPanel();
+        this.element.innerHTML = `
+          <div class="vr-panel-title">平面图</div>
+          <div class="vr-panel-body">此展馆暂未提供平面图，可使用“结构图”查看场景点位。</div>
+        `;
+        return;
+      }
       const panel = await this.ensureMapPanel(sid);
       if (!panel || token !== this.renderToken || this.currentTab !== 'map') {
         return;
@@ -265,7 +278,10 @@ export class DockPanels {
     this.currentSceneId = currentSceneId;
 
     if (this.currentTab === 'map') {
-      if (this.mapPanel) {
+      if (!museum.map?.image) {
+        this.disposeMapPanel();
+        void this.render();
+      } else if (this.mapPanel) {
         this.mapPanel.updateMuseum(museum, scenes, currentSceneId);
       } else {
         void this.render();

@@ -147,6 +147,8 @@ export class CommunityPanel {
     this.inputEl = document.createElement('input');
     this.inputEl.className = 'vr-community-input';
     this.inputEl.type = 'text';
+    this.inputEl.id = 'community-comment-input';
+    this.inputEl.name = 'comment';
     this.inputEl.placeholder = '写下你的想法…';
     this.inputEl.maxLength = 120;
     this.inputEl.addEventListener('keydown', (e) => {
@@ -321,5 +323,4 @@ export class CommunityPanel {
     this.element.remove();
   }
 }
-
 

@@ -201,6 +201,8 @@ export class FcChatPanel {
     this.input = document.createElement("input");
     this.input.className = "fcchat-input";
     this.input.type = "text";
+    this.input.id = "fcchat-message-input";
+    this.input.name = "message";
     this.input.placeholder = "输入问题，回车发送";
     this.input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") this.onSend();

@@ -158,10 +158,16 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
   const syncVrBtnState = () => {
     const active = options.panoViewer?.isVrModeEnabled() ?? false;
     vrBtn.classList.toggle('is-on', active);
+    vrBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  };
+
+  const handleVrModeChange = () => {
+    syncVrBtnState();
   };
 
   if (isTouch) {
     syncVrBtnState();
+    window.addEventListener('vr:mode-change', handleVrModeChange);
     vrBtn.addEventListener('click', async () => {
       if (!options.panoViewer) return;
       const viewerContainer = options.panoViewer.getDomElement();
@@ -234,6 +240,7 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
     contentEl: container,
     panelClassName: 'vr-modal-settings',
     onClose: () => {
+      window.removeEventListener('vr:mode-change', handleVrModeChange);
       options.bottomDock?.setMoreOpen(false);
       options.onDockTabClose('settings');
     },

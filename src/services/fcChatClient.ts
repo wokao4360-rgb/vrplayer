@@ -25,6 +25,8 @@ export type FcChatConfig = {
 };
 
 type AnyObj = Record<string, any>;
+type FcChatSuccess = { ok: true; answer: string; model?: string };
+type FcChatFailure = { ok: false; code?: number | string; msg: string; requestId?: string };
 const MAX_CONTEXT_TURN_CHARS = 1600;
 const MAX_CONTEXT_LAST_USER_CHARS = 800;
 const MAX_CONTEXT_LAST_ASSISTANT_CHARS = 3200;
@@ -178,7 +180,8 @@ function buildPayload(
 // B) { code: 0, msg: "ok", data: { answer: "...", model?: "..." } }
 // C) { code: 40101, msg: "unauthorized", data?: null }
 // D) other => error
-function extractAnswerOrError(json: any): { ok: true; answer: string; model?: string } | { ok: false; code?: number; msg: string } {
+// E) cloud function error envelope: { RequestId, Code, Message }
+function extractAnswerOrError(json: any): FcChatSuccess | FcChatFailure {
   // A) direct answer
   if (json && typeof json === "object" && typeof json.answer === "string" && json.answer.trim()) {
     return { ok: true, answer: json.answer.trim(), model: pickString(json.model) || undefined };
@@ -210,7 +213,50 @@ function extractAnswerOrError(json: any): { ok: true; answer: string; model?: st
     }
   }
 
+  if (json && typeof json === "object" && ("Code" in json || "Message" in json || "RequestId" in json)) {
+    const code = pickString(json.Code) || undefined;
+    const msg = pickString(json.Message) || "服务暂不可用";
+    const requestId = pickString(json.RequestId) || undefined;
+    return { ok: false, code, msg, requestId };
+  }
+
   return { ok: false, msg: "服务返回异常数据" };
+}
+
+function formatServiceFailure(status: number, error: FcChatFailure): string {
+  const rawMsg = (error.msg || "").trim();
+  const rawCode = typeof error.code === "string" ? error.code.trim() : error.code;
+  const normalizedMsg = rawMsg.toLowerCase();
+  const normalizedCode = typeof rawCode === "string" ? rawCode.toLowerCase() : rawCode;
+
+  if (
+    status === 403 &&
+    (normalizedCode === "accessdenied" || normalizedMsg.includes("access denied")) &&
+    normalizedMsg.includes("debt")
+  ) {
+    return "服务暂不可用（云函数账户欠费，HTTP 403）";
+  }
+
+  if (status === 401 || rawCode === 40101 || normalizedMsg === "unauthorized") {
+    return "服务未授权，请检查服务端鉴权配置";
+  }
+
+  if (status >= 400) {
+    const detailParts: string[] = [];
+    if (typeof rawCode === "string" && rawCode) {
+      detailParts.push(rawCode);
+    }
+    if (rawMsg && rawMsg !== "服务返回异常数据") {
+      detailParts.push(rawMsg);
+    }
+    const detail = detailParts.length > 0 ? `：${detailParts.join(" / ")}` : "";
+    return `服务暂不可用（HTTP ${status}${detail}）`;
+  }
+
+  if (rawMsg && rawMsg.toLowerCase().includes("bad response")) {
+    return "服务返回异常数据";
+  }
+  return rawMsg || "请求失败";
 }
 
 export class FcChatClient {
@@ -269,6 +315,10 @@ export class FcChatClient {
 
       const parsed = extractAnswerOrError(json);
 
+      if (!resp.ok && !parsed.ok) {
+        throw new Error(formatServiceFailure(resp.status, parsed));
+      }
+
       if (parsed.ok) {
         return { answer: parsed.answer, model: parsed.model };
       }
@@ -281,10 +331,7 @@ export class FcChatClient {
       }
 
       // other business errors
-      const detailRaw = parsed.code ? `${parsed.msg} (code=${parsed.code})` : parsed.msg;
-      const detail = detailRaw && detailRaw.toLowerCase().includes("bad response")
-        ? "服务返回异常数据"
-        : detailRaw;
+      const detail = formatServiceFailure(resp.status, parsed);
       throw new Error(detail || "请求失败");
     } catch (e: any) {
       // AbortError

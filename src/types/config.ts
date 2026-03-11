@@ -68,6 +68,7 @@ export interface Scene {
 export interface Museum {
   id: string;
   name: string;
+  description?: string;
   cover: string;
   map: MapConfig;
   dollhouse?: DollhouseConfig;

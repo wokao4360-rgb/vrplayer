@@ -10,11 +10,15 @@ export class BrandMark {
   private teamIntroModal: TeamIntroModal;
 
   constructor(options: BrandMarkOptions = {}) {
-    this.teamIntroModal = new TeamIntroModal({});
+    const brandText = options.brandText || options.appName || 'VR 全景导览';
+    this.teamIntroModal = new TeamIntroModal({
+      appName: options.appName,
+      brandText,
+    });
 
     this.element = document.createElement('div');
     this.element.className = 'vr-brandmark';
-    this.element.textContent = options.brandText || '鼎虎清源';
+    this.element.textContent = brandText;
   }
 
   getElement(): HTMLElement {

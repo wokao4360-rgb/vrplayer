@@ -19,13 +19,14 @@ export class AboutModal {
 
     const title = document.createElement('div');
     title.className = 'vr-modal-title';
-    title.textContent = options.brandText || '鼎虎清源';
+    const brandText = options.brandText || options.appName || 'VR 全景导览';
+    title.textContent = brandText;
 
     const desc = document.createElement('div');
     desc.className = 'vr-modal-desc';
     desc.innerHTML = `
       <div>欢迎体验 ${options.appName ? `<b>${options.appName}</b>` : 'VR 全景导览'}。</div>
-      <div style="margin-top:8px;">这是一个多展馆/多场景的 360° 全景演示播放器：支持场景传送（热点/导览）、地图入口（后续扩展位），并对移动端手势做了适配。</div>
+      <div style="margin-top:8px;">本站面向多展馆全景参观，支持场景切换、热点跳转、结构视图与移动端沉浸式浏览。</div>
     `;
 
     const actions = document.createElement('div');

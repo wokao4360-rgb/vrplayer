@@ -1,5 +1,5 @@
 {
-  "appName": "杨虎城纪念馆",
+  "appName": "三馆全景导览",
   "assetCdn": {
     "enabled": true,
     "includePrefixes": [
@@ -20,10 +20,9 @@
     {
       "id": "wangding",
       "name": "杨虎城纪念馆",
-      "description": "杨虎城纪念馆介绍，待补充",
+      "description": "通过全景场景了解杨虎城纪念馆的院落空间、展陈脉络与参观动线。",
       "cover": "/assets/panos/gate-nail.jpg",
       "map": {
-        "image": "1",
         "width": 1000,
         "height": 600
       },
@@ -56,16 +55,6 @@
                 "sceneId": "front_yard",
                 "yaw": 15,
                 "pitch": 0
-              }
-            },
-            {
-              "id": "gate_intro_video",
-              "type": "video",
-              "label": "序言短片",
-              "yaw": -25,
-              "pitch": -3,
-              "target": {
-                "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
               }
             }
           ]
@@ -117,16 +106,6 @@
                 "yaw": 90,
                 "pitch": 0
               }
-            },
-            {
-              "id": "yard_video",
-              "type": "video",
-              "label": "故居故事",
-              "yaw": -20,
-              "pitch": -2,
-              "target": {
-                "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-              }
             }
           ]
         },
@@ -168,16 +147,6 @@
                 "sceneId": "memorial_wall",
                 "yaw": 60,
                 "pitch": 0
-              }
-            },
-            {
-              "id": "hall_story_video",
-              "type": "video",
-              "label": "点击了解王鼎为官事迹",
-              "yaw": 0,
-              "pitch": 8,
-              "target": {
-                "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
               }
             }
           ],

@@ -177,11 +177,14 @@ export function validateConfig(data: any): ValidationError[] {
         fieldName: '地图配置'
       });
     } else {
-      if (!museum.map.image || typeof museum.map.image !== 'string' || museum.map.image.trim() === '') {
+      if (
+        museum.map.image !== undefined &&
+        (typeof museum.map.image !== 'string' || museum.map.image.trim() === '')
+      ) {
         errors.push({ 
           code: ErrorCode.MISSING_MAP_IMAGE,
           path: `${basePath}.map.image`, 
-          message: 'map.image 必须是有效的 URL 字符串',
+          message: 'map.image 如提供，必须是非空字符串',
           museumName,
           fieldName: '地图图片'
         });
@@ -595,7 +598,6 @@ export function validateConfig(data: any): ValidationError[] {
 
   return errors;
 }
-
 
 
 

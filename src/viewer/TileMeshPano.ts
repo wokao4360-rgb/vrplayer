@@ -2,7 +2,7 @@
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
-import { getTileMeshRenderConfig, normalizeTileUv } from './tileMeshPanoRules';
+import { getTileMeshRenderConfig, normalizeTileUv, resolveKtx2TranscoderPath } from './tileMeshPanoRules';
 
 type TileState = 'empty' | 'loading' | 'ready';
 
@@ -430,7 +430,7 @@ export class TileMeshPano {
     }
     const { KTX2Loader } = await import('three/examples/jsm/loaders/KTX2Loader.js');
     const loader = new KTX2Loader() as unknown as Ktx2LoaderLike;
-    loader.setTranscoderPath('/assets/basis/');
+    loader.setTranscoderPath(resolveKtx2TranscoderPath());
     loader.detectSupport(this.renderer);
     loader.setWorkerLimit(2);
     this.ktx2Loader = loader;

@@ -39,3 +39,22 @@ export function getTileMeshRenderConfig(priority: TileMeshPriority): TileMeshRen
     renderOrder: priority === 'high' ? 3 : 2,
   };
 }
+
+export function resolveKtx2TranscoderPath(baseHref?: string | null): string {
+  const candidates = [
+    baseHref,
+    typeof document !== 'undefined' ? document.baseURI : null,
+    typeof window !== 'undefined' ? window.location?.href : null,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      return new URL('assets/basis/', new URL('./', candidate)).toString();
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return '/assets/basis/';
+}

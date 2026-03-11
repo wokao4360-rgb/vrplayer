@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getTileMeshRenderConfig, normalizeTileUv } from '../src/viewer/tileMeshPanoRules.ts';
+import {
+  getTileMeshRenderConfig,
+  normalizeTileUv,
+  resolveKtx2TranscoderPath,
+} from '../src/viewer/tileMeshPanoRules.ts';
 
 test('normalizeTileUv keeps tile edges on exact 0..1 bounds', () => {
   const min = normalizeTileUv(0.25, 0.6, {
@@ -32,4 +36,12 @@ test('getTileMeshRenderConfig keeps tile meshes in depth pipeline', () => {
   assert.equal(high.depthTest, true);
   assert.equal(high.depthWrite, true);
   assert.ok(high.renderOrder > low.renderOrder);
+});
+
+test('resolveKtx2TranscoderPath keeps GitHub Pages app base path', () => {
+  const transcoderPath = resolveKtx2TranscoderPath(
+    'https://wokao4360-rgb.github.io/vrplayer/?museum=wangding&scene=exhibit_hall',
+  );
+
+  assert.equal(transcoderPath, 'https://wokao4360-rgb.github.io/vrplayer/assets/basis/');
 });

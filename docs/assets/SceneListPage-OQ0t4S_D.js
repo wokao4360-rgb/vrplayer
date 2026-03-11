@@ -1,4 +1,4 @@
-var a=Object.defineProperty;var r=(i,e,t)=>e in i?a(i,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):i[e]=t;var s=(i,e,t)=>r(i,typeof e!="symbol"?e+"":e,t);import{n as o}from"./index-4zaQ0zqp.js";let n=!1;class d{constructor(e){s(this,"element");this.museum=e,this.element=document.createElement("div"),this.element.className="scene-list-page",this.render(),this.applyStyles()}render(){this.element.innerHTML=`
+var a=Object.defineProperty;var r=(s,e,t)=>e in s?a(s,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):s[e]=t;var i=(s,e,t)=>r(s,typeof e!="symbol"?e+"":e,t);import{r as o,A as c,n as l}from"./index-B_BeWn1T.js";let n=!1;class p{constructor(e){i(this,"element");this.museum=e,this.element=document.createElement("div"),this.element.className="scene-list-page",this.render(),this.applyStyles()}render(){this.element.innerHTML=`
       <div class="scene-list-container">
         <h1 class="scene-list-title">${this.museum.name} - 场景列表</h1>
         ${this.museum.description?`<p class="scene-list-desc">${this.museum.description}</p>`:""}
@@ -6,7 +6,7 @@ var a=Object.defineProperty;var r=(i,e,t)=>e in i?a(i,e,{enumerable:!0,configura
           ${this.museum.scenes.map(e=>`
             <div class="scene-card" data-scene-id="${e.id}">
               <div class="scene-cover">
-                <img src="${e.thumb}" alt="${e.name}" loading="lazy">
+                <img src="${o(e.thumb,c.THUMB)}" alt="${e.name}" loading="lazy">
                 <div class="scene-overlay">
                   <h2 class="scene-name">${e.name}</h2>
                 </div>
@@ -15,7 +15,7 @@ var a=Object.defineProperty;var r=(i,e,t)=>e in i?a(i,e,{enumerable:!0,configura
           `).join("")}
         </div>
       </div>
-    `,this.element.querySelectorAll(".scene-card").forEach(e=>{e.addEventListener("click",()=>{const t=e.getAttribute("data-scene-id");t&&o(this.museum.id,t)})})}applyStyles(){if(n)return;n=!0;const e=document.createElement("style");e.textContent=`
+    `,this.element.querySelectorAll(".scene-card").forEach(e=>{e.addEventListener("click",()=>{const t=e.getAttribute("data-scene-id");t&&l(this.museum.id,t)})})}applyStyles(){if(n)return;n=!0;const e=document.createElement("style");e.textContent=`
       .scene-list-page {
         width: 100%;
         height: 100%;
@@ -86,4 +86,4 @@ var a=Object.defineProperty;var r=(i,e,t)=>e in i?a(i,e,{enumerable:!0,configura
         font-weight: 600;
         margin: 0;
       }
-    `,document.head.appendChild(e)}getElement(){return this.element}remove(){this.element.remove()}}export{d as SceneListPage};
+    `,document.head.appendChild(e)}getElement(){return this.element}remove(){this.element.remove()}}export{p as SceneListPage};

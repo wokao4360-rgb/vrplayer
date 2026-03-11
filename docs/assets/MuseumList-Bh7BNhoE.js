@@ -1,12 +1,12 @@
-var o=Object.defineProperty;var r=(i,t,s)=>t in i?o(i,t,{enumerable:!0,configurable:!0,writable:!0,value:s}):i[t]=s;var m=(i,t,s)=>r(i,typeof t!="symbol"?t+"":t,s);import{k as l}from"./index-4zaQ0zqp.js";class c{constructor(t,s="VR 全景导览"){m(this,"element");this.museums=t,this.appName=s,this.element=document.createElement("div"),this.element.className="museum-list",this.render(),this.applyStyles()}render(){const t=this.museums.filter(e=>e.scenes.length>0),s=this.museums.filter(e=>e.scenes.length===0),n=t.length>1?`当前开放 ${t.length} 个展馆`:t.length===1?"当前开放 1 个展馆":"展馆内容正在整理中";this.element.innerHTML=`
+var l=Object.defineProperty;var u=(i,s,t)=>s in i?l(i,s,{enumerable:!0,configurable:!0,writable:!0,value:t}):i[s]=t;var m=(i,s,t)=>u(i,typeof s!="symbol"?s+"":s,t);import{r as n,A as r,k as d}from"./index-B_BeWn1T.js";class g{constructor(s,t="VR 全景导览"){m(this,"element");this.museums=s,this.appName=t,this.element=document.createElement("div"),this.element.className="museum-list",this.render(),this.applyStyles()}render(){const s=this.museums.filter(e=>e.scenes.length>0),t=this.museums.filter(e=>e.scenes.length===0),o=s.length>1?`当前开放 ${s.length} 个展馆`:s.length===1?"当前开放 1 个展馆":"展馆内容正在整理中";this.element.innerHTML=`
       <div class="museum-list-container">
         <h1 class="museum-list-title">${this.appName}</h1>
-        <p class="museum-list-subtitle">${n}</p>
+        <p class="museum-list-subtitle">${o}</p>
         <div class="museum-grid">
-          ${t.map(e=>`
+          ${s.map(e=>`
             <div class="museum-card museum-card-active" data-museum-id="${e.id}">
               <div class="museum-cover">
-                <img src="${e.cover}" alt="${e.name}" loading="lazy">
+                <img src="${n(e.cover,r.COVER)}" alt="${e.name}" loading="lazy">
                 <div class="museum-overlay">
                   <h2 class="museum-name">${e.name}</h2>
                   ${e.description?`<p class="museum-desc">${e.description}</p>`:""}
@@ -16,13 +16,13 @@ var o=Object.defineProperty;var r=(i,t,s)=>t in i?o(i,t,{enumerable:!0,configura
             </div>
           `).join("")}
         </div>
-        ${s.length>0?`
+        ${t.length>0?`
           <div class="museum-section-label">内容筹备中</div>
           <div class="museum-grid muted">
-            ${s.map(e=>`
+            ${t.map(e=>`
               <div class="museum-card museum-card-disabled" aria-disabled="true">
                 <div class="museum-cover">
-                  <img src="${e.cover}" alt="${e.name}" loading="lazy">
+                  <img src="${n(e.cover,r.COVER)}" alt="${e.name}" loading="lazy">
                   <div class="museum-overlay">
                     <h2 class="museum-name">${e.name}</h2>
                     <p class="museum-desc">暂未开放线上参观</p>
@@ -33,7 +33,7 @@ var o=Object.defineProperty;var r=(i,t,s)=>t in i?o(i,t,{enumerable:!0,configura
           </div>
         `:""}
       </div>
-    `,this.element.querySelectorAll(".museum-card-active").forEach(e=>{e.addEventListener("click",()=>{const a=e.getAttribute("data-museum-id");a&&l(a)})})}applyStyles(){const t=document.createElement("style");t.textContent=`
+    `,this.element.querySelectorAll(".museum-card-active").forEach(e=>{e.addEventListener("click",()=>{const a=e.getAttribute("data-museum-id");a&&d(a)})})}applyStyles(){const s=document.createElement("style");s.textContent=`
       .museum-list {
         width: 100%;
         height: 100%;
@@ -132,4 +132,4 @@ var o=Object.defineProperty;var r=(i,t,s)=>t in i?o(i,t,{enumerable:!0,configura
         font-size: 14px;
         opacity: 0.9;
       }
-    `,document.head.appendChild(t)}getElement(){return this.element}remove(){this.element.remove()}}export{c as MuseumList};
+    `,document.head.appendChild(s)}getElement(){return this.element}remove(){this.element.remove()}}export{g as MuseumList};

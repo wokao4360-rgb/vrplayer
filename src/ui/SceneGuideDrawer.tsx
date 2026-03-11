@@ -1,5 +1,6 @@
 import type { Scene } from '../types/config';
 import { navigateToScene } from '../utils/router';
+import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
 import { DEFAULT_COVER_DATA_URI } from './placeholders';
 import { toProxiedImageUrl } from '../utils/externalImage';
 import { getIcon } from './icons';
@@ -240,7 +241,8 @@ export class SceneGuideDrawer {
       img.crossOrigin = 'anonymous';
       img.decoding = 'async';
       img.loading = 'lazy';
-      const thumbSrc = scene.thumb ? toProxiedImageUrl(scene.thumb) : DEFAULT_COVER_DATA_URI;
+      const thumbUrl = scene.thumb ? resolveAssetUrl(scene.thumb, AssetType.THUMB) : '';
+      const thumbSrc = thumbUrl ? toProxiedImageUrl(thumbUrl) : DEFAULT_COVER_DATA_URI;
       img.src = thumbSrc;
       img.alt = scene.name || scene.id;
 
@@ -311,7 +313,8 @@ export class SceneGuideDrawer {
     const targetId = this.selectedSceneId || this.hoveredSceneId || this.currentSceneId;
     const scene = this.scenes.find((s) => s.id === targetId) || this.scenes[0];
     if (!scene) return;
-    const thumbSrc = scene.thumb ? toProxiedImageUrl(scene.thumb) : DEFAULT_COVER_DATA_URI;
+    const thumbUrl = scene.thumb ? resolveAssetUrl(scene.thumb, AssetType.THUMB) : '';
+    const thumbSrc = thumbUrl ? toProxiedImageUrl(thumbUrl) : DEFAULT_COVER_DATA_URI;
     this.previewImgEl.src = thumbSrc;
     this.previewImgEl.alt = scene.name || scene.id;
     this.previewTitleEl.textContent = scene.name || scene.id;

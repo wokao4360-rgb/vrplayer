@@ -1,5 +1,6 @@
 import type { Scene } from '../types/config';
 import { navigateToScene } from '../utils/router';
+import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
 
 export class SceneList {
   private element: HTMLElement;
@@ -27,7 +28,7 @@ export class SceneList {
         <div class="scene-list-items">
           ${this.scenes.map(scene => `
             <div class="scene-item" data-scene-id="${scene.id}">
-              <img src="${scene.thumb}" alt="${scene.name}" loading="lazy">
+              <img src="${resolveAssetUrl(scene.thumb, AssetType.THUMB)}" alt="${scene.name}" loading="lazy">
               <div class="scene-item-info">
                 <h3>${scene.name}</h3>
               </div>

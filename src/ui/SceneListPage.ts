@@ -1,5 +1,6 @@
 import type { Museum } from '../types/config';
 import { navigateToScene } from '../utils/router';
+import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
 
 let styleInjected = false;
 
@@ -24,7 +25,7 @@ export class SceneListPage {
               (scene) => `
             <div class="scene-card" data-scene-id="${scene.id}">
               <div class="scene-cover">
-                <img src="${scene.thumb}" alt="${scene.name}" loading="lazy">
+                <img src="${resolveAssetUrl(scene.thumb, AssetType.THUMB)}" alt="${scene.name}" loading="lazy">
                 <div class="scene-overlay">
                   <h2 class="scene-name">${scene.name}</h2>
                 </div>

@@ -104,6 +104,62 @@ function getCurrentOrigin(): string | null {
   return null;
 }
 
+function getCurrentAppBaseUrl(): string | null {
+  const candidates = [
+    typeof document !== 'undefined' ? document.baseURI : null,
+    typeof window !== 'undefined' ? window.location?.href : null,
+    typeof location !== 'undefined' ? location.href : null,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      return new URL('./', candidate).toString();
+    } catch {
+      // ignore invalid base candidates
+    }
+  }
+
+  return null;
+}
+
+function getCurrentAppBasePath(): string {
+  const baseUrl = getCurrentAppBaseUrl();
+  if (!baseUrl) return '';
+  try {
+    const pathname = new URL(baseUrl).pathname || '';
+    return pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  } catch {
+    return '';
+  }
+}
+
+function stripAppBasePath(path: string): string {
+  const basePath = getCurrentAppBasePath();
+  if (!basePath || basePath === '/') {
+    return path;
+  }
+  if (path === basePath) {
+    return '/';
+  }
+  return path.startsWith(`${basePath}/`) ? path.slice(basePath.length) || '/' : path;
+}
+
+function resolveAgainstAppBase(url: string): string {
+  if (!url.startsWith('/') || url.startsWith('//')) {
+    return url;
+  }
+  const baseUrl = getCurrentAppBaseUrl();
+  if (!baseUrl) {
+    return url;
+  }
+  try {
+    return new URL(url.slice(1), baseUrl).toString();
+  } catch {
+    return url;
+  }
+}
+
 function getLocalStorageSafe(): Storage | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -208,10 +264,11 @@ function tryRewriteAbsoluteUrl(
     if (!origin || parsed.origin !== origin) {
       return null;
     }
-    if (!canRewritePath(parsed.pathname, config)) {
+    const cdnPath = stripAppBasePath(parsed.pathname);
+    if (!canRewritePath(cdnPath, config)) {
       return null;
     }
-    return toCdnUrl(`${parsed.pathname}${parsed.search}${parsed.hash}`, baseUrl);
+    return toCdnUrl(`${cdnPath}${parsed.search}${parsed.hash}`, baseUrl);
   } catch {
     return null;
   }
@@ -405,15 +462,20 @@ export function resolveAssetUrl(url: string | undefined, _type: AssetType): stri
   }
 
   const trimmedUrl = url.trim();
+  if (/^(?:data|blob):/i.test(trimmedUrl) || trimmedUrl.startsWith('//')) {
+    return trimmedUrl;
+  }
+
+  const originResolvedUrl = resolveAgainstAppBase(trimmedUrl);
   const config = runtimeConfig;
   if (!config || !config.enabled) {
-    return trimmedUrl;
+    return originResolvedUrl;
   }
 
   const activeBaseUrl = selectedBaseUrl;
   if (!activeBaseUrl) {
     startProbeIfNeeded();
-    return trimmedUrl;
+    return originResolvedUrl;
   }
 
   const rewrittenAbsolute = tryRewriteAbsoluteUrl(trimmedUrl, config, activeBaseUrl);
@@ -421,19 +483,16 @@ export function resolveAssetUrl(url: string | undefined, _type: AssetType): stri
     return rewrittenAbsolute;
   }
 
-  if (trimmedUrl.startsWith('//')) {
-    return trimmedUrl;
-  }
-
   const { path } = splitPathAndSuffix(trimmedUrl);
-  if (!path.startsWith('/')) {
-    return trimmedUrl;
+  const cdnPath = stripAppBasePath(path);
+  if (!cdnPath.startsWith('/')) {
+    return originResolvedUrl;
   }
-  if (!canRewritePath(path, config)) {
-    return trimmedUrl;
+  if (!canRewritePath(cdnPath, config)) {
+    return originResolvedUrl;
   }
 
-  return toCdnUrl(trimmedUrl, activeBaseUrl);
+  return toCdnUrl(trimmedUrl === path ? cdnPath : `${cdnPath}${trimmedUrl.slice(path.length)}`, activeBaseUrl);
 }
 
 /**

@@ -1,5 +1,6 @@
 import type { Museum } from '../types/config';
 import { navigateToSceneList } from '../utils/router';
+import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
 
 export class MuseumList {
   private element: HTMLElement;
@@ -34,7 +35,7 @@ export class MuseumList {
               (museum) => `
             <div class="museum-card museum-card-active" data-museum-id="${museum.id}">
               <div class="museum-cover">
-                <img src="${museum.cover}" alt="${museum.name}" loading="lazy">
+                <img src="${resolveAssetUrl(museum.cover, AssetType.COVER)}" alt="${museum.name}" loading="lazy">
                 <div class="museum-overlay">
                   <h2 class="museum-name">${museum.name}</h2>
                   ${museum.description ? `<p class="museum-desc">${museum.description}</p>` : ''}
@@ -56,7 +57,7 @@ export class MuseumList {
                 (museum) => `
               <div class="museum-card museum-card-disabled" aria-disabled="true">
                 <div class="museum-cover">
-                  <img src="${museum.cover}" alt="${museum.name}" loading="lazy">
+                  <img src="${resolveAssetUrl(museum.cover, AssetType.COVER)}" alt="${museum.name}" loading="lazy">
                   <div class="museum-overlay">
                     <h2 class="museum-name">${museum.name}</h2>
                     <p class="museum-desc">暂未开放线上参观</p>

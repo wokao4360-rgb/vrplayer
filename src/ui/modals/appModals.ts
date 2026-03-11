@@ -3,7 +3,6 @@ import type { PanoViewer } from '../../viewer/PanoViewer';
 import { mountModal, type MountedModal } from '../Modal';
 import { showToast } from '../toast';
 import { isMouseDevice, isTouchDevice } from '../../utils/deviceDetect';
-import { getPreferredQuality, setPreferredQuality, type QualityLevel } from '../../utils/qualityPreference';
 import { ZH_CN } from '../../i18n/zh-CN';
 
 type DockCloseTab = 'info' | 'settings';
@@ -79,50 +78,9 @@ export function openInfoModal(options: OpenInfoModalOptions): MountedModal {
 export function openSettingsModal(options: OpenSettingsModalOptions): MountedModal {
   const isTouch = isTouchDevice();
   const isMouse = isMouseDevice();
-  const currentQuality = getPreferredQuality();
 
   const container = document.createElement('div');
   container.className = 'vr-modal-settings-list';
-
-  const qualityLabel = document.createElement('div');
-  qualityLabel.className = 'vr-modal-settings-item-label';
-  qualityLabel.textContent = ZH_CN.modal.qualityLabel;
-
-  const qualityGroup = document.createElement('div');
-  qualityGroup.className = 'vr-modal-settings-quality';
-
-  const highBtn = document.createElement('button');
-  highBtn.className = 'vr-modal-settings-quality-btn';
-  highBtn.textContent = ZH_CN.modal.qualityHigh;
-  highBtn.dataset.level = 'high';
-
-  const lowBtn = document.createElement('button');
-  lowBtn.className = 'vr-modal-settings-quality-btn';
-  lowBtn.textContent = ZH_CN.modal.qualityLow;
-  lowBtn.dataset.level = 'low';
-
-  const applyQualityActive = (level: QualityLevel) => {
-    highBtn.classList.toggle('is-active', level === 'high');
-    lowBtn.classList.toggle('is-active', level === 'low');
-  };
-  applyQualityActive(currentQuality);
-
-  const handleQualityClick = (level: QualityLevel) => {
-    if (!options.currentScene || !options.panoViewer) return;
-    const prev = getPreferredQuality();
-    if (prev === level) return;
-    setPreferredQuality(level);
-    applyQualityActive(level);
-    options.panoViewer.loadScene(options.currentScene, { preserveView: true });
-  };
-  highBtn.addEventListener('click', () => handleQualityClick('high'));
-  lowBtn.addEventListener('click', () => handleQualityClick('low'));
-  qualityGroup.appendChild(highBtn);
-  qualityGroup.appendChild(lowBtn);
-
-  const qualityRow = document.createElement('div');
-  qualityRow.appendChild(qualityLabel);
-  qualityRow.appendChild(qualityGroup);
 
   const resetLabel = document.createElement('div');
   resetLabel.className = 'vr-modal-settings-item-label';
@@ -228,7 +186,6 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
   zoomRow.appendChild(zoomLabel);
   zoomRow.appendChild(zoomGroup);
 
-  container.appendChild(qualityRow);
   container.appendChild(resetRow);
   container.appendChild(zoomRow);
   container.appendChild(vrRow);

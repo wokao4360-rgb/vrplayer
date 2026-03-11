@@ -1,0 +1,1 @@
+function n(t){return Math.min(1,Math.max(0,t))}function a(t,r,e){const i=e.maxU-e.minU||1,m=e.maxV-e.minV||1;return{u:n((t-e.minU)/i),v:n(1-(r-e.minV)/m)}}function h(t){return{depthTest:!0,depthWrite:!0,renderOrder:t==="high"?3:2}}export{h as g,a as n};

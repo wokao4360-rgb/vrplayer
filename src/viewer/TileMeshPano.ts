@@ -2,6 +2,7 @@
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
+import { getTileMeshRenderConfig, normalizeTileUv } from './tileMeshPanoRules';
 
 type TileState = 'empty' | 'loading' | 'ready';
 
@@ -489,18 +490,15 @@ export class TileMeshPano {
     const level = this.manifest.levels.find((l) => l.z === info.z);
     if (!level) return;
     const geom = this.buildTileGeometry(level, info.col, info.row);
+    const renderConfig = getTileMeshRenderConfig(info.priority);
     const mat = new MeshBasicMaterial({
       map: info.texture,
-      transparent: true,
-      opacity: 1,
-      // 分层替换期间禁止深度竞争，避免“先错位后恢复”的撕裂观感。
-      depthWrite: false,
-      depthTest: false,
+      depthWrite: renderConfig.depthWrite,
+      depthTest: renderConfig.depthTest,
     });
     mat.toneMapped = false;
     const mesh = new Mesh(geom, mat);
-    // 深度关闭后用 z 层级保证稳定覆盖顺序：高层永远在低层之上。
-    mesh.renderOrder = 10 + info.z;
+    mesh.renderOrder = renderConfig.renderOrder;
     mesh.frustumCulled = false;
     info.mesh = mesh;
     this.group.add(mesh);
@@ -590,17 +588,16 @@ export class TileMeshPano {
     }
     const du = maxU - minU || 1;
     const dv = maxV - minV || 1;
-    const tileSize = Math.max(1, this.manifest?.tileSize ?? 1024);
-    const uvInsetU = 0.5 / tileSize;
-    const uvInsetV = 0.5 / tileSize;
     for (let i = 0; i < uvAttr.count; i += 1) {
       const u = uvAttr.getX(i);
       const v = uvAttr.getY(i);
-      const uuRaw = (u - minU) / du;
-      const vvRaw = (v - minV) / dv;
-      const uu = MathUtils.clamp(uvInsetU + uuRaw * (1 - uvInsetU * 2), 0, 1);
-      const vv = MathUtils.clamp(uvInsetV + vvRaw * (1 - uvInsetV * 2), 0, 1);
-      uvAttr.setXY(i, uu, 1 - vv);
+      const uv = normalizeTileUv(u, v, {
+        minU,
+        maxU: minU + du,
+        minV,
+        maxV: minV + dv,
+      });
+      uvAttr.setXY(i, uv.u, uv.v);
     }
     uvAttr.needsUpdate = true;
     return geom;

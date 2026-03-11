@@ -36,8 +36,6 @@ export class CompassDisk {
     this.root = document.createElement('div');
     this.root.className = 'vr-compass';
     this.root.setAttribute('data-ui', 'CompassDisk');
-    // 临时 outline 用于调试
-    this.root.style.outline = '2px solid #ff00ff';
 
     // 圆盘容器
     this.disk = document.createElement('div');
@@ -312,7 +310,6 @@ export class CompassDisk {
 export function createCompassDisk(options?: CompassDiskOptions): CompassDisk {
   return new CompassDisk(options);
 }
-
 
 
 

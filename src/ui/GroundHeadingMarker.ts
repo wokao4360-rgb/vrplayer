@@ -29,8 +29,6 @@ export class GroundHeadingMarker {
     this.root = document.createElement('div');
     this.root.className = 'vr-groundheading';
     this.root.setAttribute('data-ui', 'GroundHeadingMarker');
-    // 临时 outline 用于调试
-    this.root.style.outline = '2px solid #00ffff';
 
     // 创建内部容器（用于旋转）
     this.inner = document.createElement('div');

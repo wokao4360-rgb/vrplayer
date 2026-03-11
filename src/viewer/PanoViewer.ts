@@ -3,7 +3,6 @@ import type { TextureFilter, ToneMapping } from 'three';
 import type { Scene, InitialView } from '../types/config';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { LoadStatus } from '../types/loadStatus';
-import { getPreferredQuality } from '../utils/qualityPreference';
 import { getYawPitchFromNDC, screenToNDC } from './picking';
 import { CompassDisk } from '../ui/CompassDisk';
 import { GroundNavDots } from '../ui/GroundNavDots';
@@ -561,37 +560,22 @@ export class PanoViewer {
     const panoLowUrl = resolveAssetUrl(sceneData.panoLow, AssetType.PANO_LOW);
     const panoUrl = resolveAssetUrl(sceneData.pano, AssetType.PANO);
 
-    const quality = getPreferredQuality();
-    
-    // 画质策略：low 仅加载 panoLow；high 按渐进策略加载
-    if (quality === 'low') {
-      if (panoLowUrl) {
-        this.loadSingleTexture(geometry, panoLowUrl, true);
-        return;
-      }
-      if (panoUrl) {
-        this.loadSingleTexture(geometry, panoUrl, false);
-        return;
-      }
-    } else {
-      //
     // 如果只提供 pano，则直接加载（高分辨率）
-      if (!panoLowUrl && panoUrl) {
-        this.loadSingleTexture(geometry, panoUrl, false);
-        return;
-      }
-      
-      // 如果只提供 panoLow，则直接加载（低分辨率）
-      if (panoLowUrl && !panoUrl) {
-        this.loadSingleTexture(geometry, panoLowUrl, true);
-        return;
-      }
-      
-      // 若两者都提供，先加载低清，再切换高清
-      if (panoLowUrl && panoUrl) {
-        this.loadProgressiveTextures(geometry, panoLowUrl, panoUrl);
-        return;
-      }
+    if (!panoLowUrl && panoUrl) {
+      this.loadSingleTexture(geometry, panoUrl, false);
+      return;
+    }
+
+    // 如果只提供 panoLow，则直接加载（低分辨率）
+    if (panoLowUrl && !panoUrl) {
+      this.loadSingleTexture(geometry, panoLowUrl, true);
+      return;
+    }
+
+    // 若两者都提供，固定采用低清首屏 -> 高清接管，不再暴露手动画质切换。
+    if (panoLowUrl && panoUrl) {
+      this.loadProgressiveTextures(geometry, panoLowUrl, panoUrl);
+      return;
     }
     
     // 如果都未提供，抛错

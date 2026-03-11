@@ -84,8 +84,6 @@ export class GroundNavDots {
     this.root = document.createElement('div');
     this.root.className = 'vr-groundnav';
     this.root.setAttribute('data-ui', 'GroundNavDots');
-    // 临时 outline 用于调试
-    this.root.style.outline = '2px solid #00ffff';
 
     // 创建圆点容器
     this.container = document.createElement('div');
@@ -910,7 +908,6 @@ export class GroundNavDots {
 export function createGroundNavDots(options: GroundNavDotsOptions): GroundNavDots {
   return new GroundNavDots(options);
 }
-
 
 
 

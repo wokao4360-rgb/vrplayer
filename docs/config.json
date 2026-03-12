@@ -20,48 +20,111 @@
     {
       "id": "wangding",
       "name": "杨虎城纪念馆",
-      "description": "通过全景场景了解杨虎城纪念馆的院落空间、展陈脉络与参观动线。",
-      "cover": "/assets/panos/gate-nail.jpg",
+      "description": "当前已接入 3 个实拍点位，西屋2与南门待补采。",
+      "cover": "/assets/panos/xiwu2-nail.jpg",
       "map": {
         "width": 1000,
-        "height": 600
+        "height": 650,
+        "nodes": [
+          {
+            "id": "west_room_2",
+            "x": 180,
+            "y": 120,
+            "label": "西屋2（暂无素材）",
+            "kind": "scene",
+            "status": "disabled"
+          },
+          {
+            "id": "junction_top",
+            "x": 530,
+            "y": 150,
+            "label": "上部连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "east_room_2",
+            "x": 780,
+            "y": 140,
+            "label": "东屋2",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "memorial_wall"
+          },
+          {
+            "id": "west_room_1",
+            "x": 330,
+            "y": 430,
+            "label": "西屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "front_yard"
+          },
+          {
+            "id": "junction_middle",
+            "x": 530,
+            "y": 430,
+            "label": "中部连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "east_room_1",
+            "x": 780,
+            "y": 430,
+            "label": "东屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "exhibit_hall"
+          },
+          {
+            "id": "south_gate",
+            "x": 530,
+            "y": 590,
+            "label": "南门（暂无素材）",
+            "kind": "scene",
+            "status": "disabled"
+          }
+        ],
+        "paths": [
+          {
+            "id": "top_row",
+            "points": [
+              "west_room_2",
+              "junction_top",
+              "east_room_2"
+            ]
+          },
+          {
+            "id": "east_spine",
+            "points": [
+              "east_room_2",
+              "junction_top",
+              "junction_middle",
+              "east_room_1"
+            ]
+          },
+          {
+            "id": "middle_row",
+            "points": [
+              "west_room_1",
+              "junction_middle",
+              "east_room_1"
+            ]
+          },
+          {
+            "id": "south_stub",
+            "points": [
+              "junction_middle",
+              "south_gate"
+            ]
+          }
+        ]
       },
       "scenes": [
         {
-          "id": "gate",
-          "name": "正门与序厅1",
-          "panoLow": "/assets/panos/gate-low.jpg",
-          "pano": "/assets/panos/gate.jpg",
-          "thumb": "/assets/panos/gate-nail.jpg",
-          "initialView": {
-            "yaw": 27,
-            "pitch": 27,
-            "fov": 75
-          },
-          "northYaw": -27,
-          "mapPoint": {
-            "x": 180,
-            "y": 320
-          },
-          "hotspots": [
-            {
-              "id": "gate_to_yard",
-              "type": "scene",
-              "label": "步入西屋2",
-              "yaw": 20,
-              "pitch": -4,
-              "target": {
-                "museumId": "wangding",
-                "sceneId": "front_yard",
-                "yaw": 15,
-                "pitch": 0
-              }
-            }
-          ]
-        },
-        {
           "id": "front_yard",
-          "name": "西屋2",
+          "name": "西屋1",
           "panoLow": "/assets/panos/xiwu2-low.jpg",
           "pano": "/assets/panos/xiwu2.jpg",
           "thumb": "/assets/panos/xiwu2-nail.jpg",
@@ -77,27 +140,14 @@
           },
           "northYaw": -27,
           "mapPoint": {
-            "x": 420,
-            "y": 310
+            "x": 330,
+            "y": 430
           },
           "hotspots": [
             {
-              "id": "yard_to_gate",
+              "id": "west_room_1_to_east_room_1",
               "type": "scene",
-              "label": "返回正门1",
-              "yaw": -160,
-              "pitch": 0,
-              "target": {
-                "museumId": "wangding",
-                "sceneId": "gate",
-                "yaw": -10,
-                "pitch": 0
-              }
-            },
-            {
-              "id": "yard_to_hall",
-              "type": "scene",
-              "label": "进入东屋3",
+              "label": "前往东屋1",
               "yaw": 35,
               "pitch": -5,
               "target": {
@@ -111,7 +161,7 @@
         },
         {
           "id": "exhibit_hall",
-          "name": "东屋3",
+          "name": "东屋1",
           "thumb": "/assets/panos/dongwu3-nail.jpg",
           "initialView": {
             "yaw": 90,
@@ -119,14 +169,14 @@
             "fov": 75
           },
           "mapPoint": {
-            "x": 620,
-            "y": 260
+            "x": 780,
+            "y": 430
           },
           "hotspots": [
             {
-              "id": "hall_to_yard",
+              "id": "east_room_1_to_west_room_1",
               "type": "scene",
-              "label": "回到西屋2",
+              "label": "回到西屋1",
               "yaw": -150,
               "pitch": 0,
               "target": {
@@ -137,9 +187,9 @@
               }
             },
             {
-              "id": "hall_to_memorial",
+              "id": "east_room_1_to_east_room_2",
               "type": "scene",
-              "label": "前往北屋4",
+              "label": "前往东屋2",
               "yaw": 40,
               "pitch": 0,
               "target": {
@@ -158,7 +208,7 @@
         },
         {
           "id": "memorial_wall",
-          "name": "北屋4",
+          "name": "东屋2",
           "panoLow": "/assets/panos/beiwu4-low.jpg",
           "pano": "/assets/panos/beiwu4.jpg",
           "thumb": "/assets/panos/beiwu4-nail.jpg",
@@ -169,13 +219,13 @@
           },
           "mapPoint": {
             "x": 780,
-            "y": 240
+            "y": 140
           },
           "hotspots": [
             {
-              "id": "memorial_to_hall",
+              "id": "east_room_2_to_east_room_1",
               "type": "scene",
-              "label": "回到展厅",
+              "label": "回到东屋1",
               "yaw": -140,
               "pitch": 0,
               "target": {

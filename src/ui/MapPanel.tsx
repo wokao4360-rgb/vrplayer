@@ -1,4 +1,7 @@
 import type { Museum, Scene } from '../types/config';
+import { hasFloorplanData, resolveFloorplan } from '../floorplan/floorplanAdapter';
+import { renderFloorplanSvg } from '../floorplan/renderFloorplanSvg';
+import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { navigateToScene } from '../utils/router';
 import { emitSceneFocus, onSceneFocus, type SceneFocusEvent } from './sceneLinkBus';
 
@@ -16,8 +19,7 @@ export class MapPanel {
   private currentSceneId: string;
   private onClose?: () => void;
   private mapContainer: HTMLElement;
-  private mapImage: HTMLImageElement;
-  private pointsContainer: HTMLElement;
+  private stateEl: HTMLElement | null = null;
   private unsubscribeFocus: (() => void) | null = null;
 
   constructor(props: MapPanelProps) {
@@ -32,200 +34,162 @@ export class MapPanel {
     this.render();
   }
 
+  private getMuseumSnapshot(): Museum {
+    return {
+      ...this.museum,
+      scenes: this.scenes,
+    };
+  }
+
   private render(): void {
-    // Header
     const header = document.createElement('div');
     header.className = 'vr-map-header';
+
+    const titleWrap = document.createElement('div');
+    titleWrap.className = 'vr-map-title-wrap';
 
     const title = document.createElement('div');
     title.className = 'vr-map-title';
     title.textContent = '平面图';
 
+    this.stateEl = document.createElement('div');
+    this.stateEl.className = 'vr-map-state';
+
+    titleWrap.appendChild(title);
+    titleWrap.appendChild(this.stateEl);
+
     const closeBtn = document.createElement('button');
     closeBtn.className = 'vr-btn vr-map-close';
-    closeBtn.innerHTML = '✕';
+    closeBtn.innerHTML = '×';
     closeBtn.setAttribute('aria-label', '关闭');
     closeBtn.addEventListener('click', () => {
-      if (this.onClose) {
-        this.onClose();
-      }
+      this.onClose?.();
     });
 
-    header.appendChild(title);
+    header.appendChild(titleWrap);
     header.appendChild(closeBtn);
 
-    // Map container
     this.mapContainer = document.createElement('div');
     this.mapContainer.className = 'vr-map-container';
 
-    // Map image
-    this.mapImage = document.createElement('img');
-    this.mapImage.className = 'vr-map-image';
-    this.mapImage.src = this.museum.map.image;
-    this.mapImage.alt = `${this.museum.name} 平面图`;
-    this.mapImage.style.width = '100%';
-    this.mapImage.style.height = 'auto';
-    this.mapImage.style.display = 'block';
-
-    // Points container (absolute positioned overlay)
-    this.pointsContainer = document.createElement('div');
-    this.pointsContainer.className = 'vr-map-points';
-
-    this.mapContainer.appendChild(this.mapImage);
-    this.mapContainer.appendChild(this.pointsContainer);
-
-    // Body
     const body = document.createElement('div');
     body.className = 'vr-map-body';
     body.appendChild(this.mapContainer);
 
-    // Assemble
     this.element.appendChild(header);
     this.element.appendChild(body);
 
-    // Wait for image load to render points
-    this.mapImage.addEventListener('load', () => {
-      this.renderPoints();
-    });
+    this.renderMap();
 
-    // If image already loaded
-    if (this.mapImage.complete) {
-      this.renderPoints();
-    }
-
-    // 监听场景聚焦事件
     this.unsubscribeFocus = onSceneFocus((event) => {
       this.handleSceneFocus(event);
     });
   }
 
   private handleSceneFocus(event: SceneFocusEvent): void {
-    if (event.type === 'focus' && event.source !== 'map') {
-      // 聚焦动画：让当前场景点位执行一次轻微 pulse
-      const point = this.pointsContainer.querySelector(
-        `[data-scene-id="${event.sceneId}"]`
-      ) as HTMLElement | null;
-      
-      if (point) {
-        point.classList.add('vr-map-point--focus-flash');
-        setTimeout(() => {
-          point.classList.remove('vr-map-point--focus-flash');
-        }, 300);
-      }
-    }
-  }
-
-  private renderPoints(): void {
-    // Clear existing points
-    this.pointsContainer.innerHTML = '';
-
-    if (!this.mapImage.complete || !this.mapContainer.offsetWidth) {
-      // Retry after a short delay if image not loaded yet
-      setTimeout(() => this.renderPoints(), 100);
+    if (event.type !== 'focus' || event.source === 'map' || !event.sceneId) {
       return;
     }
 
-    const mapWidth = this.museum.map.width;
-    const mapHeight = this.museum.map.height;
-    const displayWidth = this.mapContainer.offsetWidth;
-    const displayHeight = (displayWidth * mapHeight) / mapWidth;
+    const target = this.mapContainer.querySelector(
+      `[data-scene-id="${event.sceneId}"]`,
+    ) as HTMLElement | null;
 
-    // Set container height to match image aspect ratio
-    this.mapContainer.style.height = `${displayHeight}px`;
+    if (target) {
+      target.classList.add('vr-map-point--focus-flash');
+      window.setTimeout(() => {
+        target.classList.remove('vr-map-point--focus-flash');
+      }, 300);
+    }
+  }
 
-    // Scale factor
-    const scaleX = displayWidth / mapWidth;
-    const scaleY = displayHeight / mapHeight;
+  private updateStateText(): void {
+    if (!this.stateEl) {
+      return;
+    }
 
-    // Render each scene point
-    this.scenes.forEach((scene) => {
-      if (!scene.mapPoint) return;
+    const museum = this.getMuseumSnapshot();
+    if (!hasFloorplanData(museum)) {
+      this.stateEl.textContent = '暂无平面图数据';
+      return;
+    }
 
-      const point = document.createElement('button');
-      point.className = 'vr-btn vr-map-point';
-      point.setAttribute('data-scene-id', scene.id);
-      point.setAttribute('aria-label', scene.name);
+    const floorplan = resolveFloorplan(museum);
+    const readyCount = floorplan.renderNodes.filter((node) => node.interactive).length;
+    const disabledCount = floorplan.renderNodes.filter((node) => !node.interactive).length;
+    this.stateEl.textContent = disabledCount > 0
+      ? `可进入 ${readyCount} 个点位，待补 ${disabledCount} 个点位`
+      : `当前开放 ${readyCount} 个点位`;
+  }
 
-      const isCurrent = scene.id === this.currentSceneId;
-      if (isCurrent) {
-        point.classList.add('vr-map-point--current');
+  private renderMap(): void {
+    const museum = this.getMuseumSnapshot();
+    this.mapContainer.innerHTML = '';
+
+    if (!hasFloorplanData(museum)) {
+      this.mapContainer.classList.add('is-empty');
+      this.mapContainer.innerHTML = '<div class="vr-map-empty">此展馆暂未提供平面图</div>';
+      this.updateStateText();
+      return;
+    }
+
+    this.mapContainer.classList.remove('is-empty');
+
+    const floorplan = resolveFloorplan(museum);
+    this.mapContainer.style.aspectRatio = `${floorplan.width} / ${floorplan.height}`;
+
+    if (floorplan.image) {
+      const imageUrl = resolveAssetUrl(floorplan.image, AssetType.MAP);
+      if (imageUrl) {
+        const image = document.createElement('img');
+        image.className = 'vr-map-image';
+        image.src = imageUrl;
+        image.alt = `${museum.name} 平面图`;
+        this.mapContainer.appendChild(image);
       }
+    }
 
-      // Position (mapPoint coordinates are relative to map image dimensions)
-      const x = scene.mapPoint.x * scaleX;
-      const y = scene.mapPoint.y * scaleY;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'vr-map-svg');
 
-      point.style.left = `${x}px`;
-      point.style.top = `${y}px`;
-
-      // Point marker
-      const marker = document.createElement('div');
-      marker.className = 'vr-map-point-marker';
-      point.appendChild(marker);
-
-      // Tooltip
-      const tooltip = document.createElement('div');
-      tooltip.className = 'vr-map-point-tooltip';
-      tooltip.textContent = scene.name;
-      point.appendChild(tooltip);
-
-      // Hover handlers
-      point.addEventListener('mouseenter', () => {
-        emitSceneFocus({
-          type: 'hover',
-          museumId: this.museum.id,
-          sceneId: scene.id,
-          source: 'map',
-          ts: Date.now(),
-        });
-      });
-
-      point.addEventListener('mouseleave', () => {
-        emitSceneFocus({
-          type: 'hover',
-          museumId: this.museum.id,
-          sceneId: null,
-          source: 'map',
-          ts: Date.now(),
-        });
-      });
-
-      // Click handler
-      point.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // 点击前先 emit focus（虽然 router 也会发，但这里确保立即响应）
+    renderFloorplanSvg(svg, floorplan, {
+      currentSceneId: this.currentSceneId,
+      onSceneClick: (sceneId) => {
         emitSceneFocus({
           type: 'focus',
-          museumId: this.museum.id,
-          sceneId: scene.id,
+          museumId: museum.id,
+          sceneId,
           source: 'map',
           ts: Date.now(),
         });
-        navigateToScene(this.museum.id, scene.id);
-        if (this.onClose) {
-          this.onClose();
-        }
-      });
-
-      this.pointsContainer.appendChild(point);
+        navigateToScene(museum.id, sceneId);
+        this.onClose?.();
+      },
+      onSceneHover: (sceneId) => {
+        emitSceneFocus({
+          type: 'hover',
+          museumId: museum.id,
+          sceneId,
+          source: 'map',
+          ts: Date.now(),
+        });
+      },
     });
+
+    this.mapContainer.appendChild(svg);
+    this.updateStateText();
   }
 
   updateCurrentScene(sceneId: string): void {
     this.currentSceneId = sceneId;
-    // Re-render points to update highlight
-    this.renderPoints();
+    this.renderMap();
   }
 
   updateMuseum(museum: Museum, scenes: Scene[], currentSceneId: string): void {
     this.museum = museum;
     this.scenes = scenes;
     this.currentSceneId = currentSceneId;
-    // Update image source
-    this.mapImage.src = museum.map.image;
-    // Re-render points
-    this.renderPoints();
+    this.renderMap();
   }
 
   getElement(): HTMLElement {
@@ -240,11 +204,3 @@ export class MapPanel {
     this.element.remove();
   }
 }
-
-
-
-
-
-
-
-

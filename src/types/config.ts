@@ -9,10 +9,31 @@ export interface MapPoint {
   y: number;
 }
 
+export type FloorplanNodeKind = 'scene' | 'waypoint';
+
+export type FloorplanNodeStatus = 'ready' | 'disabled';
+
+export interface FloorplanNode {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  kind: FloorplanNodeKind;
+  status: FloorplanNodeStatus;
+  sceneId?: string;
+}
+
+export interface FloorplanPath {
+  id: string;
+  points: string[];
+}
+
 export interface MapConfig {
   image?: string;
   width: number;
   height: number;
+  nodes?: FloorplanNode[];
+  paths?: FloorplanPath[];
 }
 
 export interface DollhouseConfig {

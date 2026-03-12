@@ -1,14 +1,14 @@
 /**
- * StructureView2D - 全屏2D结构图Overlay
- * 支持两种模式：
- * - 平面图模式：显示真实平面图底图 + 点位叠加（如果 museum.map.image 存在）
- * - 结构图模式：显示 SVG graph（节点+边，fallback）
+ * StructureView2D - 全屏 2D 结构图 / 平面图覆盖层
+ * - floorplan 模式：统一读取 museum.map.nodes / museum.map.paths，可选叠加底图
+ * - graph 模式：读取 sceneGraph，展示热点或 floorplan 兜底后的结构关系
  */
 
-import type { Museum, Scene } from '../types/config';
-import type { SceneGraph, SceneGraphNode } from '../graph/sceneGraph';
+import type { Museum } from '../types/config';
+import type { SceneGraph } from '../graph/sceneGraph';
 import { forceLayout2D, shouldUseAutoLayout } from '../graph/autoLayout';
-import { navigateToScene } from '../utils/router';
+import { hasFloorplanData, resolveFloorplan } from '../floorplan/floorplanAdapter';
+import { renderFloorplanSvg } from '../floorplan/renderFloorplanSvg';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 
 type StructureView2DOptions = {
@@ -27,15 +27,15 @@ export class StructureView2D {
   private svg: SVGSVGElement;
   private floorplanImg: HTMLImageElement | null = null;
   private statusEl: HTMLElement | null = null;
-  private toggleBtn: HTMLElement | null = null;
+  private toggleBtn: HTMLButtonElement | null = null;
   private museum: Museum;
   private graph: SceneGraph;
   private currentSceneId: string;
   private onClose?: () => void;
   private onNodeClick?: (museumId: string, sceneId: string) => void;
   private layout: Record<string, { x: number; y: number }> = {};
-  private mode: ViewMode = 'graph'; // 默认结构图模式
-  private hasFloorplan: boolean = false; // 是否有真实平面图
+  private mode: ViewMode = 'graph';
+  private hasFloorplan = false;
 
   constructor(options: StructureView2DOptions) {
     this.museum = options.museum;
@@ -44,10 +44,7 @@ export class StructureView2D {
     this.onClose = options.onClose;
     this.onNodeClick = options.onNodeClick;
 
-    // 检查是否有真实平面图
-    this.hasFloorplan = !!(this.museum.map?.image);
-
-    // 如果有平面图，默认使用平面图模式
+    this.hasFloorplan = hasFloorplanData(this.museum);
     this.mode = this.hasFloorplan ? 'floorplan' : 'graph';
 
     this.element = document.createElement('div');
@@ -58,96 +55,102 @@ export class StructureView2D {
   }
 
   private render(): void {
-    // Header
     const header = document.createElement('div');
     header.className = 'vr-structure2d-header';
 
     const titleWrapper = document.createElement('div');
-    titleWrapper.style.display = 'flex';
-    titleWrapper.style.flexDirection = 'column';
-    titleWrapper.style.gap = '4px';
+    titleWrapper.className = 'vr-structure2d-header-main';
 
     const title = document.createElement('div');
     title.className = 'vr-structure2d-title';
     title.textContent = '结构图';
 
-    // 状态文本（自检UI）
     this.statusEl = document.createElement('div');
     this.statusEl.className = 'vr-structure2d-status';
-    this.updateStatusText();
 
     titleWrapper.appendChild(title);
     titleWrapper.appendChild(this.statusEl);
 
-    // Toggle 按钮（仅在有平面图时显示）
-    if (this.hasFloorplan) {
-      this.toggleBtn = document.createElement('button');
-      this.toggleBtn.className = 'vr-btn vr-structure2d-toggle';
-      this.toggleBtn.textContent = this.mode === 'floorplan' ? '结构图' : '平面图';
-      this.toggleBtn.addEventListener('click', () => {
-        this.mode = this.mode === 'floorplan' ? 'graph' : 'floorplan';
-        this.toggleBtn!.textContent = this.mode === 'floorplan' ? '结构图' : '平面图';
-        this.updateStatusText();
-        this.renderContent();
-      });
-      header.appendChild(this.toggleBtn);
-    }
+    const actions = document.createElement('div');
+    actions.className = 'vr-structure2d-header-actions';
+
+    this.toggleBtn = document.createElement('button');
+    this.toggleBtn.className = 'vr-btn vr-structure2d-toggle';
+    this.toggleBtn.addEventListener('click', () => {
+      if (!this.hasFloorplan) {
+        return;
+      }
+      this.mode = this.mode === 'floorplan' ? 'graph' : 'floorplan';
+      this.syncHeaderState();
+      this.renderContent();
+    });
+    actions.appendChild(this.toggleBtn);
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'vr-btn vr-structure2d-close';
-    closeBtn.innerHTML = '✕';
+    closeBtn.innerHTML = '×';
     closeBtn.setAttribute('aria-label', '关闭');
     closeBtn.addEventListener('click', () => {
       this.close();
     });
+    actions.appendChild(closeBtn);
 
     header.appendChild(titleWrapper);
-    header.appendChild(closeBtn);
+    header.appendChild(actions);
 
-    // Canvas container
     this.canvasContainer = document.createElement('div');
     this.canvasContainer.className = 'vr-structure2d-canvas';
 
-    // SVG（用于结构图模式）
     this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.svg.setAttribute('width', '100%');
     this.svg.setAttribute('height', '100%');
     this.svg.setAttribute('class', 'vr-structure2d-svg');
-
     this.canvasContainer.appendChild(this.svg);
 
-    // 平面图图片（用于平面图模式）
-    if (this.hasFloorplan && this.museum.map?.image) {
-      const imgUrl = resolveAssetUrl(this.museum.map.image, AssetType.MAP);
-      if (imgUrl) {
-        this.floorplanImg = document.createElement('img');
-        this.floorplanImg.className = 'vr-structure2d-floorplan';
-        this.floorplanImg.src = imgUrl;
-        this.floorplanImg.style.display = 'none'; // 默认隐藏
-        this.canvasContainer.appendChild(this.floorplanImg);
-
-        // 图片加载完成后渲染点位
-        this.floorplanImg.onload = () => {
-          if (this.mode === 'floorplan') {
-            this.renderContent();
-          }
-        };
-      }
-    }
-
-    // Assemble
     this.element.appendChild(header);
     this.element.appendChild(this.canvasContainer);
 
-    // 计算布局并渲染
     this.computeLayout();
+    this.syncFloorplanImage();
+    this.syncHeaderState();
     this.renderContent();
   }
 
-  private updateStatusText(): void {
-    if (!this.statusEl) return;
-    const nodeCount = this.graph.nodes.length;
-    this.statusEl.textContent = `mode: ${this.mode}, nodes: ${nodeCount}`;
+  private syncHeaderState(): void {
+    if (this.statusEl) {
+      const nodeCount =
+        this.mode === 'floorplan'
+          ? resolveFloorplan(this.museum).renderNodes.length
+          : this.graph.nodes.length;
+      this.statusEl.textContent = `mode: ${this.mode}, nodes: ${nodeCount}`;
+    }
+
+    if (this.toggleBtn) {
+      this.toggleBtn.style.display = this.hasFloorplan ? '' : 'none';
+      this.toggleBtn.textContent = this.mode === 'floorplan' ? '结构图' : '平面图';
+    }
+  }
+
+  private syncFloorplanImage(): void {
+    if (this.floorplanImg) {
+      this.floorplanImg.remove();
+      this.floorplanImg = null;
+    }
+
+    if (!this.museum.map?.image) {
+      return;
+    }
+
+    const imageUrl = resolveAssetUrl(this.museum.map.image, AssetType.MAP);
+    if (!imageUrl) {
+      return;
+    }
+
+    this.floorplanImg = document.createElement('img');
+    this.floorplanImg.className = 'vr-structure2d-floorplan';
+    this.floorplanImg.src = imageUrl;
+    this.floorplanImg.alt = `${this.museum.name} 平面图`;
+    this.canvasContainer.insertBefore(this.floorplanImg, this.svg);
   }
 
   private renderContent(): void {
@@ -161,131 +164,69 @@ export class StructureView2D {
   private computeLayout(): void {
     const mapWidth = this.museum.map?.width || 1000;
     const mapHeight = this.museum.map?.height || 600;
-
-    // 优先使用 scene.mapPoint（如果存在）
-    // 如果 mapPoint 不足或缺失，fallback 到 autoLayout
     const useAutoLayout = shouldUseAutoLayout(this.graph.nodes);
 
     if (useAutoLayout) {
-      // 使用自动布局
       this.layout = forceLayout2D(this.graph.nodes, this.graph.edges, {
         width: mapWidth,
         height: mapHeight,
         iterations: 300,
         padding: 40,
       });
-    } else {
-      // 使用现有的 mapPoint
-      this.layout = {};
-      for (const node of this.graph.nodes) {
-        if (node.mapPoint) {
-          this.layout[node.id] = {
-            x: node.mapPoint.x,
-            y: node.mapPoint.y,
-          };
-        }
-      }
+      return;
+    }
+
+    this.layout = {};
+    for (const node of this.graph.nodes) {
+      if (!node.mapPoint) continue;
+      this.layout[node.id] = {
+        x: node.mapPoint.x,
+        y: node.mapPoint.y,
+      };
     }
   }
 
   private renderFloorplan(): void {
-    // 隐藏 SVG，显示平面图
-    if (this.svg) {
-      this.svg.style.display = 'none';
-    }
+    const floorplan = resolveFloorplan(this.museum);
+
+    this.svg.style.position = 'absolute';
+    this.svg.style.inset = '0';
+    this.svg.style.display = 'block';
+    this.svg.style.pointerEvents = 'auto';
+
     if (this.floorplanImg) {
       this.floorplanImg.style.display = 'block';
     }
 
-    // 在 SVG 上叠加点位（复用 SVG 绘制能力，但作为 overlay）
-    this.svg.innerHTML = '';
-    this.svg.style.display = 'block';
-    this.svg.style.position = 'absolute';
-    this.svg.style.top = '0';
-    this.svg.style.left = '0';
-    this.svg.style.pointerEvents = 'none';
-
-    const mapWidth = this.museum.map?.width || 1000;
-    const mapHeight = this.museum.map?.height || 600;
-
-    // Set SVG viewBox（匹配平面图尺寸）
-    this.svg.setAttribute('viewBox', `0 0 ${mapWidth} ${mapHeight}`);
-    this.svg.style.pointerEvents = 'auto'; // 节点可点击
-
-    // 渲染节点（不渲染边，只显示点位）
-    const nodesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    nodesGroup.setAttribute('class', 'vr-structure2d-nodes');
-
-    for (const node of this.graph.nodes) {
-      const pos = this.layout[node.id];
-      if (!pos) continue;
-
-      const isCurrent = node.id === this.currentSceneId;
-
-      // Node group
-      const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      nodeGroup.setAttribute('class', `vr-structure2d-node ${isCurrent ? 'is-current' : ''}`);
-      nodeGroup.setAttribute('data-scene-id', node.id);
-      nodeGroup.style.cursor = 'pointer';
-
-      // Circle
-      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      circle.setAttribute('cx', pos.x.toString());
-      circle.setAttribute('cy', pos.y.toString());
-      circle.setAttribute('r', isCurrent ? '12' : '8');
-      circle.setAttribute('class', 'vr-structure2d-node-circle');
-
-      // Label text
-      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      text.setAttribute('x', pos.x.toString());
-      text.setAttribute('y', (pos.y + (isCurrent ? 25 : 20)).toString());
-      text.setAttribute('class', 'vr-structure2d-node-label');
-      text.setAttribute('text-anchor', 'middle');
-      text.textContent = node.name;
-
-      nodeGroup.appendChild(circle);
-      nodeGroup.appendChild(text);
-      nodesGroup.appendChild(nodeGroup);
-
-      // Click handler
-      nodeGroup.addEventListener('click', () => {
-        if (this.onNodeClick) {
-          this.onNodeClick(this.museum.id, node.id);
-        }
-      });
-    }
-
-    this.svg.appendChild(nodesGroup);
+    renderFloorplanSvg(this.svg, floorplan, {
+      currentSceneId: this.currentSceneId,
+      onSceneClick: (sceneId) => {
+        this.onNodeClick?.(this.museum.id, sceneId);
+      },
+    });
   }
 
   private renderGraph(): void {
-    // 隐藏平面图，显示 SVG graph
     if (this.floorplanImg) {
       this.floorplanImg.style.display = 'none';
     }
-    if (this.svg) {
-      this.svg.style.display = 'block';
-      this.svg.style.position = '';
-      this.svg.style.pointerEvents = 'auto';
-    }
 
-    // Clear SVG
+    this.svg.style.position = '';
+    this.svg.style.display = 'block';
+    this.svg.style.pointerEvents = 'auto';
     this.svg.innerHTML = '';
 
     const mapWidth = this.museum.map?.width || 1000;
     const mapHeight = this.museum.map?.height || 600;
-
-    // Set SVG viewBox
     this.svg.setAttribute('viewBox', `0 0 ${mapWidth} ${mapHeight}`);
+    this.svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
-    // Render edges (lines)
     const edgesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     edgesGroup.setAttribute('class', 'vr-structure2d-edges');
 
     for (const edge of this.graph.edges) {
       const fromPos = this.layout[edge.from];
       const toPos = this.layout[edge.to];
-
       if (!fromPos || !toPos) continue;
 
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -294,13 +235,11 @@ export class StructureView2D {
       line.setAttribute('x2', toPos.x.toString());
       line.setAttribute('y2', toPos.y.toString());
       line.setAttribute('class', 'vr-structure2d-edge');
-
       edgesGroup.appendChild(line);
     }
 
     this.svg.appendChild(edgesGroup);
 
-    // Render nodes (circles + labels)
     const nodesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     nodesGroup.setAttribute('class', 'vr-structure2d-nodes');
 
@@ -309,21 +248,17 @@ export class StructureView2D {
       if (!pos) continue;
 
       const isCurrent = node.id === this.currentSceneId;
-
-      // Node group
       const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       nodeGroup.setAttribute('class', `vr-structure2d-node ${isCurrent ? 'is-current' : ''}`);
       nodeGroup.setAttribute('data-scene-id', node.id);
       nodeGroup.style.cursor = 'pointer';
 
-      // Circle
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('cx', pos.x.toString());
       circle.setAttribute('cy', pos.y.toString());
       circle.setAttribute('r', isCurrent ? '12' : '8');
       circle.setAttribute('class', 'vr-structure2d-node-circle');
 
-      // Label text
       const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       text.setAttribute('x', pos.x.toString());
       text.setAttribute('y', (pos.y + (isCurrent ? 25 : 20)).toString());
@@ -333,26 +268,23 @@ export class StructureView2D {
 
       nodeGroup.appendChild(circle);
       nodeGroup.appendChild(text);
-      nodesGroup.appendChild(nodeGroup);
-
-      // Click handler
       nodeGroup.addEventListener('click', () => {
-        if (this.onNodeClick) {
-          this.onNodeClick(this.museum.id, node.id);
-        }
+        this.onNodeClick?.(this.museum.id, node.id);
       });
+
+      nodesGroup.appendChild(nodeGroup);
     }
 
     this.svg.appendChild(nodesGroup);
   }
 
   private bindEvents(): void {
-    // ESC key
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
         this.close();
       }
     };
+
     document.addEventListener('keydown', handleKeyDown);
     this.element.addEventListener('vr:cleanup', () => {
       document.removeEventListener('keydown', handleKeyDown);
@@ -367,12 +299,14 @@ export class StructureView2D {
     this.museum = opts.museum;
     this.graph = opts.graph;
     this.currentSceneId = opts.currentSceneId;
-
-    // 重新检查是否有平面图
-    this.hasFloorplan = !!(this.museum.map?.image);
+    this.hasFloorplan = hasFloorplanData(this.museum);
+    if (!this.hasFloorplan) {
+      this.mode = 'graph';
+    }
 
     this.computeLayout();
-    this.updateStatusText();
+    this.syncFloorplanImage();
+    this.syncHeaderState();
     this.renderContent();
   }
 
@@ -382,9 +316,7 @@ export class StructureView2D {
 
   close(): void {
     this.element.classList.remove('is-visible');
-    if (this.onClose) {
-      this.onClose();
-    }
+    this.onClose?.();
   }
 
   getElement(): HTMLElement {
@@ -395,4 +327,3 @@ export class StructureView2D {
     this.element.remove();
   }
 }
-

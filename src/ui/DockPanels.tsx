@@ -1,4 +1,5 @@
 import type { Museum, Scene } from '../types/config';
+import { hasFloorplanData } from '../floorplan/floorplanAdapter';
 import { interactionBus } from './interactionBus';
 
 export type DockTabKey = 'guide' | 'info' | 'settings' | 'community' | 'map' | 'dollhouse';
@@ -71,6 +72,16 @@ export class DockPanels {
     void this.render();
   }
 
+  private hasMapPanelData(museum?: Museum, scenes?: Scene[]): boolean {
+    if (!museum || !scenes || scenes.length === 0) {
+      return false;
+    }
+    return hasFloorplanData({
+      ...museum,
+      scenes,
+    });
+  }
+
   private disposeCommunityPanel(): void {
     if (this.communityPanel) {
       this.communityPanel.remove();
@@ -112,19 +123,14 @@ export class DockPanels {
   }
 
   private async ensureMapPanel(sceneId: string): Promise<MapPanelLike | null> {
-    if (
-      !this.museum ||
-      !this.scenes ||
-      this.scenes.length === 0 ||
-      !this.museum.map?.image
-    ) {
+    if (!this.hasMapPanelData(this.museum, this.scenes)) {
       return null;
     }
     if (!this.mapPanel) {
       const { MapPanel } = await import('./MapPanel');
       this.mapPanel = new MapPanel({
-        museum: this.museum,
-        scenes: this.scenes,
+        museum: this.museum!,
+        scenes: this.scenes!,
         currentSceneId: sceneId,
         onClose: () => {
           window.dispatchEvent(new CustomEvent('vr:close-panels'));
@@ -193,11 +199,12 @@ export class DockPanels {
       if (!sid) {
         this.element.innerHTML = `
           <div class="vr-panel-title">平面图</div>
-          <div class="vr-panel-body">此展馆暂无平面图</div>
+          <div class="vr-panel-body">此展馆暂未提供平面图</div>
         `;
         return;
       }
-      if (!this.museum?.map?.image) {
+
+      if (!this.hasMapPanelData(this.museum, this.scenes)) {
         this.disposeMapPanel();
         this.element.innerHTML = `
           <div class="vr-panel-title">平面图</div>
@@ -205,6 +212,7 @@ export class DockPanels {
         `;
         return;
       }
+
       const panel = await this.ensureMapPanel(sid);
       if (!panel || token !== this.renderToken || this.currentTab !== 'map') {
         return;
@@ -223,7 +231,7 @@ export class DockPanels {
       if (!sid) {
         this.element.innerHTML = `
           <div class="vr-panel-title">三维图</div>
-          <div class="vr-panel-body">此展馆暂无三维图</div>
+          <div class="vr-panel-body">此展馆暂时无三维图</div>
         `;
         return;
       }
@@ -278,7 +286,7 @@ export class DockPanels {
     this.currentSceneId = currentSceneId;
 
     if (this.currentTab === 'map') {
-      if (!museum.map?.image) {
+      if (!this.hasMapPanelData(museum, scenes)) {
         this.disposeMapPanel();
         void this.render();
       } else if (this.mapPanel) {

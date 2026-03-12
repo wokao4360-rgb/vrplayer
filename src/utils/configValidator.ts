@@ -7,57 +7,64 @@
  * 错误代码枚举
  * 用于标识不同类型的校验错误
  */
-export enum ErrorCode {
+export const ErrorCode = {
   // 根级别错误
-  INVALID_ROOT = 'INVALID_ROOT',
-  MISSING_APP_NAME = 'MISSING_APP_NAME',
-  
+  INVALID_ROOT: 'INVALID_ROOT',
+  MISSING_APP_NAME: 'MISSING_APP_NAME',
+
   // 博物馆级别错误
-  MUSEUMS_NOT_ARRAY = 'MUSEUMS_NOT_ARRAY',
-  MUSEUMS_EMPTY = 'MUSEUMS_EMPTY',
-  MISSING_MUSEUM_ID = 'MISSING_MUSEUM_ID',
-  DUPLICATE_MUSEUM_ID = 'DUPLICATE_MUSEUM_ID',
-  MISSING_MUSEUM_NAME = 'MISSING_MUSEUM_NAME',
-  MISSING_MUSEUM_COVER = 'MISSING_MUSEUM_COVER',
-  MISSING_MUSEUM_MAP = 'MISSING_MUSEUM_MAP',
-  MISSING_MAP_IMAGE = 'MISSING_MAP_IMAGE',
-  INVALID_MAP_WIDTH = 'INVALID_MAP_WIDTH',
-  INVALID_MAP_HEIGHT = 'INVALID_MAP_HEIGHT',
-  
+  MUSEUMS_NOT_ARRAY: 'MUSEUMS_NOT_ARRAY',
+  MUSEUMS_EMPTY: 'MUSEUMS_EMPTY',
+  MISSING_MUSEUM_ID: 'MISSING_MUSEUM_ID',
+  DUPLICATE_MUSEUM_ID: 'DUPLICATE_MUSEUM_ID',
+  MISSING_MUSEUM_NAME: 'MISSING_MUSEUM_NAME',
+  MISSING_MUSEUM_COVER: 'MISSING_MUSEUM_COVER',
+  MISSING_MUSEUM_MAP: 'MISSING_MUSEUM_MAP',
+  MISSING_MAP_IMAGE: 'MISSING_MAP_IMAGE',
+  INVALID_MAP_WIDTH: 'INVALID_MAP_WIDTH',
+  INVALID_MAP_HEIGHT: 'INVALID_MAP_HEIGHT',
+  INVALID_MAP_NODES: 'INVALID_MAP_NODES',
+  DUPLICATE_FLOORPLAN_NODE_ID: 'DUPLICATE_FLOORPLAN_NODE_ID',
+  INVALID_FLOORPLAN_NODE: 'INVALID_FLOORPLAN_NODE',
+  INVALID_MAP_PATHS: 'INVALID_MAP_PATHS',
+  INVALID_FLOORPLAN_PATH: 'INVALID_FLOORPLAN_PATH',
+
   // 场景级别错误
-  SCENES_NOT_ARRAY = 'SCENES_NOT_ARRAY',
-  SCENES_EMPTY = 'SCENES_EMPTY',
-  MISSING_SCENE_ID = 'MISSING_SCENE_ID',
-  DUPLICATE_SCENE_ID = 'DUPLICATE_SCENE_ID',
-  MISSING_SCENE_NAME = 'MISSING_SCENE_NAME',
-  MISSING_PANO = 'MISSING_PANO',
-  INVALID_PANO_URL = 'INVALID_PANO_URL',
-  INVALID_PANOLOW_URL = 'INVALID_PANOLOW_URL',
-  MISSING_THUMB = 'MISSING_THUMB',
-  MISSING_INITIAL_VIEW = 'MISSING_INITIAL_VIEW',
-  INVALID_YAW = 'INVALID_YAW',
-  INVALID_PITCH = 'INVALID_PITCH',
-  INVALID_FOV = 'INVALID_FOV',
-  MISSING_MAP_POINT = 'MISSING_MAP_POINT',
-  INVALID_MAP_POINT_X = 'INVALID_MAP_POINT_X',
-  INVALID_MAP_POINT_Y = 'INVALID_MAP_POINT_Y',
-  
+  SCENES_NOT_ARRAY: 'SCENES_NOT_ARRAY',
+  SCENES_EMPTY: 'SCENES_EMPTY',
+  MISSING_SCENE_ID: 'MISSING_SCENE_ID',
+  DUPLICATE_SCENE_ID: 'DUPLICATE_SCENE_ID',
+  MISSING_SCENE_NAME: 'MISSING_SCENE_NAME',
+  MISSING_PANO: 'MISSING_PANO',
+  INVALID_PANO_URL: 'INVALID_PANO_URL',
+  INVALID_PANOLOW_URL: 'INVALID_PANOLOW_URL',
+  MISSING_THUMB: 'MISSING_THUMB',
+  MISSING_INITIAL_VIEW: 'MISSING_INITIAL_VIEW',
+  INVALID_YAW: 'INVALID_YAW',
+  INVALID_PITCH: 'INVALID_PITCH',
+  INVALID_FOV: 'INVALID_FOV',
+  MISSING_MAP_POINT: 'MISSING_MAP_POINT',
+  INVALID_MAP_POINT_X: 'INVALID_MAP_POINT_X',
+  INVALID_MAP_POINT_Y: 'INVALID_MAP_POINT_Y',
+
   // 热点级别错误
-  HOTSPOTS_NOT_ARRAY = 'HOTSPOTS_NOT_ARRAY',
-  MISSING_HOTSPOT_ID = 'MISSING_HOTSPOT_ID',
-  DUPLICATE_HOTSPOT_ID = 'DUPLICATE_HOTSPOT_ID',
-  INVALID_HOTSPOT_TYPE = 'INVALID_HOTSPOT_TYPE',
-  MISSING_HOTSPOT_LABEL = 'MISSING_HOTSPOT_LABEL',
-  INVALID_HOTSPOT_YAW = 'INVALID_HOTSPOT_YAW',
-  INVALID_HOTSPOT_PITCH = 'INVALID_HOTSPOT_PITCH',
-  MISSING_HOTSPOT_TARGET = 'MISSING_HOTSPOT_TARGET',
-  MISSING_TARGET_MUSEUM_ID = 'MISSING_TARGET_MUSEUM_ID',
-  MISSING_TARGET_SCENE_ID = 'MISSING_TARGET_SCENE_ID',
-  INVALID_TARGET_YAW = 'INVALID_TARGET_YAW',
-  INVALID_TARGET_PITCH = 'INVALID_TARGET_PITCH',
-  INVALID_TARGET_FOV = 'INVALID_TARGET_FOV',
-  MISSING_TARGET_URL = 'MISSING_TARGET_URL',
-}
+  HOTSPOTS_NOT_ARRAY: 'HOTSPOTS_NOT_ARRAY',
+  MISSING_HOTSPOT_ID: 'MISSING_HOTSPOT_ID',
+  DUPLICATE_HOTSPOT_ID: 'DUPLICATE_HOTSPOT_ID',
+  INVALID_HOTSPOT_TYPE: 'INVALID_HOTSPOT_TYPE',
+  MISSING_HOTSPOT_LABEL: 'MISSING_HOTSPOT_LABEL',
+  INVALID_HOTSPOT_YAW: 'INVALID_HOTSPOT_YAW',
+  INVALID_HOTSPOT_PITCH: 'INVALID_HOTSPOT_PITCH',
+  MISSING_HOTSPOT_TARGET: 'MISSING_HOTSPOT_TARGET',
+  MISSING_TARGET_MUSEUM_ID: 'MISSING_TARGET_MUSEUM_ID',
+  MISSING_TARGET_SCENE_ID: 'MISSING_TARGET_SCENE_ID',
+  INVALID_TARGET_YAW: 'INVALID_TARGET_YAW',
+  INVALID_TARGET_PITCH: 'INVALID_TARGET_PITCH',
+  INVALID_TARGET_FOV: 'INVALID_TARGET_FOV',
+  MISSING_TARGET_URL: 'MISSING_TARGET_URL',
+} as const;
+
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export interface ValidationError {
   code: ErrorCode; // 错误代码
@@ -205,6 +212,167 @@ export function validateConfig(data: any): ValidationError[] {
           message: 'map.height 必须是大于 0 的数字',
           museumName,
           fieldName: '地图高度'
+        });
+      }
+
+      if (museum.map.nodes !== undefined && !Array.isArray(museum.map.nodes)) {
+        errors.push({
+          code: ErrorCode.INVALID_MAP_NODES,
+          path: `${basePath}.map.nodes`,
+          message: 'map.nodes 如提供，必须是数组',
+          museumName,
+          fieldName: '平面图节点'
+        });
+      }
+
+      const floorplanNodeIds = new Set<string>();
+      if (Array.isArray(museum.map.nodes)) {
+        museum.map.nodes.forEach((node: any, nodeIndex: number) => {
+          const nodePath = `${basePath}.map.nodes[${nodeIndex}]`;
+
+          if (!node || typeof node !== 'object') {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_NODE,
+              path: nodePath,
+              message: 'floorplan node 必须是对象',
+              museumName,
+              fieldName: '平面图节点'
+            });
+            return;
+          }
+
+          if (!node.id || typeof node.id !== 'string' || node.id.trim() === '') {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_NODE,
+              path: `${nodePath}.id`,
+              message: 'floorplan node.id 必须是非空字符串',
+              museumName,
+              fieldName: '平面图节点 ID'
+            });
+          } else if (floorplanNodeIds.has(node.id)) {
+            errors.push({
+              code: ErrorCode.DUPLICATE_FLOORPLAN_NODE_ID,
+              path: `${nodePath}.id`,
+              message: `floorplan node.id "${node.id}" 重复`,
+              museumName,
+              fieldName: '平面图节点 ID'
+            });
+          } else {
+            floorplanNodeIds.add(node.id);
+          }
+
+          if (typeof node.x !== 'number' || typeof node.y !== 'number') {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_NODE,
+              path: nodePath,
+              message: 'floorplan node.x / node.y 必须是数字',
+              museumName,
+              fieldName: '平面图节点坐标'
+            });
+          }
+
+          if (typeof node.label !== 'string' || node.label.trim() === '') {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_NODE,
+              path: `${nodePath}.label`,
+              message: 'floorplan node.label 必须是非空字符串',
+              museumName,
+              fieldName: '平面图节点名称'
+            });
+          }
+
+          if (node.kind !== 'scene' && node.kind !== 'waypoint') {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_NODE,
+              path: `${nodePath}.kind`,
+              message: 'floorplan node.kind 只能是 scene 或 waypoint',
+              museumName,
+              fieldName: '平面图节点类型'
+            });
+          }
+
+          if (node.status !== 'ready' && node.status !== 'disabled') {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_NODE,
+              path: `${nodePath}.status`,
+              message: 'floorplan node.status 只能是 ready 或 disabled',
+              museumName,
+              fieldName: '平面图节点状态'
+            });
+          }
+
+          if (
+            node.sceneId !== undefined &&
+            (typeof node.sceneId !== 'string' || node.sceneId.trim() === '')
+          ) {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_NODE,
+              path: `${nodePath}.sceneId`,
+              message: 'floorplan node.sceneId 如提供，必须是非空字符串',
+              museumName,
+              fieldName: '平面图节点 sceneId'
+            });
+          }
+        });
+      }
+
+      if (museum.map.paths !== undefined && !Array.isArray(museum.map.paths)) {
+        errors.push({
+          code: ErrorCode.INVALID_MAP_PATHS,
+          path: `${basePath}.map.paths`,
+          message: 'map.paths 如提供，必须是数组',
+          museumName,
+          fieldName: '平面图路径'
+        });
+      }
+
+      if (Array.isArray(museum.map.paths)) {
+        museum.map.paths.forEach((path: any, pathIndex: number) => {
+          const pathPath = `${basePath}.map.paths[${pathIndex}]`;
+
+          if (!path || typeof path !== 'object') {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_PATH,
+              path: pathPath,
+              message: 'floorplan path 必须是对象',
+              museumName,
+              fieldName: '平面图路径'
+            });
+            return;
+          }
+
+          if (!path.id || typeof path.id !== 'string' || path.id.trim() === '') {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_PATH,
+              path: `${pathPath}.id`,
+              message: 'floorplan path.id 必须是非空字符串',
+              museumName,
+              fieldName: '平面图路径 ID'
+            });
+          }
+
+          if (!Array.isArray(path.points) || path.points.length < 2) {
+            errors.push({
+              code: ErrorCode.INVALID_FLOORPLAN_PATH,
+              path: `${pathPath}.points`,
+              message: 'floorplan path.points 必须是至少包含 2 个节点 ID 的数组',
+              museumName,
+              fieldName: '平面图路径点位'
+            });
+            return;
+          }
+
+          path.points.forEach((pointId: any, pointIndex: number) => {
+            if (typeof pointId !== 'string' || pointId.trim() === '' || !floorplanNodeIds.has(pointId)) {
+              errors.push({
+                code: ErrorCode.INVALID_FLOORPLAN_PATH,
+                path: `${pathPath}.points[${pointIndex}]`,
+                message: 'floorplan path.points 里的节点 ID 必须存在于 map.nodes',
+                museumName,
+                fieldName: '平面图路径点位'
+              });
+            }
+          });
         });
       }
     }
@@ -598,8 +766,6 @@ export function validateConfig(data: any): ValidationError[] {
 
   return errors;
 }
-
-
 
 
 

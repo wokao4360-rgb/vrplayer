@@ -193,6 +193,390 @@
           }
         }
       ]
+    },
+    {
+      "id": "linzexu",
+      "name": "林则徐纪念馆",
+      "description": "基于现有 12 个点位素材先行上线的骨架版导览，已接入道路拓扑、占位场景与待补扫描点。",
+      "cover": "/assets/placeholders/linzexu-cover.svg",
+      "map": {
+        "width": 1000,
+        "height": 1400,
+        "nodes": [
+          {
+            "id": "west_room_3",
+            "x": 140,
+            "y": 110,
+            "label": "西屋3",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "west_room_3"
+          },
+          {
+            "id": "cross_north",
+            "x": 400,
+            "y": 110,
+            "label": "北路口",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "cross_north"
+          },
+          {
+            "id": "east_room_3",
+            "x": 760,
+            "y": 110,
+            "label": "东屋3（暂未扫描）",
+            "kind": "scene",
+            "status": "disabled"
+          },
+          {
+            "id": "west_room_2",
+            "x": 220,
+            "y": 340,
+            "label": "西屋2",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "west_room_2"
+          },
+          {
+            "id": "east_room_2",
+            "x": 620,
+            "y": 340,
+            "label": "东屋2",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "east_room_2"
+          },
+          {
+            "id": "junction_middle",
+            "x": 400,
+            "y": 340,
+            "label": "中部连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "north_house_west",
+            "x": 250,
+            "y": 560,
+            "label": "北屋（西半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "north_house_west"
+          },
+          {
+            "id": "north_house_east",
+            "x": 560,
+            "y": 560,
+            "label": "北屋（东半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "north_house_east"
+          },
+          {
+            "id": "junction_north_house",
+            "x": 400,
+            "y": 560,
+            "label": "北屋连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "cross_mid",
+            "x": 400,
+            "y": 760,
+            "label": "中路口",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "cross_mid"
+          },
+          {
+            "id": "lianwu",
+            "x": 400,
+            "y": 940,
+            "label": "连屋",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "lianwu"
+          },
+          {
+            "id": "west_room_1",
+            "x": 170,
+            "y": 1130,
+            "label": "西屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "west_room_1"
+          },
+          {
+            "id": "cross_south",
+            "x": 400,
+            "y": 1130,
+            "label": "南路口",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "cross_south"
+          },
+          {
+            "id": "east_room_1",
+            "x": 750,
+            "y": 1130,
+            "label": "东屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "east_room_1"
+          },
+          {
+            "id": "south_gate",
+            "x": 400,
+            "y": 1290,
+            "label": "南门",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "south_gate"
+          }
+        ],
+        "paths": [
+          {
+            "id": "north_row",
+            "points": ["west_room_3", "cross_north", "east_room_3"]
+          },
+          {
+            "id": "west_room_2_path",
+            "points": ["west_room_2", "junction_middle", "cross_north"]
+          },
+          {
+            "id": "east_room_2_path",
+            "points": ["east_room_2", "junction_middle", "cross_north"]
+          },
+          {
+            "id": "spine_middle",
+            "points": ["cross_north", "junction_middle", "junction_north_house", "cross_mid"]
+          },
+          {
+            "id": "north_house_west_path",
+            "points": ["north_house_west", "junction_north_house", "cross_mid"]
+          },
+          {
+            "id": "north_house_east_path",
+            "points": ["north_house_east", "junction_north_house", "cross_mid"]
+          },
+          {
+            "id": "lower_spine",
+            "points": ["cross_mid", "lianwu", "cross_south", "south_gate"]
+          },
+          {
+            "id": "south_row",
+            "points": ["west_room_1", "cross_south", "east_room_1"]
+          }
+        ]
+      },
+      "scenes": [
+        {
+          "id": "south_gate",
+          "name": "南门",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 400,
+            "y": 1290
+          },
+          "hotspots": []
+        },
+        {
+          "id": "cross_south",
+          "name": "南路口",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 400,
+            "y": 1130
+          },
+          "hotspots": []
+        },
+        {
+          "id": "west_room_1",
+          "name": "西屋1",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 170,
+            "y": 1130
+          },
+          "hotspots": []
+        },
+        {
+          "id": "east_room_1",
+          "name": "东屋1",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 750,
+            "y": 1130
+          },
+          "hotspots": []
+        },
+        {
+          "id": "lianwu",
+          "name": "连屋",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 400,
+            "y": 940
+          },
+          "hotspots": []
+        },
+        {
+          "id": "cross_mid",
+          "name": "中路口",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 400,
+            "y": 760
+          },
+          "hotspots": []
+        },
+        {
+          "id": "north_house_west",
+          "name": "北屋（西半）",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 250,
+            "y": 560
+          },
+          "hotspots": []
+        },
+        {
+          "id": "north_house_east",
+          "name": "北屋（东半）",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 560,
+            "y": 560
+          },
+          "hotspots": []
+        },
+        {
+          "id": "west_room_2",
+          "name": "西屋2",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 220,
+            "y": 340
+          },
+          "hotspots": []
+        },
+        {
+          "id": "east_room_2",
+          "name": "东屋2",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 620,
+            "y": 340
+          },
+          "hotspots": []
+        },
+        {
+          "id": "cross_north",
+          "name": "北路口",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 400,
+            "y": 110
+          },
+          "hotspots": []
+        },
+        {
+          "id": "west_room_3",
+          "name": "西屋3",
+          "panoLow": "/assets/placeholders/pano-black.jpg",
+          "pano": "/assets/placeholders/pano-black.jpg",
+          "thumb": "/assets/placeholders/scene-pending.svg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 140,
+            "y": 110
+          },
+          "hotspots": []
+        }
+      ]
     }
   ]
 }

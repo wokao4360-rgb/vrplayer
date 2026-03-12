@@ -112,6 +112,9 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-12 13:51:58] 导览封面与场景列表当前共用 *-thumb.jpg；为了首屏速度，thumb 预算收口为单张 ≤ 16KB。Windows 下批量压缩 JPG 时不能直接覆盖原文件，必须先写临时文件再 rename，否则会偶发 UNKNOWN open。
+- [2026-03-12 13:51:58] 若要让 KTX 块图继续走 ssetCdn 加速，tile manifest 与目录必须保持在 /assets/panos/tiles/<museum>/<scene>/manifest.json 这一条 /assets/panos/ 前缀下；改到别的目录会绕过 CDN URL 改写。
+
 - [2026-03-12 10:25:00] Windows PowerShell 5.1 下用 Set-Content -Encoding utf8 回写 public/config.json 会自动带 BOM；Node 侧直接 JSON.parse(fs.readFileSync(..., 'utf8')) 会把 BOM 当成非法字符。以后脚本写配置时必须改用 UTF-8 无 BOM（如 [System.IO.File]::WriteAllText(..., (New-Object System.Text.UTF8Encoding(False)))），并在回归测试里直接读一次源配置确认无 BOM。
 
 - [2026-03-12 09:27:47] Windows 下若用脚本重写 `public/config.json` 且内容含中文，不能只看“UTF-8 编码检查通过”；中文被直接写成 `?` 仍会通过编码门禁。改完配置后必须额外抽查关键中文字段（如馆名、场景名）在源码文件与线上 `/config.json` 中都保持原文。

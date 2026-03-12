@@ -4,24 +4,64 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "host:start": "node tools/codex-host/server.mjs",
+    "host:platforms:import": "node D:/AIClient-2-API/scripts/import-platform-providers.mjs",
+    "host:platforms:import:restart": "node D:/AIClient-2-API/scripts/import-platform-providers.mjs --restart-aiclient",
+    "host:platforms:show": "node D:/AIClient-2-API/scripts/show-platform-capabilities.mjs",
+    "host:platforms:show:full": "node D:/AIClient-2-API/scripts/show-platform-capabilities.mjs --full-models",
+    "host:platforms:probe-limits": "node D:/AIClient-2-API/scripts/probe-platform-limits.mjs",
+    "host:selftest": "node tools/codex-host/server.mjs --self-test",
+    "host:execute": "node tools/codex-host/server.mjs --execute",
+    "host:autopilot": "node tools/codex-host/server.mjs --autopilot-preview",
+    "host:router:autotune:preview": "node tools/codex-host/server.mjs --router-autotune-preview --refresh-capabilities=true",
+    "host:router:autotune:apply": "node tools/codex-host/server.mjs --router-autotune-apply --refresh-capabilities=true",
+    "host:model-families": "node tools/codex-host/server.mjs --model-families --refresh=true",
+    "host:provider-scores": "node tools/codex-host/server.mjs --provider-scores --limit=0",
+    "host:v4-progress": "node tools/codex-host/server.mjs --v4-progress",
+    "host:benchmark:mainstream": "node tools/codex-host/server.mjs --benchmark-run-mainstream --samples-per-role=2 --continue-from-last=true --include-unhealthy=false",
+    "host:benchmark:once": "node tools/codex-host/server.mjs --benchmark-run-once --samples-per-role=8 --continue-from-last=true",
+    "host:team": "node tools/codex-host/server.mjs --team-run",
     "check:encoding": "node scripts/check-encoding.mjs",
     "check:text": "node scripts/check-text-quality.mjs",
+    "memory:selftest": "python scripts/memory_selftest_utf8.py",
+    "memory:repair:dryrun": "python scripts/memory_repair_mojibake.py",
+    "memory:repair:apply": "python scripts/memory_repair_mojibake.py --apply --drop-unrecoverable",
     "build": "npm run check:encoding && npm run check:text && vite build",
     "perf:baseline": "node scripts/perf-baseline.mjs",
     "preview": "vite preview --host",
+    "thumbs:optimize": "node scripts/optimize-thumbs.mjs",
     "tiles:demo": "node scripts/generateTiles.mjs demo",
     "tiles": "node scripts/generateTiles.mjs",
     "tiles:yhc-dongwu3": "node scripts/generate-pano-tiles.mjs --in public/assets/panos/demo.jpg --out public/assets/panos/tiles/yhc-dongwu3",
     "ktx2:setup": "node scripts/setup-ktx2.mjs",
-    "tiles:ktx2": "node scripts/convert-tiles-ktx2.mjs"
+    "tiles:ktx2": "node scripts/convert-tiles-ktx2.mjs",
+    "tiles:museum:ktx2": "node scripts/generate-museum-ktx2.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@types/three": "^0.160.0",
     "sharp": "^0.33.5",
     "typescript": "^5.3.3",
-    "vite": "^5.0.8"
-  }
+    "vite": "^5.0.8",
+    "zod": "^4.3.6"
+  },
+  "description": "基于 Three.js 的全景 Web 播放器，支持多馆多场景、热点导航、地图导览与低清到高清渐进加载。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wokao4360-rgb/vrplayer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wokao4360-rgb/vrplayer/issues"
+  },
+  "homepage": "https://github.com/wokao4360-rgb/vrplayer#readme"
 }

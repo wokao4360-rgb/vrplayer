@@ -1,0 +1,28 @@
+{
+  "type": "equirect-tiles",
+  "tileSize": 512,
+  "levels": [
+    {
+      "z": 0,
+      "cols": 1,
+      "rows": 1
+    },
+    {
+      "z": 1,
+      "cols": 2,
+      "rows": 1
+    },
+    {
+      "z": 2,
+      "cols": 4,
+      "rows": 2
+    },
+    {
+      "z": 3,
+      "cols": 8,
+      "rows": 4
+    }
+  ],
+  "tileFormat": "ktx2",
+  "baseUrl": "/assets/panos/tiles/linzexu/west_room_1"
+}

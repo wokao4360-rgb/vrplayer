@@ -1,1499 +1,1481 @@
 {
-    "appName":  "三馆全景导览",
-    "assetCdn":  {
-                     "enabled":  true,
-                     "includePrefixes":  [
-                                             "/assets/panos/"
-                                         ],
-                     "baseUrls":  [
-                                      "https://github.cnxiaobai.com/https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs",
-                                      "https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs"
-                                  ],
-                     "probePath":  "/config.json",
-                     "probeTimeoutMs":  1000
-                 },
-    "fcChat":  {
-                   "endpoint":  "https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/",
-                   "authToken":  ""
-               },
-    "museums":  [
-                    {
-                        "id":  "wangding",
-                        "name":  "王鼎纪念馆",
-                        "description":  "当前已接入 24 个实拍点位，北门与千古流芳暂未扫描。",
-                        "cover":  "/assets/panos/wangding/south-gate-thumb.jpg",
-                        "map":  {
-                                    "width":  1300,
-                                    "height":  2200,
-                                    "nodes":  [
-                                                  {
-                                                      "id":  "north_gate",
-                                                      "x":  650,
-                                                      "y":  70,
-                                                      "label":  "北门（暂无素材）",
-                                                      "kind":  "scene",
-                                                      "status":  "disabled"
-                                                  },
-                                                  {
-                                                      "id":  "era_chapter",
-                                                      "x":  650,
-                                                      "y":  200,
-                                                      "label":  "时代篇",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "era_chapter"
-                                                  },
-                                                  {
-                                                      "id":  "reception_room",
-                                                      "x":  650,
-                                                      "y":  370,
-                                                      "label":  "会客厅",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "reception_room"
-                                                  },
-                                                  {
-                                                      "id":  "political_chapter",
-                                                      "x":  350,
-                                                      "y":  470,
-                                                      "label":  "政绩篇",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "political_chapter"
-                                                  },
-                                                  {
-                                                      "id":  "chapter_junction",
-                                                      "x":  650,
-                                                      "y":  470,
-                                                      "label":  "书房北侧路口",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "resume_chapter",
-                                                      "x":  950,
-                                                      "y":  470,
-                                                      "label":  "履历篇",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "resume_chapter"
-                                                  },
-                                                  {
-                                                      "id":  "study_room",
-                                                      "x":  650,
-                                                      "y":  650,
-                                                      "label":  "书房",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "study_room"
-                                                  },
-                                                  {
-                                                      "id":  "conduct_west",
-                                                      "x":  350,
-                                                      "y":  820,
-                                                      "label":  "品行篇（西半）",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "conduct_west"
-                                                  },
-                                                  {
-                                                      "id":  "point_7",
-                                                      "x":  650,
-                                                      "y":  820,
-                                                      "label":  "红圈点7",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "point_7"
-                                                  },
-                                                  {
-                                                      "id":  "conduct_east",
-                                                      "x":  950,
-                                                      "y":  820,
-                                                      "label":  "品行篇（东半）",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "conduct_east"
-                                                  },
-                                                  {
-                                                      "id":  "research_space_west",
-                                                      "x":  350,
-                                                      "y":  980,
-                                                      "label":  "研学空间（西半）",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "research_space_west"
-                                                  },
-                                                  {
-                                                      "id":  "research_junction",
-                                                      "x":  650,
-                                                      "y":  980,
-                                                      "label":  "研学空间连接点",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "research_space_east",
-                                                      "x":  950,
-                                                      "y":  980,
-                                                      "label":  "研学空间（东半）",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "research_space_east"
-                                                  },
-                                                  {
-                                                      "id":  "clean_history",
-                                                      "x":  350,
-                                                      "y":  1140,
-                                                      "label":  "蒲城廉史",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "clean_history"
-                                                  },
-                                                  {
-                                                      "id":  "point_6",
-                                                      "x":  650,
-                                                      "y":  1140,
-                                                      "label":  "红圈点6",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "point_6"
-                                                  },
-                                                  {
-                                                      "id":  "anti_corruption_interactive",
-                                                      "x":  950,
-                                                      "y":  1140,
-                                                      "label":  "廉政互动",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "anti_corruption_interactive"
-                                                  },
-                                                  {
-                                                      "id":  "qian_gu_liu_fang",
-                                                      "x":  350,
-                                                      "y":  1320,
-                                                      "label":  "千古流芳（暂未扫描）",
-                                                      "kind":  "scene",
-                                                      "status":  "disabled"
-                                                  },
-                                                  {
-                                                      "id":  "point_5",
-                                                      "x":  650,
-                                                      "y":  1320,
-                                                      "label":  "红圈点5",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "point_5"
-                                                  },
-                                                  {
-                                                      "id":  "point_4",
-                                                      "x":  950,
-                                                      "y":  1320,
-                                                      "label":  "红圈点4",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "point_4"
-                                                  },
-                                                  {
-                                                      "id":  "point_3",
-                                                      "x":  950,
-                                                      "y":  1490,
-                                                      "label":  "红圈点3",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "point_3"
-                                                  },
-                                                  {
-                                                      "id":  "point_2",
-                                                      "x":  650,
-                                                      "y":  1490,
-                                                      "label":  "红圈点2",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "point_2"
-                                                  },
-                                                  {
-                                                      "id":  "point_1",
-                                                      "x":  650,
-                                                      "y":  1660,
-                                                      "label":  "红圈点1",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "point_1"
-                                                  },
-                                                  {
-                                                      "id":  "culture_achievement",
-                                                      "x":  350,
-                                                      "y":  1760,
-                                                      "label":  "文化成就",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "culture_achievement"
-                                                  },
-                                                  {
-                                                      "id":  "middle_junction",
-                                                      "x":  650,
-                                                      "y":  1760,
-                                                      "label":  "中部主路口",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "family_instruction",
-                                                      "x":  950,
-                                                      "y":  1760,
-                                                      "label":  "家风家训",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "family_instruction"
-                                                  },
-                                                  {
-                                                      "id":  "lianwu",
-                                                      "x":  650,
-                                                      "y":  1920,
-                                                      "label":  "连屋",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "lianwu"
-                                                  },
-                                                  {
-                                                      "id":  "temper_talent",
-                                                      "x":  350,
-                                                      "y":  2050,
-                                                      "label":  "砥砺成才",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "temper_talent"
-                                                  },
-                                                  {
-                                                      "id":  "lower_junction",
-                                                      "x":  650,
-                                                      "y":  2050,
-                                                      "label":  "南部主路口",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "prominent_achievement",
-                                                      "x":  950,
-                                                      "y":  2050,
-                                                      "label":  "显赫政绩",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "prominent_achievement"
-                                                  },
-                                                  {
-                                                      "id":  "south_gate",
-                                                      "x":  650,
-                                                      "y":  2170,
-                                                      "label":  "南门",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "south_gate"
-                                                  }
-                                              ],
-                                    "paths":  [
-                                                  {
-                                                      "id":  "main_upper_spine",
-                                                      "points":  [
-                                                                     "point_7",
-                                                                     "point_6",
-                                                                     "point_5",
-                                                                     "point_4",
-                                                                     "point_3",
-                                                                     "point_2",
-                                                                     "point_1",
-                                                                     "middle_junction",
-                                                                     "lianwu",
-                                                                     "lower_junction",
-                                                                     "south_gate"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "conduct_row",
-                                                      "points":  [
-                                                                     "conduct_west",
-                                                                     "point_7",
-                                                                     "conduct_east"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "study_branch",
-                                                      "points":  [
-                                                                     "point_7",
-                                                                     "study_room",
-                                                                     "chapter_junction",
-                                                                     "reception_room",
-                                                                     "era_chapter",
-                                                                     "north_gate"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "political_branch",
-                                                      "points":  [
-                                                                     "political_chapter",
-                                                                     "chapter_junction",
-                                                                     "study_room"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "resume_branch",
-                                                      "points":  [
-                                                                     "study_room",
-                                                                     "chapter_junction",
-                                                                     "resume_chapter"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "research_west_branch",
-                                                      "points":  [
-                                                                     "research_space_west",
-                                                                     "research_junction",
-                                                                     "point_6"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "research_east_branch",
-                                                      "points":  [
-                                                                     "point_6",
-                                                                     "research_junction",
-                                                                     "research_space_east"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "clean_history_branch",
-                                                      "points":  [
-                                                                     "clean_history",
-                                                                     "point_6",
-                                                                     "anti_corruption_interactive"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "qian_gu_liu_fang_branch",
-                                                      "points":  [
-                                                                     "qian_gu_liu_fang",
-                                                                     "point_5"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "culture_branch",
-                                                      "points":  [
-                                                                     "culture_achievement",
-                                                                     "middle_junction",
-                                                                     "point_1"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "family_branch",
-                                                      "points":  [
-                                                                     "point_1",
-                                                                     "middle_junction",
-                                                                     "family_instruction"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "lower_west_branch",
-                                                      "points":  [
-                                                                     "temper_talent",
-                                                                     "lower_junction",
-                                                                     "lianwu"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "lower_east_branch",
-                                                      "points":  [
-                                                                     "lianwu",
-                                                                     "lower_junction",
-                                                                     "prominent_achievement"
-                                                                 ]
-                                                  }
-                                              ]
-                                },
-                        "scenes":  [
-                                       {
-                                           "id":  "south_gate",
-                                           "name":  "南门",
-                                           "panoLow":  "/assets/panos/wangding/south-gate-low.jpg",
-                                           "pano":  "/assets/panos/wangding/south-gate.jpg",
-                                           "thumb":  "/assets/panos/wangding/south-gate-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  2170
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "temper_talent",
-                                           "name":  "砥砺成才",
-                                           "panoLow":  "/assets/panos/wangding/temper-talent-low.jpg",
-                                           "pano":  "/assets/panos/wangding/temper-talent.jpg",
-                                           "thumb":  "/assets/panos/wangding/temper-talent-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  350,
-                                                            "y":  2050
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "prominent_achievement",
-                                           "name":  "显赫政绩",
-                                           "panoLow":  "/assets/panos/wangding/prominent-achievement-low.jpg",
-                                           "pano":  "/assets/panos/wangding/prominent-achievement.jpg",
-                                           "thumb":  "/assets/panos/wangding/prominent-achievement-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  950,
-                                                            "y":  2050
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "lianwu",
-                                           "name":  "连屋",
-                                           "panoLow":  "/assets/panos/wangding/lianwu-low.jpg",
-                                           "pano":  "/assets/panos/wangding/lianwu.jpg",
-                                           "thumb":  "/assets/panos/wangding/lianwu-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  1920
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "culture_achievement",
-                                           "name":  "文化成就",
-                                           "panoLow":  "/assets/panos/wangding/culture-achievement-low.jpg",
-                                           "pano":  "/assets/panos/wangding/culture-achievement.jpg",
-                                           "thumb":  "/assets/panos/wangding/culture-achievement-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  350,
-                                                            "y":  1760
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "family_instruction",
-                                           "name":  "家风家训",
-                                           "panoLow":  "/assets/panos/wangding/family-instruction-low.jpg",
-                                           "pano":  "/assets/panos/wangding/family-instruction.jpg",
-                                           "thumb":  "/assets/panos/wangding/family-instruction-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  950,
-                                                            "y":  1760
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "point_1",
-                                           "name":  "红圈点1",
-                                           "panoLow":  "/assets/panos/wangding/point-1-low.jpg",
-                                           "pano":  "/assets/panos/wangding/point-1.jpg",
-                                           "thumb":  "/assets/panos/wangding/point-1-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  1660
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "point_2",
-                                           "name":  "红圈点2",
-                                           "panoLow":  "/assets/panos/wangding/point-2-low.jpg",
-                                           "pano":  "/assets/panos/wangding/point-2.jpg",
-                                           "thumb":  "/assets/panos/wangding/point-2-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  1490
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "point_3",
-                                           "name":  "红圈点3",
-                                           "panoLow":  "/assets/panos/wangding/point-3-low.jpg",
-                                           "pano":  "/assets/panos/wangding/point-3.jpg",
-                                           "thumb":  "/assets/panos/wangding/point-3-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  950,
-                                                            "y":  1490
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "point_4",
-                                           "name":  "红圈点4",
-                                           "panoLow":  "/assets/panos/wangding/point-4-low.jpg",
-                                           "pano":  "/assets/panos/wangding/point-4.jpg",
-                                           "thumb":  "/assets/panos/wangding/point-4-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  950,
-                                                            "y":  1320
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "point_5",
-                                           "name":  "红圈点5",
-                                           "panoLow":  "/assets/panos/wangding/point-5-low.jpg",
-                                           "pano":  "/assets/panos/wangding/point-5.jpg",
-                                           "thumb":  "/assets/panos/wangding/point-5-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  1320
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "clean_history",
-                                           "name":  "蒲城廉史",
-                                           "panoLow":  "/assets/panos/wangding/clean-history-low.jpg",
-                                           "pano":  "/assets/panos/wangding/clean-history.jpg",
-                                           "thumb":  "/assets/panos/wangding/clean-history-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  350,
-                                                            "y":  1140
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "point_6",
-                                           "name":  "红圈点6",
-                                           "panoLow":  "/assets/panos/wangding/point-6-low.jpg",
-                                           "pano":  "/assets/panos/wangding/point-6.jpg",
-                                           "thumb":  "/assets/panos/wangding/point-6-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  1140
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "anti_corruption_interactive",
-                                           "name":  "廉政互动",
-                                           "panoLow":  "/assets/panos/wangding/anti-corruption-interactive-low.jpg",
-                                           "pano":  "/assets/panos/wangding/anti-corruption-interactive.jpg",
-                                           "thumb":  "/assets/panos/wangding/anti-corruption-interactive-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  950,
-                                                            "y":  1140
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "research_space_west",
-                                           "name":  "研学空间（西半）",
-                                           "panoLow":  "/assets/panos/wangding/research-space-west-low.jpg",
-                                           "pano":  "/assets/panos/wangding/research-space-west.jpg",
-                                           "thumb":  "/assets/panos/wangding/research-space-west-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  350,
-                                                            "y":  980
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "research_space_east",
-                                           "name":  "研学空间（东半）",
-                                           "panoLow":  "/assets/panos/wangding/research-space-east-low.jpg",
-                                           "pano":  "/assets/panos/wangding/research-space-east.jpg",
-                                           "thumb":  "/assets/panos/wangding/research-space-east-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  950,
-                                                            "y":  980
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "conduct_west",
-                                           "name":  "品行篇（西半）",
-                                           "panoLow":  "/assets/panos/wangding/conduct-west-low.jpg",
-                                           "pano":  "/assets/panos/wangding/conduct-west.jpg",
-                                           "thumb":  "/assets/panos/wangding/conduct-west-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  350,
-                                                            "y":  820
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "point_7",
-                                           "name":  "红圈点7",
-                                           "panoLow":  "/assets/panos/wangding/point-7-low.jpg",
-                                           "pano":  "/assets/panos/wangding/point-7.jpg",
-                                           "thumb":  "/assets/panos/wangding/point-7-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  820
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "conduct_east",
-                                           "name":  "品行篇（东半）",
-                                           "panoLow":  "/assets/panos/wangding/conduct-east-low.jpg",
-                                           "pano":  "/assets/panos/wangding/conduct-east.jpg",
-                                           "thumb":  "/assets/panos/wangding/conduct-east-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  950,
-                                                            "y":  820
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "study_room",
-                                           "name":  "书房",
-                                           "panoLow":  "/assets/panos/wangding/study-room-low.jpg",
-                                           "pano":  "/assets/panos/wangding/study-room.jpg",
-                                           "thumb":  "/assets/panos/wangding/study-room-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  650
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "political_chapter",
-                                           "name":  "政绩篇",
-                                           "panoLow":  "/assets/panos/wangding/political-chapter-low.jpg",
-                                           "pano":  "/assets/panos/wangding/political-chapter.jpg",
-                                           "thumb":  "/assets/panos/wangding/political-chapter-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  350,
-                                                            "y":  470
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "resume_chapter",
-                                           "name":  "履历篇",
-                                           "panoLow":  "/assets/panos/wangding/resume-chapter-low.jpg",
-                                           "pano":  "/assets/panos/wangding/resume-chapter.jpg",
-                                           "thumb":  "/assets/panos/wangding/resume-chapter-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  950,
-                                                            "y":  470
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "reception_room",
-                                           "name":  "会客厅",
-                                           "panoLow":  "/assets/panos/wangding/reception-room-low.jpg",
-                                           "pano":  "/assets/panos/wangding/reception-room.jpg",
-                                           "thumb":  "/assets/panos/wangding/reception-room-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  370
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "era_chapter",
-                                           "name":  "时代篇",
-                                           "panoLow":  "/assets/panos/wangding/era-chapter-low.jpg",
-                                           "pano":  "/assets/panos/wangding/era-chapter.jpg",
-                                           "thumb":  "/assets/panos/wangding/era-chapter-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  650,
-                                                            "y":  200
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       }
-                                   ]
-                    },
-                    {
-                        "id":  "yanghucheng",
-                        "name":  "杨虎城纪念馆",
-                        "description":  "当前已接入 3 个实拍点位，西屋2与南门暂无素材。",
-                        "cover":  "/assets/panos/yanghucheng/east-room-1-thumb.jpg",
-                        "map":  {
-                                    "width":  1000,
-                                    "height":  700,
-                                    "nodes":  [
-                                                  {
-                                                      "id":  "west_room_2",
-                                                      "x":  180,
-                                                      "y":  120,
-                                                      "label":  "西屋2（暂无素材）",
-                                                      "kind":  "scene",
-                                                      "status":  "disabled"
-                                                  },
-                                                  {
-                                                      "id":  "junction_top",
-                                                      "x":  520,
-                                                      "y":  140,
-                                                      "label":  "北侧连接点",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "east_room_2",
-                                                      "x":  760,
-                                                      "y":  140,
-                                                      "label":  "东屋2",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "east_room_2"
-                                                  },
-                                                  {
-                                                      "id":  "west_room_1",
-                                                      "x":  300,
-                                                      "y":  450,
-                                                      "label":  "西屋1",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "west_room_1"
-                                                  },
-                                                  {
-                                                      "id":  "junction_middle",
-                                                      "x":  520,
-                                                      "y":  450,
-                                                      "label":  "中部连接点",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "east_room_1",
-                                                      "x":  760,
-                                                      "y":  450,
-                                                      "label":  "东屋1",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "east_room_1"
-                                                  },
-                                                  {
-                                                      "id":  "south_gate",
-                                                      "x":  520,
-                                                      "y":  620,
-                                                      "label":  "南门（暂无素材）",
-                                                      "kind":  "scene",
-                                                      "status":  "disabled"
-                                                  }
-                                              ],
-                                    "paths":  [
-                                                  {
-                                                      "id":  "top_row",
-                                                      "points":  [
-                                                                     "west_room_2",
-                                                                     "junction_top",
-                                                                     "east_room_2"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "east_spine",
-                                                      "points":  [
-                                                                     "east_room_2",
-                                                                     "junction_top",
-                                                                     "junction_middle",
-                                                                     "east_room_1"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "middle_row",
-                                                      "points":  [
-                                                                     "west_room_1",
-                                                                     "junction_middle",
-                                                                     "east_room_1"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "south_stub",
-                                                      "points":  [
-                                                                     "junction_middle",
-                                                                     "south_gate"
-                                                                 ]
-                                                  }
-                                              ]
-                                },
-                        "scenes":  [
-                                       {
-                                           "id":  "west_room_1",
-                                           "name":  "西屋1",
-                                           "panoLow":  "/assets/panos/yanghucheng/west-room-1-low.jpg",
-                                           "pano":  "/assets/panos/yanghucheng/west-room-1.jpg",
-                                           "thumb":  "/assets/panos/yanghucheng/west-room-1-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  300,
-                                                            "y":  450
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "east_room_1",
-                                           "name":  "东屋1",
-                                           "panoLow":  "/assets/panos/yanghucheng/east-room-1-low.jpg",
-                                           "pano":  "/assets/panos/yanghucheng/east-room-1.jpg",
-                                           "thumb":  "/assets/panos/yanghucheng/east-room-1-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  760,
-                                                            "y":  450
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "east_room_2",
-                                           "name":  "东屋2",
-                                           "panoLow":  "/assets/panos/yanghucheng/east-room-2-low.jpg",
-                                           "pano":  "/assets/panos/yanghucheng/east-room-2.jpg",
-                                           "thumb":  "/assets/panos/yanghucheng/east-room-2-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  760,
-                                                            "y":  140
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       }
-                                   ]
-                    },
-                    {
-                        "id":  "linzexu",
-                        "name":  "林则徐纪念馆",
-                        "description":  "已接入首批 12 个实拍点位，平面图按道路骨架与连屋、北屋分区重排。",
-                        "cover":  "/assets/panos/linzexu/south-gate-thumb.jpg",
-                        "map":  {
-                                    "width":  1000,
-                                    "height":  1450,
-                                    "nodes":  [
-                                                  {
-                                                      "id":  "north_house_west",
-                                                      "x":  350,
-                                                      "y":  70,
-                                                      "label":  "北屋（西半）",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "north_house_west"
-                                                  },
-                                                  {
-                                                      "id":  "north_house_east",
-                                                      "x":  670,
-                                                      "y":  70,
-                                                      "label":  "北屋（东半）",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "north_house_east"
-                                                  },
-                                                  {
-                                                      "id":  "junction_north_house",
-                                                      "x":  510,
-                                                      "y":  110,
-                                                      "label":  "北屋连接点",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "cross_north",
-                                                      "x":  510,
-                                                      "y":  180,
-                                                      "label":  "西屋2和东屋2之间",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "cross_north"
-                                                  },
-                                                  {
-                                                      "id":  "west_room_2",
-                                                      "x":  290,
-                                                      "y":  340,
-                                                      "label":  "西屋2",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "west_room_2"
-                                                  },
-                                                  {
-                                                      "id":  "east_room_2",
-                                                      "x":  730,
-                                                      "y":  340,
-                                                      "label":  "东屋2（暂未扫描）",
-                                                      "kind":  "scene",
-                                                      "status":  "disabled"
-                                                  },
-                                                  {
-                                                      "id":  "junction_upper_lane",
-                                                      "x":  510,
-                                                      "y":  340,
-                                                      "label":  "上部道路连接点",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "lianwu_2_west",
-                                                      "x":  350,
-                                                      "y":  560,
-                                                      "label":  "连屋2（西半）",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "lianwu_2_west"
-                                                  },
-                                                  {
-                                                      "id":  "lianwu_2_east",
-                                                      "x":  670,
-                                                      "y":  560,
-                                                      "label":  "连屋2（东半）",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "lianwu_2_east"
-                                                  },
-                                                  {
-                                                      "id":  "junction_lianwu_2",
-                                                      "x":  510,
-                                                      "y":  560,
-                                                      "label":  "连屋2连接点",
-                                                      "kind":  "waypoint",
-                                                      "status":  "ready"
-                                                  },
-                                                  {
-                                                      "id":  "cross_mid",
-                                                      "x":  510,
-                                                      "y":  790,
-                                                      "label":  "连屋1和连屋2之间",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "cross_mid"
-                                                  },
-                                                  {
-                                                      "id":  "lianwu_1",
-                                                      "x":  510,
-                                                      "y":  980,
-                                                      "label":  "连屋1",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "lianwu_1"
-                                                  },
-                                                  {
-                                                      "id":  "west_room_1",
-                                                      "x":  290,
-                                                      "y":  1210,
-                                                      "label":  "西屋1",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "west_room_1"
-                                                  },
-                                                  {
-                                                      "id":  "cross_south",
-                                                      "x":  510,
-                                                      "y":  1210,
-                                                      "label":  "西屋1和东屋1之间",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "cross_south"
-                                                  },
-                                                  {
-                                                      "id":  "east_room_1",
-                                                      "x":  730,
-                                                      "y":  1210,
-                                                      "label":  "东屋1",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "east_room_1"
-                                                  },
-                                                  {
-                                                      "id":  "south_gate",
-                                                      "x":  510,
-                                                      "y":  1360,
-                                                      "label":  "南门",
-                                                      "kind":  "scene",
-                                                      "status":  "ready",
-                                                      "sceneId":  "south_gate"
-                                                  }
-                                              ],
-                                    "paths":  [
-                                                  {
-                                                      "id":  "south_gate_path",
-                                                      "points":  [
-                                                                     "cross_south",
-                                                                     "south_gate"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "south_row",
-                                                      "points":  [
-                                                                     "west_room_1",
-                                                                     "cross_south",
-                                                                     "east_room_1"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "lianwu_1_spine",
-                                                      "points":  [
-                                                                     "cross_mid",
-                                                                     "lianwu_1",
-                                                                     "cross_south"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "upper_spine",
-                                                      "points":  [
-                                                                     "cross_north",
-                                                                     "junction_upper_lane",
-                                                                     "junction_lianwu_2",
-                                                                     "cross_mid"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "lianwu_2_west_path",
-                                                      "points":  [
-                                                                     "lianwu_2_west",
-                                                                     "junction_lianwu_2",
-                                                                     "cross_mid"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "lianwu_2_east_path",
-                                                      "points":  [
-                                                                     "lianwu_2_east",
-                                                                     "junction_lianwu_2",
-                                                                     "cross_mid"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "west_room_2_path",
-                                                      "points":  [
-                                                                     "west_room_2",
-                                                                     "junction_upper_lane",
-                                                                     "cross_north"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "east_room_2_path",
-                                                      "points":  [
-                                                                     "east_room_2",
-                                                                     "junction_upper_lane",
-                                                                     "cross_north"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "north_house_west_path",
-                                                      "points":  [
-                                                                     "north_house_west",
-                                                                     "junction_north_house",
-                                                                     "cross_north"
-                                                                 ]
-                                                  },
-                                                  {
-                                                      "id":  "north_house_east_path",
-                                                      "points":  [
-                                                                     "north_house_east",
-                                                                     "junction_north_house",
-                                                                     "cross_north"
-                                                                 ]
-                                                  }
-                                              ]
-                                },
-                        "scenes":  [
-                                       {
-                                           "id":  "south_gate",
-                                           "name":  "南门",
-                                           "panoLow":  "/assets/panos/linzexu/south-gate-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/south-gate.jpg",
-                                           "thumb":  "/assets/panos/linzexu/south-gate-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  510,
-                                                            "y":  1360
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "cross_south",
-                                           "name":  "西屋1和东屋1之间的红圈点",
-                                           "panoLow":  "/assets/panos/linzexu/cross-south-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/cross-south.jpg",
-                                           "thumb":  "/assets/panos/linzexu/cross-south-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  510,
-                                                            "y":  1210
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "west_room_1",
-                                           "name":  "西屋1",
-                                           "panoLow":  "/assets/panos/linzexu/west-room-1-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/west-room-1.jpg",
-                                           "thumb":  "/assets/panos/linzexu/west-room-1-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  290,
-                                                            "y":  1210
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "east_room_1",
-                                           "name":  "东屋1",
-                                           "panoLow":  "/assets/panos/linzexu/east-room-1-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/east-room-1.jpg",
-                                           "thumb":  "/assets/panos/linzexu/east-room-1-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  730,
-                                                            "y":  1210
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "lianwu_1",
-                                           "name":  "连屋1",
-                                           "panoLow":  "/assets/panos/linzexu/lianwu-1-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/lianwu-1.jpg",
-                                           "thumb":  "/assets/panos/linzexu/lianwu-1-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  510,
-                                                            "y":  980
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "cross_mid",
-                                           "name":  "连屋1和连屋2之间的红圈点",
-                                           "panoLow":  "/assets/panos/linzexu/cross-mid-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/cross-mid.jpg",
-                                           "thumb":  "/assets/panos/linzexu/cross-mid-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  510,
-                                                            "y":  790
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "lianwu_2_west",
-                                           "name":  "连屋2（西半）",
-                                           "panoLow":  "/assets/panos/linzexu/lianwu-2-west-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/lianwu-2-west.jpg",
-                                           "thumb":  "/assets/panos/linzexu/lianwu-2-west-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  350,
-                                                            "y":  560
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "lianwu_2_east",
-                                           "name":  "连屋2（东半）",
-                                           "panoLow":  "/assets/panos/linzexu/lianwu-2-east-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/lianwu-2-east.jpg",
-                                           "thumb":  "/assets/panos/linzexu/lianwu-2-east-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  670,
-                                                            "y":  560
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "west_room_2",
-                                           "name":  "西屋2",
-                                           "panoLow":  "/assets/panos/linzexu/west-room-2-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/west-room-2.jpg",
-                                           "thumb":  "/assets/panos/linzexu/west-room-2-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  290,
-                                                            "y":  340
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "cross_north",
-                                           "name":  "西屋2和东屋2之间的红圈点（正北正对着北屋）",
-                                           "panoLow":  "/assets/panos/linzexu/cross-north-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/cross-north.jpg",
-                                           "thumb":  "/assets/panos/linzexu/cross-north-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  510,
-                                                            "y":  180
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "north_house_west",
-                                           "name":  "北屋（西半）",
-                                           "panoLow":  "/assets/panos/linzexu/north-house-west-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/north-house-west.jpg",
-                                           "thumb":  "/assets/panos/linzexu/north-house-west-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  350,
-                                                            "y":  70
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       },
-                                       {
-                                           "id":  "north_house_east",
-                                           "name":  "北屋（东半）",
-                                           "panoLow":  "/assets/panos/linzexu/north-house-east-low.jpg",
-                                           "pano":  "/assets/panos/linzexu/north-house-east.jpg",
-                                           "thumb":  "/assets/panos/linzexu/north-house-east-thumb.jpg",
-                                           "initialView":  {
-                                                               "yaw":  0,
-                                                               "pitch":  0,
-                                                               "fov":  75
-                                                           },
-                                           "mapPoint":  {
-                                                            "x":  670,
-                                                            "y":  70
-                                                        },
-                                           "hotspots":  [
-
-                                                        ]
-                                       }
-                                   ]
-                    }
-                ]
+  "appName": "三馆全景导览",
+  "assetCdn": {
+    "enabled": true,
+    "includePrefixes": [
+      "/assets/panos/"
+    ],
+    "baseUrls": [
+      "https://github.cnxiaobai.com/https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs",
+      "https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs"
+    ],
+    "probePath": "/config.json",
+    "probeTimeoutMs": 1000
+  },
+  "fcChat": {
+    "endpoint": "https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/",
+    "authToken": ""
+  },
+  "museums": [
+    {
+      "id": "wangding",
+      "name": "王鼎纪念馆",
+      "description": "当前已接入 24 个实拍点位，北门与千古流芳暂未扫描。",
+      "cover": "/assets/panos/wangding/south-gate-thumb.jpg",
+      "map": {
+        "width": 1300,
+        "height": 2200,
+        "nodes": [
+          {
+            "id": "north_gate",
+            "x": 650,
+            "y": 70,
+            "label": "北门（暂无素材）",
+            "kind": "scene",
+            "status": "disabled"
+          },
+          {
+            "id": "era_chapter",
+            "x": 650,
+            "y": 200,
+            "label": "时代篇",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "era_chapter"
+          },
+          {
+            "id": "reception_room",
+            "x": 650,
+            "y": 370,
+            "label": "会客厅",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "reception_room"
+          },
+          {
+            "id": "political_chapter",
+            "x": 350,
+            "y": 470,
+            "label": "政绩篇",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "political_chapter"
+          },
+          {
+            "id": "chapter_junction",
+            "x": 650,
+            "y": 470,
+            "label": "书房北侧路口",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "resume_chapter",
+            "x": 950,
+            "y": 470,
+            "label": "履历篇",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "resume_chapter"
+          },
+          {
+            "id": "study_room",
+            "x": 650,
+            "y": 650,
+            "label": "书房",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "study_room"
+          },
+          {
+            "id": "conduct_west",
+            "x": 350,
+            "y": 820,
+            "label": "品行篇（西半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "conduct_west"
+          },
+          {
+            "id": "point_7",
+            "x": 650,
+            "y": 820,
+            "label": "红圈点7",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "point_7"
+          },
+          {
+            "id": "conduct_east",
+            "x": 950,
+            "y": 820,
+            "label": "品行篇（东半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "conduct_east"
+          },
+          {
+            "id": "research_space_west",
+            "x": 350,
+            "y": 980,
+            "label": "研学空间（西半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "research_space_west"
+          },
+          {
+            "id": "research_junction",
+            "x": 650,
+            "y": 980,
+            "label": "研学空间连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "research_space_east",
+            "x": 950,
+            "y": 980,
+            "label": "研学空间（东半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "research_space_east"
+          },
+          {
+            "id": "clean_history",
+            "x": 350,
+            "y": 1140,
+            "label": "蒲城廉史",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "clean_history"
+          },
+          {
+            "id": "point_6",
+            "x": 650,
+            "y": 1140,
+            "label": "红圈点6",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "point_6"
+          },
+          {
+            "id": "anti_corruption_interactive",
+            "x": 950,
+            "y": 1140,
+            "label": "廉政互动",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "anti_corruption_interactive"
+          },
+          {
+            "id": "qian_gu_liu_fang",
+            "x": 350,
+            "y": 1320,
+            "label": "千古流芳（暂未扫描）",
+            "kind": "scene",
+            "status": "disabled"
+          },
+          {
+            "id": "point_5",
+            "x": 650,
+            "y": 1320,
+            "label": "红圈点5",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "point_5"
+          },
+          {
+            "id": "point_4",
+            "x": 950,
+            "y": 1320,
+            "label": "红圈点4",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "point_4"
+          },
+          {
+            "id": "point_3",
+            "x": 950,
+            "y": 1490,
+            "label": "红圈点3",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "point_3"
+          },
+          {
+            "id": "point_2",
+            "x": 650,
+            "y": 1490,
+            "label": "红圈点2",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "point_2"
+          },
+          {
+            "id": "point_1",
+            "x": 650,
+            "y": 1660,
+            "label": "红圈点1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "point_1"
+          },
+          {
+            "id": "culture_achievement",
+            "x": 350,
+            "y": 1760,
+            "label": "文化成就",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "culture_achievement"
+          },
+          {
+            "id": "middle_junction",
+            "x": 650,
+            "y": 1760,
+            "label": "中部主路口",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "family_instruction",
+            "x": 950,
+            "y": 1760,
+            "label": "家风家训",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "family_instruction"
+          },
+          {
+            "id": "lianwu",
+            "x": 650,
+            "y": 1920,
+            "label": "连屋",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "lianwu"
+          },
+          {
+            "id": "temper_talent",
+            "x": 350,
+            "y": 2050,
+            "label": "砥砺成才",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "temper_talent"
+          },
+          {
+            "id": "lower_junction",
+            "x": 650,
+            "y": 2050,
+            "label": "南部主路口",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "prominent_achievement",
+            "x": 950,
+            "y": 2050,
+            "label": "显赫政绩",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "prominent_achievement"
+          },
+          {
+            "id": "south_gate",
+            "x": 650,
+            "y": 2170,
+            "label": "南门",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "south_gate"
+          }
+        ],
+        "paths": [
+          {
+            "id": "main_upper_spine",
+            "points": [
+              "point_7",
+              "point_6",
+              "point_5",
+              "point_4",
+              "point_3",
+              "point_2",
+              "point_1",
+              "middle_junction",
+              "lianwu",
+              "lower_junction",
+              "south_gate"
+            ]
+          },
+          {
+            "id": "conduct_row",
+            "points": [
+              "conduct_west",
+              "point_7",
+              "conduct_east"
+            ]
+          },
+          {
+            "id": "study_branch",
+            "points": [
+              "point_7",
+              "study_room",
+              "chapter_junction",
+              "reception_room",
+              "era_chapter",
+              "north_gate"
+            ]
+          },
+          {
+            "id": "political_branch",
+            "points": [
+              "political_chapter",
+              "chapter_junction",
+              "study_room"
+            ]
+          },
+          {
+            "id": "resume_branch",
+            "points": [
+              "study_room",
+              "chapter_junction",
+              "resume_chapter"
+            ]
+          },
+          {
+            "id": "research_west_branch",
+            "points": [
+              "research_space_west",
+              "research_junction",
+              "point_6"
+            ]
+          },
+          {
+            "id": "research_east_branch",
+            "points": [
+              "point_6",
+              "research_junction",
+              "research_space_east"
+            ]
+          },
+          {
+            "id": "clean_history_branch",
+            "points": [
+              "clean_history",
+              "point_6",
+              "anti_corruption_interactive"
+            ]
+          },
+          {
+            "id": "qian_gu_liu_fang_branch",
+            "points": [
+              "qian_gu_liu_fang",
+              "point_5"
+            ]
+          },
+          {
+            "id": "culture_branch",
+            "points": [
+              "culture_achievement",
+              "middle_junction",
+              "point_1"
+            ]
+          },
+          {
+            "id": "family_branch",
+            "points": [
+              "point_1",
+              "middle_junction",
+              "family_instruction"
+            ]
+          },
+          {
+            "id": "lower_west_branch",
+            "points": [
+              "temper_talent",
+              "lower_junction",
+              "lianwu"
+            ]
+          },
+          {
+            "id": "lower_east_branch",
+            "points": [
+              "lianwu",
+              "lower_junction",
+              "prominent_achievement"
+            ]
+          }
+        ]
+      },
+      "scenes": [
+        {
+          "id": "south_gate",
+          "name": "南门",
+          "panoLow": "/assets/panos/wangding/south-gate-low.jpg",
+          "pano": "/assets/panos/wangding/south-gate.jpg",
+          "thumb": "/assets/panos/wangding/south-gate-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 2170
+          },
+          "hotspots": []
+        },
+        {
+          "id": "temper_talent",
+          "name": "砥砺成才",
+          "panoLow": "/assets/panos/wangding/temper-talent-low.jpg",
+          "pano": "/assets/panos/wangding/temper-talent.jpg",
+          "thumb": "/assets/panos/wangding/temper-talent-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 350,
+            "y": 2050
+          },
+          "hotspots": []
+        },
+        {
+          "id": "prominent_achievement",
+          "name": "显赫政绩",
+          "panoLow": "/assets/panos/wangding/prominent-achievement-low.jpg",
+          "pano": "/assets/panos/wangding/prominent-achievement.jpg",
+          "thumb": "/assets/panos/wangding/prominent-achievement-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 950,
+            "y": 2050
+          },
+          "hotspots": []
+        },
+        {
+          "id": "lianwu",
+          "name": "连屋",
+          "panoLow": "/assets/panos/wangding/lianwu-low.jpg",
+          "pano": "/assets/panos/wangding/lianwu.jpg",
+          "thumb": "/assets/panos/wangding/lianwu-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 1920
+          },
+          "hotspots": []
+        },
+        {
+          "id": "culture_achievement",
+          "name": "文化成就",
+          "panoLow": "/assets/panos/wangding/culture-achievement-low.jpg",
+          "pano": "/assets/panos/wangding/culture-achievement.jpg",
+          "thumb": "/assets/panos/wangding/culture-achievement-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 350,
+            "y": 1760
+          },
+          "hotspots": []
+        },
+        {
+          "id": "family_instruction",
+          "name": "家风家训",
+          "panoLow": "/assets/panos/wangding/family-instruction-low.jpg",
+          "pano": "/assets/panos/wangding/family-instruction.jpg",
+          "thumb": "/assets/panos/wangding/family-instruction-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 950,
+            "y": 1760
+          },
+          "hotspots": []
+        },
+        {
+          "id": "point_1",
+          "name": "红圈点1",
+          "panoLow": "/assets/panos/wangding/point-1-low.jpg",
+          "pano": "/assets/panos/wangding/point-1.jpg",
+          "thumb": "/assets/panos/wangding/point-1-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 1660
+          },
+          "hotspots": []
+        },
+        {
+          "id": "point_2",
+          "name": "红圈点2",
+          "panoLow": "/assets/panos/wangding/point-2-low.jpg",
+          "pano": "/assets/panos/wangding/point-2.jpg",
+          "thumb": "/assets/panos/wangding/point-2-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 1490
+          },
+          "hotspots": []
+        },
+        {
+          "id": "point_3",
+          "name": "红圈点3",
+          "panoLow": "/assets/panos/wangding/point-3-low.jpg",
+          "pano": "/assets/panos/wangding/point-3.jpg",
+          "thumb": "/assets/panos/wangding/point-3-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 950,
+            "y": 1490
+          },
+          "hotspots": []
+        },
+        {
+          "id": "point_4",
+          "name": "红圈点4",
+          "panoLow": "/assets/panos/wangding/point-4-low.jpg",
+          "pano": "/assets/panos/wangding/point-4.jpg",
+          "thumb": "/assets/panos/wangding/point-4-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 950,
+            "y": 1320
+          },
+          "hotspots": []
+        },
+        {
+          "id": "point_5",
+          "name": "红圈点5",
+          "panoLow": "/assets/panos/wangding/point-5-low.jpg",
+          "pano": "/assets/panos/wangding/point-5.jpg",
+          "thumb": "/assets/panos/wangding/point-5-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 1320
+          },
+          "hotspots": []
+        },
+        {
+          "id": "clean_history",
+          "name": "蒲城廉史",
+          "panoLow": "/assets/panos/wangding/clean-history-low.jpg",
+          "pano": "/assets/panos/wangding/clean-history.jpg",
+          "thumb": "/assets/panos/wangding/clean-history-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 350,
+            "y": 1140
+          },
+          "hotspots": []
+        },
+        {
+          "id": "point_6",
+          "name": "红圈点6",
+          "panoLow": "/assets/panos/wangding/point-6-low.jpg",
+          "pano": "/assets/panos/wangding/point-6.jpg",
+          "thumb": "/assets/panos/wangding/point-6-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 1140
+          },
+          "hotspots": []
+        },
+        {
+          "id": "anti_corruption_interactive",
+          "name": "廉政互动",
+          "panoLow": "/assets/panos/wangding/anti-corruption-interactive-low.jpg",
+          "pano": "/assets/panos/wangding/anti-corruption-interactive.jpg",
+          "thumb": "/assets/panos/wangding/anti-corruption-interactive-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 950,
+            "y": 1140
+          },
+          "hotspots": []
+        },
+        {
+          "id": "research_space_west",
+          "name": "研学空间（西半）",
+          "panoLow": "/assets/panos/wangding/research-space-west-low.jpg",
+          "pano": "/assets/panos/wangding/research-space-west.jpg",
+          "thumb": "/assets/panos/wangding/research-space-west-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 350,
+            "y": 980
+          },
+          "hotspots": []
+        },
+        {
+          "id": "research_space_east",
+          "name": "研学空间（东半）",
+          "panoLow": "/assets/panos/wangding/research-space-east-low.jpg",
+          "pano": "/assets/panos/wangding/research-space-east.jpg",
+          "thumb": "/assets/panos/wangding/research-space-east-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 950,
+            "y": 980
+          },
+          "hotspots": []
+        },
+        {
+          "id": "conduct_west",
+          "name": "品行篇（西半）",
+          "panoLow": "/assets/panos/wangding/conduct-west-low.jpg",
+          "pano": "/assets/panos/wangding/conduct-west.jpg",
+          "thumb": "/assets/panos/wangding/conduct-west-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 350,
+            "y": 820
+          },
+          "hotspots": []
+        },
+        {
+          "id": "point_7",
+          "name": "红圈点7",
+          "panoLow": "/assets/panos/wangding/point-7-low.jpg",
+          "pano": "/assets/panos/wangding/point-7.jpg",
+          "thumb": "/assets/panos/wangding/point-7-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 820
+          },
+          "hotspots": []
+        },
+        {
+          "id": "conduct_east",
+          "name": "品行篇（东半）",
+          "panoLow": "/assets/panos/wangding/conduct-east-low.jpg",
+          "pano": "/assets/panos/wangding/conduct-east.jpg",
+          "thumb": "/assets/panos/wangding/conduct-east-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 950,
+            "y": 820
+          },
+          "hotspots": []
+        },
+        {
+          "id": "study_room",
+          "name": "书房",
+          "panoLow": "/assets/panos/wangding/study-room-low.jpg",
+          "pano": "/assets/panos/wangding/study-room.jpg",
+          "thumb": "/assets/panos/wangding/study-room-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 650
+          },
+          "hotspots": []
+        },
+        {
+          "id": "political_chapter",
+          "name": "政绩篇",
+          "panoLow": "/assets/panos/wangding/political-chapter-low.jpg",
+          "pano": "/assets/panos/wangding/political-chapter.jpg",
+          "thumb": "/assets/panos/wangding/political-chapter-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 350,
+            "y": 470
+          },
+          "hotspots": []
+        },
+        {
+          "id": "resume_chapter",
+          "name": "履历篇",
+          "panoLow": "/assets/panos/wangding/resume-chapter-low.jpg",
+          "pano": "/assets/panos/wangding/resume-chapter.jpg",
+          "thumb": "/assets/panos/wangding/resume-chapter-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 950,
+            "y": 470
+          },
+          "hotspots": []
+        },
+        {
+          "id": "reception_room",
+          "name": "会客厅",
+          "panoLow": "/assets/panos/wangding/reception-room-low.jpg",
+          "pano": "/assets/panos/wangding/reception-room.jpg",
+          "thumb": "/assets/panos/wangding/reception-room-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 370
+          },
+          "hotspots": []
+        },
+        {
+          "id": "era_chapter",
+          "name": "时代篇",
+          "panoLow": "/assets/panos/wangding/era-chapter-low.jpg",
+          "pano": "/assets/panos/wangding/era-chapter.jpg",
+          "thumb": "/assets/panos/wangding/era-chapter-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 650,
+            "y": 200
+          },
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "yanghucheng",
+      "name": "杨虎城纪念馆",
+      "description": "当前已接入 3 个实拍点位，西屋2与南门暂无素材。",
+      "cover": "/assets/panos/yanghucheng/east-room-1-thumb.jpg",
+      "map": {
+        "width": 1000,
+        "height": 700,
+        "nodes": [
+          {
+            "id": "west_room_2",
+            "x": 180,
+            "y": 120,
+            "label": "西屋2（暂无素材）",
+            "kind": "scene",
+            "status": "disabled"
+          },
+          {
+            "id": "junction_top",
+            "x": 520,
+            "y": 140,
+            "label": "北侧连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "east_room_2",
+            "x": 760,
+            "y": 140,
+            "label": "东屋2",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "east_room_2"
+          },
+          {
+            "id": "west_room_1",
+            "x": 300,
+            "y": 450,
+            "label": "西屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "west_room_1"
+          },
+          {
+            "id": "junction_middle",
+            "x": 520,
+            "y": 450,
+            "label": "中部连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "east_room_1",
+            "x": 760,
+            "y": 450,
+            "label": "东屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "east_room_1"
+          },
+          {
+            "id": "south_gate",
+            "x": 520,
+            "y": 620,
+            "label": "南门（暂无素材）",
+            "kind": "scene",
+            "status": "disabled"
+          }
+        ],
+        "paths": [
+          {
+            "id": "top_row",
+            "points": [
+              "west_room_2",
+              "junction_top",
+              "east_room_2"
+            ]
+          },
+          {
+            "id": "east_spine",
+            "points": [
+              "east_room_2",
+              "junction_top",
+              "junction_middle",
+              "east_room_1"
+            ]
+          },
+          {
+            "id": "middle_row",
+            "points": [
+              "west_room_1",
+              "junction_middle",
+              "east_room_1"
+            ]
+          },
+          {
+            "id": "south_stub",
+            "points": [
+              "junction_middle",
+              "south_gate"
+            ]
+          }
+        ]
+      },
+      "scenes": [
+        {
+          "id": "west_room_1",
+          "name": "西屋1",
+          "panoLow": "/assets/panos/yanghucheng/west-room-1-low.jpg",
+          "pano": "/assets/panos/yanghucheng/west-room-1.jpg",
+          "thumb": "/assets/panos/yanghucheng/west-room-1-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 300,
+            "y": 450
+          },
+          "hotspots": []
+        },
+        {
+          "id": "east_room_1",
+          "name": "东屋1",
+          "panoLow": "/assets/panos/yanghucheng/east-room-1-low.jpg",
+          "pano": "/assets/panos/yanghucheng/east-room-1.jpg",
+          "thumb": "/assets/panos/yanghucheng/east-room-1-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 760,
+            "y": 450
+          },
+          "hotspots": []
+        },
+        {
+          "id": "east_room_2",
+          "name": "东屋2",
+          "panoLow": "/assets/panos/yanghucheng/east-room-2-low.jpg",
+          "pano": "/assets/panos/yanghucheng/east-room-2.jpg",
+          "thumb": "/assets/panos/yanghucheng/east-room-2-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 760,
+            "y": 140
+          },
+          "hotspots": []
+        }
+      ]
+    },
+    {
+      "id": "linzexu",
+      "name": "林则徐纪念馆",
+      "description": "已接入首批 12 个实拍点位，平面图按道路骨架与连屋、北屋分区重排。",
+      "cover": "/assets/panos/linzexu/south-gate-thumb.jpg",
+      "map": {
+        "width": 1000,
+        "height": 1450,
+        "nodes": [
+          {
+            "id": "north_house_west",
+            "x": 350,
+            "y": 70,
+            "label": "北屋（西半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "north_house_west"
+          },
+          {
+            "id": "north_house_east",
+            "x": 670,
+            "y": 70,
+            "label": "北屋（东半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "north_house_east"
+          },
+          {
+            "id": "junction_north_house",
+            "x": 510,
+            "y": 110,
+            "label": "北屋连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "cross_north",
+            "x": 510,
+            "y": 180,
+            "label": "西屋2和东屋2之间",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "cross_north"
+          },
+          {
+            "id": "west_room_2",
+            "x": 290,
+            "y": 340,
+            "label": "西屋2",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "west_room_2"
+          },
+          {
+            "id": "east_room_2",
+            "x": 730,
+            "y": 340,
+            "label": "东屋2（暂未扫描）",
+            "kind": "scene",
+            "status": "disabled"
+          },
+          {
+            "id": "junction_upper_lane",
+            "x": 510,
+            "y": 340,
+            "label": "上部道路连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "lianwu_2_west",
+            "x": 350,
+            "y": 560,
+            "label": "连屋2（西半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "lianwu_2_west"
+          },
+          {
+            "id": "lianwu_2_east",
+            "x": 670,
+            "y": 560,
+            "label": "连屋2（东半）",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "lianwu_2_east"
+          },
+          {
+            "id": "junction_lianwu_2",
+            "x": 510,
+            "y": 560,
+            "label": "连屋2连接点",
+            "kind": "waypoint",
+            "status": "ready"
+          },
+          {
+            "id": "cross_mid",
+            "x": 510,
+            "y": 790,
+            "label": "连屋1和连屋2之间",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "cross_mid"
+          },
+          {
+            "id": "lianwu_1",
+            "x": 510,
+            "y": 980,
+            "label": "连屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "lianwu_1"
+          },
+          {
+            "id": "west_room_1",
+            "x": 290,
+            "y": 1210,
+            "label": "西屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "west_room_1"
+          },
+          {
+            "id": "cross_south",
+            "x": 510,
+            "y": 1210,
+            "label": "西屋1和东屋1之间",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "cross_south"
+          },
+          {
+            "id": "east_room_1",
+            "x": 730,
+            "y": 1210,
+            "label": "东屋1",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "east_room_1"
+          },
+          {
+            "id": "south_gate",
+            "x": 510,
+            "y": 1360,
+            "label": "南门",
+            "kind": "scene",
+            "status": "ready",
+            "sceneId": "south_gate"
+          }
+        ],
+        "paths": [
+          {
+            "id": "south_gate_path",
+            "points": [
+              "cross_south",
+              "south_gate"
+            ]
+          },
+          {
+            "id": "south_row",
+            "points": [
+              "west_room_1",
+              "cross_south",
+              "east_room_1"
+            ]
+          },
+          {
+            "id": "lianwu_1_spine",
+            "points": [
+              "cross_mid",
+              "lianwu_1",
+              "cross_south"
+            ]
+          },
+          {
+            "id": "upper_spine",
+            "points": [
+              "cross_north",
+              "junction_upper_lane",
+              "junction_lianwu_2",
+              "cross_mid"
+            ]
+          },
+          {
+            "id": "lianwu_2_west_path",
+            "points": [
+              "lianwu_2_west",
+              "junction_lianwu_2",
+              "cross_mid"
+            ]
+          },
+          {
+            "id": "lianwu_2_east_path",
+            "points": [
+              "lianwu_2_east",
+              "junction_lianwu_2",
+              "cross_mid"
+            ]
+          },
+          {
+            "id": "west_room_2_path",
+            "points": [
+              "west_room_2",
+              "junction_upper_lane",
+              "cross_north"
+            ]
+          },
+          {
+            "id": "east_room_2_path",
+            "points": [
+              "east_room_2",
+              "junction_upper_lane",
+              "cross_north"
+            ]
+          },
+          {
+            "id": "north_house_west_path",
+            "points": [
+              "north_house_west",
+              "junction_north_house",
+              "cross_north"
+            ]
+          },
+          {
+            "id": "north_house_east_path",
+            "points": [
+              "north_house_east",
+              "junction_north_house",
+              "cross_north"
+            ]
+          }
+        ]
+      },
+      "scenes": [
+        {
+          "id": "south_gate",
+          "name": "南门",
+          "panoLow": "/assets/panos/linzexu/south-gate-low.jpg",
+          "pano": "/assets/panos/linzexu/south-gate.jpg",
+          "thumb": "/assets/panos/linzexu/south-gate-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 510,
+            "y": 1360
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/south_gate/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/south-gate.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/south-gate-low.jpg"
+          }
+        },
+        {
+          "id": "cross_south",
+          "name": "西屋1和东屋1之间的红圈点",
+          "panoLow": "/assets/panos/linzexu/cross-south-low.jpg",
+          "pano": "/assets/panos/linzexu/cross-south.jpg",
+          "thumb": "/assets/panos/linzexu/cross-south-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 510,
+            "y": 1210
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/cross_south/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/cross-south.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/cross-south-low.jpg"
+          }
+        },
+        {
+          "id": "west_room_1",
+          "name": "西屋1",
+          "panoLow": "/assets/panos/linzexu/west-room-1-low.jpg",
+          "pano": "/assets/panos/linzexu/west-room-1.jpg",
+          "thumb": "/assets/panos/linzexu/west-room-1-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 290,
+            "y": 1210
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/west_room_1/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/west-room-1.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/west-room-1-low.jpg"
+          }
+        },
+        {
+          "id": "east_room_1",
+          "name": "东屋1",
+          "panoLow": "/assets/panos/linzexu/east-room-1-low.jpg",
+          "pano": "/assets/panos/linzexu/east-room-1.jpg",
+          "thumb": "/assets/panos/linzexu/east-room-1-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 730,
+            "y": 1210
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/east_room_1/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/east-room-1.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/east-room-1-low.jpg"
+          }
+        },
+        {
+          "id": "lianwu_1",
+          "name": "连屋1",
+          "panoLow": "/assets/panos/linzexu/lianwu-1-low.jpg",
+          "pano": "/assets/panos/linzexu/lianwu-1.jpg",
+          "thumb": "/assets/panos/linzexu/lianwu-1-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 510,
+            "y": 980
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/lianwu_1/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/lianwu-1.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/lianwu-1-low.jpg"
+          }
+        },
+        {
+          "id": "cross_mid",
+          "name": "连屋1和连屋2之间的红圈点",
+          "panoLow": "/assets/panos/linzexu/cross-mid-low.jpg",
+          "pano": "/assets/panos/linzexu/cross-mid.jpg",
+          "thumb": "/assets/panos/linzexu/cross-mid-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 510,
+            "y": 790
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/cross_mid/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/cross-mid.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/cross-mid-low.jpg"
+          }
+        },
+        {
+          "id": "lianwu_2_west",
+          "name": "连屋2（西半）",
+          "panoLow": "/assets/panos/linzexu/lianwu-2-west-low.jpg",
+          "pano": "/assets/panos/linzexu/lianwu-2-west.jpg",
+          "thumb": "/assets/panos/linzexu/lianwu-2-west-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 350,
+            "y": 560
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/lianwu_2_west/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/lianwu-2-west.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/lianwu-2-west-low.jpg"
+          }
+        },
+        {
+          "id": "lianwu_2_east",
+          "name": "连屋2（东半）",
+          "panoLow": "/assets/panos/linzexu/lianwu-2-east-low.jpg",
+          "pano": "/assets/panos/linzexu/lianwu-2-east.jpg",
+          "thumb": "/assets/panos/linzexu/lianwu-2-east-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 670,
+            "y": 560
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/lianwu_2_east/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/lianwu-2-east.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/lianwu-2-east-low.jpg"
+          }
+        },
+        {
+          "id": "west_room_2",
+          "name": "西屋2",
+          "panoLow": "/assets/panos/linzexu/west-room-2-low.jpg",
+          "pano": "/assets/panos/linzexu/west-room-2.jpg",
+          "thumb": "/assets/panos/linzexu/west-room-2-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 290,
+            "y": 340
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/west_room_2/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/west-room-2.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/west-room-2-low.jpg"
+          }
+        },
+        {
+          "id": "cross_north",
+          "name": "西屋2和东屋2之间的红圈点（正北正对着北屋）",
+          "panoLow": "/assets/panos/linzexu/cross-north-low.jpg",
+          "pano": "/assets/panos/linzexu/cross-north.jpg",
+          "thumb": "/assets/panos/linzexu/cross-north-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 510,
+            "y": 180
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/cross_north/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/cross-north.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/cross-north-low.jpg"
+          }
+        },
+        {
+          "id": "north_house_west",
+          "name": "北屋（西半）",
+          "panoLow": "/assets/panos/linzexu/north-house-west-low.jpg",
+          "pano": "/assets/panos/linzexu/north-house-west.jpg",
+          "thumb": "/assets/panos/linzexu/north-house-west-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 350,
+            "y": 70
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/north_house_west/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/north-house-west.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/north-house-west-low.jpg"
+          }
+        },
+        {
+          "id": "north_house_east",
+          "name": "北屋（东半）",
+          "panoLow": "/assets/panos/linzexu/north-house-east-low.jpg",
+          "pano": "/assets/panos/linzexu/north-house-east.jpg",
+          "thumb": "/assets/panos/linzexu/north-house-east-thumb.jpg",
+          "initialView": {
+            "yaw": 0,
+            "pitch": 0,
+            "fov": 75
+          },
+          "mapPoint": {
+            "x": 670,
+            "y": 70
+          },
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/linzexu/north_house_east/manifest.json",
+            "fallbackPano": "/assets/panos/linzexu/north-house-east.jpg",
+            "fallbackPanoLow": "/assets/panos/linzexu/north-house-east-low.jpg"
+          }
+        }
+      ]
+    }
+  ]
 }

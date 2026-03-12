@@ -196,8 +196,8 @@
     },
     {
       "id": "linzexu",
-      "name": "??????",
-      "description": "????? 12 ?????????????????????????",
+      "name": "林则徐纪念馆",
+      "description": "已接入首批 12 个实拍点位，平面图按道路骨架与连屋、北屋分区重排。",
       "cover": "/assets/panos/linzexu/south-gate-thumb.jpg",
       "map": {
         "width": 1000,
@@ -207,7 +207,7 @@
             "id": "north_house_west",
             "x": 350,
             "y": 70,
-            "label": "??????",
+            "label": "北屋（西半）",
             "kind": "scene",
             "status": "ready",
             "sceneId": "north_house_west"
@@ -216,7 +216,7 @@
             "id": "north_house_east",
             "x": 670,
             "y": 70,
-            "label": "??????",
+            "label": "北屋（东半）",
             "kind": "scene",
             "status": "ready",
             "sceneId": "north_house_east"
@@ -225,7 +225,7 @@
             "id": "junction_north_house",
             "x": 510,
             "y": 110,
-            "label": "?????",
+            "label": "北屋连接点",
             "kind": "waypoint",
             "status": "ready"
           },
@@ -233,7 +233,7 @@
             "id": "cross_north",
             "x": 510,
             "y": 180,
-            "label": "??2???2??",
+            "label": "西屋2和东屋2之间",
             "kind": "scene",
             "status": "ready",
             "sceneId": "cross_north"
@@ -242,7 +242,7 @@
             "id": "west_room_2",
             "x": 290,
             "y": 340,
-            "label": "??2",
+            "label": "西屋2",
             "kind": "scene",
             "status": "ready",
             "sceneId": "west_room_2"
@@ -251,7 +251,7 @@
             "id": "east_room_2",
             "x": 730,
             "y": 340,
-            "label": "??2??????",
+            "label": "东屋2（暂未扫描）",
             "kind": "scene",
             "status": "disabled"
           },
@@ -259,7 +259,7 @@
             "id": "junction_upper_lane",
             "x": 510,
             "y": 340,
-            "label": "???????",
+            "label": "上部道路连接点",
             "kind": "waypoint",
             "status": "ready"
           },
@@ -267,7 +267,7 @@
             "id": "lianwu_2_west",
             "x": 350,
             "y": 560,
-            "label": "??2????",
+            "label": "连屋2（西半）",
             "kind": "scene",
             "status": "ready",
             "sceneId": "lianwu_2_west"
@@ -276,7 +276,7 @@
             "id": "lianwu_2_east",
             "x": 670,
             "y": 560,
-            "label": "??2????",
+            "label": "连屋2（东半）",
             "kind": "scene",
             "status": "ready",
             "sceneId": "lianwu_2_east"
@@ -285,7 +285,7 @@
             "id": "junction_lianwu_2",
             "x": 510,
             "y": 560,
-            "label": "??2???",
+            "label": "连屋2连接点",
             "kind": "waypoint",
             "status": "ready"
           },
@@ -293,7 +293,7 @@
             "id": "cross_mid",
             "x": 510,
             "y": 790,
-            "label": "??1???2??",
+            "label": "连屋1和连屋2之间",
             "kind": "scene",
             "status": "ready",
             "sceneId": "cross_mid"
@@ -302,7 +302,7 @@
             "id": "lianwu_1",
             "x": 510,
             "y": 980,
-            "label": "??1",
+            "label": "连屋1",
             "kind": "scene",
             "status": "ready",
             "sceneId": "lianwu_1"
@@ -311,7 +311,7 @@
             "id": "west_room_1",
             "x": 290,
             "y": 1210,
-            "label": "??1",
+            "label": "西屋1",
             "kind": "scene",
             "status": "ready",
             "sceneId": "west_room_1"
@@ -320,7 +320,7 @@
             "id": "cross_south",
             "x": 510,
             "y": 1210,
-            "label": "??1???1??",
+            "label": "西屋1和东屋1之间",
             "kind": "scene",
             "status": "ready",
             "sceneId": "cross_south"
@@ -329,7 +329,7 @@
             "id": "east_room_1",
             "x": 730,
             "y": 1210,
-            "label": "??1",
+            "label": "东屋1",
             "kind": "scene",
             "status": "ready",
             "sceneId": "east_room_1"
@@ -338,7 +338,7 @@
             "id": "south_gate",
             "x": 510,
             "y": 1360,
-            "label": "??",
+            "label": "南门",
             "kind": "scene",
             "status": "ready",
             "sceneId": "south_gate"
@@ -430,7 +430,7 @@
       "scenes": [
         {
           "id": "south_gate",
-          "name": "??",
+          "name": "南门",
           "panoLow": "/assets/panos/linzexu/south-gate-low.jpg",
           "pano": "/assets/panos/linzexu/south-gate.jpg",
           "thumb": "/assets/panos/linzexu/south-gate-thumb.jpg",
@@ -447,7 +447,7 @@
         },
         {
           "id": "cross_south",
-          "name": "??1???1??????",
+          "name": "西屋1和东屋1之间的红圈点",
           "panoLow": "/assets/panos/linzexu/cross-south-low.jpg",
           "pano": "/assets/panos/linzexu/cross-south.jpg",
           "thumb": "/assets/panos/linzexu/cross-south-thumb.jpg",
@@ -464,7 +464,7 @@
         },
         {
           "id": "west_room_1",
-          "name": "??1",
+          "name": "西屋1",
           "panoLow": "/assets/panos/linzexu/west-room-1-low.jpg",
           "pano": "/assets/panos/linzexu/west-room-1.jpg",
           "thumb": "/assets/panos/linzexu/west-room-1-thumb.jpg",
@@ -481,7 +481,7 @@
         },
         {
           "id": "east_room_1",
-          "name": "??1",
+          "name": "东屋1",
           "panoLow": "/assets/panos/linzexu/east-room-1-low.jpg",
           "pano": "/assets/panos/linzexu/east-room-1.jpg",
           "thumb": "/assets/panos/linzexu/east-room-1-thumb.jpg",
@@ -498,7 +498,7 @@
         },
         {
           "id": "lianwu_1",
-          "name": "??1",
+          "name": "连屋1",
           "panoLow": "/assets/panos/linzexu/lianwu-1-low.jpg",
           "pano": "/assets/panos/linzexu/lianwu-1.jpg",
           "thumb": "/assets/panos/linzexu/lianwu-1-thumb.jpg",
@@ -515,7 +515,7 @@
         },
         {
           "id": "cross_mid",
-          "name": "??1???2??????",
+          "name": "连屋1和连屋2之间的红圈点",
           "panoLow": "/assets/panos/linzexu/cross-mid-low.jpg",
           "pano": "/assets/panos/linzexu/cross-mid.jpg",
           "thumb": "/assets/panos/linzexu/cross-mid-thumb.jpg",
@@ -532,7 +532,7 @@
         },
         {
           "id": "lianwu_2_west",
-          "name": "??2????",
+          "name": "连屋2（西半）",
           "panoLow": "/assets/panos/linzexu/lianwu-2-west-low.jpg",
           "pano": "/assets/panos/linzexu/lianwu-2-west.jpg",
           "thumb": "/assets/panos/linzexu/lianwu-2-west-thumb.jpg",
@@ -549,7 +549,7 @@
         },
         {
           "id": "lianwu_2_east",
-          "name": "??2????",
+          "name": "连屋2（东半）",
           "panoLow": "/assets/panos/linzexu/lianwu-2-east-low.jpg",
           "pano": "/assets/panos/linzexu/lianwu-2-east.jpg",
           "thumb": "/assets/panos/linzexu/lianwu-2-east-thumb.jpg",
@@ -566,7 +566,7 @@
         },
         {
           "id": "west_room_2",
-          "name": "??2",
+          "name": "西屋2",
           "panoLow": "/assets/panos/linzexu/west-room-2-low.jpg",
           "pano": "/assets/panos/linzexu/west-room-2.jpg",
           "thumb": "/assets/panos/linzexu/west-room-2-thumb.jpg",
@@ -583,7 +583,7 @@
         },
         {
           "id": "cross_north",
-          "name": "??2???2???????????????",
+          "name": "西屋2和东屋2之间的红圈点（正北正对着北屋）",
           "panoLow": "/assets/panos/linzexu/cross-north-low.jpg",
           "pano": "/assets/panos/linzexu/cross-north.jpg",
           "thumb": "/assets/panos/linzexu/cross-north-thumb.jpg",
@@ -600,7 +600,7 @@
         },
         {
           "id": "north_house_west",
-          "name": "??????",
+          "name": "北屋（西半）",
           "panoLow": "/assets/panos/linzexu/north-house-west-low.jpg",
           "pano": "/assets/panos/linzexu/north-house-west.jpg",
           "thumb": "/assets/panos/linzexu/north-house-west-thumb.jpg",
@@ -617,7 +617,7 @@
         },
         {
           "id": "north_house_east",
-          "name": "??????",
+          "name": "北屋（东半）",
           "panoLow": "/assets/panos/linzexu/north-house-east-low.jpg",
           "pano": "/assets/panos/linzexu/north-house-east.jpg",
           "thumb": "/assets/panos/linzexu/north-house-east-thumb.jpg",

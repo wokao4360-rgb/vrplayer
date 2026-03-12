@@ -112,6 +112,7 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-12 09:27:47] Windows 下若用脚本重写 `public/config.json` 且内容含中文，不能只看“UTF-8 编码检查通过”；中文被直接写成 `?` 仍会通过编码门禁。改完配置后必须额外抽查关键中文字段（如馆名、场景名）在源码文件与线上 `/config.json` 中都保持原文。
 - [2026-03-12 20:32:00] 自定义平面图拓扑现在以 `museum.map.nodes / museum.map.paths` 为单一事实源；一旦某馆配置了这套结构，`StructureView2D`、`MapPanel`、旧 `MapOverlay` 与 `sceneGraph` 兜底拓扑都必须优先读取它，不能再各自从 `scene.mapPoint` 私下重建第二套点位关系。`scene.mapPoint` 只保留给旧馆兼容和无 floorplan museum 的回退。
 
 - [2026-03-11 22:05:59] `TileMeshPano` 的高清块图不能再用“UV 半像素内缩 + depthTest/depthWrite 全关闭”这套策略；这会直接把顶/底极区分片裁坏，并让后加载 tile 盖住底部罗盘。当前安全基线是：tile UV 边界保持精确 `0..1`，tile mesh 继续走正常深度链路，高层只靠更高 `renderOrder` 覆盖低层。

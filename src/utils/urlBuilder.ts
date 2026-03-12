@@ -21,7 +21,7 @@ export function buildSameDirUrl(query: Record<string, string | number | boolean 
   });
 
   // 返回相对地址：pathname + search + hash
-  // 例如：/vrplayer/?museum=wangding&scene=gate
+  // 例如：/vrplayer/?museum=wangding&scene=south_gate
   return url.pathname + url.search + url.hash;
 }
 

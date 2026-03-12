@@ -1,4 +1,4 @@
-﻿# VR 全景 Web 播放器（vrplayer）
+# VR 全景 Web 播放器（vrplayer）
 
 基于 Three.js 的全景 Web 播放器，支持多馆多场景、热点导航、地图导览与低清到高清渐进加载。
 
@@ -75,8 +75,8 @@ git push origin main
 
 示例：
 
-- `...?museum=wangding&scene=memorial_wall&editor=1`
-- `...?museum=wangding&scene=front_yard&tilesDebug=1&metrics=1`
+- `...?museum=wangding&scene=era_chapter&editor=1`
+- `...?museum=yanghucheng&scene=east_room_1&tilesDebug=1&metrics=1`
 
 ---
 
@@ -111,6 +111,8 @@ git push origin main
 ---
 
 ## Agent Notes (Persistent)
+
+- [2026-03-12 10:25:00] Windows PowerShell 5.1 下用 Set-Content -Encoding utf8 回写 public/config.json 会自动带 BOM；Node 侧直接 JSON.parse(fs.readFileSync(..., 'utf8')) 会把 BOM 当成非法字符。以后脚本写配置时必须改用 UTF-8 无 BOM（如 [System.IO.File]::WriteAllText(..., (New-Object System.Text.UTF8Encoding(False)))），并在回归测试里直接读一次源配置确认无 BOM。
 
 - [2026-03-12 09:27:47] Windows 下若用脚本重写 `public/config.json` 且内容含中文，不能只看“UTF-8 编码检查通过”；中文被直接写成 `?` 仍会通过编码门禁。改完配置后必须额外抽查关键中文字段（如馆名、场景名）在源码文件与线上 `/config.json` 中都保持原文。
 - [2026-03-12 20:32:00] 自定义平面图拓扑现在以 `museum.map.nodes / museum.map.paths` 为单一事实源；一旦某馆配置了这套结构，`StructureView2D`、`MapPanel`、旧 `MapOverlay` 与 `sceneGraph` 兜底拓扑都必须优先读取它，不能再各自从 `scene.mapPoint` 私下重建第二套点位关系。`scene.mapPoint` 只保留给旧馆兼容和无 floorplan museum 的回退。

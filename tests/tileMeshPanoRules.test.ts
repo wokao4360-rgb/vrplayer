@@ -40,7 +40,7 @@ test('getTileMeshRenderConfig keeps tile meshes in depth pipeline', () => {
 
 test('resolveKtx2TranscoderPath keeps GitHub Pages app base path', () => {
   const transcoderPath = resolveKtx2TranscoderPath(
-    'https://wokao4360-rgb.github.io/vrplayer/?museum=wangding&scene=exhibit_hall',
+    'https://wokao4360-rgb.github.io/vrplayer/?museum=yanghucheng&scene=east_room_1',
   );
 
   assert.equal(transcoderPath, 'https://wokao4360-rgb.github.io/vrplayer/assets/basis/');

@@ -1,80 +1,90 @@
-import type { Museum } from '../types/config';
+import type { AppConfig, Museum } from '../types/config';
 import { navigateToSceneList } from '../utils/router';
 import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
+import { resolveLandingContent, resolveMuseumMarketing } from './discoveryContent';
 
 export class MuseumList {
   private element: HTMLElement;
 
-  constructor(
-    private readonly museums: Museum[],
-    private readonly appName = 'VR 全景导览',
-  ) {
+  constructor(private readonly config: AppConfig) {
     this.element = document.createElement('div');
-    this.element.className = 'museum-list';
+    this.element.className = 'vr-discovery-page';
     this.render();
-    this.applyStyles();
+    this.markReady();
+  }
+
+  private renderMuseumCard(museum: Museum, index: number): string {
+    const marketing = resolveMuseumMarketing(museum);
+    const coverUrl = resolveAssetUrl(museum.cover, AssetType.COVER);
+
+    return `
+      <article class="vr-museum-card vr-card-enter" style="--vr-card-index:${index}">
+        <button class="vr-museum-card__button" type="button" data-museum-id="${museum.id}" aria-label="进入${museum.name}">
+          <div class="vr-museum-card__media">
+            <img src="${coverUrl}" alt="${museum.name}" loading="lazy" decoding="async">
+            <div class="vr-museum-card__veil"></div>
+            <span class="vr-museum-card__seal">纪念馆</span>
+          </div>
+          <div class="vr-museum-card__body">
+            <div class="vr-museum-card__eyebrow">沉浸研学</div>
+            <h2 class="vr-museum-card__name">${museum.name}</h2>
+            <p class="vr-museum-card__hook">${marketing.hook}</p>
+            <div class="vr-discovery-tags">
+              ${marketing.tags
+                .slice(0, 3)
+                .map((tag) => `<span class="vr-discovery-tag">${tag}</span>`)
+                .join('')}
+            </div>
+            <div class="vr-museum-card__footer">
+              <span>${museum.scenes.length} 个场景</span>
+              <span class="vr-museum-card__cta">点击进入</span>
+            </div>
+          </div>
+        </button>
+      </article>
+    `;
   }
 
   private render(): void {
-    const activeMuseums = this.museums.filter((museum) => museum.scenes.length > 0);
-    const pendingMuseums = this.museums.filter((museum) => museum.scenes.length === 0);
-    const subtitle =
-      activeMuseums.length > 1
-        ? `当前开放 ${activeMuseums.length} 个展馆`
-        : activeMuseums.length === 1
-          ? '当前开放 1 个展馆'
-          : '展馆内容正在整理中';
+    const activeMuseums = this.config.museums.filter((museum) => museum.scenes.length > 0);
+    const landing = resolveLandingContent(this.config);
 
     this.element.innerHTML = `
-      <div class="museum-list-container">
-        <h1 class="museum-list-title">${this.appName}</h1>
-        <p class="museum-list-subtitle">${subtitle}</p>
-        <div class="museum-grid">
-          ${activeMuseums
-            .map(
-              (museum) => `
-            <div class="museum-card museum-card-active" data-museum-id="${museum.id}">
-              <div class="museum-cover">
-                <img src="${resolveAssetUrl(museum.cover, AssetType.COVER)}" alt="${museum.name}" loading="lazy">
-                <div class="museum-overlay">
-                  <h2 class="museum-name">${museum.name}</h2>
-                  ${museum.description ? `<p class="museum-desc">${museum.description}</p>` : ''}
-                  <p class="museum-scene-count">${museum.scenes.length} 个场景</p>
-                </div>
-              </div>
-            </div>
-          `,
-            )
-            .join('')}
-        </div>
-        ${
-          pendingMuseums.length > 0
-            ? `
-          <div class="museum-section-label">内容筹备中</div>
-          <div class="museum-grid muted">
-            ${pendingMuseums
-              .map(
-                (museum) => `
-              <div class="museum-card museum-card-disabled" aria-disabled="true">
-                <div class="museum-cover">
-                  <img src="${resolveAssetUrl(museum.cover, AssetType.COVER)}" alt="${museum.name}" loading="lazy">
-                  <div class="museum-overlay">
-                    <h2 class="museum-name">${museum.name}</h2>
-                    <p class="museum-desc">暂未开放线上参观</p>
-                  </div>
-                </div>
-              </div>
-            `,
-              )
-              .join('')}
+      <div class="vr-discovery-shell">
+        <section class="vr-discovery-hero vr-page-enter">
+          <div class="vr-discovery-brand">${landing.brandTitle}</div>
+          <h1 class="vr-discovery-hero-title">${landing.heroTitle}</h1>
+          <p class="vr-discovery-hero-subtitle">${landing.heroSubtitle}</p>
+          <div class="vr-discovery-hero-meta" aria-label="项目亮点">
+            <span class="vr-discovery-pill">公益研学</span>
+            <span class="vr-discovery-pill">${activeMuseums.length} 座展馆开放</span>
+            <span class="vr-discovery-pill">真实历史现场</span>
           </div>
-        `
-            : ''
-        }
+        </section>
+
+        <section class="vr-discovery-section">
+          <div class="vr-discovery-section-head vr-page-enter">
+            <div>
+              <div class="vr-discovery-eyebrow">馆藏入口</div>
+              <h2 class="vr-discovery-section-title">从一张门票感，走进一段正在发生的历史</h2>
+            </div>
+            <p class="vr-discovery-section-note">
+              这里不是开发态的点位清单，而是面向研学的沉浸式入口。先选一座馆，再沿着空间与故事进入现场。
+            </p>
+          </div>
+
+          <div class="vr-museum-grid">
+            ${activeMuseums.map((museum, index) => this.renderMuseumCard(museum, index)).join('')}
+          </div>
+        </section>
+
+        <section class="vr-discovery-note-card vr-page-enter">
+          ${landing.projectNote}
+        </section>
       </div>
     `;
 
-    this.element.querySelectorAll('.museum-card-active').forEach((card) => {
+    this.element.querySelectorAll<HTMLButtonElement>('.vr-museum-card__button').forEach((card) => {
       card.addEventListener('click', () => {
         const museumId = card.getAttribute('data-museum-id');
         if (museumId) {
@@ -84,109 +94,10 @@ export class MuseumList {
     });
   }
 
-  private applyStyles(): void {
-    const style = document.createElement('style');
-    style.textContent = `
-      .museum-list {
-        width: 100%;
-        height: 100%;
-        overflow-y: auto;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding-top: calc(44px + env(safe-area-inset-top, 0px));
-      }
-      .museum-list-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      .museum-list-title {
-        font-size: 28px;
-        font-weight: 600;
-        color: #fff;
-        text-align: center;
-        margin-bottom: 12px;
-      }
-      .museum-list-subtitle {
-        font-size: 16px;
-        color: rgba(255,255,255,0.9);
-        text-align: center;
-        margin-bottom: 24px;
-      }
-      .museum-section-label {
-        margin: 28px 0 12px;
-        color: rgba(255,255,255,0.9);
-        font-size: 14px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-      .museum-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 20px;
-      }
-      .museum-grid.muted {
-        opacity: 0.72;
-      }
-      .museum-card {
-        cursor: pointer;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        transition: transform 0.2s, box-shadow 0.2s;
-      }
-      .museum-card-active:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.24);
-      }
-      .museum-card-disabled {
-        cursor: not-allowed;
-        filter: grayscale(0.3);
-      }
-      .museum-card:active {
-        transform: scale(0.98);
-      }
-      .museum-card-disabled:active {
-        transform: none;
-      }
-      .museum-cover {
-        position: relative;
-        width: 100%;
-        padding-top: 60%;
-        overflow: hidden;
-      }
-      .museum-cover img {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .museum-overlay {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(to top, rgba(0,0,0,0.82), transparent);
-        padding: 20px;
-        color: #fff;
-      }
-      .museum-name {
-        font-size: 20px;
-        font-weight: 600;
-        margin-bottom: 5px;
-      }
-      .museum-desc {
-        font-size: 14px;
-        margin: 6px 0;
-        line-height: 1.5;
-      }
-      .museum-scene-count {
-        font-size: 14px;
-        opacity: 0.9;
-      }
-    `;
-    document.head.appendChild(style);
+  private markReady(): void {
+    requestAnimationFrame(() => {
+      this.element.classList.add('is-ready');
+    });
   }
 
   getElement(): HTMLElement {

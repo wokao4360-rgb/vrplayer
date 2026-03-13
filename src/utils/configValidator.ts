@@ -11,6 +11,10 @@ export const ErrorCode = {
   // 根级别错误
   INVALID_ROOT: 'INVALID_ROOT',
   MISSING_APP_NAME: 'MISSING_APP_NAME',
+  MISSING_LANDING: 'MISSING_LANDING',
+  MISSING_LANDING_BRAND_TITLE: 'MISSING_LANDING_BRAND_TITLE',
+  MISSING_LANDING_HERO_TITLE: 'MISSING_LANDING_HERO_TITLE',
+  MISSING_LANDING_HERO_SUBTITLE: 'MISSING_LANDING_HERO_SUBTITLE',
 
   // 博物馆级别错误
   MUSEUMS_NOT_ARRAY: 'MUSEUMS_NOT_ARRAY',
@@ -19,6 +23,9 @@ export const ErrorCode = {
   DUPLICATE_MUSEUM_ID: 'DUPLICATE_MUSEUM_ID',
   MISSING_MUSEUM_NAME: 'MISSING_MUSEUM_NAME',
   MISSING_MUSEUM_COVER: 'MISSING_MUSEUM_COVER',
+  INVALID_MUSEUM_MARKETING: 'INVALID_MUSEUM_MARKETING',
+  MISSING_MUSEUM_MARKETING_HOOK: 'MISSING_MUSEUM_MARKETING_HOOK',
+  INVALID_MUSEUM_MARKETING_TAGS: 'INVALID_MUSEUM_MARKETING_TAGS',
   MISSING_MUSEUM_MAP: 'MISSING_MUSEUM_MAP',
   MISSING_MAP_IMAGE: 'MISSING_MAP_IMAGE',
   INVALID_MAP_WIDTH: 'INVALID_MAP_WIDTH',
@@ -103,6 +110,49 @@ export function validateConfig(data: any): ValidationError[] {
     });
   }
 
+  if (!data.landing || typeof data.landing !== 'object') {
+    errors.push({
+      code: ErrorCode.MISSING_LANDING,
+      path: 'landing',
+      message: 'landing 必须是对象',
+      fieldName: '首页入口文案',
+    });
+  } else {
+    if (
+      typeof data.landing.brandTitle !== 'string' ||
+      data.landing.brandTitle.trim() === ''
+    ) {
+      errors.push({
+        code: ErrorCode.MISSING_LANDING_BRAND_TITLE,
+        path: 'landing.brandTitle',
+        message: 'landing.brandTitle 必须是非空字符串',
+        fieldName: '首页品牌标题',
+      });
+    }
+    if (
+      typeof data.landing.heroTitle !== 'string' ||
+      data.landing.heroTitle.trim() === ''
+    ) {
+      errors.push({
+        code: ErrorCode.MISSING_LANDING_HERO_TITLE,
+        path: 'landing.heroTitle',
+        message: 'landing.heroTitle 必须是非空字符串',
+        fieldName: '首页主标题',
+      });
+    }
+    if (
+      typeof data.landing.heroSubtitle !== 'string' ||
+      data.landing.heroSubtitle.trim() === ''
+    ) {
+      errors.push({
+        code: ErrorCode.MISSING_LANDING_HERO_SUBTITLE,
+        path: 'landing.heroSubtitle',
+        message: 'landing.heroSubtitle 必须是非空字符串',
+        fieldName: '首页副标题',
+      });
+    }
+  }
+
   if (!Array.isArray(data.museums)) {
     errors.push({ 
       code: ErrorCode.MUSEUMS_NOT_ARRAY,
@@ -161,6 +211,45 @@ export function validateConfig(data: any): ValidationError[] {
         museumName: undefined, // 名称本身缺失，无法使用
         fieldName: '博物馆名称'
       });
+    }
+
+    if (!museum.marketing || typeof museum.marketing !== 'object') {
+      errors.push({
+        code: ErrorCode.INVALID_MUSEUM_MARKETING,
+        path: `${basePath}.marketing`,
+        message: 'marketing 必须是对象',
+        museumName,
+        fieldName: '首页运营文案',
+      });
+    } else {
+      if (
+        typeof museum.marketing.hook !== 'string' ||
+        museum.marketing.hook.trim() === ''
+      ) {
+        errors.push({
+          code: ErrorCode.MISSING_MUSEUM_MARKETING_HOOK,
+          path: `${basePath}.marketing.hook`,
+          message: 'marketing.hook 必须是非空字符串',
+          museumName,
+          fieldName: '首页钩子文案',
+        });
+      }
+
+      if (
+        !Array.isArray(museum.marketing.tags) ||
+        museum.marketing.tags.length === 0 ||
+        museum.marketing.tags.some(
+          (tag: unknown) => typeof tag !== 'string' || tag.trim() === '',
+        )
+      ) {
+        errors.push({
+          code: ErrorCode.INVALID_MUSEUM_MARKETING_TAGS,
+          path: `${basePath}.marketing.tags`,
+          message: 'marketing.tags 必须是仅包含非空字符串的数组',
+          museumName,
+          fieldName: '首页标签',
+        });
+      }
     }
 
     // 检查封面图 URL
@@ -766,7 +855,6 @@ export function validateConfig(data: any): ValidationError[] {
 
   return errors;
 }
-
 
 
 

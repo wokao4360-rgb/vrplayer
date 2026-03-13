@@ -40,6 +40,7 @@ import type { SceneUiRuntime } from './app/sceneUiRuntime';
 import type { ChatRuntime } from './app/chatRuntime';
 import { ViewSessionRuntime } from './app/viewSessionRuntime';
 import { ZH_CN } from './i18n/zh-CN';
+import { resolveLandingContent } from './ui/discoveryContent';
 import './ui/uiRefresh.css';
 if (__VR_DEBUG__) {
   void Promise.all([import('./utils/debugHelper'), import('./ui/interactionBus')])
@@ -546,12 +547,13 @@ class App {
       this.loadTitleBarModule(),
       this.loadMuseumListModule(),
     ]);
+    const landing = resolveLandingContent(this.config);
     // 鍒涘缓鏍囬鏍?
-    this.titleBar = new TitleBar(this.config.appName);
+    this.titleBar = new TitleBar(landing.brandTitle);
     this.appElement.appendChild(this.titleBar.getElement());
     this.setDocumentTitle(this.config.appName);
     // 鍒涘缓棣嗗垪琛?
-    this.museumList = new MuseumList(this.config.museums, this.config.appName);
+    this.museumList = new MuseumList(this.config);
     this.appElement.appendChild(this.museumList.getElement());
   }
   private async showSceneList(museum: Museum): Promise<void> {
@@ -856,7 +858,7 @@ class App {
       }
       this.brandMark = new BrandMark({
         appName: this.config?.appName,
-        brandText: this.config?.appName || ZH_CN.brand.name,
+        brandText: this.config ? resolveLandingContent(this.config).brandTitle : ZH_CN.brand.name,
       });
       const el = this.brandMark.getElement();
       el.addEventListener('click', (e) => {

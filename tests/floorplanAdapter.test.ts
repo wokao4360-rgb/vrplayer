@@ -338,11 +338,20 @@ test('buildSceneGraph preserves hotspot topology when museum already has scene h
 test('validateConfig accepts floorplan nodes and paths with waypoints and disabled placeholders', () => {
   const config = {
     appName: '三馆全景导览',
+    landing: {
+      brandTitle: '研学.xyz',
+      heroTitle: '三馆全景导览',
+      heroSubtitle: '沉浸式进入纪念馆现场。',
+    },
     museums: [
       {
         id: 'linzexu',
         name: '林则徐纪念馆',
         cover: '/assets/placeholders/linzexu-cover.svg',
+        marketing: {
+          hook: '苟利国家生死以：穿梭百年，见证虎门销烟外的旷世长歌。',
+          tags: ['12个高清实拍', '历史遗迹'],
+        },
         map: {
           width: 1000,
           height: 1400,

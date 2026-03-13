@@ -27,10 +27,12 @@ export class SceneList {
         </div>
         <div class="scene-list-items">
           ${this.scenes.map(scene => `
-            <div class="scene-item" data-scene-id="${scene.id}">
+            <div class="scene-item vr-scene-drawer-item" data-scene-id="${scene.id}">
               <img src="${resolveAssetUrl(scene.thumb, AssetType.THUMB)}" alt="${scene.name}" loading="lazy">
-              <div class="scene-item-info">
-                <h3>${scene.name}</h3>
+              <div class="scene-item-info vr-scene-drawer-item__info">
+                <div class="vr-scene-drawer-item__label">场景点位</div>
+                <h3 class="vr-scene-drawer-item__title">${scene.name}</h3>
+                <p class="vr-scene-drawer-item__hint">点击进入当前展馆的实拍场景</p>
               </div>
             </div>
           `).join('')}
@@ -88,8 +90,10 @@ export class SceneList {
         bottom: 0;
         left: 0;
         right: 0;
-        background: #fff;
-        border-radius: 20px 20px 0 0;
+        background: linear-gradient(180deg, rgba(253,249,240,0.98), rgba(246,238,225,0.98));
+        border-radius: 28px 28px 0 0;
+        border: 1px solid rgba(120, 90, 56, 0.16);
+        box-shadow: 0 -18px 44px rgba(55, 38, 24, 0.16);
         max-height: 80vh;
         display: flex;
         flex-direction: column;
@@ -103,23 +107,23 @@ export class SceneList {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 20px;
-        border-bottom: 1px solid #eee;
+        padding: 18px 18px 16px;
+        border-bottom: 1px solid rgba(120, 90, 56, 0.12);
       }
       .scene-list-header h2 {
         font-size: 18px;
-        font-weight: 600;
-        color: #333;
+        font-weight: 700;
+        color: #241913;
         margin: 0;
       }
       .scene-list-close {
         width: 32px;
         height: 32px;
         border: none;
-        background: #f5f5f5;
+        background: rgba(140, 43, 31, 0.08);
         border-radius: 50%;
-        font-size: 24px;
-        color: #666;
+        font-size: 22px;
+        color: #6d271e;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -128,33 +132,17 @@ export class SceneList {
       }
       .scene-list-items {
         overflow-y: auto;
-        padding: 10px;
+        padding: 12px;
         flex: 1;
       }
       .scene-item {
-        display: flex;
-        align-items: center;
-        padding: 12px;
-        margin-bottom: 10px;
-        background: #f9f9f9;
-        border-radius: 8px;
         cursor: pointer;
-        transition: background 0.2s;
       }
       .scene-item:active {
-        background: #eee;
+        transform: translateY(-1px) scale(0.99);
       }
       .scene-item img {
-        width: 80px;
-        height: 45px;
-        object-fit: cover;
-        border-radius: 4px;
-        margin-right: 12px;
-      }
-      .scene-item-info h3 {
-        font-size: 16px;
-        color: #333;
-        margin: 0;
+        margin-right: 0;
       }
     `;
     document.head.appendChild(style);

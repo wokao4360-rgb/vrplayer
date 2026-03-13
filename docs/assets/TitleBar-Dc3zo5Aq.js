@@ -1,20 +1,8 @@
-export class TitleBar {
-  private element: HTMLElement;
-
-  constructor(title: string) {
-    this.element = document.createElement('div');
-    this.element.className = 'title-bar';
-    this.element.innerHTML = `
+var l=Object.defineProperty;var r=(n,e,t)=>e in n?l(n,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):n[e]=t;var i=(n,e,t)=>r(n,typeof e!="symbol"?e+"":e,t);class s{constructor(e){i(this,"element");this.element=document.createElement("div"),this.element.className="title-bar",this.element.innerHTML=`
       <div class="title-bar-content">
-        <span class="title-text">${title}</span>
+        <span class="title-text">${e}</span>
       </div>
-    `;
-    this.applyStyles();
-  }
-
-  private applyStyles(): void {
-    const style = document.createElement('style');
-    style.textContent = `
+    `,this.applyStyles()}applyStyles(){const e=document.createElement("style");e.textContent=`
       .title-bar {
         position: fixed;
         top: 0;
@@ -52,46 +40,4 @@ export class TitleBar {
         overflow: hidden;
         text-overflow: ellipsis;
       }
-    `;
-    document.head.appendChild(style);
-  }
-
-  setTitle(title: string): void {
-    const titleText = this.element.querySelector('.title-text');
-    if (titleText) {
-      titleText.textContent = title;
-    }
-  }
-
-  getElement(): HTMLElement {
-    return this.element;
-  }
-
-  remove(): void {
-    this.element.remove();
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    `,document.head.appendChild(e)}setTitle(e){const t=this.element.querySelector(".title-text");t&&(t.textContent=e)}getElement(){return this.element}remove(){this.element.remove()}}export{s as TitleBar};

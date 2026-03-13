@@ -112,6 +112,8 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-12 17:42:01] 首页营销封面若放在 `/assets/covers/**`，必须同步把 `/assets/covers/` 纳入 `assetCdn.includePrefixes`；否则全景资源会走加速而首页封面仍直连 Pages，首屏出图会明显慢一截。
+- [2026-03-12 17:42:01] Windows PowerShell 5.1 直接 `Get-Content` 无 BOM UTF-8 源文件时，可能把正常中文显示成假乱码。判断源码是否真的损坏，优先用 Node `fs.readFileSync(..., 'utf8')` 或直接跑测试，不要只凭终端显示二次改坏文件。
 - [2026-03-12 13:51:58] 导览封面与场景列表当前共用 *-thumb.jpg；为了首屏速度，thumb 预算收口为单张 ≤ 16KB。Windows 下批量压缩 JPG 时不能直接覆盖原文件，必须先写临时文件再 rename，否则会偶发 UNKNOWN open。
 - [2026-03-12 13:51:58] 若要让 KTX 块图继续走 ssetCdn 加速，tile manifest 与目录必须保持在 /assets/panos/tiles/<museum>/<scene>/manifest.json 这一条 /assets/panos/ 前缀下；改到别的目录会绕过 CDN URL 改写。
 

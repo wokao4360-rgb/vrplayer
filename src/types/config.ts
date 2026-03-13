@@ -86,11 +86,24 @@ export interface Scene {
   northYaw?: number;
 }
 
+export interface LandingConfig {
+  brandTitle: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  projectNote?: string;
+}
+
+export interface MuseumMarketing {
+  hook: string;
+  tags: string[];
+}
+
 export interface Museum {
   id: string;
   name: string;
   description?: string;
   cover: string;
+  marketing?: MuseumMarketing;
   map: MapConfig;
   dollhouse?: DollhouseConfig;
   scenes: Scene[];
@@ -113,6 +126,7 @@ export interface AssetCdnConfig {
 
 export interface AppConfig {
   appName: string;
+  landing?: LandingConfig;
   museums: Museum[];
   fcChat?: FcChatConfig;
   assetCdn?: AssetCdnConfig;

@@ -38,6 +38,34 @@ function createExitFullscreenIcon(): string {
 </svg>`;
 }
 
+function createVrIcon(): string {
+  return `
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M4 9.5C4 8.67157 4.67157 8 5.5 8H8.2C8.73104 8 9.22368 8.28121 9.49584 8.7396L10.2 9.925H13.8L14.5042 8.7396C14.7763 8.28121 15.269 8 15.8 8H18.5C19.3284 8 20 8.67157 20 9.5V14.5C20 15.3284 19.3284 16 18.5 16H15.7C15.1767 16 14.6905 15.7268 14.4158 15.2797L13.7 14.125H10.3L9.58422 15.2797C9.30955 15.7268 8.82335 16 8.3 16H5.5C4.67157 16 4 15.3284 4 14.5V9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M8.5 12.1C8.5 13.2046 7.60457 14.1 6.5 14.1C5.39543 14.1 4.5 13.2046 4.5 12.1C4.5 10.9954 5.39543 10.1 6.5 10.1C7.60457 10.1 8.5 10.9954 8.5 12.1Z" stroke="currentColor" stroke-width="1.8"/>
+  <path d="M19.5 12.1C19.5 13.2046 18.6046 14.1 17.5 14.1C16.3954 14.1 15.5 13.2046 15.5 12.1C15.5 10.9954 16.3954 10.1 17.5 10.1C18.6046 10.1 19.5 10.9954 19.5 12.1Z" stroke="currentColor" stroke-width="1.8"/>
+</svg>`;
+}
+
+function createPickIcon(): string {
+  return `
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M12 17V21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M3 12H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M17 12H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.8"/>
+</svg>`;
+}
+
+function createCompassIcon(): string {
+  return `
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/>
+  <path d="M10.2 10.2L15.6 8.4L13.8 13.8L8.4 15.6L10.2 10.2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+</svg>`;
+}
+
 export class TopRightControls {
   private element: HTMLElement;
   private fullscreenBtn: HTMLButtonElement;
@@ -110,8 +138,7 @@ export class TopRightControls {
       this.pickModeBtn.className = 'vr-topright-btn';
       this.pickModeBtn.setAttribute('aria-label', '拾取模式');
       this.pickModeBtn.title = '拾取模式：点击画面获取 yaw/pitch';
-      this.pickModeBtn.textContent = '🎯';
-      this.pickModeBtn.style.fontSize = '18px';
+      this.pickModeBtn.innerHTML = createPickIcon();
       this.pickModeBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -130,8 +157,7 @@ export class TopRightControls {
       this.northCalibrationBtn.className = 'vr-topright-btn';
       this.northCalibrationBtn.setAttribute('aria-label', '校准北向');
       this.northCalibrationBtn.title = '校准北向：设置当前场景的北方向';
-      this.northCalibrationBtn.textContent = '🧭';
-      this.northCalibrationBtn.style.fontSize = '18px';
+      this.northCalibrationBtn.innerHTML = createCompassIcon();
       this.northCalibrationBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -147,8 +173,7 @@ export class TopRightControls {
       this.vrModeBtn.className = 'vr-topright-btn vr-top-icon-only vr-icon-btn';
       this.vrModeBtn.setAttribute('aria-label', 'VR眼镜');
       this.vrModeBtn.title = 'VR眼镜：转动设备控制视角';
-      this.vrModeBtn.textContent = '🥽';
-      this.vrModeBtn.style.fontSize = '18px';
+      this.vrModeBtn.innerHTML = createVrIcon();
       this.vrModeBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();

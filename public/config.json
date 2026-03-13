@@ -3,7 +3,8 @@
   "assetCdn": {
     "enabled": true,
     "includePrefixes": [
-      "/assets/panos/"
+      "/assets/panos/",
+      "/assets/covers/"
     ],
     "baseUrls": [
       "https://github.cnxiaobai.com/https://raw.githubusercontent.com/wokao4360-rgb/vrplayer/main/docs",
@@ -817,7 +818,15 @@
           },
           "hotspots": []
         }
-      ]
+      ],
+      "marketing": {
+        "hook": "一死醒天下：探寻晚清名臣尸谏救国的铮铮铁骨。",
+        "tags": [
+          "VR沉浸",
+          "24个历史场景",
+          "独家全景"
+        ]
+      }
     },
     {
       "id": "yanghucheng",
@@ -975,13 +984,21 @@
           },
           "hotspots": []
         }
-      ]
+      ],
+      "marketing": {
+        "hook": "民族危亡的抉择：重返风云激荡的西安事变发生地。",
+        "tags": [
+          "360°漫游",
+          "将领故居",
+          "历史现场"
+        ]
+      }
     },
     {
       "id": "linzexu",
       "name": "林则徐纪念馆",
       "description": "已接入首批 12 个实拍点位，平面图按道路骨架与连屋、北屋分区重排。",
-      "cover": "/assets/panos/linzexu/south-gate-thumb.jpg",
+      "cover": "/assets/covers/linzexu/hero-cover.jpg",
       "map": {
         "width": 1000,
         "height": 1450,
@@ -1475,7 +1492,21 @@
             "fallbackPanoLow": "/assets/panos/linzexu/north-house-east-low.jpg"
           }
         }
-      ]
+      ],
+      "marketing": {
+        "hook": "苟利国家生死以：穿梭百年，见证虎门销烟外的旷世长歌。",
+        "tags": [
+          "12个高清实拍",
+          "历史遗迹",
+          "人文研学"
+        ]
+      }
     }
-  ]
+  ],
+  "landing": {
+    "brandTitle": "研学.xyz",
+    "heroTitle": "三馆全景导览",
+    "heroSubtitle": "用一座馆的门廊、一封遗墨、一道回廊，把历史从课本里请回眼前。沉浸式走进纪念馆，让研学先被看见，再被记住。",
+    "projectNote": "这是一个服务研学的公益全景项目。我们用实地采集与轻量交互，把纪念馆里的历史现场重新组织成可抵达、可观看、可讲述的沉浸入口。"
+  }
 }

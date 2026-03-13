@@ -1,44 +1,87 @@
-import type { Museum } from '../types/config';
+import type { Museum, Scene } from '../types/config';
 import { navigateToScene } from '../utils/router';
 import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
-
-let styleInjected = false;
+import { resolveMuseumMarketing } from './discoveryContent';
 
 export class SceneListPage {
   private element: HTMLElement;
 
   constructor(private readonly museum: Museum) {
     this.element = document.createElement('div');
-    this.element.className = 'scene-list-page';
+    this.element.className = 'vr-discovery-page';
     this.render();
-    this.applyStyles();
+  }
+
+  private renderSceneCard(scene: Scene, index: number): string {
+    return `
+      <article class="vr-scene-card vr-card-enter" style="--vr-card-index:${index}">
+        <button class="vr-scene-card__button" type="button" data-scene-id="${scene.id}" aria-label="进入${scene.name}">
+          <div class="vr-scene-card__media">
+            <img src="${resolveAssetUrl(scene.thumb, AssetType.THUMB)}" alt="${scene.name}" loading="lazy" decoding="async">
+            <div class="vr-scene-card__veil"></div>
+            <span class="vr-scene-card__seal">场景点位</span>
+          </div>
+          <div class="vr-scene-card__body">
+            <div class="vr-scene-card__eyebrow">实拍场景</div>
+            <h2 class="vr-scene-card__name">${scene.name}</h2>
+            <p class="vr-scene-card__hook">进入这一处空间，沿着真实拍摄视角继续向前漫游。</p>
+            <div class="vr-scene-card__footer">
+              <span>360° 实拍漫游</span>
+              <span class="vr-scene-card__cta">进入场景</span>
+            </div>
+          </div>
+        </button>
+      </article>
+    `;
   }
 
   private render(): void {
+    const marketing = resolveMuseumMarketing(this.museum);
+
     this.element.innerHTML = `
-      <div class="scene-list-container">
-        <h1 class="scene-list-title">${this.museum.name} - 场景列表</h1>
-        ${this.museum.description ? `<p class="scene-list-desc">${this.museum.description}</p>` : ''}
-        <div class="scene-grid">
-          ${this.museum.scenes
-            .map(
-              (scene) => `
-            <div class="scene-card" data-scene-id="${scene.id}">
-              <div class="scene-cover">
-                <img src="${resolveAssetUrl(scene.thumb, AssetType.THUMB)}" alt="${scene.name}" loading="lazy">
-                <div class="scene-overlay">
-                  <h2 class="scene-name">${scene.name}</h2>
-                </div>
-              </div>
+      <div class="vr-discovery-shell vr-discovery-shell--scene-list">
+        <section class="vr-scene-banner vr-page-enter">
+          <div class="vr-scene-banner__copy">
+            <div>
+              <div class="vr-discovery-eyebrow">馆内目录</div>
+              <h1 class="vr-scene-banner__title">${this.museum.name}</h1>
+              <p class="vr-scene-banner__desc">${marketing.hook}</p>
             </div>
-          `,
-            )
-            .join('')}
-        </div>
+            <div>
+              <div class="vr-discovery-tags">
+                ${marketing.tags
+                  .slice(0, 3)
+                  .map((tag) => `<span class="vr-discovery-tag">${tag}</span>`)
+                  .join('')}
+              </div>
+              ${
+                this.museum.description
+                  ? `<p class="vr-scene-banner__desc">${this.museum.description}</p>`
+                  : ''
+              }
+            </div>
+          </div>
+          <div class="vr-scene-banner__media">
+            <img src="${resolveAssetUrl(this.museum.cover, AssetType.COVER)}" alt="${this.museum.name}" loading="eager" decoding="async">
+          </div>
+        </section>
+
+        <section class="vr-discovery-section">
+          <div class="vr-discovery-section-head vr-page-enter">
+            <div>
+              <div class="vr-discovery-eyebrow">点位目录</div>
+              <h2 class="vr-discovery-section-title">从一个门槛、一段回廊，走进展馆真正的空间顺序</h2>
+            </div>
+            <p class="vr-discovery-section-note">场景卡片会保留你熟悉的进入方式，但以更清楚的目录感呈现，先看清，再进入。</p>
+          </div>
+          <div class="vr-scene-grid">
+            ${this.museum.scenes.map((scene, index) => this.renderSceneCard(scene, index)).join('')}
+          </div>
+        </section>
       </div>
     `;
 
-    this.element.querySelectorAll('.scene-card').forEach((card) => {
+    this.element.querySelectorAll<HTMLButtonElement>('.vr-scene-card__button').forEach((card) => {
       card.addEventListener('click', () => {
         const sceneId = card.getAttribute('data-scene-id');
         if (sceneId) {
@@ -46,86 +89,6 @@ export class SceneListPage {
         }
       });
     });
-  }
-
-  private applyStyles(): void {
-    if (styleInjected) return;
-    styleInjected = true;
-
-    const style = document.createElement('style');
-    style.textContent = `
-      .scene-list-page {
-        width: 100%;
-        height: 100%;
-        overflow-y: auto;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding-top: calc(44px + env(safe-area-inset-top, 0px));
-      }
-      .scene-list-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      .scene-list-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #fff;
-        text-align: center;
-        margin-bottom: 30px;
-      }
-      .scene-list-desc {
-        max-width: 820px;
-        margin: -12px auto 26px;
-        color: rgba(255, 255, 255, 0.92);
-        font-size: 15px;
-        line-height: 1.6;
-        text-align: center;
-      }
-      .scene-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 20px;
-      }
-      .scene-card {
-        cursor: pointer;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        transition: transform 0.2s;
-      }
-      .scene-card:active {
-        transform: scale(0.98);
-      }
-      .scene-cover {
-        position: relative;
-        width: 100%;
-        padding-top: 56.25%;
-        overflow: hidden;
-      }
-      .scene-cover img {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-      .scene-overlay {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-        padding: 15px;
-        color: #fff;
-      }
-      .scene-name {
-        font-size: 18px;
-        font-weight: 600;
-        margin: 0;
-      }
-    `;
-    document.head.appendChild(style);
   }
 
   getElement(): HTMLElement {

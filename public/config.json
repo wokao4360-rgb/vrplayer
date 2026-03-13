@@ -22,7 +22,7 @@
       "id": "wangding",
       "name": "王鼎纪念馆",
       "description": "当前已接入 24 个实拍点位，北门与千古流芳暂未扫描。",
-      "cover": "/assets/panos/wangding/south-gate-thumb.jpg",
+      "cover": "/assets/covers/wangding/hero-cover.jpg",
       "map": {
         "width": 1300,
         "height": 2200,
@@ -832,7 +832,7 @@
       "id": "yanghucheng",
       "name": "杨虎城纪念馆",
       "description": "当前已接入 3 个实拍点位，西屋2与南门暂无素材。",
-      "cover": "/assets/panos/yanghucheng/east-room-1-thumb.jpg",
+      "cover": "/assets/covers/yanghucheng/hero-cover.jpg",
       "map": {
         "width": 1000,
         "height": 700,

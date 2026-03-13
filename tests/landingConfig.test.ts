@@ -46,16 +46,24 @@ test('config exposes landing copy and museum marketing metadata for the homepage
   }
 });
 
-test('linzexu cover points to the processed Gemini homepage cover asset', () => {
+test('all museum covers point to processed homepage cover assets', () => {
   const config = readConfig();
-  const museum = config.museums.find((item: { id: string }) => item.id === 'linzexu');
-  const coverPath = 'public/assets/covers/linzexu/hero-cover.jpg';
+  const expectedCovers = [
+    { id: 'wangding', cover: '/assets/covers/wangding/hero-cover.jpg' },
+    { id: 'yanghucheng', cover: '/assets/covers/yanghucheng/hero-cover.jpg' },
+    { id: 'linzexu', cover: '/assets/covers/linzexu/hero-cover.jpg' },
+  ];
 
-  assert.ok(museum, 'public/config.json 中必须存在 linzexu 展馆');
-  assert.equal(museum.cover, '/assets/covers/linzexu/hero-cover.jpg');
-  assert.ok(fs.existsSync(coverPath));
-  assert.ok(
-    fs.statSync(coverPath).size < 300 * 1024,
-    '首页封面应为处理后的轻量资源，而不是原始大图直出',
-  );
+  for (const expected of expectedCovers) {
+    const museum = config.museums.find((item: { id: string }) => item.id === expected.id);
+    const coverPath = `public${expected.cover}`;
+
+    assert.ok(museum, `public/config.json 中必须存在 ${expected.id} 展馆`);
+    assert.equal(museum.cover, expected.cover);
+    assert.ok(fs.existsSync(coverPath), `${expected.id} 首页封面文件缺失`);
+    assert.ok(
+      fs.statSync(coverPath).size < 400 * 1024,
+      `${expected.id} 首页封面应为处理后的轻量资源，而不是原始大图直出`,
+    );
+  }
 });

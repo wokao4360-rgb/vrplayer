@@ -1,35 +1,22 @@
 {
-  "type": "equirect-tiles",
-  "tileSize": 512,
-  "levels": [
-    {
-      "z": 0,
-      "cols": 1,
-      "rows": 1
-    },
-    {
-      "z": 1,
-      "cols": 2,
-      "rows": 1
-    },
-    {
-      "z": 2,
-      "cols": 4,
-      "rows": 2
-    },
-    {
-      "z": 3,
-      "cols": 8,
-      "rows": 4
-    }
-  ],
-  "tileFormat": "avif",
+  "type": "cubemap-tiles",
   "baseUrl": "/assets/panos/tiles/linzexu/east_room_1",
+  "faces": [
+    "f",
+    "r",
+    "b",
+    "l",
+    "u",
+    "d"
+  ],
+  "lowFaceSize": 512,
+  "highTileSize": 1024,
+  "highGrid": 2,
+  "tileFormat": "avif",
+  "highWarmupTileBudget": 12,
   "lowFallbackFormat": "jpg",
   "highFallbackFormats": [
     "ktx2",
     "jpg"
-  ],
-  "lowLevelZ": 2,
-  "highWarmupTileBudget": 12
+  ]
 }

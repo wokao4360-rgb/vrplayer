@@ -1,6 +1,8 @@
-﻿export {
+export {
   ACESFilmicToneMapping,
+  BackSide,
   ClampToEdgeWrapping,
+  DoubleSide,
   LinearFilter,
   LinearMipmapLinearFilter,
   NoToneMapping,
@@ -21,10 +23,12 @@ export { Scene } from 'three/src/scenes/Scene.js';
 export { Texture } from 'three/src/textures/Texture.js';
 export { CanvasTexture } from 'three/src/textures/CanvasTexture.js';
 
+export { Group } from 'three/src/objects/Group.js';
 export { Mesh } from 'three/src/objects/Mesh.js';
 
 export { MeshBasicMaterial } from 'three/src/materials/MeshBasicMaterial.js';
 
+export { PlaneGeometry } from 'three/src/geometries/PlaneGeometry.js';
 export { SphereGeometry } from 'three/src/geometries/SphereGeometry.js';
 
 export { WebGLRenderer } from 'three/src/renderers/WebGLRenderer.js';

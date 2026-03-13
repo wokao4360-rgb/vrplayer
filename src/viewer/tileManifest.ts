@@ -7,7 +7,9 @@ export type TileLevel = {
   rows: number;
 };
 
-export type TileManifest = {
+export type CubeFaceId = 'f' | 'r' | 'b' | 'l' | 'u' | 'd';
+ 
+export type EquirectTileManifest = {
   type: 'equirect-tiles';
   tileSize: number;
   baseUrl: string;
@@ -18,6 +20,21 @@ export type TileManifest = {
   lowLevelZ?: number;
   highWarmupTileBudget?: number;
 };
+
+export type CubemapTileManifest = {
+  type: 'cubemap-tiles';
+  baseUrl: string;
+  lowFaceSize: number;
+  highTileSize: number;
+  highGrid: number;
+  faces?: CubeFaceId[];
+  tileFormat?: TileImageFormat;
+  lowFallbackFormat?: 'jpg';
+  highFallbackFormats?: TileMeshFormat[];
+  highWarmupTileBudget?: number;
+};
+
+export type TileManifest = EquirectTileManifest | CubemapTileManifest;
 
 function absolutizeManifestBaseUrl(baseUrl: string, manifestUrl: string): string {
   const trimmed = baseUrl.trim();

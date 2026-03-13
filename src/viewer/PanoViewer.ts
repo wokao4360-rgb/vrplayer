@@ -531,8 +531,10 @@ export class PanoViewer {
             }
             meshFallbackActivated = true;
             const previousTilePano = this.tilePano;
-            const { TileMeshPano } = await import('./TileMeshPano');
-            const nextTilePano = new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
+            const nextTilePano =
+              manifest.type === 'cubemap-tiles'
+                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
+                : new (await import('./TileMeshPano')).TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
             if ('setPerformanceMode' in nextTilePano) {
               (nextTilePano as any).setPerformanceMode(this.perfMode);
             }
@@ -547,16 +549,26 @@ export class PanoViewer {
           };
 
           if (selectInitialTileBackend(manifest) === 'mesh') {
-            const { TileMeshPano } = await import('./TileMeshPano');
-            this.tilePano = new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
+            this.tilePano =
+              manifest.type === 'cubemap-tiles'
+                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
+                : new (await import('./TileMeshPano')).TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
           } else {
-            this.tilePano = new TileCanvasPano(
-              this.scene,
-              onFirstDraw,
-              onHighReady,
-              switchToMeshFallback,
-              this.renderer.capabilities.maxTextureSize || 0
-            );
+            this.tilePano =
+              manifest.type === 'cubemap-tiles'
+                ? new (await import('./CubeCanvasPano')).CubeCanvasPano(
+                    this.scene,
+                    onFirstDraw,
+                    onHighReady,
+                    switchToMeshFallback,
+                  )
+                : new TileCanvasPano(
+                    this.scene,
+                    onFirstDraw,
+                    onHighReady,
+                    switchToMeshFallback,
+                    this.renderer.capabilities.maxTextureSize || 0
+                  );
           }
           const initialFallbackVisible = resolveInitialTileFallbackVisibility(manifest, fallbackPlanned);
           if (initialFallbackVisible) {

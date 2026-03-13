@@ -37,6 +37,22 @@ test('normalizeTileManifest fills avif fallback defaults', () => {
   assert.deepEqual(manifest.highFallbackFormats, ['ktx2', 'jpg']);
 });
 
+test('normalizeTileManifest keeps cubemap AVIF manifests on the same fallback defaults', () => {
+  const manifest = normalizeTileManifest({
+    type: 'cubemap-tiles',
+    baseUrl: '/assets/panos/cubemaps/demo',
+    lowFaceSize: 512,
+    highTileSize: 1024,
+    highGrid: 2,
+    tileFormat: 'avif',
+  });
+
+  assert.equal(manifest.type, 'cubemap-tiles');
+  assert.equal(manifest.tileFormat, 'avif');
+  assert.equal(manifest.lowFallbackFormat, 'jpg');
+  assert.deepEqual(manifest.highFallbackFormats, ['ktx2', 'jpg']);
+});
+
 test('avif low tiles stay on bitmap chain and fall back to jpg only', () => {
   const manifest = normalizeTileManifest({
     type: 'equirect-tiles',

@@ -37,39 +37,19 @@ if (!fs.existsSync(manifestPath)) {
 }
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-if (!manifest.levels || !manifest.tileSize || !manifest.baseUrl) {
-  console.error('[ktx2] manifest 格式不合法');
-  process.exit(1);
-}
 
 const toktx = await resolveToktx();
 console.log(`[ktx2] using toktx: ${toktx}`);
 
 fs.mkdirSync(absOut, { recursive: true });
-for (const level of manifest.levels) {
-  const levelDir = path.join(absIn, `z${level.z}`);
-  const outLevelDir = path.join(absOut, `z${level.z}`);
-  fs.mkdirSync(outLevelDir, { recursive: true });
-  for (let row = 0; row < level.rows; row++) {
-    for (let col = 0; col < level.cols; col++) {
-      const baseName = `${col}_${row}`;
-      const srcJpg = path.join(levelDir, `${baseName}.jpg`);
-      const srcPng = path.join(levelDir, `${baseName}.png`);
-      const src = fs.existsSync(srcJpg) ? srcJpg : fs.existsSync(srcPng) ? srcPng : '';
-      if (!src) continue;
-      const dst = path.join(outLevelDir, `${baseName}.ktx2`);
-      if (!force && fs.existsSync(dst)) continue;
-      const result = spawnSync(
-        toktx,
-        ['--t2', '--encode', 'etc1s', '--qlevel', '80', '--clevel', '2', dst, src],
-        { stdio: 'inherit' }
-      );
-      if (result.status !== 0) {
-        console.error(`[ktx2] 转换失败: ${src}`);
-        process.exit(result.status || 1);
-      }
-    }
+if (manifest.type === 'cubemap-tiles') {
+  convertCubemap();
+} else {
+  if (!manifest.levels || !manifest.tileSize || !manifest.baseUrl) {
+    console.error('[ktx2] manifest 格式不合法');
+    process.exit(1);
   }
+  convertEquirect();
 }
 
 const outManifest = {
@@ -79,6 +59,52 @@ const outManifest = {
 };
 fs.writeFileSync(path.join(absOut, 'manifest.json'), JSON.stringify(outManifest, null, 2), 'utf-8');
 console.log('[ktx2] manifest 更新完成');
+
+function convertEquirect() {
+  for (const level of manifest.levels) {
+    const levelDir = path.join(absIn, `z${level.z}`);
+    const outLevelDir = path.join(absOut, `z${level.z}`);
+    fs.mkdirSync(outLevelDir, { recursive: true });
+    for (let row = 0; row < level.rows; row++) {
+      for (let col = 0; col < level.cols; col++) {
+        const baseName = `${col}_${row}`;
+        const srcJpg = path.join(levelDir, `${baseName}.jpg`);
+        const srcPng = path.join(levelDir, `${baseName}.png`);
+        const src = fs.existsSync(srcJpg) ? srcJpg : fs.existsSync(srcPng) ? srcPng : '';
+        if (!src) continue;
+        convertFile(src, path.join(outLevelDir, `${baseName}.ktx2`));
+      }
+    }
+  }
+}
+
+function convertCubemap() {
+  const highInDir = path.join(absIn, 'high');
+  const highOutDir = path.join(absOut, 'high');
+  fs.mkdirSync(highOutDir, { recursive: true });
+  for (const face of fs.readdirSync(highInDir, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+    const inFaceDir = path.join(highInDir, face.name);
+    const outFaceDir = path.join(highOutDir, face.name);
+    fs.mkdirSync(outFaceDir, { recursive: true });
+    for (const entry of fs.readdirSync(inFaceDir)) {
+      if (!entry.endsWith('.jpg') && !entry.endsWith('.png')) continue;
+      convertFile(path.join(inFaceDir, entry), path.join(outFaceDir, entry.replace(/\.(jpg|png)$/i, '.ktx2')));
+    }
+  }
+}
+
+function convertFile(src, dst) {
+  if (!force && fs.existsSync(dst)) return;
+  const result = spawnSync(
+    toktx,
+    ['--t2', '--encode', 'etc1s', '--qlevel', '80', '--clevel', '2', dst, src],
+    { stdio: 'inherit' }
+  );
+  if (result.status !== 0) {
+    console.error(`[ktx2] 转换失败: ${src}`);
+    process.exit(result.status || 1);
+  }
+}
 
 async function resolveToktx() {
   if (process.env.KTX2_TOKTX && fs.existsSync(process.env.KTX2_TOKTX)) {

@@ -1,6 +1,7 @@
 import type { AppConfig, Museum } from '../types/config';
-import { navigateToSceneList } from '../utils/router';
+import { navigateToScene } from '../utils/router';
 import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
+import { getMuseumEntrySceneId } from '../utils/museumEntry';
 import { resolveLandingContent, resolveMuseumMarketing } from './discoveryContent';
 
 export class MuseumList {
@@ -16,10 +17,17 @@ export class MuseumList {
   private renderMuseumCard(museum: Museum, index: number): string {
     const marketing = resolveMuseumMarketing(museum);
     const coverUrl = resolveAssetUrl(museum.cover, AssetType.COVER);
+    const entrySceneId = getMuseumEntrySceneId(museum);
 
     return `
       <article class="vr-museum-card vr-card-enter" style="--vr-card-index:${index}">
-        <button class="vr-museum-card__button" type="button" data-museum-id="${museum.id}" aria-label="进入${museum.name}">
+        <button
+          class="vr-museum-card__button"
+          type="button"
+          data-museum-id="${museum.id}"
+          data-scene-id="${entrySceneId ?? ''}"
+          aria-label="进入${museum.name}"
+        >
           <div class="vr-museum-card__media">
             <img src="${coverUrl}" alt="${museum.name}" loading="lazy" decoding="async">
             <div class="vr-museum-card__veil"></div>
@@ -37,7 +45,7 @@ export class MuseumList {
             </div>
             <div class="vr-museum-card__footer">
               <span>${museum.scenes.length} 个场景</span>
-              <span class="vr-museum-card__cta">点击进入</span>
+              <span class="vr-museum-card__cta">直达首站</span>
             </div>
           </div>
         </button>
@@ -55,11 +63,6 @@ export class MuseumList {
           <div class="vr-discovery-brand">${landing.brandTitle}</div>
           <h1 class="vr-discovery-hero-title">${landing.heroTitle}</h1>
           <p class="vr-discovery-hero-subtitle">${landing.heroSubtitle}</p>
-          <div class="vr-discovery-hero-meta" aria-label="项目亮点">
-            <span class="vr-discovery-pill">公益研学</span>
-            <span class="vr-discovery-pill">${activeMuseums.length} 座展馆开放</span>
-            <span class="vr-discovery-pill">真实历史现场</span>
-          </div>
         </section>
 
         <section class="vr-discovery-section">
@@ -87,8 +90,9 @@ export class MuseumList {
     this.element.querySelectorAll<HTMLButtonElement>('.vr-museum-card__button').forEach((card) => {
       card.addEventListener('click', () => {
         const museumId = card.getAttribute('data-museum-id');
-        if (museumId) {
-          navigateToSceneList(museumId);
+        const sceneId = card.getAttribute('data-scene-id');
+        if (museumId && sceneId) {
+          navigateToScene(museumId, sceneId);
         }
       });
     });

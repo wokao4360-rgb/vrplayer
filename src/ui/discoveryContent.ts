@@ -13,7 +13,7 @@ export type MuseumMarketingContent = {
 };
 
 const DEFAULT_LANDING: LandingContent = {
-  brandTitle: '研学.xyz',
+  brandTitle: '鼎虎清源',
   heroTitle: '三馆全景导览',
   heroSubtitle: '用一座馆的门廊、一封遗墨、一道回廊，把历史从课本里请回眼前。',
   projectNote:

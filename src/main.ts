@@ -1,5 +1,5 @@
 ﻿import { loadConfig, getMuseum, getScene, clearConfigCache } from './utils/config';
-import { parseRoute, navigateToMuseumList, navigateToSceneList, navigateToScene, isDebugMode, isEditorMode } from './utils/router';
+import { parseRoute, navigateToMuseumList, navigateToScene, isDebugMode, isEditorMode } from './utils/router';
 import { normalizePathname } from './utils/urlBuilder';
 import type { PanoViewer } from './viewer/PanoViewer';
 import type { TitleBar } from './ui/TitleBar';
@@ -40,6 +40,7 @@ import type { SceneUiRuntime } from './app/sceneUiRuntime';
 import type { ChatRuntime } from './app/chatRuntime';
 import { ViewSessionRuntime } from './app/viewSessionRuntime';
 import { ZH_CN } from './i18n/zh-CN';
+import { getMuseumEntrySceneId } from './utils/museumEntry';
 import { resolveLandingContent } from './ui/discoveryContent';
 import './ui/uiRefresh.css';
 if (__VR_DEBUG__) {
@@ -516,10 +517,15 @@ class App {
       this.setDocumentTitle(this.config.appName);
       await this.showMuseumList();
     } else if (!route.sceneId) {
-      // 鏄剧ず鍦烘櫙鍒楄〃
       const museum = getMuseum(route.museumId);
       if (museum) {
-        await this.showSceneList(museum);
+        const entrySceneId = getMuseumEntrySceneId(museum);
+        if (entrySceneId) {
+          navigateToScene(museum.id, entrySceneId);
+          return;
+        }
+        this.showError('该展馆暂未开放场景');
+        navigateToMuseumList();
       } else {
         this.showError('未找到指定展馆');
         navigateToMuseumList();
@@ -534,7 +540,12 @@ class App {
       } else {
         this.showError('未找到指定场景');
         if (museum) {
-          navigateToSceneList(museum.id);
+          const entrySceneId = getMuseumEntrySceneId(museum);
+          if (entrySceneId) {
+            navigateToScene(museum.id, entrySceneId);
+            return;
+          }
+          navigateToMuseumList();
         } else {
           navigateToMuseumList();
         }

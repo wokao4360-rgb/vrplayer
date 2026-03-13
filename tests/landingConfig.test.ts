@@ -13,7 +13,7 @@ test('config exposes landing copy and museum marketing metadata for the homepage
   const errors = validateConfig(config);
 
   assert.deepEqual(errors, []);
-  assert.equal(config.landing?.brandTitle, '研学.xyz');
+  assert.equal(config.landing?.brandTitle, '鼎虎清源');
   assert.equal(config.landing?.heroTitle, '三馆全景导览');
   assert.ok(
     typeof config.landing?.heroSubtitle === 'string' &&

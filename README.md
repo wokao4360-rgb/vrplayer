@@ -112,6 +112,7 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-13 15:38:00] AVIF 块图主链路当前已收口为：低层 `avif -> jpg`，高层 `avif -> ktx2 -> jpg`。关键约束是：Canvas 路径只负责 `avif/jpg`，若高层 AVIF 失败且存在 `ktx2` fallback，必须由 `PanoViewer` 触发一次性后端切换到 `TileMeshPano`，不要在 Canvas 内直接跳到 JPG，否则会把 KTX2 高清兜底链路短路掉。
 - [2026-03-13 12:52:26] 当前站点全局 `body` 仍保持 `overflow: hidden` 以服务全景页；首页/馆入口页若要可滚，页面根容器必须自己成为固定高度滚动层（如 `height: 100% + overflow-y: auto + -webkit-overflow-scrolling: touch`）。只给 `min-height` 不给固定高度，会出现“看起来是长页但实际上滑不动”。
 - [2026-03-12 17:42:01] 首页营销封面若放在 `/assets/covers/**`，必须同步把 `/assets/covers/` 纳入 `assetCdn.includePrefixes`；否则全景资源会走加速而首页封面仍直连 Pages，首屏出图会明显慢一截。
 - [2026-03-12 17:42:01] Windows PowerShell 5.1 直接 `Get-Content` 无 BOM UTF-8 源文件时，可能把正常中文显示成假乱码。判断源码是否真的损坏，优先用 Node `fs.readFileSync(..., 'utf8')` 或直接跑测试，不要只凭终端显示二次改坏文件。

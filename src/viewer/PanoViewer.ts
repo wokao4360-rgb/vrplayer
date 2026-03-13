@@ -12,9 +12,10 @@ import { interactionBus } from '../ui/interactionBus';
 import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/externalImage';
 import { ZoomHud } from '../ui/ZoomHud';
 import { showToast } from '../ui/toast';
-import { TileCanvasPano } from './TileCanvasPano';
+import { TileCanvasPano, TileMeshFallbackRequiredError } from './TileCanvasPano';
 import { fetchTileManifest, type TileManifest } from './tileManifest';
 import { PanoLifecycleRuntime } from './panoLifecycleRuntime';
+import { selectInitialTileBackend } from './tileFormatPolicy';
 
 type NadirPatchType = import('./NadirPatch').NadirPatch;
 
@@ -115,6 +116,7 @@ export class PanoViewer {
   private renderer: WebGLRenderer;
   private sphere: Mesh | null = null;
   private tilePano: TilePano | null = null;
+  private transitionTilePano: TilePano | null = null;
   private fallbackSphere: Mesh | null = null;
   private container: HTMLElement;
   private readonly lifecycleRuntime: PanoLifecycleRuntime;
@@ -419,6 +421,10 @@ export class PanoViewer {
       this.tilePano.dispose();
       this.tilePano = null;
     }
+    if (this.transitionTilePano) {
+      this.transitionTilePano.dispose();
+      this.transitionTilePano = null;
+    }
     this.clearFallback();
     if (this.sphere) {
       this.scene.remove(this.sphere);
@@ -489,6 +495,7 @@ export class PanoViewer {
       const fallbackUrlLow = tilesConfig.fallbackPanoLow || sceneData.panoLow;
       const fallbackUrlHigh = tilesConfig.fallbackPano || sceneData.pano;
       const fallbackPlanned = Boolean(fallbackUrlLow || fallbackUrlHigh);
+      let meshFallbackActivated = false;
       this.tilesVisibleStableFrames = 0;
       this.tilesLastError = '';
       this.tilesLowReady = false;
@@ -502,6 +509,10 @@ export class PanoViewer {
         this.showFallbackTexture(resolveAssetUrl(fallbackUrlHigh, AssetType.PANO), geometry, false);
       }
       const onFirstDraw = () => {
+        if (this.transitionTilePano) {
+          this.transitionTilePano.dispose();
+          this.transitionTilePano = null;
+        }
         if (!this.tilesLowReady) {
           this.tilesLowReady = true;
           this.updateLoadStatus(LoadStatus.LOW_READY);
@@ -519,8 +530,28 @@ export class PanoViewer {
       };
       fetchTileManifest(manifestUrl)
         .then(async (manifest) => {
-          // KTX2 走 Mesh 渲染，其它格式走 Canvas 拼接
-          if (manifest.tileFormat === 'ktx2') {
+          const switchToMeshFallback = async (reason: TileMeshFallbackRequiredError) => {
+            if (meshFallbackActivated || this.disposed || !this.tilePano) {
+              return;
+            }
+            meshFallbackActivated = true;
+            const previousTilePano = this.tilePano;
+            const { TileMeshPano } = await import('./TileMeshPano');
+            const nextTilePano = new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
+            if ('setPerformanceMode' in nextTilePano) {
+              (nextTilePano as any).setPerformanceMode(this.perfMode);
+            }
+            this.transitionTilePano = previousTilePano;
+            this.tilePano = nextTilePano;
+            this.tilesLastError = reason.message;
+            this.setRenderSource(this.renderSource === 'none' ? 'fallback' : this.renderSource, 'AVIF 高清失败，切到 KTX2/JPG fallback');
+            await nextTilePano.load(manifest, {
+              fallbackVisible: true,
+            });
+            nextTilePano.prime(this.camera);
+          };
+
+          if (selectInitialTileBackend(manifest) === 'mesh') {
             const { TileMeshPano } = await import('./TileMeshPano');
             this.tilePano = new TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
           } else {
@@ -528,6 +559,7 @@ export class PanoViewer {
               this.scene,
               onFirstDraw,
               onHighReady,
+              switchToMeshFallback,
               this.renderer.capabilities.maxTextureSize || 0
             );
           }
@@ -1298,6 +1330,10 @@ export class PanoViewer {
     if (this.tilePano) {
       this.tilePano.dispose();
       this.tilePano = null;
+    }
+    if (this.transitionTilePano) {
+      this.transitionTilePano.dispose();
+      this.transitionTilePano = null;
     }
     this.clearFallback();
     if (this.sphere) {

@@ -23,6 +23,11 @@
       "rows": 4
     }
   ],
-  "tileFormat": "ktx2",
-  "baseUrl": "/assets/panos/tiles/linzexu/lianwu_2_east"
+  "tileFormat": "avif",
+  "baseUrl": "/assets/panos/tiles/linzexu/lianwu_2_east",
+  "lowFallbackFormat": "jpg",
+  "highFallbackFormats": [
+    "ktx2",
+    "jpg"
+  ]
 }

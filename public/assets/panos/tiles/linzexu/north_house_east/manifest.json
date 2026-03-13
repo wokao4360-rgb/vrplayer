@@ -23,6 +23,11 @@
       "rows": 4
     }
   ],
-  "tileFormat": "ktx2",
-  "baseUrl": "/assets/panos/tiles/linzexu/north_house_east"
+  "tileFormat": "avif",
+  "baseUrl": "/assets/panos/tiles/linzexu/north_house_east",
+  "lowFallbackFormat": "jpg",
+  "highFallbackFormats": [
+    "ktx2",
+    "jpg"
+  ]
 }

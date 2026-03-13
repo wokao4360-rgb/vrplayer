@@ -71,7 +71,7 @@ test('linzexu floorplan fallback connections follow the revised hand-drawn topol
   ]);
 });
 
-test('linzexu scenes all point to published KTX2 tile manifests with jpg fallback', () => {
+test('linzexu scenes all point to published AVIF tile manifests with jpg and ktx2 fallback', () => {
   const museum = readLinzexuMuseum();
 
   for (const scene of museum.scenes) {
@@ -95,7 +95,9 @@ test('linzexu scenes all point to published KTX2 tile manifests with jpg fallbac
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     assert.equal(manifest.type, 'equirect-tiles');
-    assert.equal(manifest.tileFormat, 'ktx2');
+    assert.equal(manifest.tileFormat, 'avif');
+    assert.equal(manifest.lowFallbackFormat, 'jpg');
+    assert.deepEqual(manifest.highFallbackFormats, ['ktx2', 'jpg']);
     assert.equal(Array.isArray(manifest.levels), true);
     assert.equal(manifest.levels.length, 4);
     assert.equal(

@@ -3,6 +3,7 @@ import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
 import { getTileMeshRenderConfig, normalizeTileUv, resolveKtx2TranscoderPath } from './tileMeshPanoRules';
+import { buildTileUrl, getHighTilePlan, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy';
 
 type TileState = 'empty' | 'loading' | 'ready';
 
@@ -11,6 +12,7 @@ type TileInfo = {
   col: number;
   row: number;
   url: string;
+  format?: TileImageFormat;
   state: TileState;
   priority: 'low' | 'high';
   priorityRank?: number;
@@ -61,6 +63,7 @@ export class TileMeshPano {
   private highReady = false;
   private fallbackVisible = false;
   private useKtx2 = false;
+  private meshFormats: TileMeshFormat[] = ['ktx2', 'jpg'];
   private ktx2Disabled = false;
   private ktx2FailCount = 0;
   private prefetchSeeded = false;
@@ -76,7 +79,11 @@ export class TileMeshPano {
 
   async load(manifest: TileManifest, options?: { fallbackVisible?: boolean }): Promise<void> {
     this.manifest = manifest;
-    this.useKtx2 = manifest.tileFormat === 'ktx2';
+    this.meshFormats = getHighTilePlan(manifest, { avifSupported: true }).meshFormats;
+    if (this.meshFormats.length === 0) {
+      this.meshFormats = ['jpg'];
+    }
+    this.useKtx2 = this.meshFormats.includes('ktx2');
     this.ktx2Disabled = false;
     this.ktx2FailCount = 0;
     this.prefetchSeeded = false;
@@ -172,7 +179,8 @@ export class TileMeshPano {
             z: this.highestLevel.z,
             col,
             row,
-            url: this.buildTileUrl(this.highestLevel.z, col, row, this.useKtx2),
+            url: this.buildPrimaryTileUrl(this.highestLevel.z, col, row),
+            format: this.getPrimaryMeshFormat(),
             state: 'empty',
             priority: 'high',
             lastUsed: now,
@@ -225,7 +233,8 @@ export class TileMeshPano {
               z: this.highestLevel.z,
               col,
               row,
-              url: this.buildTileUrl(this.highestLevel.z, col, row, this.useKtx2),
+              url: this.buildPrimaryTileUrl(this.highestLevel.z, col, row),
+              format: this.getPrimaryMeshFormat(),
               state: 'empty',
               priority: 'high',
               lastUsed: now,
@@ -284,7 +293,8 @@ export class TileMeshPano {
             z: level.z,
             col,
             row,
-            url: this.buildTileUrl(level.z, col, row, this.useKtx2),
+            url: this.buildPrimaryTileUrl(level.z, col, row),
+            format: this.getPrimaryMeshFormat(),
             state: 'empty',
             priority,
             lastUsed: now,
@@ -383,22 +393,30 @@ export class TileMeshPano {
   }
 
   private async fetchTileTexture(info: TileInfo): Promise<Texture> {
-    const baseUrl = `${this.manifest!.baseUrl}/z${info.z}/${info.col}_${info.row}`;
-    const ktx2Url = `${baseUrl}.ktx2`;
-    const jpgUrl = `${baseUrl}.jpg`;
-    if (this.useKtx2 && !this.ktx2Disabled) {
-      try {
-        const texture = await this.loadKtx2Texture(ktx2Url, info.priority);
-        texture.name = ktx2Url;
-        this.ktx2FailCount = 0;
-        return texture;
-      } catch (err) {
-        this.recordKtx2Failure(err);
+    for (const format of this.meshFormats) {
+      const url = buildTileUrl(this.manifest!.baseUrl, info.z, info.col, info.row, format);
+      info.url = url;
+      info.format = format;
+      if (format === 'ktx2') {
+        if (this.ktx2Disabled) {
+          continue;
+        }
+        try {
+          const texture = await this.loadKtx2Texture(url, info.priority);
+          texture.name = url;
+          this.ktx2FailCount = 0;
+          return texture;
+        } catch (err) {
+          this.recordKtx2Failure(err);
+          continue;
+        }
       }
+      const texture = await this.loadJpgTexture(url, info.priority);
+      texture.name = url;
+      return texture;
     }
-    const texture = await this.loadJpgTexture(jpgUrl, info.priority);
-    texture.name = jpgUrl;
-    return texture;
+
+    throw new Error(`mesh tile 无可用格式: z${info.z}/${info.col}_${info.row}`);
   }
 
   private async loadKtx2Texture(url: string, priority: 'low' | 'high'): Promise<Texture> {
@@ -475,7 +493,8 @@ export class TileMeshPano {
       z,
       col,
       row,
-      url: this.buildTileUrl(z, col, row, this.useKtx2),
+      url: this.buildPrimaryTileUrl(z, col, row),
+      format: this.getPrimaryMeshFormat(),
       state: 'loading',
       priority,
       lastUsed: performance.now(),
@@ -603,9 +622,8 @@ export class TileMeshPano {
     return geom;
   }
 
-  private buildTileUrl(z: number, col: number, row: number, ktx2: boolean): string {
-    const ext = ktx2 ? 'ktx2' : 'jpg';
-    return `${this.manifest!.baseUrl}/z${z}/${col}_${row}.${ext}`;
+  private buildPrimaryTileUrl(z: number, col: number, row: number): string {
+    return buildTileUrl(this.manifest!.baseUrl, z, col, row, this.getPrimaryMeshFormat());
   }
 
   private computeNeededTiles(
@@ -730,7 +748,8 @@ export class TileMeshPano {
           z: level.z,
           col,
           row,
-          url: this.buildTileUrl(level.z, col, row, this.useKtx2 && !this.ktx2Disabled),
+          url: this.buildPrimaryTileUrl(level.z, col, row),
+          format: this.getPrimaryMeshFormat(),
           state: 'loading',
           priority: 'high',
           priorityRank: rank,
@@ -759,6 +778,13 @@ export class TileMeshPano {
       this.useKtx2 = false;
       this.lastError = `ktx2 disabled: ${msg}`;
     }
+  }
+
+  private getPrimaryMeshFormat(): TileImageFormat {
+    if (this.meshFormats.includes('ktx2') && !this.ktx2Disabled) {
+      return 'ktx2';
+    }
+    return 'jpg';
   }
 
   private yawToCols(minYaw: number, maxYaw: number, cols: number): number[] {

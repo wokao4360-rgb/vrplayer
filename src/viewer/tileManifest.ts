@@ -1,4 +1,5 @@
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
+import { normalizeTileManifest, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy';
 
 export type TileLevel = {
   z: number;
@@ -11,7 +12,9 @@ export type TileManifest = {
   tileSize: number;
   baseUrl: string;
   levels: TileLevel[];
-  tileFormat?: 'jpg' | 'ktx2';
+  tileFormat?: TileImageFormat;
+  lowFallbackFormat?: 'jpg';
+  highFallbackFormats?: TileMeshFormat[];
 };
 
 function absolutizeManifestBaseUrl(baseUrl: string, manifestUrl: string): string {
@@ -45,8 +48,7 @@ export async function fetchTileManifest(url: string): Promise<TileManifest> {
   if (!res.ok) {
     throw new Error(`manifest 加载失败: ${url}`);
   }
-  const manifest = (await res.json()) as TileManifest;
-  if (!manifest.tileFormat) manifest.tileFormat = 'jpg';
+  const manifest = normalizeTileManifest((await res.json()) as TileManifest);
   manifest.baseUrl = resolveAssetUrl(
     absolutizeManifestBaseUrl(manifest.baseUrl, url),
     AssetType.PANO

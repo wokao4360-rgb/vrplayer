@@ -23,6 +23,11 @@
       "rows": 4
     }
   ],
-  "tileFormat": "ktx2",
-  "baseUrl": "/assets/panos/tiles/linzexu/east_room_1"
+  "tileFormat": "avif",
+  "baseUrl": "/assets/panos/tiles/linzexu/east_room_1",
+  "lowFallbackFormat": "jpg",
+  "highFallbackFormats": [
+    "ktx2",
+    "jpg"
+  ]
 }

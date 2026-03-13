@@ -35,7 +35,9 @@
     "tiles:yhc-dongwu3": "node scripts/generate-pano-tiles.mjs --in public/assets/panos/demo.jpg --out public/assets/panos/tiles/yhc-dongwu3",
     "ktx2:setup": "node scripts/setup-ktx2.mjs",
     "tiles:ktx2": "node scripts/convert-tiles-ktx2.mjs",
-    "tiles:museum:ktx2": "node scripts/generate-museum-ktx2.mjs"
+    "tiles:museum:ktx2": "node scripts/generate-museum-ktx2.mjs",
+    "tiles:avif": "node scripts/convert-tiles-avif.mjs",
+    "tiles:museum:avif": "node scripts/generate-museum-avif.mjs"
   },
   "dependencies": {
     "three": "^0.160.0"

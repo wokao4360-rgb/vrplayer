@@ -2,6 +2,8 @@
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
+import { detectAvifSupport } from '../utils/imageFormatSupport';
+import { buildTileUrl, getHighTilePlan, getLowTilePlan, type TileBitmapFormat, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy';
 
 type TileState = 'empty' | 'loading' | 'ready';
 
@@ -10,14 +12,31 @@ type TileInfo = {
   col: number;
   row: number;
   url: string;
+  format?: TileImageFormat;
   state: TileState;
   priority: 'low' | 'high';
+  purpose: 'low' | 'high';
+  bitmapFormats: TileBitmapFormat[];
+  meshFormats: TileMeshFormat[];
   priorityRank?: number;
   bitmap?: ImageBitmap;
   lastUsed: number;
   failCount: number;
   retryTimer?: number;
 };
+
+export class TileMeshFallbackRequiredError extends Error {
+  readonly requiresMeshFallback = true;
+
+  constructor(
+    readonly failedFormat: TileImageFormat | null,
+    readonly nextFormats: TileMeshFormat[],
+    message = '高层 AVIF 失败，需要切换到 mesh fallback',
+  ) {
+    super(message);
+    this.name = 'TileMeshFallbackRequiredError';
+  }
+}
 
 export class TileCanvasPano {
   private maxTextureSize: number;
@@ -56,11 +75,14 @@ export class TileCanvasPano {
   private canvasScale = 1;
   private fallbackVisible = false;
   private prefetchSeeded = false;
+  private avifSupported = true;
+  private meshFallbackRequested = false;
 
   constructor(
     private scene: Scene,
     private onFirstDraw: () => void,
     private onHighReady: () => void,
+    private onMeshFallback?: (error: TileMeshFallbackRequiredError) => void | Promise<void>,
     maxTextureSize = 0
   ) {
     this.maxTextureSize = Math.max(0, maxTextureSize);
@@ -69,6 +91,8 @@ export class TileCanvasPano {
   async load(manifest: TileManifest, options?: { fallbackVisible?: boolean }): Promise<void> {
     this.manifest = manifest;
     this.fallbackVisible = Boolean(options?.fallbackVisible);
+    this.avifSupported = await detectAvifSupport();
+    this.meshFallbackRequested = false;
     this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
     if (!this.highestLevel) throw new Error('manifest 缺少 level');
     this.lruLimit = Math.max(64, Math.min(this.highestLevel.cols * this.highestLevel.rows, 256));
@@ -152,19 +176,10 @@ export class TileCanvasPano {
     if (!this.fallbackVisible) {
       const z0 = manifest.levels.find((l) => l.z === 0);
       if (!z0) throw new Error('manifest 缺少 z0');
-      const z0Url = `${manifest.baseUrl}/z0/0_0.jpg`;
-      const z0Bitmap = await this.fetchTileBitmap(z0Url, 'high');
-      const z0Info: TileInfo = {
-        z: 0,
-        col: 0,
-        row: 0,
-        url: z0Url,
-        state: 'ready',
-        priority: 'low',
-        bitmap: z0Bitmap,
-        lastUsed: performance.now(),
-        failCount: 0,
-      };
+      const z0Info = this.createTileInfo(0, 0, 0, 'high', 'low');
+      const z0Bitmap = await this.fetchTileBitmap(z0Info);
+      z0Info.bitmap = z0Bitmap;
+      z0Info.state = 'ready';
       await this.drawTile(z0Info);
       z0Bitmap.close?.();
     }
@@ -196,7 +211,7 @@ export class TileCanvasPano {
   }
 
   update(camera: PerspectiveCamera): void {
-    if (!this.manifest || !this.highestLevel || !this.ctx) return;
+    if (!this.manifest || !this.highestLevel || !this.ctx || this.meshFallbackRequested) return;
     const now = performance.now();
     if (now - this.lastUpdate < 150) return;
     this.lastUpdate = now;
@@ -211,16 +226,8 @@ export class TileCanvasPano {
         const key = `${this.highestLevel.z}_${col}_${row}`;
         let info = this.tilesMap.get(key);
         if (!info) {
-          info = {
-            z: this.highestLevel.z,
-            col,
-            row,
-            url: `${this.manifest.baseUrl}/z${this.highestLevel.z}/${col}_${row}.jpg`,
-            state: 'empty',
-            priority: 'high',
-            lastUsed: now,
-            failCount: 0,
-          };
+          info = this.createTileInfo(this.highestLevel.z, col, row, 'high', 'high');
+          info.lastUsed = now;
           this.tilesMap.set(key, info);
         }
         info.priority = 'high';
@@ -250,7 +257,7 @@ export class TileCanvasPano {
   }
 
   prime(camera: PerspectiveCamera): void {
-    if (!this.manifest || !this.highestLevel || !this.ctx) return;
+    if (!this.manifest || !this.highestLevel || !this.ctx || this.meshFallbackRequested) return;
     camera.updateMatrixWorld(true);
     const now = performance.now();
     if (this.highestLevel && !this.highSeeded) {
@@ -263,16 +270,8 @@ export class TileCanvasPano {
           const key = `${this.highestLevel.z}_${col}_${row}`;
           let info = this.tilesMap.get(key);
           if (!info) {
-            info = {
-              z: this.highestLevel.z,
-              col,
-              row,
-              url: `${this.manifest.baseUrl}/z${this.highestLevel.z}/${col}_${row}.jpg`,
-              state: 'empty',
-              priority: 'high',
-              lastUsed: now,
-              failCount: 0,
-            };
+            info = this.createTileInfo(this.highestLevel.z, col, row, 'high', 'high');
+            info.lastUsed = now;
             this.tilesMap.set(key, info);
           }
           info.priority = 'high';
@@ -323,16 +322,8 @@ export class TileCanvasPano {
         const key = `${level.z}_${col}_${row}`;
         let info = this.tilesMap.get(key);
         if (!info) {
-          info = {
-            z: level.z,
-            col,
-            row,
-            url: `${this.manifest!.baseUrl}/z${level.z}/${col}_${row}.jpg`,
-            state: 'empty',
-            priority,
-            lastUsed: now,
-            failCount: 0,
-          };
+          info = this.createTileInfo(level.z, col, row, priority, 'low');
+          info.lastUsed = now;
           this.tilesMap.set(key, info);
         }
         info.priority = priority;
@@ -353,6 +344,7 @@ export class TileCanvasPano {
   }
 
   private processQueue(): void {
+    if (this.meshFallbackRequested) return;
     this.sortPendingHighQueue();
     while (this.activeLoads < this.maxConcurrent && (this.pendingLow.length > 0 || this.pendingHigh.length > 0)) {
       const hasLow = this.pendingLow.length > 0;
@@ -373,9 +365,8 @@ export class TileCanvasPano {
     } else {
       this.activeLowLoads += 1;
     }
-    this.lastTileUrl = info.url;
     try {
-      const bmp = await this.fetchTileBitmap(info.url, info.priority);
+      const bmp = await this.fetchTileBitmap(info);
       info.bitmap = bmp;
       info.state = 'ready';
       info.failCount = 0;
@@ -392,6 +383,22 @@ export class TileCanvasPano {
         }
       }
     } catch (err) {
+      if (err instanceof TileMeshFallbackRequiredError) {
+        this.lastError = err.message;
+        info.state = 'empty';
+        if (!this.meshFallbackRequested) {
+          this.meshFallbackRequested = true;
+          this.pendingHigh = [];
+          this.tilesQueuedCount = this.pendingLow.length;
+          try {
+            await this.onMeshFallback?.(err);
+          } catch (fallbackErr) {
+            this.lastError =
+              fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+          }
+        }
+        return;
+      }
       this.lastError = err instanceof Error ? err.message : String(err);
       info.state = 'empty';
       info.failCount += 1;
@@ -425,7 +432,31 @@ export class TileCanvasPano {
     }, delayMs);
   }
 
-  private async fetchTileBitmap(
+  private async fetchTileBitmap(info: TileInfo, timeoutMs = 12000): Promise<ImageBitmap> {
+    let lastBitmapError: unknown = null;
+
+    for (const format of info.bitmapFormats) {
+      const url = buildTileUrl(this.manifest!.baseUrl, info.z, info.col, info.row, format);
+      info.url = url;
+      info.format = format;
+      this.lastTileUrl = url;
+      try {
+        return await this.fetchBitmapFromUrl(url, info.priority, timeoutMs);
+      } catch (err) {
+        lastBitmapError = err;
+      }
+    }
+
+    if (info.priority === 'high' && info.meshFormats.length > 0) {
+      throw new TileMeshFallbackRequiredError(info.format ?? null, info.meshFormats);
+    }
+
+    throw lastBitmapError instanceof Error
+      ? lastBitmapError
+      : new Error(`tile 加载失败: z${info.z}/${info.col}_${info.row}`);
+  }
+
+  private async fetchBitmapFromUrl(
     url: string,
     priority: 'low' | 'high',
     timeoutMs = 12000
@@ -489,7 +520,9 @@ export class TileCanvasPano {
     }
     const bmp = info.bitmap;
     if (!bmp) {
-      const url = info.url || `${this.manifest.baseUrl}/z${info.z}/${info.col}_${info.row}.jpg`;
+      const url =
+        info.url ||
+        buildTileUrl(this.manifest.baseUrl, info.z, info.col, info.row, info.format ?? 'jpg');
       const fetched = await loadExternalImageBitmap(url, {
         timeoutMs: 12000,
         retries: 1,
@@ -618,7 +651,7 @@ export class TileCanvasPano {
   }
 
   private seedHighPreload(camera: PerspectiveCamera): void {
-    if (this.prefetchSeeded || !this.manifest || !this.highestLevel) return;
+    if (this.prefetchSeeded || !this.manifest || !this.highestLevel || this.meshFallbackRequested) return;
     this.prefetchSeeded = true;
     const { yaw: baseYaw, pitch: basePitch } = this.getViewAngles(camera);
     const level = this.highestLevel;
@@ -635,21 +668,43 @@ export class TileCanvasPano {
         const rank = phase * 1_000_000 + Math.round(yawDist * 1000) + Math.round(pitchDist * 10);
         const key = `${level.z}_${col}_${row}`;
         if (this.tilesMap.has(key)) continue;
-        const info: TileInfo = {
-          z: level.z,
-          col,
-          row,
-          url: `${this.manifest.baseUrl}/z${level.z}/${col}_${row}.jpg`,
-          state: 'loading',
-          priority: 'high',
-          priorityRank: rank,
-          lastUsed: now,
-          failCount: 0,
-        };
+        const info = this.createTileInfo(level.z, col, row, 'high', 'high');
+        info.state = 'loading';
+        info.priorityRank = rank;
+        info.lastUsed = now;
         this.tilesMap.set(key, info);
         this.pendingHigh.push(info);
       }
     }
+  }
+
+  private createTileInfo(
+    z: number,
+    col: number,
+    row: number,
+    priority: 'low' | 'high',
+    purpose: 'low' | 'high',
+  ): TileInfo {
+    const plan =
+      purpose === 'low'
+        ? getLowTilePlan(this.manifest!, { avifSupported: this.avifSupported })
+        : getHighTilePlan(this.manifest!, { avifSupported: this.avifSupported });
+    const initialFormat = plan.bitmapFormats[0] ?? plan.meshFormats[0] ?? 'jpg';
+
+    return {
+      z,
+      col,
+      row,
+      url: buildTileUrl(this.manifest!.baseUrl, z, col, row, initialFormat),
+      format: initialFormat,
+      state: 'empty',
+      priority,
+      purpose,
+      bitmapFormats: [...plan.bitmapFormats],
+      meshFormats: [...plan.meshFormats],
+      lastUsed: performance.now(),
+      failCount: 0,
+    };
   }
 
   private yawToCols(minYaw: number, maxYaw: number, cols: number): number[] {

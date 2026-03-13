@@ -4,6 +4,11 @@ import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
 import { detectAvifSupport } from '../utils/imageFormatSupport';
 import { buildTileUrl, getHighTilePlan, getLowTilePlan, type TileBitmapFormat, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy';
+import {
+  resolveHighWarmupTileBudget,
+  resolveLowTileLevel,
+  shouldBootstrapSingleTile,
+} from './tileLoadingPolicy';
 
 type TileState = 'empty' | 'loading' | 'ready';
 
@@ -61,7 +66,6 @@ export class TileCanvasPano {
   private lowReadyCount = 0;
   private lowTotalCount = 0;
   private lowFullyReady = false;
-  private highSeeded = false;
   private tilesVisible = false;
   private tilesLoadedCount = 0;
   private tilesLoadingCount = 0;
@@ -77,6 +81,9 @@ export class TileCanvasPano {
   private prefetchSeeded = false;
   private avifSupported = true;
   private meshFallbackRequested = false;
+  private highWarmupTileBudget: number | null = null;
+  private highExpansionAnchorYaw: number | null = null;
+  private highExpansionAnchorPitch: number | null = null;
 
   constructor(
     private scene: Scene,
@@ -96,10 +103,8 @@ export class TileCanvasPano {
     this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
     if (!this.highestLevel) throw new Error('manifest 缺少 level');
     this.lruLimit = Math.max(64, Math.min(this.highestLevel.cols * this.highestLevel.rows, 256));
-    const lowCandidates = manifest.levels.filter((l) => l.z < this.highestLevel!.z);
-    this.lowLevel = lowCandidates.length
-      ? lowCandidates.reduce((a, b) => (b.z > a.z ? b : a))
-      : null;
+    this.lowLevel = resolveLowTileLevel(manifest, this.highestLevel);
+    this.highWarmupTileBudget = resolveHighWarmupTileBudget(manifest, this.highestLevel);
     // 有整图 fallback 时，直接让高清瓦片覆盖底图，避免低层瓦片叠加造成过渡分层感。
     if (this.fallbackVisible) {
       this.lowLevel = null;
@@ -107,8 +112,9 @@ export class TileCanvasPano {
     this.lowReadyCount = 0;
     this.lowTotalCount = this.lowLevel ? this.lowLevel.cols * this.lowLevel.rows : 0;
     this.lowFullyReady = this.lowTotalCount === 0;
-    this.highSeeded = false;
     this.prefetchSeeded = false;
+    this.highExpansionAnchorYaw = null;
+    this.highExpansionAnchorPitch = null;
     this.tilesVisible = false;
     this.tilesLoadedCount = 0;
     this.tilesLoadingCount = 0;
@@ -143,8 +149,8 @@ export class TileCanvasPano {
     }
 
     this.texture = new CanvasTexture(this.canvas);
-    // Canvas 2D 与球面 UV 以 WebGL 纹理坐标对齐，禁止二次翻转。
-    this.texture.flipY = false;
+    // 分块 atlas 需要在最终纹理上传阶段统一翻转，不能逐块 flipY，否则只会翻每块内部。
+    this.texture.flipY = true;
     this.texture.wrapS = ClampToEdgeWrapping;
     this.texture.wrapT = ClampToEdgeWrapping;
     this.texture.minFilter = LinearFilter;
@@ -172,11 +178,14 @@ export class TileCanvasPano {
     this.mesh.frustumCulled = false;
     this.scene.add(this.mesh);
 
-    // 先画 z0 作为首屏（无 fallback 时）
-    if (!this.fallbackVisible) {
-      const z0 = manifest.levels.find((l) => l.z === 0);
-      if (!z0) throw new Error('manifest 缺少 z0');
-      const z0Info = this.createTileInfo(0, 0, 0, 'high', 'low');
+    // 旧 1x1 z0 继续作为首屏 bootstrap；多 tile 低层则由 prime 先按视角排序后加载。
+    const bootstrapLevel = manifest.levels.reduce((a, b) => (b.z < a.z ? b : a));
+    const allowSingleTileBootstrap =
+      !this.fallbackVisible &&
+      typeof manifest.lowLevelZ !== 'number' &&
+      shouldBootstrapSingleTile(bootstrapLevel);
+    if (allowSingleTileBootstrap) {
+      const z0Info = this.createTileInfo(bootstrapLevel.z, 0, 0, 'high', 'low');
       const z0Bitmap = await this.fetchTileBitmap(z0Info);
       z0Info.bitmap = z0Bitmap;
       z0Info.state = 'ready';
@@ -184,7 +193,7 @@ export class TileCanvasPano {
       z0Bitmap.close?.();
     }
     if (this.lowLevel) {
-      this.enqueueLevel(this.lowLevel, 'low');
+      this.enqueueLevel(this.lowLevel, 'low', true);
     }
   }
 
@@ -216,26 +225,21 @@ export class TileCanvasPano {
     if (now - this.lastUpdate < 150) return;
     this.lastUpdate = now;
 
-    const allowHigh = !this.lowLevel || this.lowFullyReady || this.highSeeded;
+    if (this.lowLevel && !this.lowFullyReady) {
+      this.reprioritizeLowQueue(camera);
+    }
+    const allowHigh = !this.lowLevel || this.lowFullyReady;
     if (allowHigh && this.highestLevel) {
-      const indices = this.computeNeededTiles(camera, this.highestLevel, {
-        marginDeg: 10,
-        expandNeighbors: false,
-      });
-      for (const { col, row, rank } of indices) {
-        const key = `${this.highestLevel.z}_${col}_${row}`;
-        let info = this.tilesMap.get(key);
-        if (!info) {
-          info = this.createTileInfo(this.highestLevel.z, col, row, 'high', 'high');
-          info.lastUsed = now;
-          this.tilesMap.set(key, info);
-        }
-        info.priority = 'high';
-        info.priorityRank = rank;
-        info.lastUsed = now;
-        if (info.state === 'empty' && !info.retryTimer) {
-          info.state = 'loading';
-          this.pendingHigh.push(info);
+      if (!this.prefetchSeeded) {
+        this.seedHighPreload(camera);
+        this.captureHighExpansionAnchor(camera);
+      } else if (
+        this.highWarmupTileBudget === null ||
+        this.shouldExpandHighCoverage(camera)
+      ) {
+        this.enqueueVisibleHighTiles(camera, now);
+        if (this.highWarmupTileBudget !== null) {
+          this.captureHighExpansionAnchor(camera);
         }
       }
     }
@@ -260,33 +264,21 @@ export class TileCanvasPano {
     if (!this.manifest || !this.highestLevel || !this.ctx || this.meshFallbackRequested) return;
     camera.updateMatrixWorld(true);
     const now = performance.now();
-    if (this.highestLevel && !this.highSeeded) {
-      const indices = this.computeNeededTiles(camera, this.highestLevel, {
-        marginDeg: 10,
-        expandNeighbors: false,
-      });
-      if (indices.length > 0) {
-        for (const { col, row, rank } of indices) {
-          const key = `${this.highestLevel.z}_${col}_${row}`;
-          let info = this.tilesMap.get(key);
-          if (!info) {
-            info = this.createTileInfo(this.highestLevel.z, col, row, 'high', 'high');
-            info.lastUsed = now;
-            this.tilesMap.set(key, info);
-          }
-          info.priority = 'high';
-          info.priorityRank = rank;
-          info.lastUsed = now;
-          if (info.state === 'empty' && !info.retryTimer) {
-            info.state = 'loading';
-            this.pendingHigh.push(info);
-          }
+    this.reprioritizeLowQueue(camera);
+    if (!this.lowLevel || this.lowFullyReady) {
+      if (!this.prefetchSeeded) {
+        this.seedHighPreload(camera);
+        this.captureHighExpansionAnchor(camera);
+      } else if (
+        this.highWarmupTileBudget === null ||
+        this.shouldExpandHighCoverage(camera)
+      ) {
+        this.enqueueVisibleHighTiles(camera, now);
+        if (this.highWarmupTileBudget !== null) {
+          this.captureHighExpansionAnchor(camera);
         }
-        this.highSeeded = true;
       }
     }
-    this.reprioritizeLowQueue(camera);
-    this.seedHighPreload(camera);
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     this.processQueue();
@@ -315,7 +307,7 @@ export class TileCanvasPano {
     };
   }
 
-  private enqueueLevel(level: TileLevel, priority: 'low' | 'high'): void {
+  private enqueueLevel(level: TileLevel, priority: 'low' | 'high', deferProcess = false): void {
     const now = performance.now();
     for (let row = 0; row < level.rows; row++) {
       for (let col = 0; col < level.cols; col++) {
@@ -340,7 +332,9 @@ export class TileCanvasPano {
     }
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
-    this.processQueue();
+    if (!deferProcess) {
+      this.processQueue();
+    }
   }
 
   private processQueue(): void {
@@ -482,7 +476,7 @@ export class TileCanvasPano {
         throw new Error(`tile HTTP ${response.status}: ${url}`);
       }
       const blob = await response.blob();
-      return await createImageBitmap(blob);
+      return await createImageBitmap(blob, { premultiplyAlpha: 'none' });
     } finally {
       clearTimeout(timeoutId);
     }
@@ -658,6 +652,7 @@ export class TileCanvasPano {
     const yawStep = (Math.PI * 2) / level.cols;
     const pitchStep = Math.PI / level.rows;
     const now = performance.now();
+    const seeded: Array<{ info: TileInfo; rank: number }> = [];
     for (let row = 0; row < level.rows; row++) {
       const pitch = Math.PI / 2 - (row + 0.5) * pitchStep;
       const pitchDist = Math.abs(pitch - basePitch);
@@ -669,13 +664,64 @@ export class TileCanvasPano {
         const key = `${level.z}_${col}_${row}`;
         if (this.tilesMap.has(key)) continue;
         const info = this.createTileInfo(level.z, col, row, 'high', 'high');
-        info.state = 'loading';
         info.priorityRank = rank;
         info.lastUsed = now;
         this.tilesMap.set(key, info);
+        seeded.push({ info, rank });
+      }
+    }
+    seeded.sort((a, b) => a.rank - b.rank);
+    const limit = this.highWarmupTileBudget ?? seeded.length;
+    for (const [index, entry] of seeded.entries()) {
+      if (index >= limit) break;
+      entry.info.state = 'loading';
+      this.pendingHigh.push(entry.info);
+    }
+  }
+
+  private enqueueVisibleHighTiles(camera: PerspectiveCamera, now: number): void {
+    if (!this.highestLevel) return;
+    const indices = this.computeNeededTiles(camera, this.highestLevel, {
+      marginDeg: 22,
+      expandNeighbors: true,
+    });
+    for (const { col, row, rank } of indices) {
+      const key = `${this.highestLevel.z}_${col}_${row}`;
+      let info = this.tilesMap.get(key);
+      if (!info) {
+        info = this.createTileInfo(this.highestLevel.z, col, row, 'high', 'high');
+        this.tilesMap.set(key, info);
+      }
+      info.priority = 'high';
+      info.priorityRank = rank;
+      info.lastUsed = now;
+      if (info.state === 'empty' && !info.retryTimer) {
+        info.state = 'loading';
         this.pendingHigh.push(info);
       }
     }
+  }
+
+  private captureHighExpansionAnchor(camera: PerspectiveCamera): void {
+    const { yaw, pitch } = this.getViewAngles(camera);
+    this.highExpansionAnchorYaw = yaw;
+    this.highExpansionAnchorPitch = pitch;
+  }
+
+  private shouldExpandHighCoverage(camera: PerspectiveCamera): boolean {
+    if (!this.highestLevel) return true;
+    if (this.highExpansionAnchorYaw === null || this.highExpansionAnchorPitch === null) {
+      return true;
+    }
+    const { yaw, pitch } = this.getViewAngles(camera);
+    const yawStep = (Math.PI * 2) / this.highestLevel.cols;
+    const pitchStep = Math.PI / this.highestLevel.rows;
+    const yawTrigger = yawStep * 0.35;
+    const pitchTrigger = pitchStep * 0.35;
+    return (
+      this.angularDistance(yaw, this.highExpansionAnchorYaw) >= yawTrigger ||
+      Math.abs(pitch - this.highExpansionAnchorPitch) >= pitchTrigger
+    );
   }
 
   private createTileInfo(

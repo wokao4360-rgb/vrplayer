@@ -4,6 +4,11 @@ import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import type { TileManifest, TileLevel } from './tileManifest';
 import { getTileMeshRenderConfig, normalizeTileUv, resolveKtx2TranscoderPath } from './tileMeshPanoRules';
 import { buildTileUrl, getHighTilePlan, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy';
+import {
+  resolveHighWarmupTileBudget,
+  resolveLowTileLevel,
+  shouldBootstrapSingleTile,
+} from './tileLoadingPolicy';
 
 type TileState = 'empty' | 'loading' | 'ready';
 
@@ -50,7 +55,6 @@ export class TileMeshPano {
   private lowReadyCount = 0;
   private lowTotalCount = 0;
   private lowFullyReady = false;
-  private highSeeded = false;
   private tilesVisible = false;
   private tilesLoadedCount = 0;
   private tilesLoadingCount = 0;
@@ -69,6 +73,9 @@ export class TileMeshPano {
   private prefetchSeeded = false;
   private ktx2Loader: Ktx2LoaderLike | null = null;
   private static readonly TWO_PI = Math.PI * 2;
+  private highWarmupTileBudget: number | null = null;
+  private highExpansionAnchorYaw: number | null = null;
+  private highExpansionAnchorPitch: number | null = null;
 
   constructor(
     private scene: Scene,
@@ -87,14 +94,14 @@ export class TileMeshPano {
     this.ktx2Disabled = false;
     this.ktx2FailCount = 0;
     this.prefetchSeeded = false;
+    this.highExpansionAnchorYaw = null;
+    this.highExpansionAnchorPitch = null;
     this.fallbackVisible = Boolean(options?.fallbackVisible);
     this.highestLevel = manifest.levels.reduce((a, b) => (b.z > a.z ? b : a));
     if (!this.highestLevel) throw new Error('manifest 缺少 level');
     this.lruLimit = Math.max(64, Math.min(this.highestLevel.cols * this.highestLevel.rows, 256));
-    const lowCandidates = manifest.levels.filter((l) => l.z < this.highestLevel!.z);
-    this.lowLevel = lowCandidates.length
-      ? lowCandidates.reduce((a, b) => (b.z > a.z ? b : a))
-      : null;
+    this.lowLevel = resolveLowTileLevel(manifest, this.highestLevel);
+    this.highWarmupTileBudget = resolveHighWarmupTileBudget(manifest, this.highestLevel);
     // 有整图 fallback 时，跳过低层瓦片，避免低层/高层叠加造成过渡撕裂感。
     if (this.fallbackVisible) {
       this.lowLevel = null;
@@ -102,7 +109,6 @@ export class TileMeshPano {
     this.lowReadyCount = 0;
     this.lowTotalCount = this.lowLevel ? this.lowLevel.cols * this.lowLevel.rows : 0;
     this.lowFullyReady = this.lowTotalCount === 0;
-    this.highSeeded = false;
     this.tilesVisible = false;
     this.tilesLoadedCount = 0;
     this.tilesLoadingCount = 0;
@@ -120,13 +126,16 @@ export class TileMeshPano {
     this.group.renderOrder = 1;
     this.scene.add(this.group);
 
-    if (!this.fallbackVisible) {
-      const z0 = manifest.levels.find((l) => l.z === 0);
-      if (!z0) throw new Error('manifest 缺少 z0');
-      await this.loadSingleTile(z0.z, 0, 0, 'low');
+    const bootstrapLevel = manifest.levels.reduce((a, b) => (b.z < a.z ? b : a));
+    const allowSingleTileBootstrap =
+      !this.fallbackVisible &&
+      typeof manifest.lowLevelZ !== 'number' &&
+      shouldBootstrapSingleTile(bootstrapLevel);
+    if (allowSingleTileBootstrap) {
+      await this.loadSingleTile(bootstrapLevel.z, 0, 0, 'low');
     }
     if (this.lowLevel) {
-      this.enqueueLevel(this.lowLevel, 'low');
+      this.enqueueLevel(this.lowLevel, 'low', true);
     }
   }
 
@@ -165,35 +174,21 @@ export class TileMeshPano {
     if (now - this.lastUpdate < 150) return;
     this.lastUpdate = now;
 
-    const allowHigh = !this.lowLevel || this.lowFullyReady || this.highSeeded;
+    if (this.lowLevel && !this.lowFullyReady) {
+      this.reprioritizeLowQueue(camera);
+    }
+    const allowHigh = !this.lowLevel || this.lowFullyReady;
     if (allowHigh && this.highestLevel) {
-      const indices = this.computeNeededTiles(camera, this.highestLevel, {
-        marginDeg: 10,
-        expandNeighbors: false,
-      });
-      for (const { col, row, rank } of indices) {
-        const key = `${this.highestLevel.z}_${col}_${row}`;
-        let info = this.tilesMap.get(key);
-        if (!info) {
-          info = {
-            z: this.highestLevel.z,
-            col,
-            row,
-            url: this.buildPrimaryTileUrl(this.highestLevel.z, col, row),
-            format: this.getPrimaryMeshFormat(),
-            state: 'empty',
-            priority: 'high',
-            lastUsed: now,
-            failCount: 0,
-          };
-          this.tilesMap.set(key, info);
-        }
-        info.priority = 'high';
-        info.priorityRank = rank;
-        info.lastUsed = now;
-        if (info.state === 'empty' && !info.retryTimer) {
-          info.state = 'loading';
-          this.pendingHigh.push(info);
+      if (!this.prefetchSeeded) {
+        this.seedHighPreload(camera);
+        this.captureHighExpansionAnchor(camera);
+      } else if (
+        this.highWarmupTileBudget === null ||
+        this.shouldExpandHighCoverage(camera)
+      ) {
+        this.enqueueVisibleHighTiles(camera, now);
+        if (this.highWarmupTileBudget !== null) {
+          this.captureHighExpansionAnchor(camera);
         }
       }
     }
@@ -219,42 +214,21 @@ export class TileMeshPano {
     if (!this.manifest || !this.highestLevel) return;
     camera.updateMatrixWorld(true);
     const now = performance.now();
-    if (this.highestLevel && !this.highSeeded) {
-      const indices = this.computeNeededTiles(camera, this.highestLevel, {
-        marginDeg: 10,
-        expandNeighbors: false,
-      });
-      if (indices.length > 0) {
-        for (const { col, row, rank } of indices) {
-          const key = `${this.highestLevel.z}_${col}_${row}`;
-          let info = this.tilesMap.get(key);
-          if (!info) {
-            info = {
-              z: this.highestLevel.z,
-              col,
-              row,
-              url: this.buildPrimaryTileUrl(this.highestLevel.z, col, row),
-              format: this.getPrimaryMeshFormat(),
-              state: 'empty',
-              priority: 'high',
-              lastUsed: now,
-              failCount: 0,
-            };
-            this.tilesMap.set(key, info);
-          }
-          info.priority = 'high';
-          info.priorityRank = rank;
-          info.lastUsed = now;
-          if (info.state === 'empty' && !info.retryTimer) {
-            info.state = 'loading';
-            this.pendingHigh.push(info);
-          }
+    this.reprioritizeLowQueue(camera);
+    if (!this.lowLevel || this.lowFullyReady) {
+      if (!this.prefetchSeeded) {
+        this.seedHighPreload(camera);
+        this.captureHighExpansionAnchor(camera);
+      } else if (
+        this.highWarmupTileBudget === null ||
+        this.shouldExpandHighCoverage(camera)
+      ) {
+        this.enqueueVisibleHighTiles(camera, now);
+        if (this.highWarmupTileBudget !== null) {
+          this.captureHighExpansionAnchor(camera);
         }
-        this.highSeeded = true;
       }
     }
-    this.reprioritizeLowQueue(camera);
-    this.seedHighPreload(camera);
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
     this.processQueue();
@@ -282,7 +256,7 @@ export class TileMeshPano {
     };
   }
 
-  private enqueueLevel(level: TileLevel, priority: 'low' | 'high'): void {
+  private enqueueLevel(level: TileLevel, priority: 'low' | 'high', deferProcess = false): void {
     const now = performance.now();
     for (let row = 0; row < level.rows; row++) {
       for (let col = 0; col < level.cols; col++) {
@@ -316,7 +290,9 @@ export class TileMeshPano {
     }
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = Array.from(this.tilesMap.values()).filter((t) => t.state === 'loading').length;
-    this.processQueue();
+    if (!deferProcess) {
+      this.processQueue();
+    }
   }
 
   private processQueue(): void {
@@ -733,6 +709,7 @@ export class TileMeshPano {
     const yawStep = (Math.PI * 2) / level.cols;
     const pitchStep = Math.PI / level.rows;
     const now = performance.now();
+    const seeded: Array<{ info: TileInfo; rank: number }> = [];
     for (let row = 0; row < level.rows; row++) {
       const pitch = Math.PI / 2 - (row + 0.5) * pitchStep;
       const pitchDist = Math.abs(pitch - basePitch);
@@ -750,16 +727,78 @@ export class TileMeshPano {
           row,
           url: this.buildPrimaryTileUrl(level.z, col, row),
           format: this.getPrimaryMeshFormat(),
-          state: 'loading',
+          state: 'empty',
           priority: 'high',
           priorityRank: rank,
           lastUsed: now,
           failCount: 0,
         };
         this.tilesMap.set(key, info);
+        seeded.push({ info, rank });
+      }
+    }
+    seeded.sort((a, b) => a.rank - b.rank);
+    const limit = this.highWarmupTileBudget ?? seeded.length;
+    for (const [index, entry] of seeded.entries()) {
+      if (index >= limit) break;
+      entry.info.state = 'loading';
+      this.pendingHigh.push(entry.info);
+    }
+  }
+
+  private enqueueVisibleHighTiles(camera: PerspectiveCamera, now: number): void {
+    if (!this.highestLevel) return;
+    const indices = this.computeNeededTiles(camera, this.highestLevel, {
+      marginDeg: 22,
+      expandNeighbors: true,
+    });
+    for (const { col, row, rank } of indices) {
+      const key = `${this.highestLevel.z}_${col}_${row}`;
+      let info = this.tilesMap.get(key);
+      if (!info) {
+        info = {
+          z: this.highestLevel.z,
+          col,
+          row,
+          url: this.buildPrimaryTileUrl(this.highestLevel.z, col, row),
+          format: this.getPrimaryMeshFormat(),
+          state: 'empty',
+          priority: 'high',
+          lastUsed: now,
+          failCount: 0,
+        };
+        this.tilesMap.set(key, info);
+      }
+      info.priority = 'high';
+      info.priorityRank = rank;
+      info.lastUsed = now;
+      if (info.state === 'empty' && !info.retryTimer) {
+        info.state = 'loading';
         this.pendingHigh.push(info);
       }
     }
+  }
+
+  private captureHighExpansionAnchor(camera: PerspectiveCamera): void {
+    const { yaw, pitch } = this.getViewAngles(camera);
+    this.highExpansionAnchorYaw = yaw;
+    this.highExpansionAnchorPitch = pitch;
+  }
+
+  private shouldExpandHighCoverage(camera: PerspectiveCamera): boolean {
+    if (!this.highestLevel) return true;
+    if (this.highExpansionAnchorYaw === null || this.highExpansionAnchorPitch === null) {
+      return true;
+    }
+    const { yaw, pitch } = this.getViewAngles(camera);
+    const yawStep = (Math.PI * 2) / this.highestLevel.cols;
+    const pitchStep = Math.PI / this.highestLevel.rows;
+    const yawTrigger = yawStep * 0.35;
+    const pitchTrigger = pitchStep * 0.35;
+    return (
+      this.angularDistance(yaw, this.highExpansionAnchorYaw) >= yawTrigger ||
+      Math.abs(pitch - this.highExpansionAnchorPitch) >= pitchTrigger
+    );
   }
 
   private recordKtx2Failure(err: unknown): void {

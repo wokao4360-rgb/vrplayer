@@ -29,5 +29,7 @@
   "highFallbackFormats": [
     "ktx2",
     "jpg"
-  ]
+  ],
+  "lowLevelZ": 2,
+  "highWarmupTileBudget": 12
 }

@@ -12,10 +12,14 @@ const args = process.argv.slice(2);
 let input = null;
 let output = null;
 let tileSize = 512;
+let lowLevelZ = null;
+let highWarmupTileBudget = null;
 for (let i = 0; i < args.length; i += 1) {
   if (args[i] === '--in') input = args[i + 1];
   if (args[i] === '--out') output = args[i + 1];
   if (args[i] === '--tileSize') tileSize = parseInt(args[i + 1], 10);
+  if (args[i] === '--lowLevelZ') lowLevelZ = parseInt(args[i + 1], 10);
+  if (args[i] === '--highWarmupTileBudget') highWarmupTileBudget = parseInt(args[i + 1], 10);
 }
 
 if (!input || !output) {
@@ -78,6 +82,12 @@ async function main() {
       ? `/${normalizePath(path.relative(path.resolve('public'), absOut)).replace(/^\.+/, '')}`
       : `/${normalizePath(path.relative(path.resolve('public'), absOut))}`,
   };
+  if (Number.isInteger(lowLevelZ)) {
+    manifest.lowLevelZ = lowLevelZ;
+  }
+  if (Number.isInteger(highWarmupTileBudget) && highWarmupTileBudget > 0) {
+    manifest.highWarmupTileBudget = highWarmupTileBudget;
+  }
   fs.writeFileSync(path.join(absOut, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
   console.log('[tiles] manifest 写入完成');
 }

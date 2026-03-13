@@ -13,7 +13,7 @@ function getSceneDirs(): string[] {
     .sort();
 }
 
-test('linzexu tile manifests are AVIF-first with JPG/KTX2 fallbacks', () => {
+test('linzexu tile manifests are AVIF-first with low/high scheduling hints', () => {
   const sceneDirs = getSceneDirs();
 
   assert.ok(sceneDirs.length > 0, '林则徐馆至少应存在一组瓦片目录');
@@ -21,13 +21,16 @@ test('linzexu tile manifests are AVIF-first with JPG/KTX2 fallbacks', () => {
   for (const sceneDir of sceneDirs) {
     const manifestPath = path.join(sceneDir, 'manifest.json');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const sceneName = path.basename(sceneDir);
 
-    assert.equal(manifest.tileFormat, 'avif', `${path.basename(sceneDir)} manifest 应切到 avif`);
-    assert.equal(manifest.lowFallbackFormat, 'jpg', `${path.basename(sceneDir)} 低层回退应保留 jpg`);
+    assert.equal(manifest.tileFormat, 'avif', `${sceneName} manifest 应切到 avif`);
+    assert.equal(manifest.lowFallbackFormat, 'jpg', `${sceneName} 低清回退应保留 jpg`);
+    assert.equal(manifest.lowLevelZ, 2, `${sceneName} 应指定 z2 作为低清首屏层`);
+    assert.equal(manifest.highWarmupTileBudget, 12, `${sceneName} 应限制首轮高清预热为 12 张`);
     assert.deepEqual(
       manifest.highFallbackFormats,
       ['ktx2', 'jpg'],
-      `${path.basename(sceneDir)} 高清回退链应为 ktx2 -> jpg`,
+      `${sceneName} 高清回退链应为 ktx2 -> jpg`,
     );
   }
 });

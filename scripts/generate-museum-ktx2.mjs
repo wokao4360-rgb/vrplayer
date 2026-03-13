@@ -12,6 +12,8 @@ function getArg(name, fallback = '') {
 const configPath = path.resolve(getArg('--config', 'public/config.json'));
 const museumId = getArg('--museum');
 const force = process.argv.includes('--force');
+const lowLevelZArg = getArg('--lowLevelZ');
+const highWarmupTileBudgetArg = getArg('--highWarmupTileBudget');
 
 if (!museumId) {
   console.error('[museum-ktx2] 缺少 --museum');
@@ -48,7 +50,15 @@ for (const scene of museum.scenes) {
 
   const generateResult = spawnSync(
     process.execPath,
-    ['scripts/generate-pano-tiles.mjs', '--in', input, '--out', outputDir],
+    [
+      'scripts/generate-pano-tiles.mjs',
+      '--in',
+      input,
+      '--out',
+      outputDir,
+      ...(lowLevelZArg ? ['--lowLevelZ', lowLevelZArg] : []),
+      ...(highWarmupTileBudgetArg ? ['--highWarmupTileBudget', highWarmupTileBudgetArg] : []),
+    ],
     { stdio: 'inherit' },
   );
   if (generateResult.status !== 0) {

@@ -15,6 +15,8 @@ export type TileManifest = {
   tileFormat?: TileImageFormat;
   lowFallbackFormat?: 'jpg';
   highFallbackFormats?: TileMeshFormat[];
+  lowLevelZ?: number;
+  highWarmupTileBudget?: number;
 };
 
 function absolutizeManifestBaseUrl(baseUrl: string, manifestUrl: string): string {

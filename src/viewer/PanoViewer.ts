@@ -15,7 +15,7 @@ import { showToast } from '../ui/toast';
 import { TileCanvasPano, TileMeshFallbackRequiredError } from './TileCanvasPano';
 import { fetchTileManifest, type TileManifest } from './tileManifest';
 import { PanoLifecycleRuntime } from './panoLifecycleRuntime';
-import { selectInitialTileBackend } from './tileFormatPolicy';
+import { resolveInitialTileFallbackVisibility, selectInitialTileBackend } from './tileFormatPolicy';
 
 type NadirPatchType = import('./NadirPatch').NadirPatch;
 
@@ -567,7 +567,7 @@ export class PanoViewer {
             (this.tilePano as any).setPerformanceMode(this.perfMode);
           }
           return this.tilePano.load(manifest, {
-            fallbackVisible: fallbackPlanned,
+            fallbackVisible: resolveInitialTileFallbackVisibility(manifest, fallbackPlanned),
           });
         })
         .then(() => {

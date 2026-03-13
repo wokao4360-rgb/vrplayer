@@ -49,6 +49,23 @@ export function selectInitialTileBackend(
   return normalizeTileManifest(manifest as TileManifest).tileFormat === 'ktx2' ? 'mesh' : 'canvas';
 }
 
+export function resolveInitialTileFallbackVisibility(
+  manifest: TileManifest | NormalizedTileManifest,
+  fallbackPlanned: boolean,
+): boolean {
+  if (!fallbackPlanned) {
+    return false;
+  }
+
+  const normalized = normalizeTileManifest(manifest as TileManifest);
+  if (normalized.tileFormat === 'avif') {
+    // AVIF 主链路即便存在整图 fallback，也必须继续加载 z0/low AVIF。
+    return false;
+  }
+
+  return true;
+}
+
 export function getLowTilePlan(
   manifest: TileManifest | NormalizedTileManifest,
   options?: { avifSupported?: boolean },

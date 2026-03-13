@@ -6,6 +6,7 @@ import {
   getHighTilePlan,
   getLowTilePlan,
   normalizeTileManifest,
+  resolveInitialTileFallbackVisibility,
   selectInitialTileBackend,
 } from '../src/viewer/tileFormatPolicy.ts';
 
@@ -77,6 +78,39 @@ test('legacy ktx2 manifests still prefer mesh and keep jpg fallback', () => {
   assert.equal(selectInitialTileBackend(manifest), 'mesh');
   assert.deepEqual(getHighTilePlan(manifest, { avifSupported: true }).bitmapFormats, []);
   assert.deepEqual(getHighTilePlan(manifest, { avifSupported: true }).meshFormats, ['ktx2', 'jpg']);
+});
+
+test('avif initial canvas load keeps low tiles active even when fallback sphere is present', () => {
+  const manifest = normalizeTileManifest({
+    type: 'equirect-tiles',
+    tileSize: 512,
+    baseUrl: '/assets/panos/tiles/demo',
+    levels: [{ z: 0, cols: 1, rows: 1 }],
+    tileFormat: 'avif',
+  });
+
+  assert.equal(resolveInitialTileFallbackVisibility(manifest, true), false);
+  assert.equal(resolveInitialTileFallbackVisibility(manifest, false), false);
+});
+
+test('legacy jpg and ktx2 manifests still suppress low tile bootstrap when fallback is already visible', () => {
+  const jpgManifest = normalizeTileManifest({
+    type: 'equirect-tiles',
+    tileSize: 512,
+    baseUrl: '/assets/panos/tiles/demo',
+    levels: [{ z: 0, cols: 1, rows: 1 }],
+    tileFormat: 'jpg',
+  });
+  const ktx2Manifest = normalizeTileManifest({
+    type: 'equirect-tiles',
+    tileSize: 512,
+    baseUrl: '/assets/panos/tiles/demo',
+    levels: [{ z: 0, cols: 1, rows: 1 }],
+    tileFormat: 'ktx2',
+  });
+
+  assert.equal(resolveInitialTileFallbackVisibility(jpgManifest, true), true);
+  assert.equal(resolveInitialTileFallbackVisibility(ktx2Manifest, true), true);
 });
 
 test('buildTileUrl appends the requested extension without mutating base url', () => {

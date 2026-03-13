@@ -503,11 +503,6 @@ export class PanoViewer {
       this.tilesLastProgressAt = performance.now();
       this.tilesHighStartAt = 0;
       this.tilesDegradedNotified = false;
-      if (fallbackUrlLow) {
-        this.showFallbackTexture(resolveAssetUrl(fallbackUrlLow, AssetType.PANO_LOW), geometry, true);
-      } else if (fallbackUrlHigh) {
-        this.showFallbackTexture(resolveAssetUrl(fallbackUrlHigh, AssetType.PANO), geometry, false);
-      }
       const onFirstDraw = () => {
         if (this.transitionTilePano) {
           this.transitionTilePano.dispose();
@@ -563,11 +558,19 @@ export class PanoViewer {
               this.renderer.capabilities.maxTextureSize || 0
             );
           }
+          const initialFallbackVisible = resolveInitialTileFallbackVisibility(manifest, fallbackPlanned);
+          if (initialFallbackVisible) {
+            if (fallbackUrlLow) {
+              this.showFallbackTexture(resolveAssetUrl(fallbackUrlLow, AssetType.PANO_LOW), geometry, true);
+            } else if (fallbackUrlHigh) {
+              this.showFallbackTexture(resolveAssetUrl(fallbackUrlHigh, AssetType.PANO), geometry, false);
+            }
+          }
           if (this.tilePano && 'setPerformanceMode' in this.tilePano) {
             (this.tilePano as any).setPerformanceMode(this.perfMode);
           }
           return this.tilePano.load(manifest, {
-            fallbackVisible: resolveInitialTileFallbackVisibility(manifest, fallbackPlanned),
+            fallbackVisible: initialFallbackVisible,
           });
         })
         .then(() => {

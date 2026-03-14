@@ -16,19 +16,19 @@ export function createCubeFaceRoot(face: CubeFaceId, halfSize: number): Group {
       break;
     case 'r':
       group.position.set(halfSize, 0, 0);
-      group.rotation.y = -Math.PI / 2;
+      group.rotation.y = Math.PI / 2;
       break;
     case 'l':
       group.position.set(-halfSize, 0, 0);
-      group.rotation.y = Math.PI / 2;
+      group.rotation.y = -Math.PI / 2;
       break;
     case 'u':
       group.position.set(0, halfSize, 0);
-      group.rotation.x = Math.PI / 2;
+      group.rotation.x = -Math.PI / 2;
       break;
     case 'd':
       group.position.set(0, -halfSize, 0);
-      group.rotation.x = -Math.PI / 2;
+      group.rotation.x = Math.PI / 2;
       break;
   }
   return group;

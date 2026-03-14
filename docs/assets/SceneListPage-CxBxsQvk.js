@@ -1,4 +1,4 @@
-var t=Object.defineProperty;var d=(r,e,s)=>e in r?t(r,e,{enumerable:!0,configurable:!0,writable:!0,value:s}):r[e]=s;var a=(r,e,s)=>d(r,typeof e!="symbol"?e+"":e,s);import{r as i,A as n,k as v,n as l}from"./index-BN2ALtCU.js";class u{constructor(e){a(this,"element");this.museum=e,this.element=document.createElement("div"),this.element.className="vr-discovery-page",this.render()}renderSceneCard(e,s){return`
+var t=Object.defineProperty;var d=(r,e,s)=>e in r?t(r,e,{enumerable:!0,configurable:!0,writable:!0,value:s}):r[e]=s;var a=(r,e,s)=>d(r,typeof e!="symbol"?e+"":e,s);import{r as i,A as n,k as v,n as l}from"./index-DNUZ5KvB.js";class u{constructor(e){a(this,"element");this.museum=e,this.element=document.createElement("div"),this.element.className="vr-discovery-page",this.render()}renderSceneCard(e,s){return`
       <article class="vr-scene-card vr-card-enter" style="--vr-card-index:${s}">
         <button class="vr-scene-card__button" type="button" data-scene-id="${e.id}" aria-label="进入${e.name}">
           <div class="vr-scene-card__media">

@@ -1,7 +1,7 @@
 import {
-  BackSide,
   CanvasTexture,
   ClampToEdgeWrapping,
+  FrontSide,
   Group,
   LinearFilter,
   MathUtils,
@@ -155,7 +155,7 @@ export class CubeCanvasPano {
       }
       const material = new MeshBasicMaterial({
         map: texture,
-        side: BackSide,
+        side: FrontSide,
         transparent: true,
         opacity: 0,
         depthWrite: false,

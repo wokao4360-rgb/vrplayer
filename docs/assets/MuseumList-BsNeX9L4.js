@@ -1,4 +1,4 @@
-var d=Object.defineProperty;var v=(t,e,s)=>e in t?d(t,e,{enumerable:!0,configurable:!0,writable:!0,value:s}):t[e]=s;var c=(t,e,s)=>v(t,typeof e!="symbol"?e+"":e,s);import{k as o,r as l,A as m,l as u,m as h,n as y}from"./index-DNUZ5KvB.js";class _{constructor(e){c(this,"element");this.config=e,this.element=document.createElement("div"),this.element.className="vr-discovery-page",this.render(),this.markReady()}renderMuseumCard(e,s){const r=o(e),a=l(e.cover,m.COVER),i=u(e);return`
+var d=Object.defineProperty;var v=(t,e,s)=>e in t?d(t,e,{enumerable:!0,configurable:!0,writable:!0,value:s}):t[e]=s;var c=(t,e,s)=>v(t,typeof e!="symbol"?e+"":e,s);import{k as o,r as l,A as m,l as u,m as h,n as y}from"./index-CJuQHwRh.js";class _{constructor(e){c(this,"element");this.config=e,this.element=document.createElement("div"),this.element.className="vr-discovery-page",this.render(),this.markReady()}renderMuseumCard(e,s){const r=o(e),a=l(e.cover,m.COVER),i=u(e);return`
       <article class="vr-museum-card vr-card-enter" style="--vr-card-index:${s}">
         <button
           class="vr-museum-card__button"

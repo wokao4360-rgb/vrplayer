@@ -1,6 +1,6 @@
 import {
-  BackSide,
   ClampToEdgeWrapping,
+  FrontSide,
   Group,
   LinearFilter,
   Mesh,
@@ -298,7 +298,7 @@ export class CubeMeshPano {
     const texture = await this.loadJpgTexture(info.url, 'high');
     const material = new MeshBasicMaterial({
       map: texture,
-      side: BackSide,
+      side: FrontSide,
       transparent: true,
       opacity: 1,
       depthWrite: false,
@@ -318,7 +318,7 @@ export class CubeMeshPano {
     const texture = await this.fetchTileTexture(info);
     const material = new MeshBasicMaterial({
       map: texture,
-      side: BackSide,
+      side: FrontSide,
       transparent: true,
       opacity: 1,
       depthWrite: false,

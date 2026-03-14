@@ -3,6 +3,7 @@ export {
   BackSide,
   ClampToEdgeWrapping,
   DoubleSide,
+  FrontSide,
   LinearFilter,
   LinearMipmapLinearFilter,
   NoToneMapping,

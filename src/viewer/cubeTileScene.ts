@@ -4,6 +4,13 @@ import type { CubeFaceId } from './tileManifest.ts';
 
 export const CUBE_FACE_SEQUENCE: CubeFaceId[] = ['f', 'r', 'b', 'l', 'u', 'd'];
 
+type CubeTileAtlasRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export function createCubeFaceRoot(face: CubeFaceId, halfSize: number): Group {
   const group = new Group();
   switch (face) {
@@ -53,4 +60,25 @@ export function createCubeTilePlane(
     0.1,
   );
   return mesh;
+}
+
+export function getCubeTileAtlasDrawRect(
+  faceSize: number,
+  grid: number,
+  col: number,
+  row: number,
+  bleedPx = 1,
+): CubeTileAtlasRect {
+  const tileSize = faceSize / grid;
+  const bleedLeft = col > 0 ? bleedPx : 0;
+  const bleedRight = col < grid - 1 ? bleedPx : 0;
+  const bleedTop = row > 0 ? bleedPx : 0;
+  const bleedBottom = row < grid - 1 ? bleedPx : 0;
+
+  return {
+    x: col * tileSize - bleedLeft,
+    y: row * tileSize - bleedTop,
+    width: tileSize + bleedLeft + bleedRight,
+    height: tileSize + bleedTop + bleedBottom,
+  };
 }

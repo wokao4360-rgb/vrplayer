@@ -26,7 +26,7 @@ import {
 import { detectAvifSupport } from '../utils/imageFormatSupport';
 import { TileMeshFallbackRequiredError } from './TileCanvasPano.ts';
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from './cubeTilePolicy.ts';
-import { CUBE_FACE_SEQUENCE, createCubeFacePlane, createCubeFaceRoot } from './cubeTileScene.ts';
+import { CUBE_FACE_SEQUENCE, createCubeFacePlane, createCubeFaceRoot, getCubeTileAtlasDrawRect } from './cubeTileScene.ts';
 
 type LoadState = 'empty' | 'loading' | 'ready';
 
@@ -427,15 +427,22 @@ export class CubeCanvasPano {
     const texture = this.faceTextures.get(info.face);
     const material = this.faceRoots.get(info.face)?.children[0]?.material as MeshBasicMaterial | undefined;
     if (!ctx || !texture) return;
+    const faceSize = this.manifest!.highTileSize * this.manifest!.highGrid;
     if (info.kind === 'low') {
-      ctx.drawImage(bitmap, 0, 0, this.manifest!.highTileSize * this.manifest!.highGrid, this.manifest!.highTileSize * this.manifest!.highGrid);
+      ctx.drawImage(bitmap, 0, 0, faceSize, faceSize);
     } else {
+      const rect = getCubeTileAtlasDrawRect(
+        faceSize,
+        this.manifest!.highGrid,
+        info.col,
+        info.row,
+      );
       ctx.drawImage(
         bitmap,
-        info.col * this.manifest!.highTileSize,
-        info.row * this.manifest!.highTileSize,
-        this.manifest!.highTileSize,
-        this.manifest!.highTileSize,
+        rect.x,
+        rect.y,
+        rect.width,
+        rect.height,
       );
     }
     texture.needsUpdate = true;

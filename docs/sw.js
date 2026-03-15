@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-globals */
-const CACHE_VERSION = 'v8-20260211-cross-origin-pano-cache';
+const CACHE_VERSION = 'v9-20260315-tile-manifest-network-only';
 const RUNTIME_CACHE = `vr-runtime-${CACHE_VERSION}`;
 const SHELL_CACHE = `vr-shell-${CACHE_VERSION}`;
 
@@ -13,6 +13,10 @@ function isShellAssetPath(pathname) {
 
 function isPanoAssetPath(pathname) {
   return pathname.includes('/assets/panos/');
+}
+
+function isTileManifestRequest(pathname) {
+  return pathname.includes('/assets/panos/tiles/') && pathname.endsWith('/manifest.json');
 }
 
 function getScopeBaseUrl() {
@@ -118,6 +122,11 @@ self.addEventListener('fetch', (event) => {
     );
 
   if (sameOrigin && isConfigRequest(pathname)) {
+    event.respondWith(networkOnly(req));
+    return;
+  }
+
+  if (sameOrigin && isTileManifestRequest(pathname)) {
     event.respondWith(networkOnly(req));
     return;
   }

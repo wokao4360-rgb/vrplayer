@@ -1,5 +1,6 @@
-import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
-import { normalizeTileManifest, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy';
+import { resolveAssetUrl, AssetType } from '../utils/assetResolver.ts';
+import { normalizeTileManifest, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy.ts';
+import { appendFreshParamToTileManifestUrl, createTileManifestRequestInit } from './tileManifestFetchPolicy.ts';
 
 export type TileLevel = {
   z: number;
@@ -60,17 +61,14 @@ function absolutizeManifestBaseUrl(baseUrl: string, manifestUrl: string): string
 }
 
 export async function fetchTileManifest(url: string): Promise<TileManifest> {
-  const init: RequestInit = {
-    cache: 'default',
-  };
-  (init as any).priority = 'high';
-  const res = await fetch(url, init);
+  const requestUrl = appendFreshParamToTileManifestUrl(url);
+  const res = await fetch(requestUrl, createTileManifestRequestInit());
   if (!res.ok) {
-    throw new Error(`manifest 加载失败: ${url}`);
+    throw new Error(`manifest 加载失败: ${requestUrl}`);
   }
   const manifest = normalizeTileManifest((await res.json()) as TileManifest);
   manifest.baseUrl = resolveAssetUrl(
-    absolutizeManifestBaseUrl(manifest.baseUrl, url),
+    absolutizeManifestBaseUrl(manifest.baseUrl, requestUrl),
     AssetType.PANO
   );
   return manifest;

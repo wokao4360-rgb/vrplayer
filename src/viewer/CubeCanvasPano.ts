@@ -4,6 +4,7 @@ import {
   FrontSide,
   Group,
   LinearFilter,
+  LinearMipmapLinearFilter,
   MathUtils,
   MeshBasicMaterial,
   PerspectiveCamera,
@@ -59,6 +60,8 @@ type CubeHighInfo = {
 };
 
 type CubeInfo = CubeLowInfo | CubeHighInfo;
+
+const CUBE_CANVAS_TEXTURE_ANISOTROPY = 8;
 
 export class CubeCanvasPano {
   private manifest: CubemapTileManifest | null = null;
@@ -145,9 +148,10 @@ export class CubeCanvasPano {
       texture.flipY = true;
       texture.wrapS = ClampToEdgeWrapping;
       texture.wrapT = ClampToEdgeWrapping;
-      texture.minFilter = LinearFilter;
+      texture.minFilter = LinearMipmapLinearFilter;
       texture.magFilter = LinearFilter;
-      texture.generateMipmaps = false;
+      texture.generateMipmaps = true;
+      texture.anisotropy = CUBE_CANVAS_TEXTURE_ANISOTROPY;
       if ('colorSpace' in texture) {
         (texture as any).colorSpace = SRGBColorSpace;
       } else {
@@ -214,6 +218,7 @@ export class CubeCanvasPano {
       } else {
         this.enqueueHighFaces(faces);
       }
+      this.maybeMarkHighReady();
     }
 
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
@@ -335,9 +340,6 @@ export class CubeCanvasPano {
         if (this.lowReadyCount >= CUBE_FACE_SEQUENCE.length) {
           this.lowFullyReady = true;
         }
-      } else if (!this.highReady) {
-        this.highReady = true;
-        this.onHighReady();
       }
       this.tilesLoadedCount += 1;
     } catch (error) {
@@ -362,8 +364,20 @@ export class CubeCanvasPano {
       else this.activeHighLoads = Math.max(0, this.activeHighLoads - 1);
       this.tilesLoadingCount = this.activeLoads;
       this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
+      this.maybeMarkHighReady();
       this.processQueue();
     }
+  }
+
+  private maybeMarkHighReady(): void {
+    if (this.highReady || this.highInfos.size === 0) return;
+    for (const info of this.highInfos.values()) {
+      if (info.state !== 'ready') {
+        return;
+      }
+    }
+    this.highReady = true;
+    this.onHighReady();
   }
 
   private scheduleRetry(info: CubeInfo): void {

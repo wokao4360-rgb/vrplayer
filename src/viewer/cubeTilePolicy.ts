@@ -2,6 +2,7 @@ import { MathUtils } from '../vendor/three-core.ts';
 import type { CubeFaceId } from './tileManifest.ts';
 
 const FACE_PRIORITY: CubeFaceId[] = ['f', 'r', 'l', 'u', 'd', 'b'];
+const FACE_SCORE_EPSILON = 1e-6;
 
 const FACE_VECTORS: Record<CubeFaceId, { x: number; y: number; z: number }> = {
   f: { x: 0, y: 0, z: 1 },
@@ -37,7 +38,8 @@ function rankFaces(view: CubeViewAngles): Array<{ face: CubeFaceId; score: numbe
   const direction = toViewVector(view);
   return FACE_PRIORITY.map((face) => {
     const normal = FACE_VECTORS[face];
-    const score = direction.x * normal.x + direction.y * normal.y + direction.z * normal.z;
+    const rawScore = direction.x * normal.x + direction.y * normal.y + direction.z * normal.z;
+    const score = Math.abs(rawScore) < FACE_SCORE_EPSILON ? 0 : rawScore;
     return { face, score };
   }).sort((a, b) => {
     if (b.score !== a.score) {
@@ -53,15 +55,15 @@ export function buildCubeLowFaceOrder(view: CubeViewAngles): CubeFaceId[] {
 
 export function buildCubeVisibleHighFaces(view: CubeViewAngles): CubeFaceId[] {
   return rankFaces(view)
-    .slice(0, 3)
+    .slice(0, 5)
     .map((item) => item.face);
 }
 
 export function buildCubeHighTileKeys(faces: CubeFaceId[], highGrid: number): CubeTileKey[] {
   const keys: CubeTileKey[] = [];
-  for (const face of faces) {
-    for (let row = 0; row < highGrid; row += 1) {
-      for (let col = 0; col < highGrid; col += 1) {
+  for (let row = 0; row < highGrid; row += 1) {
+    for (let col = 0; col < highGrid; col += 1) {
+      for (const face of faces) {
         keys.push({ face, col, row });
       }
     }

@@ -3,6 +3,7 @@ import {
   FrontSide,
   Group,
   LinearFilter,
+  LinearMipmapLinearFilter,
   Mesh,
   MeshBasicMaterial,
   PerspectiveCamera,
@@ -152,6 +153,7 @@ export class CubeMeshPano {
       const faces = buildCubeVisibleHighFaces(view);
       this.enqueueHighFaces(faces);
       this.highSeeded = true;
+      this.maybeMarkHighReady();
     }
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
     this.tilesLoadingCount = this.activeLoads;
@@ -257,10 +259,6 @@ export class CubeMeshPano {
         }
       } else {
         await this.drawHighTile(info);
-        if (!this.highReady) {
-          this.highReady = true;
-          this.onHighReady();
-        }
       }
       info.state = 'ready';
       info.failCount = 0;
@@ -277,8 +275,20 @@ export class CubeMeshPano {
       else this.activeHighLoads = Math.max(0, this.activeHighLoads - 1);
       this.tilesLoadingCount = this.activeLoads;
       this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
+      this.maybeMarkHighReady();
       this.processQueue();
     }
+  }
+
+  private maybeMarkHighReady(): void {
+    if (this.highReady || this.highInfos.size === 0) return;
+    for (const info of this.highInfos.values()) {
+      if (info.state !== 'ready') {
+        return;
+      }
+    }
+    this.highReady = true;
+    this.onHighReady();
   }
 
   private scheduleRetry(info: CubeMeshInfo): void {
@@ -367,6 +377,9 @@ export class CubeMeshPano {
     const loader = await this.ensureKtx2Loader();
     const texture = await loader._createTexture(buffer);
     texture.flipY = false;
+    texture.minFilter = LinearMipmapLinearFilter;
+    texture.magFilter = LinearFilter;
+    texture.anisotropy = this.getTextureAnisotropy();
     if ('colorSpace' in texture) {
       (texture as any).colorSpace = SRGBColorSpace;
     } else {
@@ -409,9 +422,10 @@ export class CubeMeshPano {
     texture.flipY = true;
     texture.wrapS = ClampToEdgeWrapping;
     texture.wrapT = ClampToEdgeWrapping;
-    texture.minFilter = LinearFilter;
+    texture.minFilter = LinearMipmapLinearFilter;
     texture.magFilter = LinearFilter;
-    texture.generateMipmaps = false;
+    texture.generateMipmaps = true;
+    texture.anisotropy = this.getTextureAnisotropy();
     if ('colorSpace' in texture) {
       (texture as any).colorSpace = SRGBColorSpace;
     } else {
@@ -441,5 +455,10 @@ export class CubeMeshPano {
       yawDeg: Math.atan2(tmp.x, tmp.z) * 180 / Math.PI,
       pitchDeg: Math.asin(Math.max(-1, Math.min(1, tmp.y))) * 180 / Math.PI,
     };
+  }
+
+  private getTextureAnisotropy(): number {
+    const maxAniso = this.renderer.capabilities.getMaxAnisotropy?.() ?? 1;
+    return Math.min(8, Math.max(1, maxAniso));
   }
 }

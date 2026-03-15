@@ -1014,6 +1014,8 @@ export class PanoViewer {
     const tilesLoading = status?.tilesLoadingCount ?? 0;
     const tilesQueued = status?.tilesQueuedCount ?? 0;
     const lastTileUrl = status?.lastTileUrl ?? '';
+    const lastTilePixels = (status as any)?.lastTilePixels ?? '';
+    const requestBudget = (status as any)?.requestBudget ?? '';
     const lastError = this.tilesLastError || status?.lastError || '';
     const fallbackVisible = this.fallbackSphere ? 'true' : 'false';
     const canvasSize = status?.canvasSize ?? '';
@@ -1033,7 +1035,9 @@ export class PanoViewer {
       `tilesLoaded=${tilesCount}\n` +
       `tilesLoading=${tilesLoading}\n` +
       `tilesQueued=${tilesQueued}\n` +
+      `requestBudget=${requestBudget}\n` +
       `lastTileUrl=${lastTileUrl}\n` +
+      `lastTilePixels=${lastTilePixels}\n` +
       `lastError=${lastError}\n` +
       `canvas=${canvasSize} zMax=${maxLevel} levels=${levels} highReady=${highReady}\n` +
       `lowReady=${this.tilesLowReady}`;

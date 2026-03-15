@@ -26,6 +26,7 @@ import {
 } from './tileFormatPolicy.ts';
 import { detectAvifSupport } from '../utils/imageFormatSupport';
 import { TileMeshFallbackRequiredError } from './TileCanvasPano.ts';
+import { assertCubemapBitmapDimensions, getCubemapBudget } from './cubeTileContract.ts';
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from './cubeTilePolicy.ts';
 import { CUBE_FACE_SEQUENCE, createCubeFacePlane, createCubeFaceRoot, getCubeTileAtlasDrawRect } from './cubeTileScene.ts';
 
@@ -107,6 +108,7 @@ export class CubeCanvasPano {
   private tilesFailedCount = 0;
   private tilesRetryCount = 0;
   private lastTileUrl = '';
+  private lastTilePixels = '';
   private lastError = '';
 
   constructor(
@@ -131,6 +133,7 @@ export class CubeCanvasPano {
     this.tilesQueuedCount = 0;
     this.tilesFailedCount = 0;
     this.tilesRetryCount = 0;
+    this.lastTilePixels = '';
     this.lowInfos.clear();
     this.highInfos.clear();
     this.pendingLow = [];
@@ -265,6 +268,7 @@ export class CubeCanvasPano {
   }
 
   getStatus() {
+    const budget = this.manifest ? getCubemapBudget(this.manifest) : null;
     return {
       tilesVisible: this.tilesVisible,
       fallbackVisible: false,
@@ -274,6 +278,7 @@ export class CubeCanvasPano {
       tilesFailedCount: this.tilesFailedCount,
       tilesRetryCount: this.tilesRetryCount,
       lastTileUrl: this.lastTileUrl,
+      lastTilePixels: this.lastTilePixels,
       lastError: this.lastError,
       canvasSize: this.manifest ? `${this.manifest.highTileSize * this.manifest.highGrid}x${this.manifest.highTileSize * this.manifest.highGrid}` : '',
       canvasScale: 1,
@@ -281,6 +286,9 @@ export class CubeCanvasPano {
       highReady: this.highReady,
       zMax: this.manifest?.highGrid ?? 0,
       levels: this.manifest ? `cube-low-${this.manifest.lowFaceSize},cube-high-${this.manifest.highTileSize}` : '',
+      requestBudget: budget
+        ? `low:${budget.lowFaceCount}x${budget.lowFaceSize} high:${budget.highTileCount}x${budget.highTileSize}`
+        : '',
       lowReady: this.lowFullyReady,
       lowLevel: 'cube',
     };
@@ -455,6 +463,14 @@ export class CubeCanvasPano {
     const texture = this.faceTextures.get(info.face);
     const material = this.faceRoots.get(info.face)?.children[0]?.material as MeshBasicMaterial | undefined;
     if (!ctx) return;
+    assertCubemapBitmapDimensions(
+      this.manifest!,
+      info.kind,
+      bitmap.width,
+      bitmap.height,
+      info.url,
+    );
+    this.lastTilePixels = `${bitmap.width}x${bitmap.height}`;
     const faceSize = this.manifest!.highTileSize * this.manifest!.highGrid;
     if (info.kind === 'low') {
       ctx.clearRect(0, 0, faceSize, faceSize);

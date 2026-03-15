@@ -17,6 +17,7 @@ import {
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import type { CubemapTileManifest, CubeFaceId } from './tileManifest.ts';
+import { assertCubemapBitmapDimensions, getCubemapBudget } from './cubeTileContract.ts';
 import { buildCubeHighTileUrl, buildCubeLowFaceUrl, getHighTilePlan, getLowTilePlan, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy.ts';
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from './cubeTilePolicy.ts';
 import { CUBE_FACE_SEQUENCE, createCubeFacePlane, createCubeFaceRoot, createCubeTilePlane } from './cubeTileScene.ts';
@@ -77,6 +78,7 @@ export class CubeMeshPano {
   private tilesFailedCount = 0;
   private tilesRetryCount = 0;
   private lastTileUrl = '';
+  private lastTilePixels = '';
   private lastError = '';
 
   constructor(
@@ -108,6 +110,7 @@ export class CubeMeshPano {
     this.tilesQueuedCount = 0;
     this.tilesFailedCount = 0;
     this.tilesRetryCount = 0;
+    this.lastTilePixels = '';
 
     if (this.group) {
       this.scene.remove(this.group);
@@ -201,6 +204,7 @@ export class CubeMeshPano {
   }
 
   getStatus() {
+    const budget = this.manifest ? getCubemapBudget(this.manifest) : null;
     return {
       tilesVisible: this.tilesVisible,
       fallbackVisible: this.lowFullyReady,
@@ -210,6 +214,7 @@ export class CubeMeshPano {
       tilesFailedCount: this.tilesFailedCount,
       tilesRetryCount: this.tilesRetryCount,
       lastTileUrl: this.lastTileUrl,
+      lastTilePixels: this.lastTilePixels,
       lastError: this.lastError,
       canvasSize: '',
       canvasScale: 1,
@@ -217,6 +222,9 @@ export class CubeMeshPano {
       highReady: this.highReady,
       zMax: this.manifest?.highGrid ?? 0,
       levels: this.manifest ? `cube-low-${this.manifest.lowFaceSize},cube-high-${this.manifest.highTileSize}` : '',
+      requestBudget: budget
+        ? `low:${budget.lowFaceCount}x${budget.lowFaceSize} high:${budget.highTileCount}x${budget.highTileSize}`
+        : '',
       lowReady: this.lowFullyReady,
       lowLevel: 'cube',
     };
@@ -320,7 +328,7 @@ export class CubeMeshPano {
   }
 
   private async drawLowFace(info: CubeMeshInfo): Promise<void> {
-    const texture = await this.loadJpgTexture(info.url, 'high');
+    const texture = await this.loadJpgTexture(info.url, 'high', 'low');
     const material = new MeshBasicMaterial({
       map: texture,
       side: FrontSide,
@@ -380,20 +388,20 @@ export class CubeMeshPano {
       this.lastTileUrl = url;
       if (format === 'ktx2' && !this.ktx2Disabled) {
         try {
-          return await this.loadKtx2Texture(url, 'low');
+          return await this.loadKtx2Texture(url, 'low', 'high');
         } catch (error) {
           this.recordKtx2Failure(error);
           continue;
         }
       }
       if (format === 'jpg') {
-        return await this.loadJpgTexture(url, 'low');
+        return await this.loadJpgTexture(url, 'low', 'high');
       }
     }
     throw new Error(`cubemap mesh tile 无可用格式: ${info.face}/${info.col}_${info.row}`);
   }
 
-  private async loadKtx2Texture(url: string, priority: 'low' | 'high'): Promise<Texture> {
+  private async loadKtx2Texture(url: string, priority: 'low' | 'high', kind: 'low' | 'high'): Promise<Texture> {
     const response = await fetch(url, {
       mode: 'cors',
       cache: 'default',
@@ -413,6 +421,11 @@ export class CubeMeshPano {
     } else {
       (texture as any).encoding = sRGBEncoding;
     }
+    const image = (texture as any).image;
+    if (image?.width && image?.height) {
+      assertCubemapBitmapDimensions(this.manifest!, kind, image.width, image.height, url);
+      this.lastTilePixels = `${image.width}x${image.height}`;
+    }
     texture.needsUpdate = true;
     return texture;
   }
@@ -430,7 +443,7 @@ export class CubeMeshPano {
     return loader;
   }
 
-  private async loadJpgTexture(url: string, priority: 'low' | 'high'): Promise<Texture> {
+  private async loadJpgTexture(url: string, priority: 'low' | 'high', kind: 'low' | 'high'): Promise<Texture> {
     let bmp: ImageBitmap | null = null;
     try {
       bmp = await decodeImageBitmapInWorker(url, { timeoutMs: 12000, priority });
@@ -446,6 +459,8 @@ export class CubeMeshPano {
         channel: 'tile',
       });
     }
+    assertCubemapBitmapDimensions(this.manifest!, kind, bmp.width, bmp.height, url);
+    this.lastTilePixels = `${bmp.width}x${bmp.height}`;
     const texture = new Texture(bmp);
     texture.flipY = true;
     texture.wrapS = ClampToEdgeWrapping;

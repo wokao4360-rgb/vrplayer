@@ -68,6 +68,8 @@ export class CubeMeshPano {
   private lowSeeded = false;
   private highSeeded = false;
   private highReady = false;
+  private initialHighFaces: CubeFaceId[] = [];
+  private activatedHighFaces = new Set<CubeFaceId>();
   private meshFormats: TileMeshFormat[] = ['ktx2', 'jpg'];
   private ktx2Loader: Ktx2LoaderLike | null = null;
   private ktx2Disabled = false;
@@ -104,6 +106,8 @@ export class CubeMeshPano {
     this.lowSeeded = false;
     this.highSeeded = false;
     this.highReady = false;
+    this.initialHighFaces = [];
+    this.activatedHighFaces.clear();
     this.tilesVisible = false;
     this.tilesLoadedCount = 0;
     this.tilesLoadingCount = 0;
@@ -166,8 +170,13 @@ export class CubeMeshPano {
       }
     } else {
       const faces = buildCubeVisibleHighFaces(view);
+      if (!this.highSeeded) {
+        this.initialHighFaces = [...faces];
+      }
       this.enqueueHighFaces(faces);
       this.highSeeded = true;
+      this.reorderHighQueue(view);
+      this.maybeActivateReadyHighFaces();
       this.maybeMarkHighReady();
     }
     this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
@@ -259,6 +268,17 @@ export class CubeMeshPano {
     }
   }
 
+  private reorderHighQueue(view: { yawDeg: number; pitchDeg: number }): void {
+    if (!this.manifest || this.pendingHigh.length < 2) return;
+    const priority = buildCubeHighTileKeys(buildCubeVisibleHighFaces(view), this.manifest.highGrid);
+    const rank = new Map(priority.map((item, index) => [`${item.face}_${item.col}_${item.row}`, index]));
+    this.pendingHigh.sort((a, b) => {
+      const aKey = `${a.face}_${a.col}_${a.row}`;
+      const bKey = `${b.face}_${b.col}_${b.row}`;
+      return (rank.get(aKey) ?? Number.MAX_SAFE_INTEGER) - (rank.get(bKey) ?? Number.MAX_SAFE_INTEGER);
+    });
+  }
+
   private processQueue(): void {
     while (this.activeLoads < this.maxConcurrent && (this.pendingLow.length > 0 || this.pendingHigh.length > 0)) {
       const takeHigh =
@@ -299,19 +319,41 @@ export class CubeMeshPano {
       else this.activeHighLoads = Math.max(0, this.activeHighLoads - 1);
       this.tilesLoadingCount = this.activeLoads;
       this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
+      this.maybeActivateReadyHighFaces();
       this.maybeMarkHighReady();
       this.processQueue();
     }
   }
 
+  private isHighFaceReady(face: CubeFaceId): boolean {
+    if (!this.manifest) return false;
+    for (let row = 0; row < this.manifest.highGrid; row += 1) {
+      for (let col = 0; col < this.manifest.highGrid; col += 1) {
+        const info = this.highInfos.get(`${face}_${col}_${row}`);
+        if (!info || info.state !== 'ready') {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private maybeActivateReadyHighFaces(): void {
+    for (const face of CUBE_FACE_SEQUENCE) {
+      if (this.activatedHighFaces.has(face)) continue;
+      if (!this.isHighFaceReady(face)) continue;
+      this.activateHighFace(face);
+      this.activatedHighFaces.add(face);
+    }
+  }
+
   private maybeMarkHighReady(): void {
-    if (this.highReady || !this.highSeeded || this.highInfos.size === 0) return;
-    for (const info of this.highInfos.values()) {
-      if (info.state !== 'ready') {
+    if (this.highReady || !this.highSeeded || this.initialHighFaces.length === 0) return;
+    for (const face of this.initialHighFaces) {
+      if (!this.activatedHighFaces.has(face)) {
         return;
       }
     }
-    this.activateHighFaces();
     this.highReady = true;
     this.onHighReady();
   }
@@ -365,16 +407,14 @@ export class CubeMeshPano {
     info.mesh = mesh;
   }
 
-  private activateHighFaces(): void {
-    for (const face of CUBE_FACE_SEQUENCE) {
-      const highGroup = this.faceHighGroups.get(face);
-      const lowGroup = this.faceLowGroups.get(face);
-      if (highGroup) {
-        highGroup.visible = true;
-      }
-      if (lowGroup) {
-        lowGroup.visible = false;
-      }
+  private activateHighFace(face: CubeFaceId): void {
+    const highGroup = this.faceHighGroups.get(face);
+    const lowGroup = this.faceLowGroups.get(face);
+    if (highGroup) {
+      highGroup.visible = true;
+    }
+    if (lowGroup) {
+      lowGroup.visible = false;
     }
     if (!this.tilesVisible) {
       this.tilesVisible = true;

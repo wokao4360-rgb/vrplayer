@@ -24,6 +24,12 @@ export type CubeTileKey = {
   row: number;
 };
 
+type Vec3 = {
+  x: number;
+  y: number;
+  z: number;
+};
+
 function toViewVector({ yawDeg, pitchDeg }: CubeViewAngles) {
   const yaw = MathUtils.degToRad(yawDeg);
   const pitch = MathUtils.degToRad(pitchDeg);
@@ -34,35 +40,106 @@ function toViewVector({ yawDeg, pitchDeg }: CubeViewAngles) {
   };
 }
 
-function rankFaces(view: CubeViewAngles): Array<{ face: CubeFaceId; score: number }> {
-  const direction = toViewVector(view);
-  return FACE_PRIORITY.map((face) => {
-    const normal = FACE_VECTORS[face];
-    const rawScore = direction.x * normal.x + direction.y * normal.y + direction.z * normal.z;
+function dot(a: Vec3, b: Vec3): number {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+function cross(a: Vec3, b: Vec3): Vec3 {
+  return {
+    x: a.y * b.z - a.z * b.y,
+    y: a.z * b.x - a.x * b.z,
+    z: a.x * b.y - a.y * b.x,
+  };
+}
+
+function normalize(v: Vec3): Vec3 {
+  const len = Math.hypot(v.x, v.y, v.z);
+  if (len < FACE_SCORE_EPSILON) {
+    return { x: 0, y: 0, z: 0 };
+  }
+  return {
+    x: v.x / len,
+    y: v.y / len,
+    z: v.z / len,
+  };
+}
+
+function negate(v: Vec3): Vec3 {
+  return { x: -v.x, y: -v.y, z: -v.z };
+}
+
+function selectBestFace(direction: Vec3, used: Set<CubeFaceId>): CubeFaceId {
+  let bestFace: CubeFaceId = 'f';
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (const face of FACE_PRIORITY) {
+    if (used.has(face)) continue;
+    const rawScore = dot(direction, FACE_VECTORS[face]);
     const score = Math.abs(rawScore) < FACE_SCORE_EPSILON ? 0 : rawScore;
-    return { face, score };
-  }).sort((a, b) => {
-    if (b.score !== a.score) {
-      return b.score - a.score;
+    if (score > bestScore) {
+      bestFace = face;
+      bestScore = score;
     }
-    return FACE_PRIORITY.indexOf(a.face) - FACE_PRIORITY.indexOf(b.face);
+  }
+  return bestFace;
+}
+
+function buildCameraBasis(view: CubeViewAngles) {
+  const forward = normalize(toViewVector(view));
+  const worldUp = { x: 0, y: 1, z: 0 };
+  let right = normalize(cross(worldUp, forward));
+  if (Math.hypot(right.x, right.y, right.z) < FACE_SCORE_EPSILON) {
+    right = normalize(cross({ x: 0, y: 0, z: 1 }, forward));
+  }
+  if (Math.hypot(right.x, right.y, right.z) < FACE_SCORE_EPSILON) {
+    right = { x: 1, y: 0, z: 0 };
+  }
+  const up = normalize(cross(forward, right));
+  return {
+    forward,
+    back: negate(forward),
+    left: negate(right),
+    right,
+    up,
+    down: negate(up),
+  };
+}
+
+function buildCubeFaceLoadOrder(view: CubeViewAngles): CubeFaceId[] {
+  const basis = buildCameraBasis(view);
+  const used = new Set<CubeFaceId>();
+  const directions = [basis.forward, basis.left, basis.right, basis.up, basis.down, basis.back];
+  return directions.map((direction) => {
+    const face = selectBestFace(direction, used);
+    used.add(face);
+    return face;
+  });
+}
+
+function buildColumnPriority(highGrid: number): number[] {
+  const center = (highGrid - 1) / 2;
+  return Array.from({ length: highGrid }, (_, index) => index).sort((a, b) => {
+    const distance = Math.abs(a - center) - Math.abs(b - center);
+    if (distance !== 0) {
+      return distance;
+    }
+    return b - a;
   });
 }
 
 export function buildCubeLowFaceOrder(view: CubeViewAngles): CubeFaceId[] {
-  return rankFaces(view).map((item) => item.face);
+  return buildCubeFaceLoadOrder(view);
 }
 
 export function buildCubeVisibleHighFaces(view: CubeViewAngles): CubeFaceId[] {
-  return rankFaces(view)
-    .map((item) => item.face);
+  return buildCubeFaceLoadOrder(view).slice(0, 3);
 }
 
 export function buildCubeHighTileKeys(faces: CubeFaceId[], highGrid: number): CubeTileKey[] {
   const keys: CubeTileKey[] = [];
-  for (let row = 0; row < highGrid; row += 1) {
-    for (let col = 0; col < highGrid; col += 1) {
-      for (const face of faces) {
+  const cols = buildColumnPriority(highGrid);
+  for (const face of faces) {
+    for (let row = highGrid - 1; row >= 0; row -= 1) {
+      for (const col of cols) {
         keys.push({ face, col, row });
       }
     }

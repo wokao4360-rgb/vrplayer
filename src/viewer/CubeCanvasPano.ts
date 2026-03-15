@@ -101,6 +101,8 @@ export class CubeCanvasPano {
   private lowSeeded = false;
   private highSeeded = false;
   private highReady = false;
+  private initialHighFaces: CubeFaceId[] = [];
+  private activatedHighFaces = new Set<CubeFaceId>();
   private avifSupported = true;
   private meshFallbackRequested = false;
   private tilesLoadedCount = 0;
@@ -128,6 +130,8 @@ export class CubeCanvasPano {
     this.lowSeeded = false;
     this.highSeeded = false;
     this.highReady = false;
+    this.initialHighFaces = [];
+    this.activatedHighFaces.clear();
     this.tilesVisible = false;
     this.tilesLoadedCount = 0;
     this.tilesLoadingCount = 0;
@@ -229,8 +233,13 @@ export class CubeCanvasPano {
       }
     } else {
       const faces = buildCubeVisibleHighFaces(view);
+      if (!this.highSeeded) {
+        this.initialHighFaces = [...faces];
+      }
       this.enqueueHighFaces(faces);
       this.highSeeded = true;
+      this.reorderHighQueue(view);
+      this.maybeActivateReadyHighFaces();
       this.maybeMarkHighReady();
     }
 
@@ -301,6 +310,17 @@ export class CubeCanvasPano {
     const order = buildCubeLowFaceOrder(view);
     const rank = new Map(order.map((face, index) => [face, index]));
     this.pendingLow.sort((a, b) => (rank.get(a.face) ?? 99) - (rank.get(b.face) ?? 99));
+  }
+
+  private reorderHighQueue(view: { yawDeg: number; pitchDeg: number }): void {
+    if (!this.manifest || this.pendingHigh.length < 2) return;
+    const priority = buildCubeHighTileKeys(buildCubeVisibleHighFaces(view), this.manifest.highGrid);
+    const rank = new Map(priority.map((item, index) => [`${item.face}_${item.col}_${item.row}`, index]));
+    this.pendingHigh.sort((a, b) => {
+      const aKey = `${a.face}_${a.col}_${a.row}`;
+      const bKey = `${b.face}_${b.col}_${b.row}`;
+      return (rank.get(aKey) ?? Number.MAX_SAFE_INTEGER) - (rank.get(bKey) ?? Number.MAX_SAFE_INTEGER);
+    });
   }
 
   private enqueueHighFaces(faces: CubeFaceId[]): void {
@@ -385,19 +405,41 @@ export class CubeCanvasPano {
       else this.activeHighLoads = Math.max(0, this.activeHighLoads - 1);
       this.tilesLoadingCount = this.activeLoads;
       this.tilesQueuedCount = this.pendingLow.length + this.pendingHigh.length;
+      this.maybeActivateReadyHighFaces();
       this.maybeMarkHighReady();
       this.processQueue();
     }
   }
 
+  private isHighFaceReady(face: CubeFaceId): boolean {
+    if (!this.manifest) return false;
+    for (let row = 0; row < this.manifest.highGrid; row += 1) {
+      for (let col = 0; col < this.manifest.highGrid; col += 1) {
+        const info = this.highInfos.get(`${face}_${col}_${row}`);
+        if (!info || info.state !== 'ready') {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private maybeActivateReadyHighFaces(): void {
+    for (const face of CUBE_FACE_SEQUENCE) {
+      if (this.activatedHighFaces.has(face)) continue;
+      if (!this.isHighFaceReady(face)) continue;
+      this.activateHighFace(face);
+      this.activatedHighFaces.add(face);
+    }
+  }
+
   private maybeMarkHighReady(): void {
-    if (this.highReady || !this.highSeeded || this.highInfos.size === 0) return;
-    for (const info of this.highInfos.values()) {
-      if (info.state !== 'ready') {
+    if (this.highReady || !this.highSeeded || this.initialHighFaces.length === 0) return;
+    for (const face of this.initialHighFaces) {
+      if (!this.activatedHighFaces.has(face)) {
         return;
       }
     }
-    this.activateHighFaces();
     this.highReady = true;
     this.onHighReady();
   }
@@ -507,20 +549,18 @@ export class CubeCanvasPano {
     );
   }
 
-  private activateHighFaces(): void {
-    for (const face of CUBE_FACE_SEQUENCE) {
-      const stagedCanvas = this.stagedFaceCanvases.get(face);
-      const ctx = this.faceContexts.get(face);
-      const texture = this.faceTextures.get(face);
-      const material = this.faceRoots.get(face)?.children[0]?.material as MeshBasicMaterial | undefined;
-      if (!stagedCanvas || !ctx || !texture) continue;
-      ctx.clearRect(0, 0, stagedCanvas.width, stagedCanvas.height);
-      ctx.drawImage(stagedCanvas, 0, 0);
-      texture.needsUpdate = true;
-      if (material && material.opacity !== 1) {
-        material.opacity = 1;
-        material.needsUpdate = true;
-      }
+  private activateHighFace(face: CubeFaceId): void {
+    const stagedCanvas = this.stagedFaceCanvases.get(face);
+    const ctx = this.faceContexts.get(face);
+    const texture = this.faceTextures.get(face);
+    const material = this.faceRoots.get(face)?.children[0]?.material as MeshBasicMaterial | undefined;
+    if (!stagedCanvas || !ctx || !texture) return;
+    ctx.clearRect(0, 0, stagedCanvas.width, stagedCanvas.height);
+    ctx.drawImage(stagedCanvas, 0, 0);
+    texture.needsUpdate = true;
+    if (material && material.opacity !== 1) {
+      material.opacity = 1;
+      material.needsUpdate = true;
     }
     if (!this.tilesVisible) {
       this.tilesVisible = true;

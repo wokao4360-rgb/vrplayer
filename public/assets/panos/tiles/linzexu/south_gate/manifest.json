@@ -9,6 +9,10 @@
     "u",
     "d"
   ],
+  "assetFaceByWorldFace": {
+    "f": "b",
+    "b": "f"
+  },
   "lowFaceSize": 512,
   "highTileSize": 1024,
   "highGrid": 2,

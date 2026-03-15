@@ -18,7 +18,7 @@ import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import type { CubemapTileManifest, CubeFaceId } from './tileManifest.ts';
 import { assertCubemapBitmapDimensions, getCubemapBudget } from './cubeTileContract.ts';
-import { buildCubeHighTileUrl, buildCubeLowFaceUrl, getHighTilePlan, getLowTilePlan, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy.ts';
+import { buildCubeHighTileUrl, buildCubeLowFaceUrl, getCubeAssetFace, getHighTilePlan, getLowTilePlan, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy.ts';
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from './cubeTilePolicy.ts';
 import { CUBE_FACE_SEQUENCE, createCubeFacePlane, createCubeFaceRoot, createCubeTilePlane } from './cubeTileScene.ts';
 import { resolveKtx2TranscoderPath } from './tileMeshPanoRules.ts';
@@ -133,11 +133,12 @@ export class CubeMeshPano {
       this.faceRoots.set(face, root);
       this.faceLowGroups.set(face, lowGroup);
       this.faceHighGroups.set(face, highGroup);
+      const assetFace = getCubeAssetFace(manifest, face);
       this.lowInfos.set(face, {
         kind: 'low',
         face,
         state: this.lowFullyReady ? 'ready' : 'empty',
-        url: buildCubeLowFaceUrl(manifest.baseUrl, face, getLowTilePlan(manifest, { avifSupported: true }).bitmapFormats[1] ?? 'jpg'),
+        url: buildCubeLowFaceUrl(manifest.baseUrl, assetFace, getLowTilePlan(manifest, { avifSupported: true }).bitmapFormats[1] ?? 'jpg'),
         format: 'jpg',
         meshFormats: ['jpg'],
         failCount: 0,
@@ -236,13 +237,14 @@ export class CubeMeshPano {
       const key = `${face}_${col}_${row}`;
       let info = this.highInfos.get(key);
       if (!info) {
+        const assetFace = getCubeAssetFace(this.manifest, face);
         info = {
           kind: 'high',
           face,
           col,
           row,
           state: 'empty',
-          url: buildCubeHighTileUrl(this.manifest.baseUrl, face, col, row, this.meshFormats[0] ?? 'jpg'),
+          url: buildCubeHighTileUrl(this.manifest.baseUrl, assetFace, col, row, this.meshFormats[0] ?? 'jpg'),
           format: this.meshFormats[0] ?? 'jpg',
           meshFormats: [...this.meshFormats],
           failCount: 0,
@@ -381,8 +383,9 @@ export class CubeMeshPano {
   }
 
   private async fetchTileTexture(info: CubeMeshInfo): Promise<Texture> {
+    const assetFace = getCubeAssetFace(this.manifest!, info.face);
     for (const format of info.meshFormats) {
-      const url = buildCubeHighTileUrl(this.manifest!.baseUrl, info.face, info.col!, info.row!, format);
+      const url = buildCubeHighTileUrl(this.manifest!.baseUrl, assetFace, info.col!, info.row!, format);
       info.url = url;
       info.format = format;
       this.lastTileUrl = url;

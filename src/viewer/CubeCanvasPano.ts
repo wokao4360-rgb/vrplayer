@@ -18,6 +18,7 @@ import type { CubemapTileManifest, CubeFaceId } from './tileManifest.ts';
 import {
   buildCubeHighTileUrl,
   buildCubeLowFaceUrl,
+  getCubeAssetFace,
   getHighTilePlan,
   getLowTilePlan,
   type TileBitmapFormat,
@@ -190,11 +191,12 @@ export class CubeCanvasPano {
       this.stagedFaceContexts.set(face, stagedCtx);
 
       const lowPlan = getLowTilePlan(manifest, { avifSupported: this.avifSupported });
+      const assetFace = getCubeAssetFace(manifest, face);
       this.lowInfos.set(face, {
         kind: 'low',
         face,
         state: this.lowFullyReady ? 'ready' : 'empty',
-        url: buildCubeLowFaceUrl(manifest.baseUrl, face, lowPlan.bitmapFormats[0] ?? 'jpg'),
+        url: buildCubeLowFaceUrl(manifest.baseUrl, assetFace, lowPlan.bitmapFormats[0] ?? 'jpg'),
         format: lowPlan.bitmapFormats[0] ?? 'jpg',
         bitmapFormats: [...lowPlan.bitmapFormats],
         meshFormats: [],
@@ -309,13 +311,14 @@ export class CubeCanvasPano {
       if (!info) {
         const plan = getHighTilePlan(this.manifest, { avifSupported: this.avifSupported });
         const initialFormat = plan.bitmapFormats[0] ?? plan.meshFormats[0] ?? 'jpg';
+        const assetFace = getCubeAssetFace(this.manifest, face);
         info = {
           kind: 'high',
           face,
           col,
           row,
           state: 'empty',
-          url: buildCubeHighTileUrl(this.manifest.baseUrl, face, col, row, initialFormat),
+          url: buildCubeHighTileUrl(this.manifest.baseUrl, assetFace, col, row, initialFormat),
           format: initialFormat,
           bitmapFormats: [...plan.bitmapFormats],
           meshFormats: [...plan.meshFormats],
@@ -414,11 +417,12 @@ export class CubeCanvasPano {
 
   private async fetchBitmap(info: CubeInfo): Promise<ImageBitmap> {
     let lastError: unknown = null;
+    const assetFace = getCubeAssetFace(this.manifest!, info.face);
     for (const format of info.bitmapFormats) {
       const url =
         info.kind === 'low'
-          ? buildCubeLowFaceUrl(this.manifest!.baseUrl, info.face, format)
-          : buildCubeHighTileUrl(this.manifest!.baseUrl, info.face, info.col, info.row, format);
+          ? buildCubeLowFaceUrl(this.manifest!.baseUrl, assetFace, format)
+          : buildCubeHighTileUrl(this.manifest!.baseUrl, assetFace, info.col, info.row, format);
       info.url = url;
       info.format = format;
       this.lastTileUrl = url;

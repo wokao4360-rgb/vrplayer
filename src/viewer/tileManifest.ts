@@ -28,6 +28,7 @@ export type CubemapTileManifest = {
   highTileSize: number;
   highGrid: number;
   faces?: CubeFaceId[];
+  assetFaceByWorldFace?: Partial<Record<CubeFaceId, CubeFaceId>>;
   tileFormat?: TileImageFormat;
   lowFallbackFormat?: 'jpg';
   highFallbackFormats?: TileMeshFormat[];

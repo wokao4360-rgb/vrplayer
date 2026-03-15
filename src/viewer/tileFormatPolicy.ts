@@ -169,6 +169,13 @@ export function buildCubeLowFaceUrl(
   return `${baseUrl}/low/${face}.${format}`;
 }
 
+export function getCubeAssetFace(
+  manifest: { assetFaceByWorldFace?: Partial<Record<CubeFaceId, CubeFaceId>> },
+  worldFace: CubeFaceId,
+): CubeFaceId {
+  return manifest.assetFaceByWorldFace?.[worldFace] ?? worldFace;
+}
+
 export function buildCubeHighTileUrl(
   baseUrl: string,
   face: CubeFaceId,

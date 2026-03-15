@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   buildTileUrl,
+  getCubeAssetFace,
   getHighTilePlan,
   getLowTilePlan,
   normalizeTileManifest,
@@ -133,4 +134,32 @@ test('buildTileUrl appends the requested extension without mutating base url', (
   assert.equal(buildTileUrl('/assets/panos/tiles/demo', 3, 4, 2, 'avif'), '/assets/panos/tiles/demo/z3/4_2.avif');
   assert.equal(buildTileUrl('/assets/panos/tiles/demo', 3, 4, 2, 'ktx2'), '/assets/panos/tiles/demo/z3/4_2.ktx2');
   assert.equal(buildTileUrl('/assets/panos/tiles/demo', 3, 4, 2, 'jpg'), '/assets/panos/tiles/demo/z3/4_2.jpg');
+});
+
+test('getCubeAssetFace defaults to world face and honors scene-level overrides', () => {
+  assert.equal(getCubeAssetFace({}, 'f'), 'f');
+  assert.equal(
+    getCubeAssetFace(
+      {
+        assetFaceByWorldFace: {
+          f: 'b',
+          b: 'f',
+        },
+      },
+      'f',
+    ),
+    'b',
+  );
+  assert.equal(
+    getCubeAssetFace(
+      {
+        assetFaceByWorldFace: {
+          f: 'b',
+          b: 'f',
+        },
+      },
+      'r',
+    ),
+    'r',
+  );
 });

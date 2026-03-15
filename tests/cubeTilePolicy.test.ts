@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 
 import { buildCubeHighTileKeys, buildCubeVisibleHighFaces } from '../src/viewer/cubeTilePolicy.ts';
 
-test('front-facing cubemap keeps all non-opposite faces in the high-res set', () => {
-  assert.deepEqual(buildCubeVisibleHighFaces({ yawDeg: 0, pitchDeg: 0 }), ['f', 'r', 'l', 'u', 'd']);
+test('front-facing cubemap keeps all six faces in the high-res set', () => {
+  assert.deepEqual(buildCubeVisibleHighFaces({ yawDeg: 0, pitchDeg: 0 }), ['f', 'r', 'l', 'u', 'd', 'b']);
 });
 
-test('back-facing cubemap keeps all non-opposite faces in the high-res set', () => {
-  assert.deepEqual(buildCubeVisibleHighFaces({ yawDeg: 180, pitchDeg: 0 }), ['b', 'r', 'l', 'u', 'd']);
+test('back-facing cubemap keeps all six faces in the high-res set', () => {
+  assert.deepEqual(buildCubeVisibleHighFaces({ yawDeg: 180, pitchDeg: 0 }), ['b', 'r', 'l', 'u', 'd', 'f']);
 });
 
 test('cubemap high-tile queue interleaves faces instead of completing one face first', () => {
@@ -27,4 +27,9 @@ test('cubemap high-tile queue interleaves faces instead of completing one face f
     'r:1_1',
     'l:1_1',
   ]);
+});
+
+test('full cubemap budget expands to exactly 24 high-res tiles', () => {
+  const keys = buildCubeHighTileKeys(['f', 'r', 'b', 'l', 'u', 'd'], 2);
+  assert.equal(keys.length, 24);
 });

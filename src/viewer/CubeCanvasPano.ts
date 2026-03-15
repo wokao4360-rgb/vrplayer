@@ -63,6 +63,18 @@ type CubeInfo = CubeLowInfo | CubeHighInfo;
 
 const CUBE_CANVAS_TEXTURE_ANISOTROPY = 8;
 
+function createFaceCanvas(face: CubeFaceId, faceSize: number) {
+  const canvas = document.createElement('canvas');
+  canvas.width = faceSize;
+  canvas.height = faceSize;
+  const ctx = canvas.getContext('2d', { alpha: true });
+  if (!ctx) {
+    throw new Error(`cubemap face ${face} canvas init failed`);
+  }
+  ctx.clearRect(0, 0, faceSize, faceSize);
+  return { canvas, ctx };
+}
+
 export class CubeCanvasPano {
   private manifest: CubemapTileManifest | null = null;
   private group: Group | null = null;
@@ -70,6 +82,8 @@ export class CubeCanvasPano {
   private faceCanvases = new Map<CubeFaceId, HTMLCanvasElement>();
   private faceContexts = new Map<CubeFaceId, CanvasRenderingContext2D>();
   private faceTextures = new Map<CubeFaceId, CanvasTexture>();
+  private stagedFaceCanvases = new Map<CubeFaceId, HTMLCanvasElement>();
+  private stagedFaceContexts = new Map<CubeFaceId, CanvasRenderingContext2D>();
   private pendingLow: CubeLowInfo[] = [];
   private pendingHigh: CubeHighInfo[] = [];
   private lowInfos = new Map<CubeFaceId, CubeLowInfo>();
@@ -132,18 +146,14 @@ export class CubeCanvasPano {
     this.faceCanvases.clear();
     this.faceContexts.clear();
     this.faceTextures.clear();
+    this.stagedFaceCanvases.clear();
+    this.stagedFaceContexts.clear();
 
     const highFaceSize = manifest.highTileSize * manifest.highGrid;
     for (const face of CUBE_FACE_SEQUENCE) {
       const root = createCubeFaceRoot(face, 500);
-      const canvas = document.createElement('canvas');
-      canvas.width = highFaceSize;
-      canvas.height = highFaceSize;
-      const ctx = canvas.getContext('2d', { alpha: true });
-      if (!ctx) {
-        throw new Error(`cubemap face ${face} canvas 初始化失败`);
-      }
-      ctx.clearRect(0, 0, highFaceSize, highFaceSize);
+      const { canvas, ctx } = createFaceCanvas(face, highFaceSize);
+      const { canvas: stagedCanvas, ctx: stagedCtx } = createFaceCanvas(face, highFaceSize);
       const texture = new CanvasTexture(canvas);
       texture.flipY = true;
       texture.wrapS = ClampToEdgeWrapping;
@@ -173,6 +183,8 @@ export class CubeCanvasPano {
       this.faceCanvases.set(face, canvas);
       this.faceContexts.set(face, ctx);
       this.faceTextures.set(face, texture);
+      this.stagedFaceCanvases.set(face, stagedCanvas);
+      this.stagedFaceContexts.set(face, stagedCtx);
 
       const lowPlan = getLowTilePlan(manifest, { avifSupported: this.avifSupported });
       this.lowInfos.set(face, {
@@ -212,12 +224,8 @@ export class CubeCanvasPano {
       }
     } else {
       const faces = buildCubeVisibleHighFaces(view);
-      if (!this.highSeeded) {
-        this.highSeeded = true;
-        this.enqueueHighFaces(faces);
-      } else {
-        this.enqueueHighFaces(faces);
-      }
+      this.enqueueHighFaces(faces);
+      this.highSeeded = true;
       this.maybeMarkHighReady();
     }
 
@@ -242,6 +250,8 @@ export class CubeCanvasPano {
     this.faceCanvases.clear();
     this.faceContexts.clear();
     this.faceTextures.clear();
+    this.stagedFaceCanvases.clear();
+    this.stagedFaceContexts.clear();
   }
 
   setPerformanceMode(mode: 'normal' | 'throttle'): void {
@@ -370,12 +380,13 @@ export class CubeCanvasPano {
   }
 
   private maybeMarkHighReady(): void {
-    if (this.highReady || this.highInfos.size === 0) return;
+    if (this.highReady || !this.highSeeded || this.highInfos.size === 0) return;
     for (const info of this.highInfos.values()) {
       if (info.state !== 'ready') {
         return;
       }
     }
+    this.activateHighFaces();
     this.highReady = true;
     this.onHighReady();
   }
@@ -414,7 +425,7 @@ export class CubeCanvasPano {
       throw new TileMeshFallbackRequiredError(info.format ?? null, info.meshFormats);
     }
 
-    throw lastError instanceof Error ? lastError : new Error(`cubemap 资源加载失败: ${info.url}`);
+    throw lastError instanceof Error ? lastError : new Error(`cubemap resource load failed: ${info.url}`);
   }
 
   private async fetchBitmapFromUrl(url: string, priority: 'low' | 'high'): Promise<ImageBitmap> {
@@ -437,32 +448,59 @@ export class CubeCanvasPano {
   }
 
   private drawBitmap(info: CubeInfo, bitmap: ImageBitmap): void {
-    const ctx = this.faceContexts.get(info.face);
+    const ctx =
+      info.kind === 'low'
+        ? this.faceContexts.get(info.face)
+        : this.stagedFaceContexts.get(info.face);
     const texture = this.faceTextures.get(info.face);
     const material = this.faceRoots.get(info.face)?.children[0]?.material as MeshBasicMaterial | undefined;
-    if (!ctx || !texture) return;
+    if (!ctx) return;
     const faceSize = this.manifest!.highTileSize * this.manifest!.highGrid;
     if (info.kind === 'low') {
+      ctx.clearRect(0, 0, faceSize, faceSize);
       ctx.drawImage(bitmap, 0, 0, faceSize, faceSize);
-    } else {
-      const rect = getCubeTileAtlasDrawRect(
-        faceSize,
-        this.manifest!.highGrid,
-        info.col,
-        info.row,
-      );
-      ctx.drawImage(
-        bitmap,
-        rect.x,
-        rect.y,
-        rect.width,
-        rect.height,
-      );
+      if (!texture) return;
+      texture.needsUpdate = true;
+      if (material && material.opacity !== 1) {
+        material.opacity = 1;
+        material.needsUpdate = true;
+      }
+      if (!this.tilesVisible) {
+        this.tilesVisible = true;
+        this.onFirstDraw();
+      }
+      return;
     }
-    texture.needsUpdate = true;
-    if (material && material.opacity !== 1) {
-      material.opacity = 1;
-      material.needsUpdate = true;
+
+    const rect = getCubeTileAtlasDrawRect(
+      faceSize,
+      this.manifest!.highGrid,
+      info.col,
+      info.row,
+    );
+    ctx.drawImage(
+      bitmap,
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+    );
+  }
+
+  private activateHighFaces(): void {
+    for (const face of CUBE_FACE_SEQUENCE) {
+      const stagedCanvas = this.stagedFaceCanvases.get(face);
+      const ctx = this.faceContexts.get(face);
+      const texture = this.faceTextures.get(face);
+      const material = this.faceRoots.get(face)?.children[0]?.material as MeshBasicMaterial | undefined;
+      if (!stagedCanvas || !ctx || !texture) continue;
+      ctx.clearRect(0, 0, stagedCanvas.width, stagedCanvas.height);
+      ctx.drawImage(stagedCanvas, 0, 0);
+      texture.needsUpdate = true;
+      if (material && material.opacity !== 1) {
+        material.opacity = 1;
+        material.needsUpdate = true;
+      }
     }
     if (!this.tilesVisible) {
       this.tilesVisible = true;

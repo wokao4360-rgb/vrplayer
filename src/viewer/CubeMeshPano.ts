@@ -51,6 +51,8 @@ export class CubeMeshPano {
   private manifest: CubemapTileManifest | null = null;
   private group: Group | null = null;
   private faceRoots = new Map<CubeFaceId, Group>();
+  private faceLowGroups = new Map<CubeFaceId, Group>();
+  private faceHighGroups = new Map<CubeFaceId, Group>();
   private pendingLow: CubeMeshInfo[] = [];
   private pendingHigh: CubeMeshInfo[] = [];
   private lowInfos = new Map<CubeFaceId, CubeMeshInfo>();
@@ -114,11 +116,20 @@ export class CubeMeshPano {
     this.group.renderOrder = 1;
     this.scene.add(this.group);
     this.faceRoots.clear();
+    this.faceLowGroups.clear();
+    this.faceHighGroups.clear();
 
     for (const face of CUBE_FACE_SEQUENCE) {
       const root = createCubeFaceRoot(face, 500);
+      const lowGroup = new Group();
+      const highGroup = new Group();
+      highGroup.visible = false;
+      root.add(lowGroup);
+      root.add(highGroup);
       this.group.add(root);
       this.faceRoots.set(face, root);
+      this.faceLowGroups.set(face, lowGroup);
+      this.faceHighGroups.set(face, highGroup);
       this.lowInfos.set(face, {
         kind: 'low',
         face,
@@ -170,6 +181,9 @@ export class CubeMeshPano {
       });
       this.group = null;
     }
+    this.faceRoots.clear();
+    this.faceLowGroups.clear();
+    this.faceHighGroups.clear();
     if (this.ktx2Loader) {
       this.ktx2Loader.dispose();
       this.ktx2Loader = null;
@@ -281,12 +295,13 @@ export class CubeMeshPano {
   }
 
   private maybeMarkHighReady(): void {
-    if (this.highReady || this.highInfos.size === 0) return;
+    if (this.highReady || !this.highSeeded || this.highInfos.size === 0) return;
     for (const info of this.highInfos.values()) {
       if (info.state !== 'ready') {
         return;
       }
     }
+    this.activateHighFaces();
     this.highReady = true;
     this.onHighReady();
   }
@@ -316,7 +331,7 @@ export class CubeMeshPano {
     });
     material.toneMapped = false;
     const mesh = createCubeFacePlane(1000, material);
-    this.faceRoots.get(info.face)?.add(mesh);
+    this.faceLowGroups.get(info.face)?.add(mesh);
     info.mesh = mesh;
     if (!this.tilesVisible) {
       this.tilesVisible = true;
@@ -336,8 +351,21 @@ export class CubeMeshPano {
     });
     material.toneMapped = false;
     const mesh = createCubeTilePlane(500, this.manifest!.highGrid, info.col!, info.row!, material);
-    this.faceRoots.get(info.face)?.add(mesh);
+    this.faceHighGroups.get(info.face)?.add(mesh);
     info.mesh = mesh;
+  }
+
+  private activateHighFaces(): void {
+    for (const face of CUBE_FACE_SEQUENCE) {
+      const highGroup = this.faceHighGroups.get(face);
+      const lowGroup = this.faceLowGroups.get(face);
+      if (highGroup) {
+        highGroup.visible = true;
+      }
+      if (lowGroup) {
+        lowGroup.visible = false;
+      }
+    }
     if (!this.tilesVisible) {
       this.tilesVisible = true;
       this.onFirstDraw();

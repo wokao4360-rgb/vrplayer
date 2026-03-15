@@ -55,7 +55,6 @@ export function buildCubeLowFaceOrder(view: CubeViewAngles): CubeFaceId[] {
 
 export function buildCubeVisibleHighFaces(view: CubeViewAngles): CubeFaceId[] {
   return rankFaces(view)
-    .slice(0, 5)
     .map((item) => item.face);
 }
 

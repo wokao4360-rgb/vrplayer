@@ -1,4 +1,4 @@
-var b=Object.defineProperty;var x=(h,e,t)=>e in h?b(h,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):h[e]=t;var i=(h,e,t)=>x(h,typeof e!="symbol"?e+"":e,t);import{n as A,r as w,A as C}from"./index-CrWmf6IM.js";import{toProxiedImageUrl as y}from"./externalImage-Dn5QT-Tp.js";import{g as L}from"./index-DnDnySW2.js";import"./three-renderer-BGQoZ2fB.js";const N="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
+var b=Object.defineProperty;var x=(h,e,t)=>e in h?b(h,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):h[e]=t;var i=(h,e,t)=>x(h,typeof e!="symbol"?e+"":e,t);import{n as A,r as w,A as C}from"./index-emygNk_y.js";import{toProxiedImageUrl as y}from"./externalImage-CA3N5w7k.js";import{g as L}from"./index-DnDnySW2.js";import"./three-renderer-BGQoZ2fB.js";const N="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#1F2933"/>

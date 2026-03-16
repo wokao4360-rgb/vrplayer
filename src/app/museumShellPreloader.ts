@@ -1,4 +1,4 @@
-import { resolveAssetUrl, AssetType } from '../utils/assetResolver.ts';
+import { resolveAssetUrl, AssetType, waitForAssetResolverReady } from '../utils/assetResolver.ts';
 import { fetchTileManifest, type CubemapTileManifest, type TileManifest } from '../viewer/tileManifest.ts';
 import { buildCubeHighTileUrl, buildCubeLowFaceUrl, getCubeAssetFace } from '../viewer/tileFormatPolicy.ts';
 import {
@@ -132,6 +132,17 @@ export class MuseumShellPreloader {
     assets: MuseumShellPreloadAsset[],
     hiresManifest: TileManifest | null,
   ): Promise<void> {
+    if (
+      assets.some(
+        (asset) =>
+          asset.kind === 'image' &&
+          (asset.role === 'low-face' ||
+            asset.role === 'hero-high-tile' ||
+            asset.role === 'remaining-high-tile'),
+      )
+    ) {
+      await waitForAssetResolverReady();
+    }
     await Promise.allSettled(assets.map((asset) => this.preloadAsset(asset, hiresManifest)));
   }
 
@@ -186,13 +197,14 @@ export class MuseumShellPreloader {
     asset: MuseumShellPreloadAsset,
     manifest: CubemapTileManifest,
   ): string {
+    const baseUrl = resolveAssetUrl(manifest.baseUrl, AssetType.PANO) || manifest.baseUrl;
     const assetFace = getCubeAssetFace(manifest, asset.worldFace!);
     const tileFormat = manifest.tileFormat ?? 'avif';
     if (asset.role === 'low-face') {
-      return buildCubeLowFaceUrl(manifest.baseUrl, assetFace, tileFormat);
+      return buildCubeLowFaceUrl(baseUrl, assetFace, tileFormat);
     }
     return buildCubeHighTileUrl(
-      manifest.baseUrl,
+      baseUrl,
       assetFace,
       asset.col ?? 0,
       asset.row ?? 0,

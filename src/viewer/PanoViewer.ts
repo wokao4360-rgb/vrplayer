@@ -15,7 +15,11 @@ import { showToast } from '../ui/toast';
 import { TileCanvasPano, TileMeshFallbackRequiredError } from './TileCanvasPano';
 import { fetchTileManifest, type TileManifest } from './tileManifest';
 import { PanoLifecycleRuntime } from './panoLifecycleRuntime';
-import { resolveInitialTileFallbackVisibility, selectInitialTileBackend } from './tileFormatPolicy';
+import {
+  resolveInitialTileFallbackVisibility,
+  selectInitialTileBackend,
+  shouldAllowLegacyTileFallback,
+} from './tileFormatPolicy';
 import { worldYawToInternalYaw } from './cubemapViewSemantics';
 
 type NadirPatchType = import('./NadirPatch').NadirPatch;
@@ -495,6 +499,7 @@ export class PanoViewer {
       const fallbackUrlHigh = tilesConfig.fallbackPano || sceneData.pano;
       const fallbackPlanned = Boolean(fallbackUrlLow || fallbackUrlHigh);
       let meshFallbackActivated = false;
+      let allowLegacyTileFallback = false;
       this.tilesVisibleStableFrames = 0;
       this.tilesLastError = '';
       this.tilesLowReady = false;
@@ -524,6 +529,7 @@ export class PanoViewer {
       };
       fetchTileManifest(manifestUrl)
         .then(async (manifest) => {
+          allowLegacyTileFallback = shouldAllowLegacyTileFallback(manifest);
           const switchToMeshFallback = async (reason: TileMeshFallbackRequiredError) => {
             if (meshFallbackActivated || this.disposed || !this.tilePano) {
               return;
@@ -569,7 +575,9 @@ export class PanoViewer {
                     this.renderer.capabilities.maxTextureSize || 0
                   );
           }
-          const initialFallbackVisible = resolveInitialTileFallbackVisibility(manifest, fallbackPlanned);
+          const initialFallbackVisible =
+            allowLegacyTileFallback &&
+            resolveInitialTileFallbackVisibility(manifest, fallbackPlanned);
           if (initialFallbackVisible) {
             if (fallbackUrlLow) {
               this.showFallbackTexture(resolveAssetUrl(fallbackUrlLow, AssetType.PANO_LOW), geometry, true);
@@ -593,10 +601,24 @@ export class PanoViewer {
           this.tilePano?.prime(this.camera);
         })
         .catch((err) => {
-          console.error('瓦片加载失败，回退传统全景', err);
+          console.error('瓦片加载失败', err);
           this.tilesLastError = err instanceof Error ? err.message : String(err);
-          showToast('瓦片加载失败，已回退到全景图', 2000);
-          this.fallbackToLegacy(sceneData, tilesConfig);
+          if (allowLegacyTileFallback) {
+            showToast('瓦片加载失败，已回退到全景图', 2000);
+            this.fallbackToLegacy(sceneData, tilesConfig);
+            return;
+          }
+          if (this.tilesLowReady) {
+            this.isDegradedMode = true;
+            this.updateLoadStatus(LoadStatus.DEGRADED);
+            this.setRenderSource('low', 'AVIF 加载失败，禁用 KTX/JPG fallback');
+            showToast('AVIF 高清加载失败，保留 AVIF 低清', 2000);
+            return;
+          }
+          this.updateLoadStatus(LoadStatus.ERROR);
+          if (this.onErrorCallback) {
+            this.onErrorCallback(err instanceof Error ? err : new Error(String(err)));
+          }
         });
       return;
     }

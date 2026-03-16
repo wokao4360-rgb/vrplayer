@@ -112,6 +112,8 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-16 20:15:00] 所有 `tileFormat=avif` 的全景球运行时现已锁定为 `AVIF-only`：manifest 里的 `lowFallbackFormat=jpg` 与 `highFallbackFormats=[ktx2,jpg]` 仅保留为静态资产元数据，不再进入实际请求候选；`PanoViewer` 也不再在 AVIF 失败时自动切到 `KTX2/JPG` mesh 或整图 fallback。后续若线上仍出现 `.ktx2` 或 `.jpg` 的全景球请求，第一优先检查 `tileFormatPolicy` 与 `shouldAllowLegacyTileFallback()` 是否被绕过。
+
 - [2026-03-16 18:35:00] museum shell 的长期实现约束已经补齐为显式三层：`museumShellManifest` 负责把 legacy config 归一成 cover / preview / hires / neighbors 的配置驱动 schema；`museumShellStateMachine` 负责 `COVER -> ENTER_PRELOADING -> SCENE_PREVIEW_READY -> SCENE_SHARPENING -> SCENE_ACTIVE / ERROR_FALLBACK` 的单一状态真相；`museumShellPreloadPlanner` 负责 `L0/L1/L2/L3` 资源分层。后续新增转场或预热规则时，优先改这三层，不要再把状态散落回 `main.ts`。
 - [2026-03-16 18:35:00] museum shell 转场视觉现已固定为“上一帧 snapshot + blur + frosted veil + preview crossfade + sharpening exit”。`MuseumShellChrome` 不再只是文案遮罩：目标 scene 的 low preview 一 ready 就必须 crossfade 接管，低清进场后仍保留轻模糊，直到 `HIGH_READY/DEGRADED` 才退掉转场层。若后续又出现点击热点后黑屏或瞬切，优先回查 `MuseumShellChrome` 与 `MuseumShellStateMachine` 的阶段推进，而不是先改 viewer。
 

@@ -9,6 +9,7 @@ import {
   normalizeTileManifest,
   resolveInitialTileFallbackVisibility,
   selectInitialTileBackend,
+  shouldAllowLegacyTileFallback,
 } from '../src/viewer/tileFormatPolicy.ts';
 
 test('normalizeTileManifest keeps legacy jpg manifests stable', () => {
@@ -54,7 +55,7 @@ test('normalizeTileManifest keeps cubemap AVIF manifests on the same fallback de
   assert.deepEqual(manifest.highFallbackFormats, ['ktx2', 'jpg']);
 });
 
-test('avif low tiles stay on bitmap chain and fall back to jpg only', () => {
+test('avif low tiles stay on avif-only bitmap chain at runtime', () => {
   const manifest = normalizeTileManifest({
     type: 'equirect-tiles',
     tileSize: 512,
@@ -63,12 +64,12 @@ test('avif low tiles stay on bitmap chain and fall back to jpg only', () => {
     tileFormat: 'avif',
   });
 
-  assert.deepEqual(getLowTilePlan(manifest, { avifSupported: true }).bitmapFormats, ['avif', 'jpg']);
+  assert.deepEqual(getLowTilePlan(manifest, { avifSupported: true }).bitmapFormats, ['avif']);
   assert.deepEqual(getLowTilePlan(manifest, { avifSupported: true }).meshFormats, []);
-  assert.deepEqual(getLowTilePlan(manifest, { avifSupported: false }).bitmapFormats, ['jpg']);
+  assert.deepEqual(getLowTilePlan(manifest, { avifSupported: false }).bitmapFormats, ['avif']);
 });
 
-test('avif high tiles prefer avif and then escalate to mesh fallback chain', () => {
+test('avif high tiles stay on avif-only bitmap chain and never escalate to mesh fallback', () => {
   const manifest = normalizeTileManifest({
     type: 'equirect-tiles',
     tileSize: 512,
@@ -78,9 +79,9 @@ test('avif high tiles prefer avif and then escalate to mesh fallback chain', () 
   });
 
   assert.deepEqual(getHighTilePlan(manifest, { avifSupported: true }).bitmapFormats, ['avif']);
-  assert.deepEqual(getHighTilePlan(manifest, { avifSupported: true }).meshFormats, ['ktx2', 'jpg']);
-  assert.deepEqual(getHighTilePlan(manifest, { avifSupported: false }).bitmapFormats, []);
-  assert.deepEqual(getHighTilePlan(manifest, { avifSupported: false }).meshFormats, ['ktx2', 'jpg']);
+  assert.deepEqual(getHighTilePlan(manifest, { avifSupported: true }).meshFormats, []);
+  assert.deepEqual(getHighTilePlan(manifest, { avifSupported: false }).bitmapFormats, ['avif']);
+  assert.deepEqual(getHighTilePlan(manifest, { avifSupported: false }).meshFormats, []);
 });
 
 test('legacy ktx2 manifests still prefer mesh and keep jpg fallback', () => {
@@ -108,6 +109,7 @@ test('avif initial canvas load keeps low tiles active even when fallback sphere 
 
   assert.equal(resolveInitialTileFallbackVisibility(manifest, true), false);
   assert.equal(resolveInitialTileFallbackVisibility(manifest, false), false);
+  assert.equal(shouldAllowLegacyTileFallback(manifest), false);
 });
 
 test('legacy jpg and ktx2 manifests still suppress low tile bootstrap when fallback is already visible', () => {
@@ -128,6 +130,8 @@ test('legacy jpg and ktx2 manifests still suppress low tile bootstrap when fallb
 
   assert.equal(resolveInitialTileFallbackVisibility(jpgManifest, true), true);
   assert.equal(resolveInitialTileFallbackVisibility(ktx2Manifest, true), true);
+  assert.equal(shouldAllowLegacyTileFallback(jpgManifest), true);
+  assert.equal(shouldAllowLegacyTileFallback(ktx2Manifest), true);
 });
 
 test('buildTileUrl appends the requested extension without mutating base url', () => {

@@ -1,4 +1,4 @@
-var a=Object.defineProperty;var d=(r,e,i)=>e in r?a(r,e,{enumerable:!0,configurable:!0,writable:!0,value:i}):r[e]=i;var t=(r,e,i)=>d(r,typeof e!="symbol"?e+"":e,i);import{k as c,l as u,m as s,p as k,q as h}from"./index-Ci96kcxr.js";import"./three-renderer-BGQoZ2fB.js";function p(){return`
+var a=Object.defineProperty;var d=(r,e,i)=>e in r?a(r,e,{enumerable:!0,configurable:!0,writable:!0,value:i}):r[e]=i;var t=(r,e,i)=>d(r,typeof e!="symbol"?e+"":e,i);import{l as c,m as u,p as s,q as k,t as h}from"./index-Bn5BVboa.js";import"./three-renderer-BGQoZ2fB.js";function p(){return`
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M9 4H4V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M15 4H20V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

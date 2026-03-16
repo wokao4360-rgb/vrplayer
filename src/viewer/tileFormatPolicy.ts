@@ -25,6 +25,12 @@ function dedupeFormats<T extends string>(formats: readonly T[]): T[] {
   return Array.from(new Set(formats));
 }
 
+export function isAvifOnlyTileRuntime(
+  manifest: TileManifest | NormalizedTileManifest,
+): boolean {
+  return normalizeTileManifest(manifest as TileManifest).tileFormat === 'avif';
+}
+
 export function normalizeTileManifest(manifest: TileManifest): NormalizedTileManifest {
   const tileFormat = manifest.tileFormat ?? 'jpg';
   if (manifest.type === 'cubemap-tiles') {
@@ -81,13 +87,13 @@ export function resolveInitialTileFallbackVisibility(
     return false;
   }
 
-  const normalized = normalizeTileManifest(manifest as TileManifest);
-  if (normalized.tileFormat === 'avif') {
-    // AVIF 主链路即便存在整图 fallback，也必须继续加载 z0/low AVIF。
-    return false;
-  }
+  return !isAvifOnlyTileRuntime(manifest);
+}
 
-  return true;
+export function shouldAllowLegacyTileFallback(
+  manifest: TileManifest | NormalizedTileManifest,
+): boolean {
+  return !isAvifOnlyTileRuntime(manifest);
 }
 
 export function getLowTilePlan(
@@ -100,7 +106,7 @@ export function getLowTilePlan(
   switch (normalized.tileFormat) {
     case 'avif':
       return {
-        bitmapFormats: avifSupported ? ['avif', normalized.lowFallbackFormat ?? 'jpg'] : ['jpg'],
+        bitmapFormats: avifSupported ? ['avif'] : ['avif'],
         meshFormats: [],
       };
     case 'ktx2':
@@ -125,18 +131,11 @@ export function getHighTilePlan(
   const avifSupported = options?.avifSupported ?? true;
 
   switch (normalized.tileFormat) {
-    case 'avif': {
-      const fallbackFormats = dedupeFormats(normalized.highFallbackFormats ?? ['ktx2', 'jpg']);
-      const hasKtx2Fallback = fallbackFormats.includes('ktx2');
-      const bitmapFallbacks = hasKtx2Fallback
-        ? []
-        : fallbackFormats.filter((format): format is TileBitmapFormat => format === 'jpg');
-
+    case 'avif':
       return {
-        bitmapFormats: avifSupported ? ['avif', ...bitmapFallbacks] : bitmapFallbacks,
-        meshFormats: hasKtx2Fallback ? fallbackFormats : [],
+        bitmapFormats: avifSupported ? ['avif'] : ['avif'],
+        meshFormats: [],
       };
-    }
     case 'ktx2':
       return {
         bitmapFormats: [],

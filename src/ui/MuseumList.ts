@@ -1,6 +1,7 @@
 import type { AppConfig, Museum } from '../types/config';
-import { navigateToMuseum } from '../utils/router';
+import { navigateToScene } from '../utils/router';
 import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
+import { getMuseumEntrySceneId } from '../utils/museumEntry';
 import { resolveLandingContent, resolveMuseumMarketing } from './discoveryContent';
 
 export class MuseumList {
@@ -16,6 +17,7 @@ export class MuseumList {
   private renderMuseumCard(museum: Museum, index: number): string {
     const marketing = resolveMuseumMarketing(museum);
     const coverUrl = resolveAssetUrl(museum.cover, AssetType.COVER);
+    const entrySceneId = getMuseumEntrySceneId(museum);
 
     return `
       <article class="vr-museum-card vr-card-enter" style="--vr-card-index:${index}">
@@ -23,6 +25,7 @@ export class MuseumList {
           class="vr-museum-card__button"
           type="button"
           data-museum-id="${museum.id}"
+          data-scene-id="${entrySceneId ?? ''}"
           aria-label="进入${museum.name}"
         >
           <div class="vr-museum-card__media">
@@ -42,7 +45,7 @@ export class MuseumList {
             </div>
             <div class="vr-museum-card__footer">
               <span>${museum.scenes.length} 个场景</span>
-              <span class="vr-museum-card__cta">进入封面页</span>
+              <span class="vr-museum-card__cta">直达首站</span>
             </div>
           </div>
         </button>
@@ -69,7 +72,7 @@ export class MuseumList {
               <h2 class="vr-discovery-section-title">从一张门票感，走进一段正在发生的历史</h2>
             </div>
             <p class="vr-discovery-section-note">
-              这里不是开发态的点位列表，而是面向研学的沉浸式入口。先选一座馆，再沿着空间与故事进入现场。
+              这里不是开发态的点位清单，而是面向研学的沉浸式入口。先选一座馆，再沿着空间与故事进入现场。
             </p>
           </div>
 
@@ -87,8 +90,9 @@ export class MuseumList {
     this.element.querySelectorAll<HTMLButtonElement>('.vr-museum-card__button').forEach((card) => {
       card.addEventListener('click', () => {
         const museumId = card.getAttribute('data-museum-id');
-        if (museumId) {
-          navigateToMuseum(museumId);
+        const sceneId = card.getAttribute('data-scene-id');
+        if (museumId && sceneId) {
+          navigateToScene(museumId, sceneId);
         }
       });
     });

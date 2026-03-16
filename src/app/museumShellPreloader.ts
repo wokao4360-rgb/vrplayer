@@ -7,6 +7,10 @@ import {
   type MuseumShellPreloadPlan,
 } from './museumShellPreloadPlanner.ts';
 import { getMuseumShellScene, type MuseumShellManifest } from './museumShellManifest.ts';
+import {
+  resolveMuseumShellWarmExecutionLayers,
+  type MuseumShellWarmPhase,
+} from './museumShellPreloadExecution.ts';
 
 export type MuseumShellWarmResult = {
   previewUrl: string | null;
@@ -18,7 +22,7 @@ export type MuseumShellWarmResult = {
 type WarmArgs = {
   museum: MuseumShellManifest;
   sceneId: string;
-  phase: 'museum-entry' | 'scene-transition';
+  phase: MuseumShellWarmPhase;
   view: {
     yaw: number;
     pitch: number;
@@ -49,10 +53,10 @@ export class MuseumShellPreloader {
       hiresManifestBySceneId: hiresManifest ? { [scene.id]: hiresManifest } : {},
     });
 
-    await this.preloadLayer(plan.L0, hiresManifest);
-    await this.preloadLayer(plan.L1, hiresManifest);
-    this.scheduleBackgroundLayer(plan.L2, hiresManifest, 24);
-    this.scheduleBackgroundLayer(plan.L3, hiresManifest, 180);
+    this.cancelBackgroundWork();
+    for (const layer of resolveMuseumShellWarmExecutionLayers(args.phase)) {
+      await this.preloadLayer(plan[layer], hiresManifest);
+    }
 
     return {
       previewUrl: this.previewReadyBySceneId.get(scene.id) ?? scene.preview.url ?? null,
@@ -90,6 +94,10 @@ export class MuseumShellPreloader {
   }
 
   dispose(): void {
+    this.cancelBackgroundWork();
+  }
+
+  private cancelBackgroundWork(): void {
     for (const timer of this.backgroundTimers) {
       window.clearTimeout(timer);
     }
@@ -124,19 +132,6 @@ export class MuseumShellPreloader {
     hiresManifest: TileManifest | null,
   ): Promise<void> {
     await Promise.allSettled(assets.map((asset) => this.preloadAsset(asset, hiresManifest)));
-  }
-
-  private scheduleBackgroundLayer(
-    assets: MuseumShellPreloadAsset[],
-    hiresManifest: TileManifest | null,
-    delayMs: number,
-  ): void {
-    if (assets.length === 0) return;
-    const timer = window.setTimeout(() => {
-      this.backgroundTimers.delete(timer);
-      void this.preloadLayer(assets, hiresManifest);
-    }, delayMs);
-    this.backgroundTimers.add(timer);
   }
 
   private async preloadAsset(

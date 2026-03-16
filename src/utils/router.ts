@@ -9,12 +9,28 @@ export interface RouteParams {
   fov?: number;
 }
 
+export interface SceneRouteView {
+  yaw?: number;
+  pitch?: number;
+  fov?: number;
+}
+
+type RouteHistoryMode = 'push' | 'replace';
+
+function commitRoute(url: string, historyMode: RouteHistoryMode): void {
+  if (historyMode === 'replace') {
+    window.history.replaceState({}, '', url);
+    return;
+  }
+  window.history.pushState({}, '', url);
+}
+
 export function parseRoute(): RouteParams {
   const params = new URLSearchParams(window.location.search);
   const yaw = params.get('yaw');
   const pitch = params.get('pitch');
   const fov = params.get('fov');
-  
+
   return {
     museumId: params.get('museum') || undefined,
     sceneId: params.get('scene') || undefined,
@@ -24,17 +40,11 @@ export function parseRoute(): RouteParams {
   };
 }
 
-/**
- * 检查是否启用调试模式（?debug=1）
- */
 export function isDebugMode(): boolean {
   const params = new URLSearchParams(window.location.search);
   return params.get('debug') === '1';
 }
 
-/**
- * 检查是否启用编辑器模式（?editor=1 或 ?debug=1）
- */
 export function isEditorMode(): boolean {
   const params = new URLSearchParams(window.location.search);
   return params.get('editor') === '1' || params.get('debug') === '1';
@@ -46,13 +56,32 @@ export function navigateToMuseumList(): void {
   window.dispatchEvent(new Event('popstate'));
 }
 
-export function navigateToSceneList(museumId: string): void {
-  const url = buildSameDirUrl({ museum: museumId });
-  window.history.pushState({}, '', url);
+export function navigateToMuseum(museumId: string): void {
+  const url = buildSameDirUrl({
+    museum: museumId,
+    scene: null,
+    yaw: null,
+    pitch: null,
+    fov: null,
+  });
+  commitRoute(url, 'push');
   window.dispatchEvent(new Event('popstate'));
 }
 
-export function navigateToScene(museumId: string, sceneId: string, view?: { yaw?: number; pitch?: number; fov?: number }): void {
+export function navigateToSceneList(museumId: string): void {
+  navigateToMuseum(museumId);
+}
+
+export function navigateToScene(
+  museumId: string,
+  sceneId: string,
+  view?: SceneRouteView,
+  options?: {
+    history?: RouteHistoryMode;
+    emitFocus?: boolean;
+    focusSource?: 'dock' | 'pano' | 'pano-auto' | 'shell';
+  },
+): void {
   const url = buildSameDirUrl({
     museum: museumId,
     scene: sceneId,
@@ -60,17 +89,32 @@ export function navigateToScene(museumId: string, sceneId: string, view?: { yaw?
     pitch: view?.pitch,
     fov: view?.fov,
   });
-  window.history.pushState({}, '', url);
-  
-  // 派发场景聚焦事件（在 popstate 之前，确保其他端能收到）
-  emitSceneFocus({
-    type: 'focus',
-    museumId,
-    sceneId,
-    source: 'dock',
-    ts: Date.now(),
-  });
-  
+  commitRoute(url, options?.history ?? 'push');
+
+  if (options?.emitFocus !== false) {
+    emitSceneFocus({
+      type: 'focus',
+      museumId,
+      sceneId,
+      source: options?.focusSource ?? 'dock',
+      ts: Date.now(),
+    });
+  }
+
   window.dispatchEvent(new Event('popstate'));
 }
 
+export function replaceSceneView(
+  museumId: string,
+  sceneId: string,
+  view?: SceneRouteView,
+): void {
+  const url = buildSameDirUrl({
+    museum: museumId,
+    scene: sceneId,
+    yaw: view?.yaw,
+    pitch: view?.pitch,
+    fov: view?.fov,
+  });
+  commitRoute(url, 'replace');
+}

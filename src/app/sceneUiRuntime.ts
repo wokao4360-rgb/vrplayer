@@ -19,7 +19,14 @@ type SceneUiRuntimeOptions = {
   getPanoViewer: () => PanoViewer | null;
   getCurrentSceneId: () => string | null;
   onModeChange: (mode: AppViewMode) => void;
-  onEnterScene: (sceneId: string) => void;
+  onEnterScene: (
+    sceneId: string,
+    view?: {
+      yaw?: number;
+      pitch?: number;
+      fov?: number;
+    },
+  ) => void;
   onOpenInfo: () => void;
   onOpenSettings: () => void;
   onOpenCommunity: () => void;

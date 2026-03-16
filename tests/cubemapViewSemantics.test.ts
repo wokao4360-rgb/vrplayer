@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getSceneWorldYawOffset, worldYawToInternalYaw } from '../src/viewer/cubemapViewSemantics.ts';
+import {
+  getSceneWorldYawOffset,
+  internalYawToWorldYaw,
+  worldYawToInternalYaw,
+} from '../src/viewer/cubemapViewSemantics.ts';
 
 test('plain pano scenes keep the original world yaw semantics', () => {
   const scene = {
@@ -46,4 +50,24 @@ test('scene-level world-yaw override can opt out or choose a custom compensation
   assert.equal(worldYawToInternalYaw(zeroOffsetScene, 30), -30);
   assert.equal(getSceneWorldYawOffset(customOffsetScene), 90);
   assert.equal(worldYawToInternalYaw(customOffsetScene, 30), -120);
+});
+
+test('internal/world yaw conversion stays reversible for route syncing', () => {
+  const cubemapScene = {
+    initialView: { yaw: 0, pitch: 0, fov: 75 },
+    panoTiles: {
+      manifest: '/assets/panos/tiles/demo/manifest.json',
+    },
+  };
+
+  assert.equal(internalYawToWorldYaw(cubemapScene, -180), 0);
+  assert.equal(internalYawToWorldYaw(cubemapScene, -270), 90);
+  assert.equal(internalYawToWorldYaw(cubemapScene, 0), -180);
+  assert.equal(
+    internalYawToWorldYaw(
+      cubemapScene,
+      worldYawToInternalYaw(cubemapScene, 37),
+    ),
+    37,
+  );
 });

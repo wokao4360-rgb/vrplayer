@@ -8,7 +8,14 @@ import { showToast } from './toast';
 import { onSceneFocus, type SceneFocusEvent } from './sceneLinkBus';
 
 type HotspotsOptions = {
-  onEnterScene?: (sceneId: string) => void;
+  onEnterScene?: (
+    sceneId: string,
+    view?: {
+      yaw?: number;
+      pitch?: number;
+      fov?: number;
+    },
+  ) => void;
   resolveSceneName?: (sceneId: string) => string | undefined;
   museumId?: string; // 用于匹配 hover 事件
 };
@@ -373,7 +380,11 @@ export class Hotspots {
           const targetSceneId = (data as any).targetSceneId as string | undefined;
           if (targetSceneId && this.options.onEnterScene) {
             showToast(`进入 ${this.options.resolveSceneName?.(targetSceneId) || targetSceneId}`, 1000);
-            this.options.onEnterScene(targetSceneId);
+            this.options.onEnterScene(targetSceneId, {
+              yaw: h.target?.yaw,
+              pitch: h.target?.pitch,
+              fov: h.target?.fov,
+            });
             return;
           }
         }

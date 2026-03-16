@@ -112,6 +112,8 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-16 15:40:00] 单馆入口现已锁定为 museum shell：`?museum=<id>` 必须先显示馆级 `cover gate`，CTA 才进入目标场景；首次 deep link `?museum=<id>&scene=<id>` 也先显示封面，再进入该 scene。后续若又出现“museum 路由直接跳首场景”的行为，优先回查 `resolveMuseumShellRoute()`，不要再在路由入口里做无条件重定向。
+- [2026-03-16 15:40:00] 同馆场景切换现已锁定为“复用同一 viewer shell + 浅路由 + 过渡层遮挡加载”：scene 变化只能 shallow update URL，不允许销毁 `PanoViewer` 根实例；相机转动只允许 `replaceState` 同步 `yaw/pitch/fov`，且必须保留 `tilesDebug/debug/fresh` 等既有 query。转场层必须保留上一帧快照并拦截 pointer，直到目标场景达到 `LOW_READY/HIGH_READY/DEGRADED` 再退场。
 - [2026-03-16 08:30:00] 全馆 cubemap rollout 当前统一收口为 `south_gate` 规范：每个已扫描场景都必须在 `public/config.json` 中配置 `scene.panoTiles.manifest`，资源目录固定为 `/assets/panos/tiles/<museum>/<scene>/manifest.json`，manifest 固定 `type=cubemap-tiles`、`tileFormat=avif`、`lowFallbackFormat=jpg`、`highFallbackFormats=[ktx2,jpg]`、`lowFaceSize=512`、`highTileSize=1024`、`highGrid=2`、`highWarmupTileBudget=12`。未来给新馆补齐这套资源时，先改 `public/config.json`，再运行 `npm run tiles:museum:cubemap -- --museum <museumId>`，不要再为单馆单点位维护第二套块图规范。
 - [2026-03-16 08:30:00] cubemap 首屏加载顺序不能绑死在 `f/b/r/l/u/d` 文件名上，必须始终以场景当前首屏朝向（`initialView.yaw` / URL `yaw`）推导“世界前方半球”。当前稳定规则是：低清按“前、左、右、上、下、后”加载；高清首屏只加载当前前半球 3 个面的 12 张 `1024x1024` AVIF，后半球继续留在低清，等用户转到对应半球时再补传输与渲染。若场景存在 `assetFaceByWorldFace`（如 `linzexu/south_gate` 的 `f/b` 互换），它只负责 world face 到 asset face 的映射，不得篡改前半球判定规则。
 - [2026-03-16 09:48:00] `assetFaceByWorldFace` 现在是全量 cubemap manifest 的必填规范，不再允许只给单场景特判。当前稳定基线是：所有 `/assets/panos/tiles/**/manifest.json` 都必须显式声明 `{ "f": "b", "b": "f" }`；运行时 low/high 两层统一通过这条映射解算 asset face。若 rollout 后再次出现“正前方/正后方高清方块错位”，第一优先检查是否有新场景漏写这条 manifest 映射，而不是先改渲染器。

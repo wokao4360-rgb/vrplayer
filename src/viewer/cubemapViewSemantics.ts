@@ -23,3 +23,15 @@ export function worldYawToInternalYaw(
   const internalYaw = -(worldYaw + getSceneWorldYawOffset(scene));
   return Object.is(internalYaw, -0) ? 0 : internalYaw;
 }
+
+function normalizeSignedAngle(angle: number): number {
+  const normalized = ((angle + 180) % 360 + 360) % 360 - 180;
+  return Object.is(normalized, -0) ? 0 : normalized;
+}
+
+export function internalYawToWorldYaw(
+  scene: SceneLike | null | undefined,
+  internalYaw: number,
+): number {
+  return normalizeSignedAngle(-internalYaw - getSceneWorldYawOffset(scene));
+}

@@ -16,6 +16,7 @@ import { TileCanvasPano, TileMeshFallbackRequiredError } from './TileCanvasPano'
 import { fetchTileManifest, type TileManifest } from './tileManifest';
 import { PanoLifecycleRuntime } from './panoLifecycleRuntime';
 import { resolveInitialTileFallbackVisibility, selectInitialTileBackend } from './tileFormatPolicy';
+import { worldYawToInternalYaw } from './cubemapViewSemantics';
 
 type NadirPatchType = import('./NadirPatch').NadirPatch;
 
@@ -442,12 +443,10 @@ export class PanoViewer {
     const preserveView = options?.preserveView === true;
     if (!preserveView) {
       // 设置初始视角（world yaw -> internal yaw）
-      // 注意：如果 this.yaw 已被 setView/URL 参数设置，则不再覆盖
+      // 外部若已通过 setView/URL 预设视角，应以 preserveView=true 进入此分支
       const iv = sceneData.initialView;
       const worldInitialYaw = iv.yaw || 0;
-      if (this.yaw === 0 && worldInitialYaw !== 0) {
-        this.yaw = -worldInitialYaw; // 统一取反：世界 -> 内部
-      }
+      this.yaw = worldYawToInternalYaw(sceneData, worldInitialYaw);
       this.pitch = iv.pitch || 0;
       const preset = RENDER_PRESETS[this.renderProfile];
       this.fov = iv.fov !== undefined ? iv.fov : preset.camera.defaultFov;
@@ -468,7 +467,7 @@ export class PanoViewer {
         ? sceneData.northYaw
         : sceneData.initialView?.yaw ?? 0;
     
-    const northYaw = -worldNorthYaw;
+    const northYaw = worldYawToInternalYaw(sceneData, worldNorthYaw);
     
     if (this.nadirPatch) {
       this.nadirPatch.setNorthYaw(northYaw);

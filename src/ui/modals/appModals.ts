@@ -4,6 +4,7 @@ import { mountModal, type MountedModal } from '../Modal';
 import { showToast } from '../toast';
 import { isMouseDevice, isTouchDevice } from '../../utils/deviceDetect';
 import { ZH_CN } from '../../i18n/zh-CN';
+import { worldYawToInternalYaw } from '../../viewer/cubemapViewSemantics';
 
 type DockCloseTab = 'info' | 'settings';
 
@@ -94,7 +95,7 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
     if (!options.currentScene || !options.panoViewer) return;
     const iv = options.currentScene.initialView || { yaw: 0, pitch: 0, fov: 75 };
     const worldYaw = iv.yaw || 0;
-    const internalYaw = -worldYaw;
+    const internalYaw = worldYawToInternalYaw(options.currentScene, worldYaw);
     const pitch = iv.pitch || 0;
     const fov = iv.fov ?? 75;
     options.panoViewer.setView(internalYaw, pitch, fov);

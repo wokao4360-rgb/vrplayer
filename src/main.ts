@@ -42,6 +42,7 @@ import { ViewSessionRuntime } from './app/viewSessionRuntime';
 import { ZH_CN } from './i18n/zh-CN';
 import { getMuseumEntrySceneId } from './utils/museumEntry';
 import { resolveLandingContent } from './ui/discoveryContent';
+import { worldYawToInternalYaw } from './viewer/cubemapViewSemantics';
 import './ui/uiRefresh.css';
 if (__VR_DEBUG__) {
   void Promise.all([import('./utils/debugHelper'), import('./ui/interactionBus')])
@@ -813,10 +814,10 @@ class App {
     const targetFov = route.fov !== undefined ? route.fov : (scene.initialView.fov || 75);
     
     // 缁熶竴涓栫晫 鈫?鍐呴儴 yaw锛堝叧閿級
-    const internalTargetYaw = -worldTargetYaw;
+    const internalTargetYaw = worldYawToInternalYaw(scene, worldTargetYaw);
     
     this.panoViewer.setView(internalTargetYaw, targetPitch, targetFov);
-    this.panoViewer.loadScene(scene);
+    this.panoViewer.loadScene(scene, { preserveView: true });
     
     // 璁剧疆鍦烘櫙鏁版嵁锛堢敤浜?GroundNavDots锛?
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);

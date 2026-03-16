@@ -71,6 +71,7 @@ export interface PanoTilesConfig {
   manifest: string;
   fallbackPano?: string;
   fallbackPanoLow?: string;
+  worldYawOffset?: number;
 }
 
 export interface Scene {

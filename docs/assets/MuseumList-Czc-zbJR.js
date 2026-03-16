@@ -1,10 +1,9 @@
-var d=Object.defineProperty;var v=(t,e,s)=>e in t?d(t,e,{enumerable:!0,configurable:!0,writable:!0,value:s}):t[e]=s;var c=(t,e,s)=>v(t,typeof e!="symbol"?e+"":e,s);import{k as o,r as l,A as m,l as u,m as h,n as y}from"./index-CcD1ppFp.js";class _{constructor(e){c(this,"element");this.config=e,this.element=document.createElement("div"),this.element.className="vr-discovery-page",this.render(),this.markReady()}renderMuseumCard(e,s){const r=o(e),a=l(e.cover,m.COVER),i=u(e);return`
+var n=Object.defineProperty;var d=(t,e,s)=>e in t?n(t,e,{enumerable:!0,configurable:!0,writable:!0,value:s}):t[e]=s;var i=(t,e,s)=>d(t,typeof e!="symbol"?e+"":e,s);import{k as v,r as o,A as l,l as m,m as u}from"./index-Dn-_A7Ka.js";class p{constructor(e){i(this,"element");this.config=e,this.element=document.createElement("div"),this.element.className="vr-discovery-page",this.render(),this.markReady()}renderMuseumCard(e,s){const r=v(e),a=o(e.cover,l.COVER);return`
       <article class="vr-museum-card vr-card-enter" style="--vr-card-index:${s}">
         <button
           class="vr-museum-card__button"
           type="button"
           data-museum-id="${e.id}"
-          data-scene-id="${i??""}"
           aria-label="进入${e.name}"
         >
           <div class="vr-museum-card__media">
@@ -17,16 +16,16 @@ var d=Object.defineProperty;var v=(t,e,s)=>e in t?d(t,e,{enumerable:!0,configura
             <h2 class="vr-museum-card__name">${e.name}</h2>
             <p class="vr-museum-card__hook">${r.hook}</p>
             <div class="vr-discovery-tags">
-              ${r.tags.slice(0,3).map(n=>`<span class="vr-discovery-tag">${n}</span>`).join("")}
+              ${r.tags.slice(0,3).map(c=>`<span class="vr-discovery-tag">${c}</span>`).join("")}
             </div>
             <div class="vr-museum-card__footer">
               <span>${e.scenes.length} 个场景</span>
-              <span class="vr-museum-card__cta">直达首站</span>
+              <span class="vr-museum-card__cta">进入展馆</span>
             </div>
           </div>
         </button>
       </article>
-    `}render(){const e=this.config.museums.filter(r=>r.scenes.length>0),s=h(this.config);this.element.innerHTML=`
+    `}render(){const e=this.config.museums.filter(r=>r.scenes.length>0),s=m(this.config);this.element.innerHTML=`
       <div class="vr-discovery-shell">
         <section class="vr-discovery-hero vr-page-enter">
           <div class="vr-discovery-brand">${s.brandTitle}</div>
@@ -54,4 +53,4 @@ var d=Object.defineProperty;var v=(t,e,s)=>e in t?d(t,e,{enumerable:!0,configura
           ${s.projectNote}
         </section>
       </div>
-    `,this.element.querySelectorAll(".vr-museum-card__button").forEach(r=>{r.addEventListener("click",()=>{const a=r.getAttribute("data-museum-id"),i=r.getAttribute("data-scene-id");a&&i&&y(a,i)})})}markReady(){requestAnimationFrame(()=>{this.element.classList.add("is-ready")})}getElement(){return this.element}remove(){this.element.remove()}}export{_ as MuseumList};
+    `,this.element.querySelectorAll(".vr-museum-card__button").forEach(r=>{r.addEventListener("click",()=>{const a=r.getAttribute("data-museum-id");a&&u(a)})})}markReady(){requestAnimationFrame(()=>{this.element.classList.add("is-ready")})}getElement(){return this.element}remove(){this.element.remove()}}export{p as MuseumList};

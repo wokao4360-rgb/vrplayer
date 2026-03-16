@@ -1,0 +1,22 @@
+{
+  "type": "cubemap-tiles",
+  "baseUrl": "/assets/panos/tiles/wangding/era_chapter",
+  "faces": [
+    "f",
+    "r",
+    "b",
+    "l",
+    "u",
+    "d"
+  ],
+  "lowFaceSize": 512,
+  "highTileSize": 1024,
+  "highGrid": 2,
+  "tileFormat": "avif",
+  "highWarmupTileBudget": 12,
+  "lowFallbackFormat": "jpg",
+  "highFallbackFormats": [
+    "ktx2",
+    "jpg"
+  ]
+}

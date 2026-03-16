@@ -36,6 +36,7 @@
     "ktx2:setup": "node scripts/setup-ktx2.mjs",
     "tiles:ktx2": "node scripts/convert-tiles-ktx2.mjs",
     "tiles:museum:ktx2": "node scripts/generate-museum-ktx2.mjs",
+    "tiles:museum:cubemap": "node scripts/generate-museum-cubemap.mjs",
     "tiles:avif": "node scripts/convert-tiles-avif.mjs",
     "tiles:museum:avif": "node scripts/generate-museum-avif.mjs"
   },

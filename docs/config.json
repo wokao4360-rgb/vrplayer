@@ -425,7 +425,12 @@
             "x": 650,
             "y": 2170
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/south_gate/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/south-gate.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/south-gate-low.jpg"
+          }
         },
         {
           "id": "temper_talent",
@@ -442,7 +447,12 @@
             "x": 350,
             "y": 2050
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/temper_talent/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/temper-talent.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/temper-talent-low.jpg"
+          }
         },
         {
           "id": "prominent_achievement",
@@ -459,7 +469,12 @@
             "x": 950,
             "y": 2050
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/prominent_achievement/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/prominent-achievement.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/prominent-achievement-low.jpg"
+          }
         },
         {
           "id": "lianwu",
@@ -476,7 +491,12 @@
             "x": 650,
             "y": 1920
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/lianwu/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/lianwu.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/lianwu-low.jpg"
+          }
         },
         {
           "id": "culture_achievement",
@@ -493,7 +513,12 @@
             "x": 350,
             "y": 1760
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/culture_achievement/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/culture-achievement.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/culture-achievement-low.jpg"
+          }
         },
         {
           "id": "family_instruction",
@@ -510,7 +535,12 @@
             "x": 950,
             "y": 1760
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/family_instruction/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/family-instruction.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/family-instruction-low.jpg"
+          }
         },
         {
           "id": "point_1",
@@ -527,7 +557,12 @@
             "x": 650,
             "y": 1660
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/point_1/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/point-1.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/point-1-low.jpg"
+          }
         },
         {
           "id": "point_2",
@@ -544,7 +579,12 @@
             "x": 650,
             "y": 1490
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/point_2/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/point-2.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/point-2-low.jpg"
+          }
         },
         {
           "id": "point_3",
@@ -561,7 +601,12 @@
             "x": 950,
             "y": 1490
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/point_3/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/point-3.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/point-3-low.jpg"
+          }
         },
         {
           "id": "point_4",
@@ -578,7 +623,12 @@
             "x": 950,
             "y": 1320
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/point_4/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/point-4.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/point-4-low.jpg"
+          }
         },
         {
           "id": "point_5",
@@ -595,7 +645,12 @@
             "x": 650,
             "y": 1320
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/point_5/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/point-5.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/point-5-low.jpg"
+          }
         },
         {
           "id": "clean_history",
@@ -612,7 +667,12 @@
             "x": 350,
             "y": 1140
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/clean_history/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/clean-history.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/clean-history-low.jpg"
+          }
         },
         {
           "id": "point_6",
@@ -629,7 +689,12 @@
             "x": 650,
             "y": 1140
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/point_6/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/point-6.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/point-6-low.jpg"
+          }
         },
         {
           "id": "anti_corruption_interactive",
@@ -646,7 +711,12 @@
             "x": 950,
             "y": 1140
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/anti_corruption_interactive/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/anti-corruption-interactive.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/anti-corruption-interactive-low.jpg"
+          }
         },
         {
           "id": "research_space_west",
@@ -663,7 +733,12 @@
             "x": 350,
             "y": 980
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/research_space_west/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/research-space-west.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/research-space-west-low.jpg"
+          }
         },
         {
           "id": "research_space_east",
@@ -680,7 +755,12 @@
             "x": 950,
             "y": 980
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/research_space_east/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/research-space-east.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/research-space-east-low.jpg"
+          }
         },
         {
           "id": "conduct_west",
@@ -697,7 +777,12 @@
             "x": 350,
             "y": 820
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/conduct_west/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/conduct-west.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/conduct-west-low.jpg"
+          }
         },
         {
           "id": "point_7",
@@ -714,7 +799,12 @@
             "x": 650,
             "y": 820
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/point_7/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/point-7.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/point-7-low.jpg"
+          }
         },
         {
           "id": "conduct_east",
@@ -731,7 +821,12 @@
             "x": 950,
             "y": 820
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/conduct_east/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/conduct-east.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/conduct-east-low.jpg"
+          }
         },
         {
           "id": "study_room",
@@ -748,7 +843,12 @@
             "x": 650,
             "y": 650
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/study_room/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/study-room.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/study-room-low.jpg"
+          }
         },
         {
           "id": "political_chapter",
@@ -765,7 +865,12 @@
             "x": 350,
             "y": 470
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/political_chapter/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/political-chapter.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/political-chapter-low.jpg"
+          }
         },
         {
           "id": "resume_chapter",
@@ -782,7 +887,12 @@
             "x": 950,
             "y": 470
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/resume_chapter/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/resume-chapter.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/resume-chapter-low.jpg"
+          }
         },
         {
           "id": "reception_room",
@@ -799,7 +909,12 @@
             "x": 650,
             "y": 370
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/reception_room/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/reception-room.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/reception-room-low.jpg"
+          }
         },
         {
           "id": "era_chapter",
@@ -816,7 +931,12 @@
             "x": 650,
             "y": 200
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/wangding/era_chapter/manifest.json",
+            "fallbackPano": "/assets/panos/wangding/era-chapter.jpg",
+            "fallbackPanoLow": "/assets/panos/wangding/era-chapter-low.jpg"
+          }
         }
       ],
       "marketing": {
@@ -948,7 +1068,12 @@
             "x": 300,
             "y": 450
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/yanghucheng/west_room_1/manifest.json",
+            "fallbackPano": "/assets/panos/yanghucheng/west-room-1.jpg",
+            "fallbackPanoLow": "/assets/panos/yanghucheng/west-room-1-low.jpg"
+          }
         },
         {
           "id": "east_room_1",
@@ -965,7 +1090,12 @@
             "x": 760,
             "y": 450
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/yanghucheng/east_room_1/manifest.json",
+            "fallbackPano": "/assets/panos/yanghucheng/east-room-1.jpg",
+            "fallbackPanoLow": "/assets/panos/yanghucheng/east-room-1-low.jpg"
+          }
         },
         {
           "id": "east_room_2",
@@ -982,7 +1112,12 @@
             "x": 760,
             "y": 140
           },
-          "hotspots": []
+          "hotspots": [],
+          "panoTiles": {
+            "manifest": "/assets/panos/tiles/yanghucheng/east_room_2/manifest.json",
+            "fallbackPano": "/assets/panos/yanghucheng/east-room-2.jpg",
+            "fallbackPanoLow": "/assets/panos/yanghucheng/east-room-2-low.jpg"
+          }
         }
       ],
       "marketing": {

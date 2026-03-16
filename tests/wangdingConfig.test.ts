@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import path from 'node:path';
 
 import {
   deriveSceneConnectionsFromFloorplan,
@@ -97,4 +98,43 @@ test('wangding floorplan fallback connections follow the latest hand-drawn topol
     { from: 'temper_talent', to: 'lianwu' },
     { from: 'lianwu', to: 'prominent_achievement' },
   ]);
+});
+
+test('wangding scenes all point to published cubemap AVIF manifests with jpg and ktx2 fallback', () => {
+  const museum = readWangdingMuseum();
+
+  for (const scene of museum.scenes) {
+    assert.ok(scene.panoTiles, `scene ${scene.id} 缺少 panoTiles`);
+    assert.equal(
+      scene.panoTiles.fallbackPano,
+      scene.pano,
+      `scene ${scene.id} 的 fallbackPano 必须与 pano 对齐`,
+    );
+    assert.equal(
+      scene.panoTiles.fallbackPanoLow,
+      scene.panoLow,
+      `scene ${scene.id} 的 fallbackPanoLow 必须与 panoLow 对齐`,
+    );
+
+    const manifestPath = path.resolve(
+      'public',
+      scene.panoTiles.manifest.replace(/^\/+/, ''),
+    );
+    assert.ok(fs.existsSync(manifestPath), `scene ${scene.id} 的 manifest 不存在: ${manifestPath}`);
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    assert.equal(manifest.type, 'cubemap-tiles');
+    assert.equal(manifest.tileFormat, 'avif');
+    assert.equal(manifest.lowFallbackFormat, 'jpg');
+    assert.deepEqual(manifest.highFallbackFormats, ['ktx2', 'jpg']);
+    assert.equal(manifest.lowFaceSize, 512);
+    assert.equal(manifest.highTileSize, 1024);
+    assert.equal(manifest.highGrid, 2);
+    assert.equal(manifest.highWarmupTileBudget, 12);
+    assert.equal(
+      manifest.baseUrl,
+      path.posix.dirname(scene.panoTiles.manifest),
+      `scene ${scene.id} 的 manifest.baseUrl 必须与 manifest 所在目录一致`,
+    );
+  }
 });

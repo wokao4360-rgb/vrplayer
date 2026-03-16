@@ -1,6 +1,7 @@
 ﻿import { ClampToEdgeWrapping, Group, LinearFilter, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, sRGBEncoding, Texture, Vector3, WebGLRenderer } from 'three';
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
+import { readImageBlob } from '../utils/imageBlobCache';
 import type { TileManifest, TileLevel } from './tileManifest';
 import { getTileMeshRenderConfig, normalizeTileUv, resolveKtx2TranscoderPath } from './tileMeshPanoRules';
 import { buildTileUrl, getHighTilePlan, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy';
@@ -434,18 +435,17 @@ export class TileMeshPano {
   private async loadJpgTexture(url: string, priority: 'low' | 'high'): Promise<Texture> {
     let bmp: ImageBitmap | null = null;
     try {
-      bmp = await decodeImageBitmapInWorker(url, { timeoutMs: 12000, priority });
+      bmp = await decodeImageBitmapInWorker(url, { timeoutMs: 12000, priority, channel: 'tile' });
     } catch {
       bmp = null;
     }
     if (!bmp) {
-      bmp = await loadExternalImageBitmap(url, {
+      const blob = await readImageBlob(url, {
         timeoutMs: 12000,
-        retries: 1,
-        allowFetchFallback: true,
         priority,
         channel: 'tile',
       });
+      bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none' });
     }
     const texture = new Texture(bmp);
     // JPG 分片与 KTX2 统一为“纹理不翻转，几何 UV 决定方向”。

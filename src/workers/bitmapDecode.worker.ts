@@ -1,6 +1,6 @@
 type DecodeRequest = {
   id: number;
-  url: string;
+  blob: Blob;
   timeoutMs: number;
   priority: 'low' | 'high';
   imageOrientation?: 'from-image' | 'flipY' | 'none';
@@ -13,22 +13,15 @@ type DecodeResponse = {
 };
 
 self.onmessage = async (event: MessageEvent<DecodeRequest>) => {
-  const { id, url, timeoutMs, priority, imageOrientation = 'from-image' } = event.data;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const init: RequestInit = {
-      mode: 'cors',
-      cache: 'default',
-      referrerPolicy: 'no-referrer',
-      signal: controller.signal,
+  const { id, blob, timeoutMs, priority, imageOrientation = 'from-image' } = event.data;
+  const timeoutId = setTimeout(() => {
+    const payload: DecodeResponse = {
+      id,
+      error: 'worker decode timeout',
     };
-    (init as any).priority = priority === 'high' ? 'high' : 'low';
-    const res = await fetch(url, init);
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-    const blob = await res.blob();
+    (self as any).postMessage(payload);
+  }, timeoutMs);
+  try {
     const bitmap = await (createImageBitmap as any)(blob, {
       imageOrientation,
       premultiplyAlpha: 'none',

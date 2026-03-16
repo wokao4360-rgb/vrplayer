@@ -11,6 +11,7 @@ import {
   resolveMuseumShellWarmExecutionLayers,
   type MuseumShellWarmPhase,
 } from './museumShellPreloadExecution.ts';
+import { primeImageBlob } from '../utils/imageBlobCache';
 
 export type MuseumShellWarmResult = {
   previewUrl: string | null;
@@ -144,6 +145,14 @@ export class MuseumShellPreloader {
 
     const resolvedUrl = this.resolveAssetFetchUrl(asset, hiresManifest);
     if (!resolvedUrl) return;
+    if (
+      asset.role === 'low-face' ||
+      asset.role === 'hero-high-tile' ||
+      asset.role === 'remaining-high-tile'
+    ) {
+      await this.ensureTileBlob(resolvedUrl, asset.role === 'low-face' ? 'high' : 'low');
+      return;
+    }
     await this.ensureImage(resolvedUrl);
     if (asset.role === 'scene-preview' && asset.sceneId) {
       this.previewReadyBySceneId.set(asset.sceneId, resolvedUrl);
@@ -227,6 +236,32 @@ export class MuseumShellPreloader {
           },
         );
       }
+    });
+
+    this.imagePromises.set(url, promise);
+    return promise;
+  }
+
+  private ensureTileBlob(url: string, priority: 'low' | 'high'): Promise<void> {
+    if (this.loadedUrls.has(url)) {
+      return Promise.resolve();
+    }
+
+    const existing = this.imagePromises.get(url);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = primeImageBlob(url, {
+      timeoutMs: 12000,
+      priority,
+      channel: 'tile',
+    }).then(() => {
+      this.loadedUrls.add(url);
+      this.imagePromises.delete(url);
+    }).catch((error) => {
+      this.imagePromises.delete(url);
+      throw error;
     });
 
     this.imagePromises.set(url, promise);

@@ -1,6 +1,7 @@
 ﻿import { CanvasTexture, ClampToEdgeWrapping, LinearFilter, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, Scene, SphereGeometry, SRGBColorSpace, Vector3, sRGBEncoding } from '../vendor/three-core';
 import { loadExternalImageBitmap } from '../utils/externalImage';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
+import { readImageBlob } from '../utils/imageBlobCache';
 import type { TileManifest, TileLevel } from './tileManifest';
 import { detectAvifSupport } from '../utils/imageFormatSupport';
 import { buildTileUrl, getHighTilePlan, getLowTilePlan, type TileBitmapFormat, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy';
@@ -456,30 +457,17 @@ export class TileCanvasPano {
     timeoutMs = 12000
   ): Promise<ImageBitmap> {
     try {
-      const bmp = await decodeImageBitmapInWorker(url, { timeoutMs, priority });
+      const bmp = await decodeImageBitmapInWorker(url, { timeoutMs, priority, channel: 'tile' });
       if (bmp) return bmp;
     } catch {
       // worker ?????????
     }
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const init: RequestInit = {
-        mode: 'cors',
-        cache: 'default',
-        referrerPolicy: 'no-referrer',
-        signal: controller.signal,
-      };
-      (init as any).priority = priority === 'high' ? 'high' : 'low';
-      const response = await fetch(url, init);
-      if (!response.ok) {
-        throw new Error(`tile HTTP ${response.status}: ${url}`);
-      }
-      const blob = await response.blob();
-      return await createImageBitmap(blob, { premultiplyAlpha: 'none' });
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    const blob = await readImageBlob(url, {
+      timeoutMs,
+      priority,
+      channel: 'tile',
+    });
+    return await createImageBitmap(blob, { premultiplyAlpha: 'none' });
   }
 
   private hasHigherReadyTile(z: number, col: number, row: number): boolean {

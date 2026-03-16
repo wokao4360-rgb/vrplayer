@@ -1,3 +1,5 @@
+import { readImageBlob, type ImageBlobCacheOptions } from './imageBlobCache';
+
 type Pending = {
   resolve: (bmp: ImageBitmap) => void;
   reject: (err: Error) => void;
@@ -42,6 +44,7 @@ export async function decodeImageBitmapInWorker(
     timeoutMs?: number;
     priority?: 'low' | 'high';
     imageOrientation?: 'from-image' | 'flipY' | 'none';
+    channel?: ImageBlobCacheOptions['channel'];
   } = {}
 ): Promise<ImageBitmap | null> {
   const w = ensureWorker();
@@ -50,6 +53,11 @@ export async function decodeImageBitmapInWorker(
   const timeoutMs = Math.max(1000, opts.timeoutMs ?? 12000);
   const priority = opts.priority ?? 'high';
   const imageOrientation = opts.imageOrientation ?? 'from-image';
+  const blob = await readImageBlob(url, {
+    timeoutMs,
+    priority,
+    channel: opts.channel ?? 'tile',
+  });
   return new Promise<ImageBitmap>((resolve, reject) => {
     const entry: Pending = { resolve, reject };
     entry.timer = window.setTimeout(() => {
@@ -57,6 +65,6 @@ export async function decodeImageBitmapInWorker(
       reject(new Error('worker decode timeout'));
     }, timeoutMs + 500);
     pending.set(id, entry);
-    w.postMessage({ id, url, timeoutMs, priority, imageOrientation });
+    w.postMessage({ id, blob, timeoutMs, priority, imageOrientation });
   });
 }

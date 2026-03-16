@@ -26,6 +26,7 @@ import {
   type TileMeshFormat,
 } from './tileFormatPolicy.ts';
 import { detectAvifSupport } from '../utils/imageFormatSupport';
+import { readImageBlob } from '../utils/imageBlobCache';
 import { TileMeshFallbackRequiredError } from './TileCanvasPano.ts';
 import { assertCubemapBitmapDimensions, getCubemapBudget } from './cubeTileContract.ts';
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from './cubeTilePolicy.ts';
@@ -484,21 +485,17 @@ export class CubeCanvasPano {
 
   private async fetchBitmapFromUrl(url: string, priority: 'low' | 'high'): Promise<ImageBitmap> {
     try {
-      const bmp = await decodeImageBitmapInWorker(url, { timeoutMs: 12000, priority });
+      const bmp = await decodeImageBitmapInWorker(url, { timeoutMs: 12000, priority, channel: 'tile' });
       if (bmp) return bmp;
     } catch {
       // ignore worker decode failure and fall back to fetch
     }
-    const response = await fetch(url, {
-      mode: 'cors',
-      cache: 'default',
-      referrerPolicy: 'no-referrer',
-      priority: priority === 'high' ? 'high' : 'low',
-    } as RequestInit);
-    if (!response.ok) {
-      throw new Error(`tile HTTP ${response.status}: ${url}`);
-    }
-    return await createImageBitmap(await response.blob(), { premultiplyAlpha: 'none' });
+    const blob = await readImageBlob(url, {
+      timeoutMs: 12000,
+      priority,
+      channel: 'tile',
+    });
+    return await createImageBitmap(blob, { premultiplyAlpha: 'none' });
   }
 
   private drawBitmap(info: CubeInfo, bitmap: ImageBitmap): void {

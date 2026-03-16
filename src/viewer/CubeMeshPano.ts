@@ -16,6 +16,7 @@ import {
 } from '../vendor/three-core.ts';
 import { decodeImageBitmapInWorker } from '../utils/bitmapWorker';
 import { loadExternalImageBitmap } from '../utils/externalImage';
+import { readImageBlob } from '../utils/imageBlobCache';
 import type { CubemapTileManifest, CubeFaceId } from './tileManifest.ts';
 import { assertCubemapBitmapDimensions, getCubemapBudget } from './cubeTileContract.ts';
 import { buildCubeHighTileUrl, buildCubeLowFaceUrl, getCubeAssetFace, getHighTilePlan, getLowTilePlan, type TileImageFormat, type TileMeshFormat } from './tileFormatPolicy.ts';
@@ -489,18 +490,17 @@ export class CubeMeshPano {
   private async loadJpgTexture(url: string, priority: 'low' | 'high', kind: 'low' | 'high'): Promise<Texture> {
     let bmp: ImageBitmap | null = null;
     try {
-      bmp = await decodeImageBitmapInWorker(url, { timeoutMs: 12000, priority });
+      bmp = await decodeImageBitmapInWorker(url, { timeoutMs: 12000, priority, channel: 'tile' });
     } catch {
       bmp = null;
     }
     if (!bmp) {
-      bmp = await loadExternalImageBitmap(url, {
+      const blob = await readImageBlob(url, {
         timeoutMs: 12000,
-        retries: 1,
-        allowFetchFallback: true,
         priority,
         channel: 'tile',
       });
+      bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none' });
     }
     assertCubemapBitmapDimensions(this.manifest!, kind, bmp.width, bmp.height, url);
     this.lastTilePixels = `${bmp.width}x${bmp.height}`;

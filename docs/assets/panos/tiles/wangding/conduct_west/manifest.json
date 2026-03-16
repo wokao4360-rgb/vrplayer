@@ -18,5 +18,9 @@
   "highFallbackFormats": [
     "ktx2",
     "jpg"
-  ]
+  ],
+  "assetFaceByWorldFace": {
+    "f": "b",
+    "b": "f"
+  }
 }

@@ -122,6 +122,10 @@ async function main() {
     type: 'cubemap-tiles',
     baseUrl: resolveBaseUrl(absOut),
     faces: FACE_IDS,
+    assetFaceByWorldFace: {
+      f: 'b',
+      b: 'f',
+    },
     lowFaceSize,
     highTileSize,
     highGrid,

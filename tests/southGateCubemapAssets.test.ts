@@ -23,7 +23,7 @@ test('south_gate cubemap files keep the required 512 low faces and 1024 high til
   }
 });
 
-test('south_gate manifest swaps front and back asset faces only for this scene', async () => {
+test('south_gate manifest follows the global cubemap front/back asset swap rule', async () => {
   const manifest = JSON.parse(await fs.readFile(path.join(SCENE_ROOT, 'manifest.json'), 'utf8'));
   assert.deepEqual(manifest.assetFaceByWorldFace, {
     f: 'b',

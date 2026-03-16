@@ -1,139 +1,27 @@
-﻿# task_plan.md
+# Task Plan
 
-## 任务
-VRPlayer 第七轮一次性收口优化（DeepWiki/GPT 建议闭环版）
+## Goal
+把 museum shell 从已上线的 MVP 补齐到用户 prompt 要求的完整产品规格，重点完成：
+- 显式页面状态机
+- 配置驱动的 museum/scene shell manifest
+- 分层资源预加载调度（L0/L1/L2/L3）
+- 转场层的 snapshot -> preview crossfade -> sharpening
+- 完整验证、发布与持久化沉淀
 
-## 时间
-- 创建时间：2026-02-11 18:51:14
-- 最新更新：2026-02-12 00:31:57
+## Phases
+- [in_progress] Phase 1: 建立隔离 worktree 基线，确认当前实现与缺口
+- [pending] Phase 2: 先补 failing tests，覆盖状态机、manifest 解析、预加载计划
+- [pending] Phase 3: 实现 museum shell state machine / manifest / preloader / transition UI
+- [pending] Phase 4: 运行构建与浏览器验收，发布到 main 并确认 Pages
 
-## 已完成基线
-- 第一轮：入口依赖瘦身、Dock 惰性化、CDN 后台探测、关键生命周期清理。
-- 第二轮：KTX2/three-extras 按需化、聊天首交互触发、SW 壳层预缓存、发布上线。
-- 第三轮：main 入口深度解耦、SceneListPage 拆分、路由级按需加载、发布上线。
+## Key Decisions
+- 在仓库外同级目录 `D:\Projects\vrplayer_museum_shell_full` 建隔离 worktree，避免主仓库脏改冲突。
+- 不推翻现有 cubemap 前半球规则，新的 hero 预加载直接复用 `cubeTilePolicy.ts`。
+- 配置层采用“新增可选字段 + 运行时归一化 manifest”的兼容策略，不强迫一次性重写 `public/config.json`。
 
-## 第四轮阶段状态
-- [x] 阶段0：规划文件中文化与编码治理（清理乱码/控制字符，统一简体中文记录）
-- [x] 阶段1（P0）：图片请求调度器落地（分通道并发：tile/pano/preload/ui）
-- [x] 阶段2（P1）：CDN 探测并行竞速 + 默认超时收敛到 1000ms
-- [x] 阶段3（P1）：SW 跨域全景缓存对齐（保持 /config.json network-only）
-- [x] 阶段4（P2）：输入事件聚合到每帧应用，保持全速渲染并默认关闭自动节流降载
-- [x] 阶段5：构建验证 + chrome-devtools 证据采样
-- [x] 阶段6：按 SOP 发布（dist -> docs -> commit -> push）
+## Risks
+- 当前 `npm run build` 在本机环境里找不到 `vite` 命令，需要并行排查为环境问题还是脚本入口问题。
+- `src/main.ts` 目前已经承担较多 museum shell 逻辑，新增状态机时要避免再堆一层分支。
 
-## 第五轮阶段状态（本次）
-- [x] 阶段0（P0）：确认用户偏好变更（任务完成后不再做 Cloudflare 部署侧 commit 对齐核验）
-- [x] 阶段1（P0）：修复底部品牌、信息弹窗、更多设置弹窗中文乱码
-- [x] 阶段2（P0）：补充中文乱码防回归守卫（`scripts/check-text-quality.mjs` + `npm run check:text`）
-- [x] 阶段3（P1）：建立构建体积基线脚本（`scripts/perf-baseline.mjs` + `reports/perf-baseline/latest.json`）
-- [ ] 阶段4（P1）：`main.ts` / `PanoViewer.ts` 结构性拆分（降低长期耦合复杂度）
-- [x] 阶段5：按 SOP 发布第五轮改动
-
-## 第六轮阶段状态（本次）
-- [x] 阶段0（规划）：基线勘测与优先级锁定（保持全速渲染，不降帧率/画质）
-- [x] 阶段1（P0）：`PanoViewer` 渲染循环与事件监听生命周期收口
-- [x] 阶段2（P1）：`main.ts` 信息/更多弹窗模块拆分并按需动态加载
-- [x] 阶段3：构建验证 + chrome-devtools 证据采样
-- [x] 阶段4：按 SOP 发布第六轮改动
-
-## 第七轮阶段状态（本次）
-- [x] 阶段0（P0）：`main.ts` 场景 UI 装配从内联迁移到 `SceneUiRuntime`（核心层/次级层/观测层）
-- [x] 阶段1（P0）：聊天初始化迁移到 `ChatRuntime`，并改为“社区 tab 首次点击触发”
-- [x] 阶段2（P0）：`BottomDock` 新增 `onOpenCommunity` 回调接口并接入主链路
-- [x] 阶段3（P0）：`picking/spatialProjection/createCompassTexture/Hotspots/NadirPatch/TileCanvasPano/TileMeshPano/PanoViewer/dollhouseScene` 改为 three 按需命名导入
-- [x] 阶段4（P1）：`vite.config.ts` 更新拆包策略（`three-renderer/three-math`）并过滤 HTML preload
-- [x] 阶段5：`npm run check:text` + `npm run build` + `npm run perf:baseline` 验证通过
-- [x] 阶段6：chrome-devtools 证据采样（snapshot + network + console）
-- [x] 阶段7：按 SOP 发布第七轮（dist -> docs -> commit -> push）
-
-## 第七轮补充收口（本次）
-- [x] 阶段0（P0）：`main.ts` 入口继续瘦身，`ConfigErrorPanel` 改为按需加载
-- [x] 阶段1（P0）：`SceneUiRuntime/ChatRuntime` 从静态入口依赖改为场景路径动态加载
-- [x] 阶段2（P1）：debug helper 改为 `debug=1` 时动态加载，减少常规首屏入口负担
-- [x] 阶段3：构建验证（`npm run check:text` + `npm run build` + `npm run perf:baseline`）
-- [x] 阶段4：chrome-devtools 证据采样（snapshot + network + console）
-- [ ] 阶段5：按 SOP 发布补充收口改动
-
-## 第八轮交互体验收口（本次）
-- [x] 阶段0（P0）：高清就绪后后台预热“导览/社区/信息/更多”相关模块，降低首次点击卡顿
-- [x] 阶段1（P0）：恢复低清加载状态提示链路（确保 `LOADING_LOW/LOW_READY` 可见）
-- [x] 阶段2（P0）：保持“三馆学伴头像”仅在点击“社区”后显示，首屏不展示
-- [x] 阶段3：构建验证 + chrome-devtools 证据采样
-- [ ] 阶段4：按 SOP 发布第八轮改动
-
-## 约束
-- 不降帧率，不降画质，渲染循环保持全速。
-- 不手改 dist/**、docs/**。
-- 所有“修复成立”结论必须有 MCP 证据（snapshot + network/console）。
-
-## 关键决策
-| 决策 | 原因 |
-|---|---|
-| 引入分通道并发调度器 | 解除全局并发=2 的瓶颈，提升全景与瓦片爬升速度 |
-| CDN probe 并行化 | 缩短可用 CDN 选路时间，弱网下更快可用 |
-| SW 支持跨域全景缓存 | 提升回访命中与跨域资源复用 |
-| 事件增量每帧应用 | 降低高频输入导致的主线程抖动，提升流畅性 |
-| 默认关闭自动 tile 节流 | 满足“全速渲染、不降载”要求 |
-| 任务完成后不做 Cloudflare commit 对齐核验 | 按用户工作分工：用户自行目视验收线上站点 |
-| 构建前强制执行乱码检查 | 在 CI/本地构建前拦截中文乱码回归 |
-| 新增性能基线脚本 | 形成长期可比较的首屏与网络体积数据 |
-| 第六轮优先做生命周期收口 | 先解决旧 RAF 与监听残留风险，再做入口拆分 |
-
-## 风险与应对
-| 风险 | 应对 |
-|---|---|
-| 并发提高导致弱网抖动 | 按设备档位区分并发上限（桌面/移动） |
-| 跨域缓存不可见头部 | 允许 opaque 响应缓存，仅限全景资源路径 |
-| 调整输入链路引发交互回归 | 用 chrome-devtools 做交互与网络双采样回归 |
-
-## 第九轮阶段状态（本次）
-- [x] 阶段0（P0）：`three-renderer` 继续瘦身（Structure3D runtime 拆分 + `PanoViewer` 中 `NadirPatch` 改为按需加载）
-- [x] 阶段1（P0）：`main.ts / PanoViewer.ts` 结构解耦（`ViewSessionRuntime`、`PanoLifecycleRuntime` 落地）
-- [x] 阶段2（P1）：预热改为预算化调度（`WarmupScheduler` + `sceneUiRuntime` 分档触发）
-- [x] 阶段3（P1）：中文乱码全链路守卫（`check-encoding` + 文案源统一 + build 前置校验）
-- [x] 阶段4：构建验证 + `chrome-devtools` 证据采样（`snapshot + network + console`）
-- [x] 阶段5：按 SOP 发布第九轮（`dist -> docs -> commit -> push`，本次包含 `AGENTS.md`）
-
-## 第十轮阶段状态（本次）
-- [x] 阶段0（P0）：大陆访问链路收口，`assetCdn.baseUrls` 增加海外回退
-- [x] 阶段1（P0）：静态资源缓存策略增强，`_headers` 增加 hash `js/css/worker` 长缓存
-- [x] 阶段2（P0）：预热调度改为优先级队列（导览/信息优先，社区次级）
-- [x] 阶段3（P1）：修复用户可见 pick 提示乱码，并补充文本守卫特征
-- [ ] 阶段4：构建验证 + chrome-devtools 证据采样
-- [ ] 阶段5：按 SOP 发布第十轮（`dist -> docs -> commit -> push`）
-
-## 2026-02-19 16:42:28
-- 第十轮增量优化：去除场景初始化的阻塞等待（移除 wait sceneUiRuntime.ensureQualityIndicatorMounted()）。
-- 预热策略收敛：自动预热仅保留导览/信息相关模块，不再自动预热 dock-panels/community/chat。
-- 目标结果：减少首屏与高清爬升阶段的网络争抢，社区链路改为“点击后再加载”。
-
-## 2026-02-20 21:09:42
-- 控制台与聊天链路复核：chatRuntime -> FcChatPanel -> fcChatClient。
-- 三馆学伴会话记忆兼容修复：请求体历史项新增 	ext，并新增 chatHistory 兼容字段，避免后端仅识别 	ext 时丢失上下文。
-- 三馆学伴文案修复：聊天面板状态/错误文案统一简体中文，错误提示改为 请求失败：<msg>。
-- 约束保持：聊天入口仍为“点击社区后初始化”，未改回首屏显示头像。
-
-## 2026-02-20 22:03:10
-- [x] 补充图片上下文到仓库文档（Codex 主会话与子任务外包边界）
-- [x] 新建宿主服务 `tools/codex-host/server.mjs`（MCP + 本地 health/status）
-- [x] 新增 npm 脚本 `host:start` / `host:selftest`
-- [x] 将宿主接入本机 `C:\Users\Lenovo\.codex\config.toml`，供 Codex 插件直接访问
-- [x] 自测与证据化验收（self-test + health API + chrome-devtools snapshot/network）
-
-## 2026-02-20 21:20:35
-- 新增三馆学伴前端兜底记忆：按馆持久化 profile(name)，识别“我叫xxx/我的名字是xxx/叫我xxx”。
-- 命中“我叫什么/我的名字/记得我名字”等问句时，本地直答，避免后端忽略 history 导致失忆。
-- 修复姓名提取边界：过滤“什么/啥/名字”等占位词，避免误把“我叫什么”写成名字。
-- Playwright 实测：点击社区后才显示学伴头像；清空后输入“我叫sgm”再问“我叫什么”，回复“你叫sgm。我已经记住了。”
-
-## 第十轮记忆修复增量（2026-02-20 21:37:52）
-- [x] 阶段0（P0）：`FcChatPanel` 增加“我今天干了什么/我刚才说了什么”本地回忆兜底分支
-- [x] 阶段1（P0）：保持“点击社区后才显示学伴头像”的现有触发链路
-- [x] 阶段2：`npm run check:text` + `npm run build` + Playwright 复现采样验证
-- [x] 阶段3：按 SOP 发布本次增量（`dist -> docs -> commit -> push`）
-
-## 第十轮记忆修复增量（二次收口，2026-02-20 22:06:55）
-- [x] 阶段0（P0）：回忆逻辑从“固定问法匹配”升级为“语义打分检索”（token overlap + 主语命中 + 近因权重）
-- [x] 阶段1（P0）：覆盖改写问法（示例：`姥姥干了家务 -> 姥姥干了啥`）并保留社区后初始化约束
-- [x] 阶段2：`npm run check:text` + `npm run build` + Playwright 复现采样（snapshot + network + console）
-- [ ] 阶段3：按 SOP 发布本次二次收口（`dist -> docs -> commit -> push`）
+## Errors Encountered
+- `2026-03-16 17:04:00` `npm run build` 在主仓库与 worktree 中都报 `'vite' is not recognized as an internal or external command`；待定位并收口为稳定构建入口。

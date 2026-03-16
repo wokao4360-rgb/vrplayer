@@ -5,6 +5,9 @@ export type MuseumShellCoverViewModel = {
   subtitle: string;
   ctaLabel: string;
   heroImage: string;
+  eyebrow?: string;
+  note?: string;
+  brandLogos?: string[];
 };
 
 export type MuseumShellTransitionViewModel = {
@@ -13,6 +16,15 @@ export type MuseumShellTransitionViewModel = {
   subtitle: string;
   backgroundImage?: string;
   snapshotImage?: string;
+  previewImage?: string;
+  progressLabel?: string;
+  accentLabel?: string;
+  eyebrow?: string;
+  note?: string;
+};
+
+type MuseumShellPreviewReadyOptions = {
+  previewImage?: string;
   progressLabel?: string;
   accentLabel?: string;
 };
@@ -34,7 +46,6 @@ function ensureStyles(): void {
       pointer-events: none;
       --vr-shell-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
       --vr-shell-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-      --vr-shell-panel: rgba(248, 244, 236, 0.14);
       --vr-shell-panel-border: rgba(255, 255, 255, 0.22);
       --vr-shell-ink: rgba(255, 248, 240, 0.96);
       --vr-shell-muted: rgba(255, 244, 230, 0.72);
@@ -68,26 +79,66 @@ function ensureStyles(): void {
     }
 
     .vr-shell-chrome__bg,
-    .vr-shell-chrome__snapshot {
+    .vr-shell-chrome__snapshot,
+    .vr-shell-chrome__preview {
       position: absolute;
       inset: -8%;
       background-position: center;
       background-repeat: no-repeat;
       background-size: cover;
       transform: scale(1.06);
-      filter: blur(22px) saturate(0.9);
+      transition:
+        opacity 360ms var(--vr-shell-ease-out),
+        filter 420ms var(--vr-shell-ease-out),
+        transform 560ms var(--vr-shell-ease-in-out);
+    }
+
+    .vr-shell-chrome__bg {
+      filter: blur(24px) saturate(0.9);
       opacity: 0.92;
     }
 
     .vr-shell-chrome__snapshot {
+      filter: blur(18px) saturate(0.92);
       opacity: 0;
-      transition: opacity 320ms var(--vr-shell-ease-out);
+    }
+
+    .vr-shell-chrome__preview {
+      filter: blur(18px) saturate(0.94);
+      opacity: 0;
+      transform: scale(1.035);
     }
 
     .vr-shell-chrome__layer[data-stage="transition"] .vr-shell-chrome__snapshot,
+    .vr-shell-chrome__layer[data-stage="enter-preloading"] .vr-shell-chrome__snapshot,
     .vr-shell-chrome__layer[data-stage="error"] .vr-shell-chrome__snapshot {
       opacity: 1;
       animation: vr-shell-drift 820ms var(--vr-shell-ease-in-out) forwards;
+    }
+
+    .vr-shell-chrome__layer[data-stage="enter-preloading"] .vr-shell-chrome__preview {
+      opacity: 0.36;
+      filter: blur(22px) saturate(0.96);
+    }
+
+    .vr-shell-chrome__layer[data-stage="preview-ready"] .vr-shell-chrome__preview {
+      opacity: 1;
+      filter: blur(12px) saturate(0.98);
+      transform: scale(1.02);
+    }
+
+    .vr-shell-chrome__layer[data-stage="preview-ready"] .vr-shell-chrome__snapshot {
+      opacity: 0.42;
+    }
+
+    .vr-shell-chrome__layer[data-stage="sharpening"] .vr-shell-chrome__preview {
+      opacity: 1;
+      filter: blur(4px) saturate(1);
+      transform: scale(1.01);
+    }
+
+    .vr-shell-chrome__layer[data-stage="sharpening"] .vr-shell-chrome__snapshot {
+      opacity: 0.18;
     }
 
     .vr-shell-chrome__veil {
@@ -166,6 +217,25 @@ function ensureStyles(): void {
       flex: none;
     }
 
+    .vr-shell-chrome__logos {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .vr-shell-chrome__logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-color: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
     .vr-shell-chrome__eyebrow {
       font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
       font-size: 12px;
@@ -191,6 +261,15 @@ function ensureStyles(): void {
       line-height: 1.75;
       color: var(--vr-shell-muted);
       text-wrap: pretty;
+    }
+
+    .vr-shell-chrome__note {
+      margin-top: 14px;
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 12px;
+      line-height: 1.7;
+      color: rgba(255, 244, 230, 0.58);
+      letter-spacing: 0.04em;
     }
 
     .vr-shell-chrome__footer {
@@ -301,16 +380,23 @@ export class MuseumShellChrome {
   private readonly coverBackground: HTMLDivElement;
   private readonly transitionBackground: HTMLDivElement;
   private readonly transitionSnapshot: HTMLDivElement;
+  private readonly transitionPreview: HTMLDivElement;
   private readonly coverBrand: HTMLSpanElement;
   private readonly coverAppName: HTMLSpanElement;
   private readonly coverTitle: HTMLHeadingElement;
   private readonly coverSubtitle: HTMLParagraphElement;
+  private readonly coverEyebrow: HTMLDivElement;
+  private readonly coverNote: HTMLParagraphElement;
+  private readonly coverLogos: HTMLDivElement;
   private readonly coverCta: HTMLButtonElement;
   private readonly transitionBrand: HTMLSpanElement;
   private readonly transitionAccent: HTMLSpanElement;
   private readonly transitionTitle: HTMLHeadingElement;
   private readonly transitionSubtitle: HTMLParagraphElement;
+  private readonly transitionEyebrow: HTMLDivElement;
+  private readonly transitionNote: HTMLParagraphElement;
   private readonly transitionProgressLabel: HTMLDivElement;
+  private readonly transitionLogos: HTMLDivElement;
   private onEnter: (() => void) | null = null;
 
   constructor() {
@@ -337,15 +423,18 @@ export class MuseumShellChrome {
     coverDot.className = 'vr-shell-chrome__brand-dot';
     this.coverBrand = document.createElement('span');
     this.coverAppName = document.createElement('span');
+    this.coverLogos = document.createElement('div');
+    this.coverLogos.className = 'vr-shell-chrome__logos';
     coverBrandBadge.append(coverDot, this.coverBrand);
-    coverBrandRow.append(coverBrandBadge, this.coverAppName);
-    const coverEyebrow = document.createElement('div');
-    coverEyebrow.className = 'vr-shell-chrome__eyebrow';
-    coverEyebrow.textContent = 'Museum Immersion';
+    coverBrandRow.append(coverBrandBadge, this.coverAppName, this.coverLogos);
+    this.coverEyebrow = document.createElement('div');
+    this.coverEyebrow.className = 'vr-shell-chrome__eyebrow';
     this.coverTitle = document.createElement('h1');
     this.coverTitle.className = 'vr-shell-chrome__title';
     this.coverSubtitle = document.createElement('p');
     this.coverSubtitle.className = 'vr-shell-chrome__subtitle';
+    this.coverNote = document.createElement('p');
+    this.coverNote.className = 'vr-shell-chrome__note';
     const coverFooter = document.createElement('div');
     coverFooter.className = 'vr-shell-chrome__footer';
     this.coverCta = document.createElement('button');
@@ -354,18 +443,20 @@ export class MuseumShellChrome {
     this.coverCta.addEventListener('click', () => {
       this.onEnter?.();
     });
-    const coverNote = document.createElement('div');
-    coverNote.className = 'vr-shell-chrome__cta-note';
-    coverNote.textContent = '进入同一馆壳层内的连续漫游';
-    coverFooter.append(this.coverCta, coverNote);
-    coverCard.append(coverBrandRow, coverEyebrow, this.coverTitle, this.coverSubtitle, coverFooter);
-    coverContent.appendChild(coverCard);
-    this.coverLayer.append(
-      this.coverBackground,
-      createVeil(),
-      createGrain(),
-      coverContent,
+    const coverCtaNote = document.createElement('div');
+    coverCtaNote.className = 'vr-shell-chrome__cta-note';
+    coverCtaNote.textContent = '进入同一馆壳层内的连续漫游';
+    coverFooter.append(this.coverCta, coverCtaNote);
+    coverCard.append(
+      coverBrandRow,
+      this.coverEyebrow,
+      this.coverTitle,
+      this.coverSubtitle,
+      this.coverNote,
+      coverFooter,
     );
+    coverContent.appendChild(coverCard);
+    this.coverLayer.append(this.coverBackground, createVeil(), createGrain(), coverContent);
 
     this.transitionLayer = document.createElement('div');
     this.transitionLayer.className = 'vr-shell-chrome__layer';
@@ -374,6 +465,8 @@ export class MuseumShellChrome {
     this.transitionBackground.className = 'vr-shell-chrome__bg';
     this.transitionSnapshot = document.createElement('div');
     this.transitionSnapshot.className = 'vr-shell-chrome__snapshot';
+    this.transitionPreview = document.createElement('div');
+    this.transitionPreview.className = 'vr-shell-chrome__preview';
     const transitionContent = document.createElement('div');
     transitionContent.className = 'vr-shell-chrome__content';
     const transitionCard = document.createElement('div');
@@ -387,15 +480,18 @@ export class MuseumShellChrome {
     this.transitionBrand = document.createElement('span');
     this.transitionAccent = document.createElement('span');
     this.transitionAccent.className = 'vr-shell-chrome__cta-note';
+    this.transitionLogos = document.createElement('div');
+    this.transitionLogos.className = 'vr-shell-chrome__logos';
     transitionBrandBadge.append(transitionDot, this.transitionBrand);
-    transitionBrandRow.append(transitionBrandBadge, this.transitionAccent);
-    const transitionEyebrow = document.createElement('div');
-    transitionEyebrow.className = 'vr-shell-chrome__eyebrow';
-    transitionEyebrow.textContent = '正在切换展点';
+    transitionBrandRow.append(transitionBrandBadge, this.transitionAccent, this.transitionLogos);
+    this.transitionEyebrow = document.createElement('div');
+    this.transitionEyebrow.className = 'vr-shell-chrome__eyebrow';
     this.transitionTitle = document.createElement('h2');
     this.transitionTitle.className = 'vr-shell-chrome__title';
     this.transitionSubtitle = document.createElement('p');
     this.transitionSubtitle.className = 'vr-shell-chrome__subtitle';
+    this.transitionNote = document.createElement('p');
+    this.transitionNote.className = 'vr-shell-chrome__note';
     const progress = document.createElement('div');
     progress.className = 'vr-shell-chrome__progress';
     this.transitionProgressLabel = document.createElement('div');
@@ -405,15 +501,17 @@ export class MuseumShellChrome {
     progress.append(this.transitionProgressLabel, progressBar);
     transitionCard.append(
       transitionBrandRow,
-      transitionEyebrow,
+      this.transitionEyebrow,
       this.transitionTitle,
       this.transitionSubtitle,
+      this.transitionNote,
       progress,
     );
     transitionContent.appendChild(transitionCard);
     this.transitionLayer.append(
       this.transitionBackground,
       this.transitionSnapshot,
+      this.transitionPreview,
       createVeil(),
       createGrain(),
       transitionContent,
@@ -433,10 +531,13 @@ export class MuseumShellChrome {
   showCover(model: MuseumShellCoverViewModel): void {
     this.coverBrand.textContent = model.brandTitle;
     this.coverAppName.textContent = model.appName;
+    this.coverEyebrow.textContent = model.eyebrow || 'Museum Immersion';
     this.coverTitle.textContent = model.title;
     this.coverSubtitle.textContent = model.subtitle;
+    this.coverNote.textContent = model.note || '进入同一馆壳层内的连续漫游';
     this.coverCta.textContent = model.ctaLabel;
     this.coverBackground.style.backgroundImage = model.heroImage ? `url("${model.heroImage}")` : '';
+    renderLogos(this.coverLogos, model.brandLogos);
     this.coverLayer.classList.add('is-active', 'is-interactive');
     this.coverLayer.classList.remove('is-leaving');
   }
@@ -462,8 +563,21 @@ export class MuseumShellChrome {
     this.transitionLayer.classList.remove('is-leaving');
   }
 
-  markPreviewReady(progressLabel = '低清预览已就绪，正在恢复清晰'): void {
+  markPreviewReady(options: MuseumShellPreviewReadyOptions = {}): void {
+    if (options.previewImage) {
+      this.transitionPreview.style.backgroundImage = `url("${options.previewImage}")`;
+    }
+    if (options.progressLabel) {
+      this.transitionProgressLabel.textContent = options.progressLabel;
+    }
+    if (options.accentLabel) {
+      this.transitionAccent.textContent = options.accentLabel;
+    }
     this.transitionLayer.dataset.stage = 'preview-ready';
+  }
+
+  markSharpening(progressLabel = '低清已接管，正在逐步恢复清晰'): void {
+    this.transitionLayer.dataset.stage = 'sharpening';
     this.transitionProgressLabel.textContent = progressLabel;
   }
 
@@ -477,6 +591,7 @@ export class MuseumShellChrome {
       this.transitionLayer.classList.remove('is-leaving');
       this.transitionLayer.dataset.stage = 'transition';
       this.transitionSnapshot.style.backgroundImage = '';
+      this.transitionPreview.style.backgroundImage = '';
     }, 420);
   }
 
@@ -487,8 +602,10 @@ export class MuseumShellChrome {
   private setTransitionModel(model: MuseumShellTransitionViewModel, accentLabel: string): void {
     this.transitionBrand.textContent = model.brandTitle;
     this.transitionAccent.textContent = model.accentLabel || accentLabel;
+    this.transitionEyebrow.textContent = model.eyebrow || '正在切换展点';
     this.transitionTitle.textContent = model.title;
     this.transitionSubtitle.textContent = model.subtitle;
+    this.transitionNote.textContent = model.note || '先保留上一帧，再让目标场景低清接管。';
     this.transitionProgressLabel.textContent =
       model.progressLabel || '正在准备下一段漫游画面';
     this.transitionBackground.style.backgroundImage = model.backgroundImage
@@ -497,6 +614,10 @@ export class MuseumShellChrome {
     this.transitionSnapshot.style.backgroundImage = model.snapshotImage
       ? `url("${model.snapshotImage}")`
       : '';
+    this.transitionPreview.style.backgroundImage = model.previewImage
+      ? `url("${model.previewImage}")`
+      : '';
+    renderLogos(this.transitionLogos, []);
   }
 }
 
@@ -510,4 +631,15 @@ function createGrain(): HTMLDivElement {
   const grain = document.createElement('div');
   grain.className = 'vr-shell-chrome__grain';
   return grain;
+}
+
+function renderLogos(container: HTMLDivElement, logos: string[] | undefined): void {
+  container.innerHTML = '';
+  if (!logos || logos.length === 0) return;
+  for (const logoUrl of logos) {
+    const logo = document.createElement('div');
+    logo.className = 'vr-shell-chrome__logo';
+    logo.style.backgroundImage = `url("${logoUrl}")`;
+    container.appendChild(logo);
+  }
 }

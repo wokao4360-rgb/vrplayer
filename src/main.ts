@@ -52,12 +52,22 @@ import { resolveLandingContent } from './ui/discoveryContent';
 import { internalYawToWorldYaw, worldYawToInternalYaw } from './viewer/cubemapViewSemantics';
 import {
   buildMuseumCoverModel,
-  buildMuseumPreloadPlan,
   resolveMuseumSceneRuntimePlan,
   resolveMuseumShellRoute,
 } from './app/museumShellState';
 import type { MuseumSceneRuntimePlan } from './app/museumShellState';
 import type { MuseumShellChrome, MuseumShellTransitionViewModel } from './ui/MuseumShellChrome';
+import {
+  createMuseumShellManifest,
+  getMuseumShellScene,
+  type MuseumShellManifest,
+} from './app/museumShellManifest';
+import { MuseumShellPreloader } from './app/museumShellPreloader';
+import {
+  createMuseumShellState,
+  reduceMuseumShellState,
+  type MuseumShellState,
+} from './app/museumShellStateMachine';
 import './ui/uiRefresh.css';
 if (__VR_DEBUG__) {
   void Promise.all([import('./utils/debugHelper'), import('./ui/interactionBus')])
@@ -134,6 +144,9 @@ class App {
   private currentScene: Scene | null = null;
   private viewerContainer: HTMLElement | null = null;
   private museumShellChrome: MuseumShellChrome | null = null;
+  private readonly museumShellPreloader = new MuseumShellPreloader();
+  private readonly museumShellManifestCache = new Map<string, MuseumShellManifest>();
+  private museumShellState: MuseumShellState = createMuseumShellState();
   private sceneUiRuntime: SceneUiRuntime | null = null;
   private chatRuntime: ChatRuntime | null = null;
   private viewSessionRuntime: ViewSessionRuntime;
@@ -352,41 +365,74 @@ class App {
     }
     return this.museumShellChrome;
   }
-  private buildMuseumTransitionModel(museum: Museum, scene: Scene): MuseumShellTransitionViewModel {
+  private getMuseumShellManifest(museum: Museum): MuseumShellManifest {
+    const cached = this.museumShellManifestCache.get(museum.id);
+    if (cached) {
+      return cached;
+    }
+    if (!this.config) {
+      throw new Error('config is not ready');
+    }
+    const manifest = createMuseumShellManifest(this.config, museum);
+    this.museumShellManifestCache.set(museum.id, manifest);
+    return manifest;
+  }
+  private applyMuseumShellEvent(event: Parameters<typeof reduceMuseumShellState>[1]): void {
+    this.museumShellState = reduceMuseumShellState(this.museumShellState, event);
+  }
+  private resolveShellSceneView(
+    sceneView: { yaw: number; pitch: number; fov: number },
+    route: { yaw?: number; pitch?: number; fov?: number },
+  ): { yaw: number; pitch: number; fov: number } {
     return {
-      brandTitle: resolveLandingContent(this.config).brandTitle,
-      title: scene.name,
-      subtitle: `${museum.name} · 正在进入下一个展点`,
-      backgroundImage: resolveAssetUrl(museum.cover, AssetType.COVER) || '',
+      yaw: route.yaw !== undefined ? route.yaw : sceneView.yaw,
+      pitch: route.pitch !== undefined ? route.pitch : sceneView.pitch,
+      fov: route.fov !== undefined ? route.fov : sceneView.fov,
+    };
+  }
+  private buildMuseumTransitionModel(museum: Museum, scene: Scene): MuseumShellTransitionViewModel {
+    const museumShellManifest = this.getMuseumShellManifest(museum);
+    const shellScene = getMuseumShellScene(museumShellManifest, scene.id);
+    return {
+      brandTitle: museumShellManifest.cover.brandTitle,
+      title: shellScene?.title || scene.name,
+      subtitle: `${museumShellManifest.title} · 正在进入下一个展点`,
+      backgroundImage: resolveAssetUrl(museumShellManifest.cover.heroImage, AssetType.COVER) || '',
       snapshotImage: this.resolveScenePreviewAsset(scene),
+      previewImage:
+        resolveAssetUrl(shellScene?.preview.url, AssetType.PANO) || this.resolveScenePreviewAsset(scene),
       progressLabel: '正在复用馆内壳层并恢复场景',
+      eyebrow: 'Scene handoff',
+      note: museumShellManifest.cover.note,
     };
   }
   private warmMuseumPreviewAssets(museum: Museum, targetSceneId: string): void {
-    const preloadPlan = buildMuseumPreloadPlan({
-      museum,
-      targetSceneId,
-    });
-    for (const asset of preloadPlan.previewAssets) {
-      const img = new Image();
-      img.decoding = 'async';
-      img.loading = 'eager';
-      img.src =
-        resolveAssetUrl(asset, AssetType.THUMB) ||
-        resolveAssetUrl(asset, AssetType.PANO) ||
-        asset;
-    }
+    const museumShellManifest = this.getMuseumShellManifest(museum);
+    const shellScene = getMuseumShellScene(museumShellManifest, targetSceneId);
+    if (!shellScene) return;
+    const route = parseRoute();
+    void this.museumShellPreloader
+      .warm({
+        museum: museumShellManifest,
+        sceneId: targetSceneId,
+        phase: 'museum-entry',
+        view: this.resolveShellSceneView(shellScene.defaultView, route),
+      })
+      .catch(() => {
+        // 预热失败不阻断封面页
+      });
   }
   private async showMuseumCover(museum: Museum, targetSceneId: string): Promise<void> {
     if (!this.config) return;
+    const museumShellManifest = this.getMuseumShellManifest(museum);
     this.currentMuseum = museum;
     this.currentScene = null;
     this.setDocumentTitle(museum.name, this.config.appName);
+    this.applyMuseumShellEvent({ type: 'SHOW_COVER', museumId: museum.id });
     this.loading.hide();
     void this.loadPanoViewerModule();
     void this.loadTopRightControlsModule();
     void this.loadBrandMarkModule();
-    const landing = resolveLandingContent(this.config);
     const shellChrome = await this.ensureMuseumShellChrome();
     shellChrome.setCoverAction(() => {
       this.enteredMuseumIds.add(museum.id);
@@ -397,14 +443,19 @@ class App {
       }
       navigateToScene(museum.id, targetSceneId);
     });
-    shellChrome.showCover(
-      buildMuseumCoverModel({
-        appName: this.config.appName,
-        brandTitle: landing.brandTitle,
-        museum,
-        targetSceneId,
-      }),
-    );
+    shellChrome.showCover({
+      appName: this.config.appName,
+      brandTitle: museumShellManifest.cover.brandTitle,
+      title: museumShellManifest.cover.title,
+      subtitle: museumShellManifest.cover.subtitle,
+      ctaLabel: museumShellManifest.cover.ctaLabel,
+      heroImage: resolveAssetUrl(museumShellManifest.cover.heroImage, AssetType.COVER) || museumShellManifest.cover.heroImage,
+      eyebrow: museumShellManifest.cover.eyebrow,
+      note: museumShellManifest.cover.note,
+      brandLogos: museumShellManifest.cover.brandLogos.map(
+        (logo) => resolveAssetUrl(logo, AssetType.COVER) || logo,
+      ),
+    });
     this.warmMuseumPreviewAssets(museum, targetSceneId);
   }
   private ensureLoadingElementAttached(): void {
@@ -567,6 +618,7 @@ class App {
       this.configStudio = new ConfigStudio(this.config, (newConfig) => {
         // 閰嶇疆鍙樻洿鍥炶皟锛氭洿鏂板唴閮ㄩ厤缃紝浣嗕笉閲嶆柊鍔犺浇椤甸潰
         this.config = newConfig;
+        this.museumShellManifestCache.clear();
         setAssetResolverConfig(newConfig.assetCdn);
         // 娓呴櫎缂撳瓨锛屼互渚夸笅娆″姞杞戒娇鐢ㄦ柊閰嶇疆
         clearConfigCache();
@@ -790,25 +842,100 @@ class App {
     runtimePlan: MuseumSceneRuntimePlan,
   ): Promise<void> {
     const route = parseRoute();
+    const museumShellManifest = this.getMuseumShellManifest(museum);
+    const shellScene = getMuseumShellScene(museumShellManifest, scene.id);
+    if (!shellScene) {
+      throw new Error(`museum shell scene missing: ${museum.id}/${scene.id}`);
+    }
+    const targetView = this.resolveShellSceneView(shellScene.defaultView, route);
+    const previewAlreadyReady = this.museumShellPreloader.isPreviewReady(scene.id);
+    const previewUrl =
+      this.museumShellPreloader.getPreviewUrl(scene.id) ||
+      (resolveAssetUrl(shellScene.preview.url, AssetType.PANO) || shellScene.preview.url);
     this.currentMuseum = museum;
     this.currentScene = scene;
     this.enteredMuseumIds.add(museum.id);
+    if (runtimePlan.shellStrategy === 'reuse-shell' && this.museumShellState.pendingSceneId !== scene.id) {
+      this.applyMuseumShellEvent({
+        type: 'START_SCENE_TRANSITION',
+        museumId: museum.id,
+        fromSceneId: this.museumShellState.currentSceneId || scene.id,
+        toSceneId: scene.id,
+      });
+    } else {
+      this.applyMuseumShellEvent({
+        type: 'START_ENTER',
+        museumId: museum.id,
+        sceneId: scene.id,
+        previewAlreadyReady,
+        previewUrl: previewAlreadyReady ? previewUrl : undefined,
+      });
+    }
     this.loading.hide();
     this.setDocumentTitle(scene.name, museum.name, this.config?.appName);
     const debugMode = isDebugMode();
     const viewerContainer = await this.ensureViewerShell(debugMode);
     const shellChrome = await this.ensureMuseumShellChrome();
     const transitionModel = this.buildMuseumTransitionModel(museum, scene);
+    const transitionSnapshot = this.captureViewerSnapshot() || transitionModel.snapshotImage;
     if (runtimePlan.shellStrategy === 'reuse-shell') {
       shellChrome.startSceneTransition({
         ...transitionModel,
-        snapshotImage: this.captureViewerSnapshot() || transitionModel.snapshotImage,
+        snapshotImage: transitionSnapshot,
+        previewImage: previewUrl || transitionModel.previewImage,
       });
-    } else if (shellChrome.isCoverVisible()) {
-      shellChrome.showEnterPreloading(transitionModel);
     } else {
-      shellChrome.completeTransition();
+      shellChrome.showEnterPreloading({
+        ...transitionModel,
+        snapshotImage: transitionSnapshot,
+        previewImage: previewUrl || transitionModel.previewImage,
+        accentLabel: shellChrome.isCoverVisible() ? '即将进入首个场景' : 'Loading scene shell',
+      });
     }
+    const warmPhase = runtimePlan.shellStrategy === 'reuse-shell' ? 'scene-transition' : 'museum-entry';
+    void this.museumShellPreloader
+      .warm({
+        museum: museumShellManifest,
+        sceneId: scene.id,
+        phase: warmPhase,
+        view: targetView,
+      })
+      .then((warmResult) => {
+        if (this.currentMuseum?.id !== museum.id || this.currentScene?.id !== scene.id) {
+          return;
+        }
+        const readyPreviewUrl =
+          warmResult.previewUrl ||
+          (resolveAssetUrl(shellScene.preview.url, AssetType.PANO) || shellScene.preview.url);
+        this.applyMuseumShellEvent({
+          type: 'TARGET_PREVIEW_READY',
+          sceneId: scene.id,
+          previewUrl: readyPreviewUrl,
+        });
+        shellChrome.markPreviewReady({
+          previewImage: readyPreviewUrl,
+          progressLabel: '目标场景低清预览已接管，正在恢复清晰',
+          accentLabel: 'Preview ready',
+        });
+      })
+      .catch((error) => {
+        if (this.currentMuseum?.id !== museum.id || this.currentScene?.id !== scene.id) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : 'scene preload failed';
+        this.applyMuseumShellEvent({
+          type: 'SCENE_ERROR',
+          sceneId: scene.id,
+          message,
+        });
+        shellChrome.showErrorFallback({
+          ...transitionModel,
+          snapshotImage: transitionSnapshot,
+          previewImage: previewUrl || transitionModel.previewImage,
+          progressLabel: '目标场景预热较慢，正在继续等待资源',
+          accentLabel: 'Error fallback',
+        });
+      });
     const devMode = isDevMode();
     void this.mountTopRightControls(viewerContainer, scene, devMode);
     // 鏂?UI锛氬乏涓婅鍦烘櫙鏍囬锛堝瑙嗛鏍硷級
@@ -894,6 +1021,9 @@ class App {
         this.setMode(mode);
       },
       onEnterScene: (sceneId, view) => {
+        if (this.museumShellState.inputLocked) {
+          return;
+        }
         navigateToScene(museum.id, sceneId, view);
       },
       onOpenInfo: () => {
@@ -920,7 +1050,8 @@ class App {
     };
     let coreUiRequested = false;
     let chatInitRequested = false;
-    let transitionSettled = false;
+    let lowSceneReady = false;
+    let transitionCompleted = false;
     let chatInitFallbackTimer: number | null = window.setTimeout(() => {
       if (chatInitRequested) return;
       chatInitRequested = true;
@@ -930,15 +1061,19 @@ class App {
       }
     }, 3500);
 
-    const settleTransition = (status: LoadStatus) => {
-      if (transitionSettled) return;
-      transitionSettled = true;
-      shellChrome.markPreviewReady(
-        status === LoadStatus.HIGH_READY ? '高清已接管，正在收束转场' : '低清预览已就绪，正在恢复清晰',
-      );
+    const completeTransition = (status: LoadStatus) => {
+      if (transitionCompleted) return;
+      transitionCompleted = true;
+      if (status === LoadStatus.HIGH_READY) {
+        this.applyMuseumShellEvent({ type: 'SCENE_HIGH_READY', sceneId: scene.id });
+        shellChrome.markSharpening('高清已接管，正在收束转场');
+      } else {
+        this.applyMuseumShellEvent({ type: 'SCENE_DEGRADED_READY', sceneId: scene.id });
+        shellChrome.markSharpening('网络较慢，先以可用画质进入场景');
+      }
       window.setTimeout(() => {
         shellChrome.completeTransition();
-      }, 260);
+      }, 320);
     };
 
     const clearChatInitFallback = () => {
@@ -966,10 +1101,19 @@ class App {
       this.sceneUiRuntime?.handleStatusChange(status);
       syncSceneUiRuntimeRefs();
       if (
-        (runtimePlan.shellStrategy === 'reuse-shell' || shellChrome.isCoverVisible()) &&
-        (status === LoadStatus.LOW_READY || status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED)
+        (runtimePlan.shellStrategy === 'reuse-shell' || this.museumShellState.overlayVisible) &&
+        status === LoadStatus.LOW_READY &&
+        !lowSceneReady
       ) {
-        settleTransition(status);
+        lowSceneReady = true;
+        this.applyMuseumShellEvent({ type: 'SCENE_LOW_READY', sceneId: scene.id });
+        shellChrome.markSharpening('目标场景低清已可见，正在补齐前方高清资源');
+      }
+      if (
+        (runtimePlan.shellStrategy === 'reuse-shell' || this.museumShellState.overlayVisible) &&
+        (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED)
+      ) {
+        completeTransition(status);
       }
       if (
         !coreUiRequested &&
@@ -1013,8 +1157,8 @@ class App {
       clearChatInitFallback();
       this.loading.hide();
       this.hideUIError();
-      if (!transitionSettled) {
-        settleTransition(LoadStatus.HIGH_READY);
+      if (!transitionCompleted) {
+        completeTransition(LoadStatus.HIGH_READY);
       }
       
       this.preloadNextScene(museum, scene);
@@ -1024,9 +1168,15 @@ class App {
       console.error('加载场景失败:', error);
       this.loading.hide();
       this.showError('加载全景图失败，请检查网络连接');
+      this.applyMuseumShellEvent({
+        type: 'SCENE_ERROR',
+        sceneId: scene.id,
+        message: error instanceof Error ? error.message : 'scene load failed',
+      });
       shellChrome.showErrorFallback({
         ...this.buildMuseumTransitionModel(museum, scene),
-        snapshotImage: this.captureViewerSnapshot() || transitionModel.snapshotImage,
+        snapshotImage: this.captureViewerSnapshot() || transitionSnapshot,
+        previewImage: previewUrl || transitionModel.previewImage,
         progressLabel: '转场失败，请检查资源后重试',
       });
       if (this.qualityIndicator) {
@@ -1034,9 +1184,9 @@ class App {
       }
     });
     if (runtimePlan.viewStrategy === 'reset-to-target') {
-      const worldTargetYaw = route.yaw !== undefined ? route.yaw : (scene.initialView.yaw || 0);
-      const targetPitch = route.pitch !== undefined ? route.pitch : (scene.initialView.pitch || 0);
-      const targetFov = route.fov !== undefined ? route.fov : (scene.initialView.fov || 75);
+      const worldTargetYaw = targetView.yaw;
+      const targetPitch = targetView.pitch;
+      const targetFov = targetView.fov;
       
       // 缁熶竴涓栫晫 鈫?鍐呴儴 yaw锛堝叧閿級
       const internalTargetYaw = worldYawToInternalYaw(scene, worldTargetYaw);
@@ -1116,27 +1266,8 @@ class App {
    * 璧勬簮绫诲瀷锛歵humb锛堢敤浜庡垪琛?棰勮锛?
    */
   private preloadNextScene(museum: Museum, currentScene: Scene): void {
-    const currentIndex = museum.scenes.findIndex(s => s.id === currentScene.id);
-    const nextIndex = (currentIndex + 1) % museum.scenes.length;
-    const nextScene = museum.scenes[nextIndex];
-    
-    if (nextScene && nextScene.thumb) {
-      const resolvedUrl = resolveAssetUrl(nextScene.thumb, AssetType.THUMB);
-      if (resolvedUrl) {
-        const img = new Image();
-        img.referrerPolicy = 'no-referrer';
-        img.crossOrigin = 'anonymous';
-        (img as any).loading = 'lazy';
-        img.decoding = 'async';
-        void this.resolveProxiedImageUrl(resolvedUrl)
-          .then((proxiedUrl) => {
-            img.src = proxiedUrl;
-          })
-          .catch(() => {
-            img.src = resolvedUrl;
-          });
-      }
-    }
+    const museumShellManifest = this.getMuseumShellManifest(museum);
+    void this.museumShellPreloader.warmNeighborPreviews(museumShellManifest, currentScene.id);
   }
   private clearView(options: { preserveViewerShell?: boolean; preserveMuseumShell?: boolean } = {}): void {
     const preserveViewerShell = options.preserveViewerShell === true;

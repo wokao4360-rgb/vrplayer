@@ -58,8 +58,10 @@ export interface SceneHotspot {
   id: string;
   type: 'scene' | 'video' | 'image' | 'info';
   label: string;
+  hintLabel?: string;
   yaw: number;
   pitch: number;
+  preloadHint?: 'entry' | 'neighbor' | 'hero' | 'background';
   target?: SceneHotspotTarget;
   src?: string;
   text?: string;
@@ -74,12 +76,39 @@ export interface PanoTilesConfig {
   worldYawOffset?: number;
 }
 
+export interface SceneShellPreviewConfig {
+  url: string;
+  width?: number;
+  height?: number;
+}
+
+export interface SceneShellHiresTileManifestConfig {
+  format: 'tile-manifest';
+  manifestUrl: string;
+}
+
+export interface SceneShellHiresPanoramaConfig {
+  format: 'panorama';
+  url: string;
+}
+
+export type SceneShellHiresConfig =
+  | SceneShellHiresTileManifestConfig
+  | SceneShellHiresPanoramaConfig;
+
+export interface SceneShellConfig {
+  preview?: SceneShellPreviewConfig;
+  hires?: SceneShellHiresConfig;
+  neighbors?: string[];
+}
+
 export interface Scene {
   id: string;
   name: string;
   pano?: string;
   panoLow?: string;
   panoTiles?: PanoTilesConfig;
+  shell?: SceneShellConfig;
   thumb: string;
   initialView: InitialView;
   mapPoint: MapPoint;
@@ -99,12 +128,30 @@ export interface MuseumMarketing {
   tags: string[];
 }
 
+export interface MuseumShellCoverConfig {
+  heroImage?: string;
+  brandLogos?: string[];
+  ctaLabel?: string;
+  eyebrow?: string;
+  note?: string;
+  title?: string;
+  subtitle?: string;
+}
+
+export interface MuseumShellConfig {
+  title?: string;
+  subtitle?: string;
+  defaultSceneId?: string;
+  cover?: MuseumShellCoverConfig;
+}
+
 export interface Museum {
   id: string;
   name: string;
   description?: string;
   cover: string;
   marketing?: MuseumMarketing;
+  shell?: MuseumShellConfig;
   map: MapConfig;
   dollhouse?: DollhouseConfig;
   scenes: Scene[];

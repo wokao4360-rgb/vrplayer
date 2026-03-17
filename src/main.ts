@@ -852,6 +852,10 @@ class App {
     const previewUrl =
       this.museumShellPreloader.getPreviewUrl(scene.id) ||
       (resolveAssetUrl(shellScene.preview.url, AssetType.PANO) || shellScene.preview.url);
+    const runtimeSceneData =
+      previewAlreadyReady && previewUrl
+        ? ({ ...scene, panoLow: previewUrl } as Scene)
+        : scene;
     this.currentMuseum = museum;
     this.currentScene = scene;
     this.enteredMuseumIds.add(museum.id);
@@ -1193,7 +1197,7 @@ class App {
       
       this.panoViewer.setView(internalTargetYaw, targetPitch, targetFov);
     }
-    this.panoViewer.loadScene(scene, { preserveView: true });
+    this.panoViewer.loadScene(runtimeSceneData, { preserveView: true });
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
     this.bindRouteViewSync();
   }

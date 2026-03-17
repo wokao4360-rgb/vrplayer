@@ -11,7 +11,7 @@ import {
   resolveMuseumShellWarmExecutionLayers,
   type MuseumShellWarmPhase,
 } from './museumShellPreloadExecution.ts';
-import { primeImageBlob } from '../utils/imageBlobCache';
+import { primeImageBlob, readImageBlob } from '../utils/imageBlobCache';
 
 export type MuseumShellWarmResult = {
   previewUrl: string | null;
@@ -35,6 +35,7 @@ export class MuseumShellPreloader {
   private readonly loadedUrls = new Set<string>();
   private readonly imagePromises = new Map<string, Promise<void>>();
   private readonly previewReadyBySceneId = new Map<string, string>();
+  private readonly previewBlobUrlBySourceUrl = new Map<string, string>();
   private readonly manifestPromises = new Map<string, Promise<TileManifest>>();
   private readonly hiresManifestBySceneId = new Map<string, TileManifest>();
   private readonly backgroundTimers = new Set<number>();
@@ -96,6 +97,10 @@ export class MuseumShellPreloader {
 
   dispose(): void {
     this.cancelBackgroundWork();
+    for (const url of this.previewBlobUrlBySourceUrl.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.previewBlobUrlBySourceUrl.clear();
   }
 
   private cancelBackgroundWork(): void {
@@ -166,10 +171,14 @@ export class MuseumShellPreloader {
       await this.ensureTileBlob(resolvedUrl, asset.role === 'low-face' ? 'high' : 'low');
       return;
     }
-    await this.ensureImage(resolvedUrl);
-    if (asset.role === 'scene-preview' && asset.sceneId) {
-      this.previewReadyBySceneId.set(asset.sceneId, resolvedUrl);
+    if (asset.role === 'scene-preview' || asset.role === 'neighbor-preview') {
+      const previewUrl = await this.ensurePreviewBlobUrl(resolvedUrl);
+      if (asset.sceneId) {
+        this.previewReadyBySceneId.set(asset.sceneId, previewUrl);
+      }
+      return;
     }
+    await this.ensureImage(resolvedUrl);
   }
 
   private resolveAssetFetchUrl(
@@ -280,5 +289,20 @@ export class MuseumShellPreloader {
 
     this.imagePromises.set(url, promise);
     return promise;
+  }
+
+  private async ensurePreviewBlobUrl(url: string): Promise<string> {
+    const existing = this.previewBlobUrlBySourceUrl.get(url);
+    if (existing) {
+      return existing;
+    }
+    const blob = await readImageBlob(url, {
+      timeoutMs: 12000,
+      priority: 'high',
+      channel: 'pano',
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    this.previewBlobUrlBySourceUrl.set(url, objectUrl);
+    return objectUrl;
   }
 }

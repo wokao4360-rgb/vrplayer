@@ -9,7 +9,7 @@ export type TileLevel = {
 };
 
 export type CubeFaceId = 'f' | 'r' | 'b' | 'l' | 'u' | 'd';
- 
+
 export type EquirectTileManifest = {
   type: 'equirect-tiles';
   tileSize: number;
@@ -38,6 +38,8 @@ export type CubemapTileManifest = {
 
 export type TileManifest = EquirectTileManifest | CubemapTileManifest;
 
+const tileManifestPromiseCache = new Map<string, Promise<TileManifest>>();
+
 function absolutizeManifestBaseUrl(baseUrl: string, manifestUrl: string): string {
   const trimmed = baseUrl.trim();
   if (!trimmed) return trimmed;
@@ -62,14 +64,32 @@ function absolutizeManifestBaseUrl(baseUrl: string, manifestUrl: string): string
 
 export async function fetchTileManifest(url: string): Promise<TileManifest> {
   const requestUrl = appendFreshParamToTileManifestUrl(url);
-  const res = await fetch(requestUrl, createTileManifestRequestInit());
-  if (!res.ok) {
-    throw new Error(`manifest 加载失败: ${requestUrl}`);
+  const cached = tileManifestPromiseCache.get(requestUrl);
+  if (cached) {
+    return cached;
   }
-  const manifest = normalizeTileManifest((await res.json()) as TileManifest);
-  manifest.baseUrl = resolveAssetUrl(
-    absolutizeManifestBaseUrl(manifest.baseUrl, requestUrl),
-    AssetType.PANO
-  );
-  return manifest;
+
+  const promise = fetch(requestUrl, createTileManifestRequestInit())
+    .then(async (res) => {
+      if (!res.ok) {
+        throw new Error(`manifest 加载失败: ${requestUrl}`);
+      }
+      const manifest = normalizeTileManifest((await res.json()) as TileManifest);
+      manifest.baseUrl = resolveAssetUrl(
+        absolutizeManifestBaseUrl(manifest.baseUrl, requestUrl),
+        AssetType.PANO
+      );
+      return manifest;
+    })
+    .catch((error) => {
+      tileManifestPromiseCache.delete(requestUrl);
+      throw error;
+    });
+
+  tileManifestPromiseCache.set(requestUrl, promise);
+  return promise;
+}
+
+export function clearTileManifestCache(): void {
+  tileManifestPromiseCache.clear();
 }

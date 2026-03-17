@@ -424,8 +424,6 @@ export function setAssetResolverConfig(config: AssetCdnConfig | undefined): void
   if (cachedBaseUrl) {
     selectedBaseUrl = cachedBaseUrl;
     probeState = 'ok';
-    // use cached CDN immediately, refresh availability in background
-    startProbeIfNeeded(true);
     return;
   }
 

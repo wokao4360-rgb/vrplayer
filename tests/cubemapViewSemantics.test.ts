@@ -4,8 +4,10 @@ import assert from 'node:assert/strict';
 import {
   getSceneWorldYawOffset,
   internalYawToWorldYaw,
+  normalizeCubemapPolicyView,
   worldYawToInternalYaw,
 } from '../src/viewer/cubemapViewSemantics.ts';
+import { buildCubeVisibleHighFaces } from '../src/viewer/cubeTilePolicy.ts';
 
 test('plain pano scenes keep the original world yaw semantics', () => {
   const scene = {
@@ -70,4 +72,24 @@ test('internal/world yaw conversion stays reversible for route syncing', () => {
     ),
     37,
   );
+});
+
+test('cubemap tile scheduling converts internal camera yaw back to world yaw before choosing hero faces', () => {
+  const cubemapScene = {
+    initialView: { yaw: 0, pitch: 0, fov: 75 },
+    panoTiles: {
+      manifest: '/assets/panos/tiles/demo/manifest.json',
+    },
+  };
+
+  const policyView = normalizeCubemapPolicyView(cubemapScene, {
+    yawDeg: -180,
+    pitchDeg: 0,
+  });
+
+  assert.deepEqual(policyView, {
+    yawDeg: 0,
+    pitchDeg: 0,
+  });
+  assert.deepEqual(buildCubeVisibleHighFaces(policyView), ['f', 'l', 'r']);
 });

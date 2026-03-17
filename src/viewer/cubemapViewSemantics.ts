@@ -5,6 +5,11 @@ type SceneLike = {
   };
 };
 
+export type CubePolicyView = {
+  yawDeg: number;
+  pitchDeg: number;
+};
+
 export function getSceneWorldYawOffset(scene: SceneLike | null | undefined): number {
   const offset = scene?.panoTiles?.worldYawOffset;
   if (typeof offset === 'number' && Number.isFinite(offset)) {
@@ -34,4 +39,14 @@ export function internalYawToWorldYaw(
   internalYaw: number,
 ): number {
   return normalizeSignedAngle(-internalYaw - getSceneWorldYawOffset(scene));
+}
+
+export function normalizeCubemapPolicyView(
+  scene: SceneLike | null | undefined,
+  view: CubePolicyView,
+): CubePolicyView {
+  return {
+    yawDeg: internalYawToWorldYaw(scene, view.yawDeg),
+    pitchDeg: view.pitchDeg,
+  };
 }

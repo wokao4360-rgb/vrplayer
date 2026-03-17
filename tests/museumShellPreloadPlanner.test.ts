@@ -60,7 +60,7 @@ const museumShellManifest: MuseumShellManifest = {
   ],
 };
 
-test('museum-entry preload includes L0 cover and manifest, L1 previews, and front-hemisphere hero tiles', () => {
+test('museum-entry preload keeps L0 to manifest only while cover UI itself loads the hero image', () => {
   const plan = buildMuseumShellPreloadPlan({
     museum: museumShellManifest,
     sceneId: 'south_gate',
@@ -74,7 +74,6 @@ test('museum-entry preload includes L0 cover and manifest, L1 previews, and fron
   assert.deepEqual(
     plan.L0.map((asset) => `${asset.kind}:${asset.role}:${asset.url}`),
     [
-      'image:museum-cover:/assets/covers/linzexu/hero-cover.jpg',
       'json:scene-hires-manifest:/assets/panos/tiles/linzexu/south_gate/manifest.json',
     ],
   );

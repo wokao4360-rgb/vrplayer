@@ -61,14 +61,6 @@ export function buildMuseumShellPreloadPlan({
   const L2: MuseumShellPreloadAsset[] = [];
   const L3: MuseumShellPreloadAsset[] = [];
 
-  if (phase === 'museum-entry' && museum.cover.heroImage) {
-    L0.push({
-      kind: 'image',
-      role: 'museum-cover',
-      url: museum.cover.heroImage,
-    });
-  }
-
   if (scene.hires?.format === 'tile-manifest') {
     L0.push({
       kind: 'json',

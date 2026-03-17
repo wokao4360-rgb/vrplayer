@@ -112,6 +112,9 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-17 00:20:00] cubemap viewer 运行时的首批 low/high 面优先级必须基于 world yaw，而不是 three.js internal yaw。`museum shell` cover 预热用的是 world 视角，`PanoViewer` 接管后若直接拿 `camera.getWorldDirection()` 算内部角度，会把首屏前后半球翻转，表现为 cover 阶段先拉对的 `high/b|l|r/*`，点击进入后 viewer 又补错的 `high/f/*`。修复基线：`CubeCanvasPano` / `CubeMeshPano` 在调用 `buildCubeLowFaceOrder()` 与 `buildCubeVisibleHighFaces()` 前必须先通过 `internalYawToWorldYaw()` 还原成 world yaw。
+- [2026-03-17 00:20:00] asset CDN probe 不得并发 race 多个 base URL，否则胜者返回后其余探测会以 `net::ERR_ABORTED` 残留在 Network。当前基线：`assetResolver` 按 `public/config.json.assetCdn.baseUrls` 顺序串行探测，默认首选 `raw.githubusercontent.com`，仅当首选失败时才回退到后备源；`museum shell` cover 计划不再重复预拉 `hero-cover`，tile manifest 预热也必须等 `waitForAssetResolverReady()` 后再取 URL，避免 cover/viewer 之间出现轻量重复请求。
+
 - [2026-03-16 21:25:00] museum shell 的 `warm()` 执行层现已固定为 `L0/L1/L2`：cover / ENTER_PRELOADING / scene-transition 阶段必须在 `hero-cover.jpg`、scene preview、manifest 之后继续预热首屏 `low-face` 与前半球 `hero-high-tile`，用封面停留时间争取首屏出图；但这些 AVIF tile 必须在 `waitForAssetResolverReady()` 之后统一走共享 blob 缓存（`imageBlobCache` + `bitmapWorker` 传 blob 而非 URL），并且 tile builder 必须按当前 asset CDN 状态实时解算 URL，确保 cover 预热和 viewer 接管命中同一条 CDN URL，不得出现“cover 拉 Pages 源、viewer 又拉 raw CDN”的双份传输。若后续又出现“缓冲页已经拉过图，点击进入后黑屏并把同一批 tile 重拉一遍”的现象，第一优先检查 `museumShellPreloadExecution` 是否丢了 `L2`，以及 `waitForAssetResolverReady` / `buildCubeLowFaceUrl` / `buildCubeHighTileUrl` / `decodeImageBitmapInWorker` 是否重新退回 URL 漂移或双 fetch。
 - [2026-03-16 20:15:00] 所有 `tileFormat=avif` 的全景球运行时现已锁定为 `AVIF-only`：manifest 里的 `lowFallbackFormat=jpg` 与 `highFallbackFormats=[ktx2,jpg]` 仅保留为静态资产元数据，不再进入实际请求候选；`PanoViewer` 也不再在 AVIF 失败时自动切到 `KTX2/JPG` mesh 或整图 fallback。后续若线上仍出现 `.ktx2` 或 `.jpg` 的全景球请求，第一优先检查 `tileFormatPolicy` 与 `shouldAllowLegacyTileFallback()` 是否被绕过。
 

@@ -118,11 +118,13 @@ export class MuseumShellPreloader {
     const cacheKey = `${sceneId}:${hires.manifestUrl}`;
     let promise = this.manifestPromises.get(cacheKey);
     if (!promise) {
-      const manifestUrl = resolveAssetUrl(hires.manifestUrl, AssetType.PANO) || hires.manifestUrl;
-      promise = fetchTileManifest(manifestUrl).then((manifest) => {
+      promise = (async () => {
+        await waitForAssetResolverReady();
+        const manifestUrl = resolveAssetUrl(hires.manifestUrl, AssetType.PANO) || hires.manifestUrl;
+        const manifest = await fetchTileManifest(manifestUrl);
         this.hiresManifestBySceneId.set(sceneId, manifest);
         return manifest;
-      });
+      })();
       this.manifestPromises.set(cacheKey, promise);
     }
     return promise;

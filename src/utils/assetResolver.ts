@@ -4,6 +4,8 @@
  * 2) 先做 CDN 可达性探测，不可达时自动回源，避免长时间 net::ERR_* 重试
  */
 
+import { probeBaseUrlsSequentially } from './assetResolverProbe.ts';
+
 export enum AssetType {
   THUMB = 'thumb',
   PANO_LOW = 'panoLow',
@@ -360,7 +362,9 @@ function startProbeIfNeeded(force = false): void {
   const token = ++probeToken;
 
   probePromise = (async () => {
-    const winner = await raceProbeBaseUrls(cfg, token);
+    const winner = await probeBaseUrlsSequentially(cfg.baseUrls, (baseUrl) =>
+      probeBaseUrl(baseUrl, cfg, token),
+    );
     if (token !== probeToken) return;
     if (winner) {
       selectedBaseUrl = winner;

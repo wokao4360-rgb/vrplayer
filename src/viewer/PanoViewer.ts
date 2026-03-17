@@ -538,7 +538,7 @@ export class PanoViewer {
             const previousTilePano = this.tilePano;
             const nextTilePano =
               manifest.type === 'cubemap-tiles'
-                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
+                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady, sceneData)
                 : new (await import('./TileMeshPano')).TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
             if ('setPerformanceMode' in nextTilePano) {
               (nextTilePano as any).setPerformanceMode(this.perfMode);
@@ -556,7 +556,7 @@ export class PanoViewer {
           if (selectInitialTileBackend(manifest) === 'mesh') {
             this.tilePano =
               manifest.type === 'cubemap-tiles'
-                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
+                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady, sceneData)
                 : new (await import('./TileMeshPano')).TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
           } else {
             this.tilePano =
@@ -565,6 +565,7 @@ export class PanoViewer {
                     this.scene,
                     onFirstDraw,
                     onHighReady,
+                    sceneData,
                     switchToMeshFallback,
                   )
                 : new TileCanvasPano(

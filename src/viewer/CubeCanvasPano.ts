@@ -31,6 +31,7 @@ import { TileMeshFallbackRequiredError } from './TileCanvasPano.ts';
 import { assertCubemapBitmapDimensions, getCubemapBudget } from './cubeTileContract.ts';
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from './cubeTilePolicy.ts';
 import { CUBE_FACE_SEQUENCE, createCubeFacePlane, createCubeFaceRoot, getCubeTileAtlasDrawRect } from './cubeTileScene.ts';
+import { normalizeCubemapPolicyView } from './cubemapViewSemantics.ts';
 
 type LoadState = 'empty' | 'loading' | 'ready';
 
@@ -119,6 +120,7 @@ export class CubeCanvasPano {
     private scene: Scene,
     private onFirstDraw: () => void,
     private onHighReady: () => void,
+    private sceneViewConfig: { panoTiles?: { manifest?: string; worldYawOffset?: number } } | null,
     private onMeshFallback?: (error: TileMeshFallbackRequiredError) => void | Promise<void>,
   ) {}
 
@@ -217,7 +219,7 @@ export class CubeCanvasPano {
 
   update(camera: PerspectiveCamera): void {
     if (!this.manifest || !this.group || this.meshFallbackRequested) return;
-    const view = { yawDeg: this.getYaw(camera), pitchDeg: this.getPitch(camera) };
+    const view = this.getPolicyView(camera);
 
     if (!this.lowFullyReady) {
       if (!this.lowSeeded) {
@@ -575,5 +577,12 @@ export class CubeCanvasPano {
     const tmp = new Vector3();
     camera.getWorldDirection(tmp);
     return MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, tmp.y))));
+  }
+
+  private getPolicyView(camera: PerspectiveCamera) {
+    return normalizeCubemapPolicyView(this.sceneViewConfig, {
+      yawDeg: this.getYaw(camera),
+      pitchDeg: this.getPitch(camera),
+    });
   }
 }

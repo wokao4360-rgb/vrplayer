@@ -399,8 +399,7 @@ class App {
       subtitle: `${museumShellManifest.title} · 正在进入下一个展点`,
       backgroundImage: resolveAssetUrl(museumShellManifest.cover.heroImage, AssetType.COVER) || '',
       snapshotImage: this.resolveScenePreviewAsset(scene),
-      previewImage:
-        resolveAssetUrl(shellScene?.preview.url, AssetType.PANO) || this.resolveScenePreviewAsset(scene),
+      previewImage: undefined,
       progressLabel: '正在复用馆内壳层并恢复场景',
       eyebrow: 'Scene handoff',
       note: museumShellManifest.cover.note,
@@ -848,14 +847,12 @@ class App {
       throw new Error(`museum shell scene missing: ${museum.id}/${scene.id}`);
     }
     const targetView = this.resolveShellSceneView(shellScene.defaultView, route);
-    const previewAlreadyReady = this.museumShellPreloader.isPreviewReady(scene.id);
+    const prewarmedPreviewUrl = this.museumShellPreloader.getPreviewUrl(scene.id);
+    const previewAlreadyReady = Boolean(prewarmedPreviewUrl);
     const previewUrl =
-      this.museumShellPreloader.getPreviewUrl(scene.id) ||
+      prewarmedPreviewUrl ||
       (resolveAssetUrl(shellScene.preview.url, AssetType.PANO) || shellScene.preview.url);
-    const runtimeSceneData =
-      previewAlreadyReady && previewUrl
-        ? ({ ...scene, panoLow: previewUrl } as Scene)
-        : scene;
+    const transitionPreviewImage = prewarmedPreviewUrl || undefined;
     this.currentMuseum = museum;
     this.currentScene = scene;
     this.enteredMuseumIds.add(museum.id);
@@ -886,13 +883,13 @@ class App {
       shellChrome.startSceneTransition({
         ...transitionModel,
         snapshotImage: transitionSnapshot,
-        previewImage: previewUrl || transitionModel.previewImage,
+        previewImage: transitionPreviewImage,
       });
     } else {
       shellChrome.showEnterPreloading({
         ...transitionModel,
         snapshotImage: transitionSnapshot,
-        previewImage: previewUrl || transitionModel.previewImage,
+        previewImage: transitionPreviewImage,
         accentLabel: shellChrome.isCoverVisible() ? '即将进入首个场景' : 'Loading scene shell',
       });
     }
@@ -935,7 +932,7 @@ class App {
         shellChrome.showErrorFallback({
           ...transitionModel,
           snapshotImage: transitionSnapshot,
-          previewImage: previewUrl || transitionModel.previewImage,
+          previewImage: this.museumShellPreloader.getPreviewUrl(scene.id) || undefined,
           progressLabel: '目标场景预热较慢，正在继续等待资源',
           accentLabel: 'Error fallback',
         });
@@ -1180,7 +1177,7 @@ class App {
       shellChrome.showErrorFallback({
         ...this.buildMuseumTransitionModel(museum, scene),
         snapshotImage: this.captureViewerSnapshot() || transitionSnapshot,
-        previewImage: previewUrl || transitionModel.previewImage,
+        previewImage: this.museumShellPreloader.getPreviewUrl(scene.id) || undefined,
         progressLabel: '转场失败，请检查资源后重试',
       });
       if (this.qualityIndicator) {
@@ -1197,6 +1194,11 @@ class App {
       
       this.panoViewer.setView(internalTargetYaw, targetPitch, targetFov);
     }
+    const latestPreviewUrl = this.museumShellPreloader.getPreviewUrl(scene.id);
+    const runtimeSceneData =
+      latestPreviewUrl
+        ? ({ ...scene, panoLow: latestPreviewUrl } as Scene)
+        : scene;
     this.panoViewer.loadScene(runtimeSceneData, { preserveView: true });
     this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
     this.bindRouteViewSync();

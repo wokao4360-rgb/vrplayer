@@ -1,4 +1,4 @@
-var c=Object.defineProperty;var d=(a,e,r)=>e in a?c(a,e,{enumerable:!0,configurable:!0,writable:!0,value:r}):a[e]=r;var s=(a,e,r)=>d(a,typeof e!="symbol"?e+"":e,r);import{E as p,a as m}from"./errorMessages-B3nTeG1F.js";import"./index-D76pEY1L.js";import"./three-renderer-BGQoZ2fB.js";class g{constructor(e,r,n){s(this,"element");this.element=document.createElement("div"),this.element.className="config-error-panel",this.render(e,r,n),this.applyStyles()}render(e,r,n){this.element.innerHTML=`
+var c=Object.defineProperty;var d=(a,e,r)=>e in a?c(a,e,{enumerable:!0,configurable:!0,writable:!0,value:r}):a[e]=r;var s=(a,e,r)=>d(a,typeof e!="symbol"?e+"":e,r);import{E as p,a as m}from"./errorMessages-DifF2vJT.js";import"./index-C3GPAa-l.js";import"./three-renderer-BGQoZ2fB.js";class g{constructor(e,r,n){s(this,"element");this.element=document.createElement("div"),this.element.className="config-error-panel",this.render(e,r,n),this.applyStyles()}render(e,r,n){this.element.innerHTML=`
       <div class="error-panel-content">
         <div class="error-panel-header">
           <h2>⚠️ 配置错误</h2>

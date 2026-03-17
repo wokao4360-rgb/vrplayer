@@ -10,6 +10,75 @@ import type { QualityIndicator } from '../ui/QualityIndicator';
 import { LoadStatus } from '../types/loadStatus';
 import { WarmupScheduler, type WarmupQueueTask } from './warmupScheduler';
 
+let bottomDockModulePromise: Promise<typeof import('../ui/BottomDock')> | null = null;
+let topModeTabsModulePromise: Promise<typeof import('../ui/TopModeTabs')> | null = null;
+let hotspotsModulePromise: Promise<typeof import('../ui/Hotspots')> | null = null;
+let videoPlayerModulePromiseShared: Promise<typeof import('../ui/VideoPlayer')> | null = null;
+let guideTrayModulePromiseShared: Promise<typeof import('../ui/GuideTray')> | null = null;
+let sceneGuideDrawerModulePromiseShared: Promise<typeof import('../ui/SceneGuideDrawer')> | null = null;
+let qualityIndicatorModulePromiseShared: Promise<typeof import('../ui/QualityIndicator')> | null = null;
+
+function loadBottomDockModule(): Promise<typeof import('../ui/BottomDock')> {
+  if (!bottomDockModulePromise) {
+    bottomDockModulePromise = import('../ui/BottomDock');
+  }
+  return bottomDockModulePromise;
+}
+
+function loadTopModeTabsModule(): Promise<typeof import('../ui/TopModeTabs')> {
+  if (!topModeTabsModulePromise) {
+    topModeTabsModulePromise = import('../ui/TopModeTabs');
+  }
+  return topModeTabsModulePromise;
+}
+
+function loadHotspotsModule(): Promise<typeof import('../ui/Hotspots')> {
+  if (!hotspotsModulePromise) {
+    hotspotsModulePromise = import('../ui/Hotspots');
+  }
+  return hotspotsModulePromise;
+}
+
+function loadVideoPlayerModuleShared(): Promise<typeof import('../ui/VideoPlayer')> {
+  if (!videoPlayerModulePromiseShared) {
+    videoPlayerModulePromiseShared = import('../ui/VideoPlayer');
+  }
+  return videoPlayerModulePromiseShared;
+}
+
+function loadGuideTrayModuleShared(): Promise<typeof import('../ui/GuideTray')> {
+  if (!guideTrayModulePromiseShared) {
+    guideTrayModulePromiseShared = import('../ui/GuideTray');
+  }
+  return guideTrayModulePromiseShared;
+}
+
+function loadSceneGuideDrawerModuleShared(): Promise<typeof import('../ui/SceneGuideDrawer')> {
+  if (!sceneGuideDrawerModulePromiseShared) {
+    sceneGuideDrawerModulePromiseShared = import('../ui/SceneGuideDrawer');
+  }
+  return sceneGuideDrawerModulePromiseShared;
+}
+
+function loadQualityIndicatorModuleShared(): Promise<typeof import('../ui/QualityIndicator')> {
+  if (!qualityIndicatorModulePromiseShared) {
+    qualityIndicatorModulePromiseShared = import('../ui/QualityIndicator');
+  }
+  return qualityIndicatorModulePromiseShared;
+}
+
+export async function prewarmSceneUiRuntimeModules(): Promise<void> {
+  await Promise.allSettled([
+    loadBottomDockModule(),
+    loadTopModeTabsModule(),
+    loadHotspotsModule(),
+    loadVideoPlayerModuleShared(),
+    loadGuideTrayModuleShared(),
+    loadSceneGuideDrawerModuleShared(),
+    loadQualityIndicatorModuleShared(),
+  ]);
+}
+
 type SceneUiRuntimeOptions = {
   appElement: HTMLElement;
   viewerContainer: HTMLElement;
@@ -69,11 +138,6 @@ export class SceneUiRuntime {
   private qualityIndicator: QualityIndicator | null = null;
   private handleMetricsEvent: ((event: Event) => void) | null = null;
 
-  private videoPlayerModulePromise: Promise<typeof import('../ui/VideoPlayer')> | null = null;
-  private guideTrayModulePromise: Promise<typeof import('../ui/GuideTray')> | null = null;
-  private sceneGuideDrawerModulePromise: Promise<typeof import('../ui/SceneGuideDrawer')> | null = null;
-  private qualityIndicatorModulePromise: Promise<typeof import('../ui/QualityIndicator')> | null = null;
-
   constructor(options: SceneUiRuntimeOptions) {
     this.options = options;
   }
@@ -113,9 +177,9 @@ export class SceneUiRuntime {
     this.coreMounting = true;
     try {
       const [{ BottomDock }, { TopModeTabs }, { Hotspots }] = await Promise.all([
-        import('../ui/BottomDock'),
-        import('../ui/TopModeTabs'),
-        import('../ui/Hotspots'),
+        loadBottomDockModule(),
+        loadTopModeTabsModule(),
+        loadHotspotsModule(),
       ]);
       if (this.coreMounted || this.disposed || !this.isAlive()) {
         return;
@@ -376,31 +440,19 @@ export class SceneUiRuntime {
   }
 
   private loadVideoPlayerModule(): Promise<typeof import('../ui/VideoPlayer')> {
-    if (!this.videoPlayerModulePromise) {
-      this.videoPlayerModulePromise = import('../ui/VideoPlayer');
-    }
-    return this.videoPlayerModulePromise;
+    return loadVideoPlayerModuleShared();
   }
 
   private loadGuideTrayModule(): Promise<typeof import('../ui/GuideTray')> {
-    if (!this.guideTrayModulePromise) {
-      this.guideTrayModulePromise = import('../ui/GuideTray');
-    }
-    return this.guideTrayModulePromise;
+    return loadGuideTrayModuleShared();
   }
 
   private loadSceneGuideDrawerModule(): Promise<typeof import('../ui/SceneGuideDrawer')> {
-    if (!this.sceneGuideDrawerModulePromise) {
-      this.sceneGuideDrawerModulePromise = import('../ui/SceneGuideDrawer');
-    }
-    return this.sceneGuideDrawerModulePromise;
+    return loadSceneGuideDrawerModuleShared();
   }
 
   private loadQualityIndicatorModule(): Promise<typeof import('../ui/QualityIndicator')> {
-    if (!this.qualityIndicatorModulePromise) {
-      this.qualityIndicatorModulePromise = import('../ui/QualityIndicator');
-    }
-    return this.qualityIndicatorModulePromise;
+    return loadQualityIndicatorModuleShared();
   }
 
   private isAlive(): boolean {

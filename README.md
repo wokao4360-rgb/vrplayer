@@ -112,6 +112,9 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-17 14:25:00] 自定义域名 `研学.xyz / xn--48s508d.xyz` 线上验收时，若 Network/Console 里再次出现 `raw.githubusercontent.com ... net::ERR_FAILED`、`config.json?__cdn_probe=` 或大量 `sw.js` 二次资源行，第一优先检查两条基线是否被回退：`public/config.json.assetCdn.enabled` 必须保持 `false`，`public/sw.js` 必须保持“被动 worker”模式（不再拦 JS/CSS/全景资源请求）。否则会出现同一场景一部分资源走同源、一部分走外部 CDN/Service Worker 的混合链路，直接导致 cover 阶段和 CTA 后的重复请求、失败请求与顺序错乱。
+- [2026-03-17 14:25:00] museum cover 的正确预热顺序是：先显式预热 `hero-cover.jpg` 并将其转成 blob URL 交给 `MuseumShellChrome`，再预热 `scene preview(low.jpg)`，随后再进入首屏 `6` 张 low AVIF 与前半球 `12` 张 high AVIF；CTA 接管时必须复用同一条 `warm()` promise，禁止重新起第二份 museum-entry 预热。若用户再次反馈“点击开启 VR 漫游后又从头传、Console 一片红”，优先排查 `main.ts` 里的 `warmMuseumShellScene()` 去重是否被绕开。
+
 - [2026-03-17 00:20:00] cubemap viewer 运行时的首批 low/high 面优先级必须基于 world yaw，而不是 three.js internal yaw。`museum shell` cover 预热用的是 world 视角，`PanoViewer` 接管后若直接拿 `camera.getWorldDirection()` 算内部角度，会把首屏前后半球翻转，表现为 cover 阶段先拉对的 `high/b|l|r/*`，点击进入后 viewer 又补错的 `high/f/*`。修复基线：`CubeCanvasPano` / `CubeMeshPano` 在调用 `buildCubeLowFaceOrder()` 与 `buildCubeVisibleHighFaces()` 前必须先通过 `internalYawToWorldYaw()` 还原成 world yaw。
 - [2026-03-17 00:20:00] asset CDN probe 不得并发 race 多个 base URL，否则胜者返回后其余探测会以 `net::ERR_ABORTED` 残留在 Network。当前基线：`assetResolver` 按 `public/config.json.assetCdn.baseUrls` 顺序串行探测，默认首选 `raw.githubusercontent.com`，仅当首选失败时才回退到后备源；`museum shell` cover 计划不再重复预拉 `hero-cover`，tile manifest 预热也必须等 `waitForAssetResolverReady()` 后再取 URL，避免 cover/viewer 之间出现轻量重复请求。
 - [2026-03-17 10:45:00] assetResolver 命中有效的 `vrplayer.assetCdn.lastSuccess` 缓存后，必须直接采用缓存 base URL 并跳过后台 refresh probe；否则 Network 里仍会出现额外的 `config.json?__cdn_probe=...` 成功/失败噪声，用户会把它误判成资源错误。

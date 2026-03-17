@@ -25,6 +25,7 @@ test('config exposes landing copy and museum marketing metadata for the homepage
       config.assetCdn.includePrefixes.includes('/assets/covers/'),
     '封面资源也应纳入 assetCdn 加速前缀',
   );
+  assert.equal(config.assetCdn?.enabled, false, '生产默认应关闭外部 asset CDN，避免自定义域名跨源失败');
 
   for (const museum of config.museums) {
     assert.ok(

@@ -63,6 +63,7 @@ import {
   type MuseumShellManifest,
 } from './app/museumShellManifest';
 import { MuseumShellPreloader } from './app/museumShellPreloader';
+import type { MuseumShellWarmResult } from './app/museumShellPreloader';
 import {
   createMuseumShellState,
   reduceMuseumShellState,
@@ -146,6 +147,7 @@ class App {
   private museumShellChrome: MuseumShellChrome | null = null;
   private readonly museumShellPreloader = new MuseumShellPreloader();
   private readonly museumShellManifestCache = new Map<string, MuseumShellManifest>();
+  private readonly museumShellWarmPromises = new Map<string, Promise<MuseumShellWarmResult>>();
   private museumShellState: MuseumShellState = createMuseumShellState();
   private sceneUiRuntime: SceneUiRuntime | null = null;
   private chatRuntime: ChatRuntime | null = null;
@@ -405,18 +407,72 @@ class App {
       note: museumShellManifest.cover.note,
     };
   }
-  private warmMuseumPreviewAssets(museum: Museum, targetSceneId: string): void {
+  private buildMuseumShellWarmKey(
+    museumId: string,
+    sceneId: string,
+    phase: 'museum-entry' | 'scene-transition',
+    view: { yaw: number; pitch: number; fov: number },
+  ): string {
+    return `${museumId}:${sceneId}:${phase}:${view.yaw.toFixed(2)}:${view.pitch.toFixed(2)}:${view.fov.toFixed(1)}`;
+  }
+  private warmMuseumShellScene(args: {
+    museum: MuseumShellManifest;
+    sceneId: string;
+    phase: 'museum-entry' | 'scene-transition';
+    view: { yaw: number; pitch: number; fov: number };
+  }): Promise<MuseumShellWarmResult> {
+    const key = this.buildMuseumShellWarmKey(args.museum.id, args.sceneId, args.phase, args.view);
+    const existing = this.museumShellWarmPromises.get(key);
+    if (existing) {
+      return existing;
+    }
+    const promise = this.museumShellPreloader.warm(args).catch((error) => {
+      this.museumShellWarmPromises.delete(key);
+      throw error;
+    });
+    this.museumShellWarmPromises.set(key, promise);
+    return promise;
+  }
+  private prewarmMuseumEntryModules(): void {
+    window.setTimeout(() => {
+      void Promise.allSettled([
+        this.loadSceneUiRuntimeModule().then((module) => module.prewarmSceneUiRuntimeModules()),
+        this.loadChatRuntimeModule().then((module) => module.prewarmChatRuntimeModules()),
+        this.loadAppModalsModule(),
+        import('./viewer/CubeCanvasPano'),
+        import('./viewer/cubeTileScene'),
+        import('./utils/bitmapWorker'),
+      ]);
+    }, 0);
+  }
+  private warmMuseumPreviewAssets(
+    museum: Museum,
+    targetSceneId: string,
+    coverImageUrl: string,
+    shellChrome: MuseumShellChrome,
+  ): void {
     const museumShellManifest = this.getMuseumShellManifest(museum);
     const shellScene = getMuseumShellScene(museumShellManifest, targetSceneId);
     if (!shellScene) return;
     const route = parseRoute();
-    void this.museumShellPreloader
-      .warm({
-        museum: museumShellManifest,
-        sceneId: targetSceneId,
-        phase: 'museum-entry',
-        view: this.resolveShellSceneView(shellScene.defaultView, route),
-      })
+    const targetView = this.resolveShellSceneView(shellScene.defaultView, route);
+    void (async () => {
+      try {
+        const displayCoverUrl = await this.museumShellPreloader.ensureCoverImageUrl(coverImageUrl);
+        if (this.currentMuseum?.id === museum.id && !this.currentScene) {
+          shellChrome.setCoverHeroImage(displayCoverUrl);
+        }
+        await this.warmMuseumShellScene({
+          museum: museumShellManifest,
+          sceneId: targetSceneId,
+          phase: 'museum-entry',
+          view: targetView,
+        });
+        this.prewarmMuseumEntryModules();
+      } catch {
+        // 预热失败不阻断封面页
+      }
+    })()
       .catch(() => {
         // 预热失败不阻断封面页
       });
@@ -442,20 +498,23 @@ class App {
       }
       navigateToScene(museum.id, targetSceneId);
     });
+    const resolvedCoverHeroUrl =
+      resolveAssetUrl(museumShellManifest.cover.heroImage, AssetType.COVER) || museumShellManifest.cover.heroImage;
+    const cachedCoverHeroUrl = this.museumShellPreloader.getCoverImageUrl(resolvedCoverHeroUrl) || '';
     shellChrome.showCover({
       appName: this.config.appName,
       brandTitle: museumShellManifest.cover.brandTitle,
       title: museumShellManifest.cover.title,
       subtitle: museumShellManifest.cover.subtitle,
       ctaLabel: museumShellManifest.cover.ctaLabel,
-      heroImage: resolveAssetUrl(museumShellManifest.cover.heroImage, AssetType.COVER) || museumShellManifest.cover.heroImage,
+      heroImage: cachedCoverHeroUrl,
       eyebrow: museumShellManifest.cover.eyebrow,
       note: museumShellManifest.cover.note,
       brandLogos: museumShellManifest.cover.brandLogos.map(
         (logo) => resolveAssetUrl(logo, AssetType.COVER) || logo,
       ),
     });
-    this.warmMuseumPreviewAssets(museum, targetSceneId);
+    this.warmMuseumPreviewAssets(museum, targetSceneId, resolvedCoverHeroUrl, shellChrome);
   }
   private ensureLoadingElementAttached(): void {
     const loadingEl = this.loading.getElement();
@@ -894,8 +953,7 @@ class App {
       });
     }
     const warmPhase = runtimePlan.shellStrategy === 'reuse-shell' ? 'scene-transition' : 'museum-entry';
-    void this.museumShellPreloader
-      .warm({
+    void this.warmMuseumShellScene({
         museum: museumShellManifest,
         sceneId: scene.id,
         phase: warmPhase,

@@ -8,6 +8,11 @@ type ChatContext = {
   fcChatConfig: FcChatConfig | null | undefined;
 };
 
+let sharedChatModulesPromise: Promise<{
+  FcChatPanel: typeof import('../ui/FcChatPanel').FcChatPanel;
+  FcChatClient: typeof import('../services/fcChatClient').FcChatClient;
+}> | null = null;
+
 function hasValidEndpoint(config: FcChatConfig | null | undefined): config is FcChatConfig {
   return Boolean(config?.endpoint && config.endpoint.trim());
 }
@@ -101,14 +106,24 @@ export class ChatRuntime {
     FcChatClient: typeof import('../services/fcChatClient').FcChatClient;
   }> {
     if (!this.chatModulesPromise) {
-      this.chatModulesPromise = Promise.all([
-        import('../ui/FcChatPanel'),
-        import('../services/fcChatClient'),
-      ]).then(([panelModule, clientModule]) => ({
-        FcChatPanel: panelModule.FcChatPanel,
-        FcChatClient: clientModule.FcChatClient,
-      }));
+      this.chatModulesPromise = prewarmChatRuntimeModules();
     }
     return this.chatModulesPromise;
   }
+}
+
+export function prewarmChatRuntimeModules(): Promise<{
+  FcChatPanel: typeof import('../ui/FcChatPanel').FcChatPanel;
+  FcChatClient: typeof import('../services/fcChatClient').FcChatClient;
+}> {
+  if (!sharedChatModulesPromise) {
+    sharedChatModulesPromise = Promise.all([
+      import('../ui/FcChatPanel'),
+      import('../services/fcChatClient'),
+    ]).then(([panelModule, clientModule]) => ({
+      FcChatPanel: panelModule.FcChatPanel,
+      FcChatClient: clientModule.FcChatClient,
+    }));
+  }
+  return sharedChatModulesPromise;
 }

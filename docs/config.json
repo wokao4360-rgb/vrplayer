@@ -1,7 +1,7 @@
 {
   "appName": "三馆全景导览",
   "assetCdn": {
-    "enabled": true,
+    "enabled": false,
     "includePrefixes": [
       "/assets/panos/",
       "/assets/covers/"

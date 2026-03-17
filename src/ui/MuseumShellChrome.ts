@@ -528,6 +528,10 @@ export class MuseumShellChrome {
     this.onEnter = onEnter;
   }
 
+  setCoverHeroImage(heroImage: string): void {
+    this.coverBackground.style.backgroundImage = heroImage ? `url("${heroImage}")` : '';
+  }
+
   showCover(model: MuseumShellCoverViewModel): void {
     this.coverBrand.textContent = model.brandTitle;
     this.coverAppName.textContent = model.appName;
@@ -536,7 +540,7 @@ export class MuseumShellChrome {
     this.coverSubtitle.textContent = model.subtitle;
     this.coverNote.textContent = model.note || '进入同一馆壳层内的连续漫游';
     this.coverCta.textContent = model.ctaLabel;
-    this.coverBackground.style.backgroundImage = model.heroImage ? `url("${model.heroImage}")` : '';
+    this.setCoverHeroImage(model.heroImage);
     renderLogos(this.coverLogos, model.brandLogos);
     this.coverLayer.classList.add('is-active', 'is-interactive');
     this.coverLayer.classList.remove('is-leaving');

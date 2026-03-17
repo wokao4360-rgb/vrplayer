@@ -36,6 +36,7 @@ export class MuseumShellPreloader {
   private readonly imagePromises = new Map<string, Promise<void>>();
   private readonly previewReadyBySceneId = new Map<string, string>();
   private readonly previewBlobUrlBySourceUrl = new Map<string, string>();
+  private readonly coverBlobUrlBySourceUrl = new Map<string, string>();
   private readonly manifestPromises = new Map<string, Promise<TileManifest>>();
   private readonly hiresManifestBySceneId = new Map<string, TileManifest>();
   private readonly backgroundTimers = new Set<number>();
@@ -91,6 +92,25 @@ export class MuseumShellPreloader {
     return this.previewReadyBySceneId.get(sceneId) ?? null;
   }
 
+  getCoverImageUrl(sourceUrl: string): string | null {
+    return this.coverBlobUrlBySourceUrl.get(sourceUrl) ?? null;
+  }
+
+  async ensureCoverImageUrl(sourceUrl: string): Promise<string> {
+    const existing = this.coverBlobUrlBySourceUrl.get(sourceUrl);
+    if (existing) {
+      return existing;
+    }
+    const blob = await readImageBlob(sourceUrl, {
+      timeoutMs: 12000,
+      priority: 'high',
+      channel: 'preload',
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    this.coverBlobUrlBySourceUrl.set(sourceUrl, objectUrl);
+    return objectUrl;
+  }
+
   getHiresManifest(sceneId: string): TileManifest | null {
     return this.hiresManifestBySceneId.get(sceneId) ?? null;
   }
@@ -101,6 +121,10 @@ export class MuseumShellPreloader {
       URL.revokeObjectURL(url);
     }
     this.previewBlobUrlBySourceUrl.clear();
+    for (const url of this.coverBlobUrlBySourceUrl.values()) {
+      URL.revokeObjectURL(url);
+    }
+    this.coverBlobUrlBySourceUrl.clear();
   }
 
   private cancelBackgroundWork(): void {

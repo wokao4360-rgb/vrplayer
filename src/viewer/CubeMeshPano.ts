@@ -23,7 +23,6 @@ import { buildCubeHighTileUrl, buildCubeLowFaceUrl, getCubeAssetFace, getHighTil
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from './cubeTilePolicy.ts';
 import { CUBE_FACE_SEQUENCE, createCubeFacePlane, createCubeFaceRoot, createCubeTilePlane } from './cubeTileScene.ts';
 import { resolveKtx2TranscoderPath } from './tileMeshPanoRules.ts';
-import { normalizeCubemapPolicyView } from './cubemapViewSemantics.ts';
 
 type LoadState = 'empty' | 'loading' | 'ready';
 
@@ -539,10 +538,10 @@ export class CubeMeshPano {
   private getView(camera: PerspectiveCamera) {
     const tmp = new Vector3();
     camera.getWorldDirection(tmp);
-    return normalizeCubemapPolicyView(this.sceneViewConfig, {
+    return {
       yawDeg: Math.atan2(tmp.x, tmp.z) * 180 / Math.PI,
       pitchDeg: Math.asin(Math.max(-1, Math.min(1, tmp.y))) * 180 / Math.PI,
-    });
+    };
   }
 
   private getTextureAnisotropy(): number {

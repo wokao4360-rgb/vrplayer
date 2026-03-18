@@ -1216,10 +1216,6 @@ class App {
       clearChatInitFallback();
       this.loading.hide();
       this.hideUIError();
-      if (!transitionCompleted) {
-        completeTransition(LoadStatus.HIGH_READY);
-      }
-      
       this.preloadNextScene(museum, scene);
     });
     this.panoViewer.setOnError((error) => {

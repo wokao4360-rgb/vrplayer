@@ -174,7 +174,21 @@ export class MuseumShellPreloader {
     ) {
       await waitForAssetResolverReady();
     }
-    await Promise.allSettled(assets.map((asset) => this.preloadAsset(asset, hiresManifest)));
+    const lowFaces = assets.filter((asset) => asset.role === 'low-face');
+    const heroHighTiles = assets.filter((asset) => asset.role === 'hero-high-tile');
+    const remainingAssets = assets.filter(
+      (asset) => asset.role !== 'low-face' && asset.role !== 'hero-high-tile',
+    );
+
+    if (remainingAssets.length > 0) {
+      await Promise.allSettled(remainingAssets.map((asset) => this.preloadAsset(asset, hiresManifest)));
+    }
+    if (lowFaces.length > 0) {
+      await Promise.allSettled(lowFaces.map((asset) => this.preloadAsset(asset, hiresManifest)));
+    }
+    if (heroHighTiles.length > 0) {
+      await Promise.allSettled(heroHighTiles.map((asset) => this.preloadAsset(asset, hiresManifest)));
+    }
   }
 
   private async preloadAsset(
@@ -192,7 +206,10 @@ export class MuseumShellPreloader {
       asset.role === 'hero-high-tile' ||
       asset.role === 'remaining-high-tile'
     ) {
-      await this.ensureTileBlob(resolvedUrl, asset.role === 'low-face' ? 'high' : 'low');
+      await this.ensureTileBlob(
+        resolvedUrl,
+        asset.role === 'remaining-high-tile' ? 'low' : 'high',
+      );
       return;
     }
     if (asset.role === 'scene-preview' || asset.role === 'neighbor-preview') {

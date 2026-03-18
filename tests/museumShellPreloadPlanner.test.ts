@@ -65,7 +65,7 @@ test('museum-entry preload keeps L0 to manifest only while cover UI itself loads
     museum: museumShellManifest,
     sceneId: 'south_gate',
     phase: 'museum-entry',
-    view: { yaw: 180, pitch: 0, fov: 75 },
+    view: { yaw: 0, pitch: 0, fov: 75 },
     hiresManifestBySceneId: {
       south_gate: cubemapManifest,
     },
@@ -87,12 +87,12 @@ test('museum-entry preload keeps L0 to manifest only while cover UI itself loads
   assert.deepEqual(
     plan.L2.slice(0, 6).map((asset) => asset.url),
     [
-      '/assets/panos/tiles/linzexu/south_gate/low/b.avif',
+      '/assets/panos/tiles/linzexu/south_gate/low/f.avif',
       '/assets/panos/tiles/linzexu/south_gate/low/r.avif',
       '/assets/panos/tiles/linzexu/south_gate/low/l.avif',
       '/assets/panos/tiles/linzexu/south_gate/low/u.avif',
       '/assets/panos/tiles/linzexu/south_gate/low/d.avif',
-      '/assets/panos/tiles/linzexu/south_gate/low/f.avif',
+      '/assets/panos/tiles/linzexu/south_gate/low/b.avif',
     ],
   );
   assert.equal(plan.L2.filter((asset) => asset.role === 'hero-high-tile').length, 12);
@@ -102,10 +102,10 @@ test('museum-entry preload keeps L0 to manifest only while cover UI itself loads
       .slice(0, 4)
       .map((asset) => asset.url),
     [
-      '/assets/panos/tiles/linzexu/south_gate/high/b/1_1.avif',
-      '/assets/panos/tiles/linzexu/south_gate/high/b/0_1.avif',
-      '/assets/panos/tiles/linzexu/south_gate/high/b/1_0.avif',
-      '/assets/panos/tiles/linzexu/south_gate/high/b/0_0.avif',
+      '/assets/panos/tiles/linzexu/south_gate/high/f/1_1.avif',
+      '/assets/panos/tiles/linzexu/south_gate/high/f/0_1.avif',
+      '/assets/panos/tiles/linzexu/south_gate/high/f/1_0.avif',
+      '/assets/panos/tiles/linzexu/south_gate/high/f/0_0.avif',
     ],
   );
 });
@@ -115,7 +115,7 @@ test('scene-transition preload keeps cover assets out and defers remaining tiles
     museum: museumShellManifest,
     sceneId: 'south_gate',
     phase: 'scene-transition',
-    view: { yaw: 180, pitch: 0, fov: 75 },
+    view: { yaw: 0, pitch: 0, fov: 75 },
     hiresManifestBySceneId: {
       south_gate: cubemapManifest,
     },
@@ -129,7 +129,7 @@ test('scene-transition preload keeps cover assets out and defers remaining tiles
   assert.equal(plan.L3.filter((asset) => asset.role === 'remaining-high-tile').length, 12);
   assert.ok(plan.L3.some((asset) => asset.url.endsWith('/high/u/1_1.avif')));
   assert.ok(plan.L3.some((asset) => asset.url.endsWith('/high/d/0_0.avif')));
-  assert.ok(plan.L3.some((asset) => asset.url.endsWith('/high/f/1_0.avif')));
+  assert.ok(plan.L3.some((asset) => asset.url.endsWith('/high/b/1_0.avif')));
 });
 
 test('panorama hires scenes degrade gracefully to preview plus single hires asset planning', () => {

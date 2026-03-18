@@ -31,7 +31,6 @@ import { TileMeshFallbackRequiredError } from './TileCanvasPano.ts';
 import { assertCubemapBitmapDimensions, getCubemapBudget } from './cubeTileContract.ts';
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from './cubeTilePolicy.ts';
 import { CUBE_FACE_SEQUENCE, createCubeFacePlane, createCubeFaceRoot, getCubeTileAtlasDrawRect } from './cubeTileScene.ts';
-import { normalizeCubemapPolicyView } from './cubemapViewSemantics.ts';
 
 type LoadState = 'empty' | 'loading' | 'ready';
 
@@ -105,6 +104,9 @@ export class CubeCanvasPano {
   private highReady = false;
   private initialHighFaces: CubeFaceId[] = [];
   private activatedHighFaces = new Set<CubeFaceId>();
+  private lastPolicyView: { yawDeg: number; pitchDeg: number } = { yawDeg: 0, pitchDeg: 0 };
+  private lastLowFaceOrder: CubeFaceId[] = [];
+  private lastVisibleHighFaces: CubeFaceId[] = [];
   private avifSupported = true;
   private meshFallbackRequested = false;
   private tilesLoadedCount = 0;
@@ -220,11 +222,13 @@ export class CubeCanvasPano {
   update(camera: PerspectiveCamera): void {
     if (!this.manifest || !this.group || this.meshFallbackRequested) return;
     const view = this.getPolicyView(camera);
+    this.lastPolicyView = { ...view };
 
     if (!this.lowFullyReady) {
+      this.lastLowFaceOrder = buildCubeLowFaceOrder(view);
       if (!this.lowSeeded) {
         this.lowSeeded = true;
-        for (const face of buildCubeLowFaceOrder(view)) {
+        for (const face of this.lastLowFaceOrder) {
           const info = this.lowInfos.get(face);
           if (!info || info.state !== 'empty') continue;
           info.state = 'loading';
@@ -236,6 +240,7 @@ export class CubeCanvasPano {
       }
     } else {
       const faces = buildCubeVisibleHighFaces(view);
+      this.lastVisibleHighFaces = [...faces];
       if (!this.highSeeded) {
         this.initialHighFaces = [...faces];
       }
@@ -305,7 +310,50 @@ export class CubeCanvasPano {
         : '',
       lowReady: this.lowFullyReady,
       lowLevel: 'cube',
+      policyView: `${this.lastPolicyView.yawDeg.toFixed(2)}/${this.lastPolicyView.pitchDeg.toFixed(2)}`,
+      lowFaceOrder: this.lastLowFaceOrder.join(','),
+      visibleHighFaces: this.lastVisibleHighFaces.join(','),
+      initialHighFaces: this.initialHighFaces.join(','),
+      activatedHighFaces: Array.from(this.activatedHighFaces.values()).join(','),
     };
+  }
+
+  getDebugFaceSnapshots() {
+    const faces = CUBE_FACE_SEQUENCE.map((face) => {
+      const liveCanvas = this.faceCanvases.get(face);
+      const stagedCanvas = this.stagedFaceCanvases.get(face);
+      const sample = (canvas: HTMLCanvasElement | undefined) => {
+        if (!canvas) {
+          return null;
+        }
+        const ctx = canvas.getContext('2d', { alpha: true });
+        if (!ctx) {
+          return null;
+        }
+        const size = Math.max(1, Math.floor(canvas.width / 8));
+        const imageData = ctx.getImageData(0, 0, Math.min(size, canvas.width), Math.min(size, canvas.height)).data;
+        let alphaCount = 0;
+        let lumaSum = 0;
+        for (let i = 0; i < imageData.length; i += 4) {
+          const a = imageData[i + 3];
+          if (a > 0) alphaCount += 1;
+          lumaSum += imageData[i] + imageData[i + 1] + imageData[i + 2];
+        }
+        return {
+          width: canvas.width,
+          height: canvas.height,
+          alphaCount,
+          lumaSum,
+        };
+      };
+      return {
+        face,
+        activated: this.activatedHighFaces.has(face),
+        live: sample(liveCanvas),
+        staged: sample(stagedCanvas),
+      };
+    });
+    return faces;
   }
 
   private reorderLowQueue(view: { yawDeg: number; pitchDeg: number }): void {
@@ -472,7 +520,7 @@ export class CubeCanvasPano {
       info.format = format;
       this.lastTileUrl = url;
       try {
-        return await this.fetchBitmapFromUrl(url, info.kind === 'low' ? 'high' : 'low');
+        return await this.fetchBitmapFromUrl(url, 'high');
       } catch (error) {
         lastError = error;
       }
@@ -580,9 +628,9 @@ export class CubeCanvasPano {
   }
 
   private getPolicyView(camera: PerspectiveCamera) {
-    return normalizeCubemapPolicyView(this.sceneViewConfig, {
+    return {
       yawDeg: this.getYaw(camera),
       pitchDeg: this.getPitch(camera),
-    });
+    };
   }
 }

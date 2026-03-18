@@ -33,6 +33,7 @@ export type MuseumShellScene = {
   title: string;
   preview: MuseumShellScenePreview;
   hires?: MuseumShellSceneHires;
+  worldYawOffset?: number;
   defaultView: {
     yaw: number;
     pitch: number;
@@ -133,6 +134,7 @@ function createMuseumShellScene(scene: Scene): MuseumShellScene {
     title: scene.name,
     preview,
     hires,
+    worldYawOffset: scene.panoTiles?.worldYawOffset,
     defaultView: {
       yaw: scene.initialView.yaw,
       pitch: scene.initialView.pitch,

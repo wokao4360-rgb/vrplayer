@@ -1,7 +1,8 @@
 import type { CubeFaceId, CubemapTileManifest, TileManifest } from '../viewer/tileManifest.ts';
 import { buildCubeHighTileKeys, buildCubeLowFaceOrder, buildCubeVisibleHighFaces } from '../viewer/cubeTilePolicy.ts';
-import { buildCubeHighTileUrl, buildCubeLowFaceUrl } from '../viewer/tileFormatPolicy.ts';
-import type { MuseumShellManifest } from './museumShellManifest.ts';
+import { worldViewToInternalLoadView } from '../viewer/cubemapViewSemantics.ts';
+import { buildCubeHighTileUrl, buildCubeLowFaceUrl, getCubeAssetFace } from '../viewer/tileFormatPolicy.ts';
+import type { MuseumShellManifest, MuseumShellScene } from './museumShellManifest.ts';
 
 export type MuseumShellPreloadAssetRole =
   | 'museum-cover'
@@ -113,7 +114,7 @@ export function buildMuseumShellPreloadPlan({
     };
   }
 
-  appendCubemapAssets(L2, L3, scene.id, hiresManifest, view);
+  appendCubemapAssets(L2, L3, scene, hiresManifest, view);
   return {
     L0: dedupeAssets(L0),
     L1: dedupeAssets(L1),
@@ -125,29 +126,40 @@ export function buildMuseumShellPreloadPlan({
 function appendCubemapAssets(
   L2: MuseumShellPreloadAsset[],
   L3: MuseumShellPreloadAsset[],
-  sceneId: string,
+  scene: MuseumShellScene,
   manifest: CubemapTileManifest,
   view: { yaw: number; pitch: number; fov: number },
 ): void {
+  const loadView = worldViewToInternalLoadView(
+    {
+      panoTiles: {
+        manifest: scene.hires?.format === 'tile-manifest' ? scene.hires.manifestUrl : undefined,
+        worldYawOffset: scene.worldYawOffset,
+      },
+    },
+    { yawDeg: view.yaw, pitchDeg: view.pitch },
+  );
   const tileFormat = manifest.tileFormat ?? 'avif';
-  const lowFaces = buildCubeLowFaceOrder({ yawDeg: view.yaw, pitchDeg: view.pitch });
+  const lowFaces = buildCubeLowFaceOrder(loadView);
   for (const worldFace of lowFaces) {
+    const assetFace = getCubeAssetFace(manifest, worldFace);
     L2.push({
       kind: 'image',
       role: 'low-face',
-      url: buildCubeLowFaceUrl(manifest.baseUrl, worldFace, tileFormat),
-      sceneId,
+      url: buildCubeLowFaceUrl(manifest.baseUrl, assetFace, tileFormat),
+      sceneId: scene.id,
       worldFace,
     });
   }
 
-  const heroFaces = buildCubeVisibleHighFaces({ yawDeg: view.yaw, pitchDeg: view.pitch });
+  const heroFaces = buildCubeVisibleHighFaces(loadView);
   for (const tile of buildCubeHighTileKeys(heroFaces, manifest.highGrid)) {
+    const assetFace = getCubeAssetFace(manifest, tile.face);
     L2.push({
       kind: 'image',
       role: 'hero-high-tile',
-      url: buildCubeHighTileUrl(manifest.baseUrl, tile.face, tile.col, tile.row, tileFormat),
-      sceneId,
+      url: buildCubeHighTileUrl(manifest.baseUrl, assetFace, tile.col, tile.row, tileFormat),
+      sceneId: scene.id,
       worldFace: tile.face,
       col: tile.col,
       row: tile.row,
@@ -156,11 +168,12 @@ function appendCubemapAssets(
 
   const remainingFaces = resolveRemainingFaces(manifest.faces, heroFaces);
   for (const tile of buildCubeHighTileKeys(remainingFaces, manifest.highGrid)) {
+    const assetFace = getCubeAssetFace(manifest, tile.face);
     L3.push({
       kind: 'image',
       role: 'remaining-high-tile',
-      url: buildCubeHighTileUrl(manifest.baseUrl, tile.face, tile.col, tile.row, tileFormat),
-      sceneId,
+      url: buildCubeHighTileUrl(manifest.baseUrl, assetFace, tile.col, tile.row, tileFormat),
+      sceneId: scene.id,
       worldFace: tile.face,
       col: tile.col,
       row: tile.row,

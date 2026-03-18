@@ -41,6 +41,16 @@ export function internalYawToWorldYaw(
   return normalizeSignedAngle(-internalYaw - getSceneWorldYawOffset(scene));
 }
 
+export function worldViewToInternalLoadView(
+  scene: SceneLike | null | undefined,
+  view: CubePolicyView,
+): CubePolicyView {
+  return {
+    yawDeg: worldYawToInternalYaw(scene, view.yawDeg),
+    pitchDeg: view.pitchDeg,
+  };
+}
+
 export function normalizeCubemapPolicyView(
   scene: SceneLike | null | undefined,
   view: CubePolicyView,

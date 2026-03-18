@@ -20,7 +20,7 @@ import {
   selectInitialTileBackend,
   shouldAllowLegacyTileFallback,
 } from './tileFormatPolicy';
-import { worldYawToInternalYaw } from './cubemapViewSemantics';
+import { internalYawToWorldYaw, worldYawToInternalYaw } from './cubemapViewSemantics';
 
 type NadirPatchType = import('./NadirPatch').NadirPatch;
 
@@ -594,11 +594,6 @@ export class PanoViewer {
           });
         })
         .then(() => {
-          if (!this.tilesLowReady) {
-            this.tilesLowReady = true;
-            this.updateLoadStatus(LoadStatus.LOW_READY);
-            if (this.onLoadCallback) this.onLoadCallback();
-          }
           this.tilePano?.prime(this.camera);
         })
         .catch((err) => {
@@ -1044,9 +1039,18 @@ export class PanoViewer {
     const maxLevel = status?.maxLevel ?? '';
     const highReady = status?.highReady ? 'true' : 'false';
     const levels = status?.levels ?? '';
+    const policyView = (status as any)?.policyView ?? '';
+    const lowFaceOrder = (status as any)?.lowFaceOrder ?? '';
+    const visibleHighFaces = (status as any)?.visibleHighFaces ?? '';
+    const initialHighFaces = (status as any)?.initialHighFaces ?? '';
+    const activatedHighFaces = (status as any)?.activatedHighFaces ?? '';
     const renderSource = this.renderSource;
     const switchReason = this.renderSwitchReason;
     const clearedCount = this.clearedCount;
+    const currentView = this.getCurrentView();
+    const currentWorldYaw =
+      this.scene ? Number(internalYawToWorldYaw(this.scene, currentView.yaw).toFixed(2)) : currentView.yaw;
+    const currentWorldPitch = Number(currentView.pitch.toFixed(2));
     this.tilesDebugEl.textContent =
       `mode=${mode}\n` +
       `renderSource=${renderSource}\n` +
@@ -1061,6 +1065,12 @@ export class PanoViewer {
       `lastTileUrl=${lastTileUrl}\n` +
       `lastTilePixels=${lastTilePixels}\n` +
       `lastError=${lastError}\n` +
+      `view=world:${currentWorldYaw}/${currentWorldPitch} internal:${currentView.yaw.toFixed(2)}/${currentView.pitch.toFixed(2)}/${currentView.fov.toFixed(1)}\n` +
+      `policyView=${policyView}\n` +
+      `lowFaceOrder=${lowFaceOrder}\n` +
+      `visibleHighFaces=${visibleHighFaces}\n` +
+      `initialHighFaces=${initialHighFaces}\n` +
+      `activatedHighFaces=${activatedHighFaces}\n` +
       `canvas=${canvasSize} zMax=${maxLevel} levels=${levels} highReady=${highReady}\n` +
       `lowReady=${this.tilesLowReady}`;
   }
@@ -1138,7 +1148,7 @@ export class PanoViewer {
       if (status.lastError) {
         this.tilesLastError = status.lastError;
       }
-      if (!this.tilesLowReady && status.tilesLoadedCount > 0) {
+      if (!this.tilesLowReady && status.tilesVisible) {
         this.tilesLowReady = true;
         this.updateLoadStatus(LoadStatus.LOW_READY);
       }

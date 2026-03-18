@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   getSceneWorldYawOffset,
   internalYawToWorldYaw,
-  normalizeCubemapPolicyView,
+  worldViewToInternalLoadView,
   worldYawToInternalYaw,
 } from '../src/viewer/cubemapViewSemantics.ts';
 import { buildCubeVisibleHighFaces } from '../src/viewer/cubeTilePolicy.ts';
@@ -74,7 +74,7 @@ test('internal/world yaw conversion stays reversible for route syncing', () => {
   );
 });
 
-test('cubemap tile scheduling converts internal camera yaw back to world yaw before choosing hero faces', () => {
+test('cubemap tile scheduling converts world view into internal geometry faces before choosing hero faces', () => {
   const cubemapScene = {
     initialView: { yaw: 0, pitch: 0, fov: 75 },
     panoTiles: {
@@ -82,14 +82,14 @@ test('cubemap tile scheduling converts internal camera yaw back to world yaw bef
     },
   };
 
-  const policyView = normalizeCubemapPolicyView(cubemapScene, {
-    yawDeg: -180,
-    pitchDeg: 0,
-  });
-
-  assert.deepEqual(policyView, {
+  const loadView = worldViewToInternalLoadView(cubemapScene, {
     yawDeg: 0,
     pitchDeg: 0,
   });
-  assert.deepEqual(buildCubeVisibleHighFaces(policyView), ['f', 'l', 'r']);
+
+  assert.deepEqual(loadView, {
+    yawDeg: -180,
+    pitchDeg: 0,
+  });
+  assert.deepEqual(buildCubeVisibleHighFaces(loadView), ['b', 'r', 'l']);
 });

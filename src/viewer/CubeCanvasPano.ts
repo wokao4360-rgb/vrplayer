@@ -424,7 +424,6 @@ export class CubeCanvasPano {
     try {
       const bitmap = await this.fetchBitmap(info);
       this.drawBitmap(info, bitmap);
-      bitmap.close?.();
       info.state = 'ready';
       info.failCount = 0;
       if (info.kind === 'low') {

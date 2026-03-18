@@ -11,7 +11,9 @@ import {
   resolveMuseumShellWarmExecutionLayers,
   type MuseumShellWarmPhase,
 } from './museumShellPreloadExecution.ts';
-import { primeImageBlob, readImageBlob } from '../utils/imageBlobCache';
+import { primeImageBlob, readImageBlob } from '../utils/imageBlobCache.ts';
+import { primeDecodedBitmap } from '../utils/bitmapWorker.ts';
+import { shouldPrimeDecodedTileRole } from './museumShellTileWarmPolicy.ts';
 
 export type MuseumShellWarmResult = {
   previewUrl: string | null;
@@ -206,10 +208,11 @@ export class MuseumShellPreloader {
       asset.role === 'hero-high-tile' ||
       asset.role === 'remaining-high-tile'
     ) {
-      await this.ensureTileBlob(
-        resolvedUrl,
-        asset.role === 'remaining-high-tile' ? 'low' : 'high',
-      );
+      if (shouldPrimeDecodedTileRole(asset.role)) {
+        await this.ensureDecodedTile(resolvedUrl, 'high');
+      } else {
+        await this.ensureTileBlob(resolvedUrl, 'low');
+      }
       return;
     }
     if (asset.role === 'scene-preview' || asset.role === 'neighbor-preview') {
@@ -317,6 +320,32 @@ export class MuseumShellPreloader {
     }
 
     const promise = primeImageBlob(url, {
+      timeoutMs: 12000,
+      priority,
+      channel: 'tile',
+    }).then(() => {
+      this.loadedUrls.add(url);
+      this.imagePromises.delete(url);
+    }).catch((error) => {
+      this.imagePromises.delete(url);
+      throw error;
+    });
+
+    this.imagePromises.set(url, promise);
+    return promise;
+  }
+
+  private ensureDecodedTile(url: string, priority: 'low' | 'high'): Promise<void> {
+    if (this.loadedUrls.has(url)) {
+      return Promise.resolve();
+    }
+
+    const existing = this.imagePromises.get(url);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = primeDecodedBitmap(url, {
       timeoutMs: 12000,
       priority,
       channel: 'tile',

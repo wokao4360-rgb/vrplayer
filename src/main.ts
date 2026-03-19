@@ -1046,13 +1046,12 @@ class App {
         this.panoViewer?.setInteractionLocked(locked);
       },
       releaseMode: 'high',
-      onCameraFrame: previousScene
-        ? (view) => {
-            if (!this.panoViewer) return;
-            const internalYaw = worldYawToInternalYaw(previousScene, view.yaw);
-            this.panoViewer.setView(internalYaw, view.pitch, view.fov);
-          }
-        : undefined,
+      onCameraFrame: (view, context) => {
+        if (!this.panoViewer) return;
+        const yawScene = context.useTargetScene ? scene : previousScene ?? scene;
+        const internalYaw = worldYawToInternalYaw(yawScene, view.yaw);
+        this.panoViewer.setView(internalYaw, view.pitch, view.fov);
+      },
     });
     this.activeTransitionSession = transitionSession;
     if (coverWasVisible) {

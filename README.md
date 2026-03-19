@@ -112,6 +112,9 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-19 15:10:00] 场景切换在 target scene commit 之后，transition camera 的 yaw 语义必须立即切到 target scene 再做 `worldYawToInternalYaw()`；禁止 commit 后继续拿 previous scene 做 world/internal 转换补偿。当前稳定基线：`SceneTransitionController.onCameraFrame` 只透出 `useTargetScene` 上下文，`main.ts` 只复用现有唯一入口 `worldYawToInternalYaw()/internalYawToWorldYaw()`，不允许再新增第二次取反或组件内私有补偿。
+- [2026-03-19 15:10:00] `TravelTransitionOverlay` 现已固定为“WebGL compositing shader + from/to 双层 blurred fallback backdrop”架构：target preview/low 未 ready 时继续用模糊后的上一点位顶住，target ready 后通过 directional wipe + local distortion + targetMix/settle 接管；禁止退回等待页、黑屏、白屏或单层 CSS 假过渡。
+
 - [2026-03-19 13:10:00] museum shell / hotspot / 导览切点的过渡层现在必须统一走 `SceneTransitionController + TravelTransitionOverlay`，禁止再让 `MuseumShellChrome` 复活旧的中心等待卡片。当前稳定基线：`MuseumShellChrome.transitionLayer` 永久 `hidden + aria-hidden`，其 `showEnterPreloading/startSceneTransition/markPreviewReady/markSharpening/showErrorFallback/completeTransition` 只保留签名，不再产生任何可见 UI；所有真实过渡只能由 `main.ts -> sceneTransitionController.start()` 驱动。
 - [2026-03-19 13:10:00] 场景切换不得在 `LOW_READY/preview ready` 时提前露出目标场景。当前稳定基线：`SceneTransitionController` 默认 `releaseMode='high'`，进度先 hold 在 `TARGET_READY_HOLD_PROGRESS=0.92`，只有 `LoadStatus.HIGH_READY / DEGRADED` 或失败兜底才允许 release 到 1；如果后续又出现“点击开启 VR 漫游后首屏还是糊的，转到后方才变清晰”，第一优先检查 `sceneTransitionGate.ts` 的 release gating 是否被回退。
 - [2026-03-18 15:10:00] museum shell cover 阶段若要真正争取 CTA 后的首屏清晰时间，不能只预热 `hero-cover.jpg`、`low.jpg` 和 tile blob；必须连当前首屏 `6` 张 low AVIF 与前半球 `12` 张 hero high AVIF 的 `ImageBitmap` 解码结果一起预热，并在 viewer 接管时复用同一份 decoded bitmap / blob promise。若后续再次出现“封面阶段 Network 已经把首屏块图拉完，但点击开启 VR 漫游后首屏仍是一整屏糊图，只有转到背面才变清晰”，第一优先检查 `museumShellPreloader.ensureDecodedTile()`、`bitmapWorker` 的 decoded cache，以及 `CubeCanvasPano` 是否错误地在首帧绘制后立刻 `bitmap.close()` 破坏了 handoff 复用。

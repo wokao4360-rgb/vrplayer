@@ -18,6 +18,7 @@ export { Vector3 } from 'three/src/math/Vector3.js';
 export { Raycaster } from 'three/src/core/Raycaster.js';
 
 export { PerspectiveCamera } from 'three/src/cameras/PerspectiveCamera.js';
+export { OrthographicCamera } from 'three/src/cameras/OrthographicCamera.js';
 
 export { Scene } from 'three/src/scenes/Scene.js';
 
@@ -28,6 +29,7 @@ export { Group } from 'three/src/objects/Group.js';
 export { Mesh } from 'three/src/objects/Mesh.js';
 
 export { MeshBasicMaterial } from 'three/src/materials/MeshBasicMaterial.js';
+export { ShaderMaterial } from 'three/src/materials/ShaderMaterial.js';
 
 export { PlaneGeometry } from 'three/src/geometries/PlaneGeometry.js';
 export { SphereGeometry } from 'three/src/geometries/SphereGeometry.js';

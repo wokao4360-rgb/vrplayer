@@ -51,6 +51,9 @@ test('main travel stage drives reveal from right side with strong seam distortio
   assert.equal(frame.stage, 'travel');
   assert.equal(frame.wipeFrom, 'right');
   assert.ok(frame.revealProgress > 0.35 && frame.revealProgress < 0.75);
+  assert.ok(frame.targetMixProgress > frame.revealProgress);
+  assert.ok(frame.targetMixProgress < 1);
+  assert.ok(frame.settleStrength < 0.35);
   assert.ok(frame.wipeSoftness >= WIPE_SOFTNESS);
   assert.ok(frame.distortionStrength >= DISTORTION_STRENGTH * 0.8);
   assert.ok(frame.fovDelta > 0);
@@ -89,6 +92,8 @@ test('left-biased transition reveals from left and settles exactly on target yaw
   assert.equal(finalFrame.fovDelta, 0);
   assert.equal(finalFrame.blurPx, 0);
   assert.equal(finalFrame.revealProgress, 1);
+  assert.equal(finalFrame.targetMixProgress, 1);
+  assert.equal(finalFrame.settleStrength, 1);
 });
 
 test('when target is not ready, transition keeps previous scene disguise and delays reveal', () => {
@@ -107,6 +112,8 @@ test('when target is not ready, transition keeps previous scene disguise and del
 
   assert.equal(frame.stage, 'travel');
   assert.equal(frame.revealProgress, 0);
+  assert.equal(frame.targetMixProgress, 0);
+  assert.equal(frame.settleStrength, 0);
   assert.ok(frame.blurPx > BLUR_STRENGTH * 0.5);
   assert.ok(frame.glassAlpha > 0.2);
 });

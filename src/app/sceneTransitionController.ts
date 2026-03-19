@@ -3,6 +3,7 @@ import { LoadStatus } from '../types/loadStatus.ts';
 import { computeSceneTransitionPlan, type SceneTransitionPlan } from './sceneTransitionMath.ts';
 import { buildSceneTransitionFrame, type SceneTransitionFrame } from './sceneTransitionTimeline.ts';
 import { TravelTransitionOverlay } from '../ui/TravelTransitionOverlay.ts';
+import { buildSceneTransitionCameraView } from './sceneTransitionCamera.ts';
 import {
   computeSceneTransitionProgress,
   isTransitionReleaseReady,
@@ -24,7 +25,13 @@ export type SceneTransitionControllerStartArgs = {
   fromImage?: string;
   targetPreviewImage?: string;
   hotspotScreenX?: number;
-  onCameraFrame?: (view: SceneTransitionView) => void;
+  onCameraFrame?: (
+    view: SceneTransitionView,
+    context: {
+      useTargetScene: boolean;
+      frame: SceneTransitionFrame;
+    },
+  ) => void;
   onInteractionLock?: (locked: boolean) => void;
   releaseMode?: SceneTransitionReleaseMode;
 };
@@ -199,7 +206,7 @@ export class TransitionSession {
       targetReady: this.state.targetReady,
     });
     this.overlay.render(frame);
-    this.drivePreCommitCamera(frame);
+    this.driveCamera(frame);
 
     if (progress >= 1 && isTransitionReleaseReady(this.state, this.args.releaseMode ?? 'high')) {
       this.finish();
@@ -219,18 +226,19 @@ export class TransitionSession {
     });
   }
 
-  private drivePreCommitCamera(frame: SceneTransitionFrame): void {
-    if (this.state.loadCommitted || !this.args.onCameraFrame) {
+  private driveCamera(frame: SceneTransitionFrame): void {
+    if (!this.args.onCameraFrame) {
       return;
     }
-    const pitchBlend = frame.stage === 'turn-in' ? 0.08 : frame.stage === 'travel' ? 0.18 : 0;
-    const nextPitch =
-      this.args.currentWorldView.pitch +
-      (this.args.targetWorldView.pitch - this.args.currentWorldView.pitch) * pitchBlend;
-    this.args.onCameraFrame({
-      yaw: frame.displayWorldYaw,
-      pitch: Number(nextPitch.toFixed(2)),
-      fov: Number((this.args.currentWorldView.fov + frame.fovDelta).toFixed(2)),
+    const nextView = buildSceneTransitionCameraView({
+      frame,
+      currentWorldView: this.args.currentWorldView,
+      targetWorldView: this.args.targetWorldView,
+      loadCommitted: this.state.loadCommitted,
+    });
+    this.args.onCameraFrame(nextView, {
+      useTargetScene: this.state.loadCommitted,
+      frame,
     });
   }
 

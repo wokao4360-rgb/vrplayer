@@ -1,3 +1,16 @@
+import {
+  ClampToEdgeWrapping,
+  LinearFilter,
+  Mesh,
+  OrthographicCamera,
+  PlaneGeometry,
+  Scene,
+  ShaderMaterial,
+  SRGBColorSpace,
+  Texture,
+  Vector2,
+  WebGLRenderer,
+} from '../vendor/three-core.ts';
 import type { SceneTransitionFrame } from '../app/sceneTransitionTimeline.ts';
 
 type TravelTransitionOverlayStartArgs = {
@@ -5,7 +18,133 @@ type TravelTransitionOverlayStartArgs = {
   targetImage?: string;
 };
 
+type TextureSlot = 'from' | 'to';
+
 const STYLE_ID = 'vr-travel-transition-overlay-style';
+const CLEAR_DELAY_MS = 220;
+
+const VERTEX_SHADER = `
+  varying vec2 vUv;
+
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }
+`;
+
+const FRAGMENT_SHADER = `
+  precision mediump float;
+
+  uniform sampler2D uFromTex;
+  uniform sampler2D uToTex;
+  uniform vec2 uResolution;
+  uniform float uRevealProgress;
+  uniform float uTargetMixProgress;
+  uniform float uProgress;
+  uniform float uTravelDirX;
+  uniform float uCurveStrength;
+  uniform float uWipeSoftness;
+  uniform float uDistortionStrength;
+  uniform float uBlurStrength;
+  uniform float uMotionBlurStrength;
+  uniform float uGlassAlpha;
+  uniform float uOcclusionOpacity;
+  uniform float uZoomScale;
+  uniform float uFromShift;
+  uniform float uToShift;
+  uniform float uShearRad;
+  uniform float uSettleStrength;
+  uniform float uTargetMixReady;
+
+  varying vec2 vUv;
+
+  vec2 clampUv(vec2 uv) {
+    return clamp(uv, vec2(0.001), vec2(0.999));
+  }
+
+  vec2 coverUv(vec2 uv, float scale, float shiftPercent, float shearRad) {
+    vec2 p = uv - 0.5;
+    p.x += shiftPercent * 0.01;
+    p.y += p.x * tan(shearRad) * 0.18;
+    p /= max(scale, 0.0001);
+    return clampUv(p + 0.5);
+  }
+
+  vec4 sampleLayer(sampler2D tex, vec2 uv, vec2 dir, float blurPx) {
+    vec2 px = 1.0 / max(uResolution, vec2(1.0));
+    vec2 delta = dir * blurPx * px;
+    vec4 color = texture2D(tex, clampUv(uv)) * 0.34;
+    color += texture2D(tex, clampUv(uv + delta * 0.45)) * 0.23;
+    color += texture2D(tex, clampUv(uv - delta * 0.45)) * 0.23;
+    color += texture2D(tex, clampUv(uv + delta * 0.9)) * 0.1;
+    color += texture2D(tex, clampUv(uv - delta * 0.9)) * 0.1;
+    return color;
+  }
+
+  void main() {
+    float reveal = clamp(uRevealProgress, 0.0, 1.0);
+    float mixProgress = clamp(uTargetMixProgress, 0.0, 1.0);
+    float settleStrength = clamp(uSettleStrength, 0.0, 1.0);
+    float soft = max(0.012, uWipeSoftness * 0.55);
+    float seam = uTravelDirX > 0.0 ? 1.0 - reveal : reveal;
+    float mask = uTravelDirX > 0.0
+      ? smoothstep(seam - soft, seam + soft, vUv.x)
+      : 1.0 - smoothstep(seam - soft, seam + soft, vUv.x);
+    float seamDistance = abs(vUv.x - seam);
+    float edge = 1.0 - smoothstep(0.0, soft * 2.4, seamDistance);
+    float bend = sin((vUv.y + uProgress * 0.28) * 3.14159265) * 0.52
+      + sin((vUv.y * 2.0 - 1.0) * 1.57079632) * 0.22;
+    vec2 travelDir = vec2(uTravelDirX, bend * (0.04 + uCurveStrength * 0.06));
+    float distortion = edge * uDistortionStrength * (0.022 + uCurveStrength * 0.03);
+    float motionAmount = uMotionBlurStrength * 8.0;
+
+    vec2 fromUv = coverUv(vUv, uZoomScale, uFromShift, uShearRad * 0.55);
+    vec2 toUv = coverUv(vUv, max(1.0, uZoomScale - 0.012), uToShift, uShearRad);
+
+    fromUv += travelDir * distortion * 0.65;
+    toUv += travelDir * distortion * 1.08;
+    toUv.y += edge * uCurveStrength * 0.01 * bend;
+
+    vec2 smearDir = normalize(vec2(uTravelDirX, bend * 0.34 + 0.0001));
+    float corridor = 1.0 - smoothstep(0.06, 0.34, abs(vUv.y - 0.5 - bend * 0.035));
+    float centerFocus = 1.0 - smoothstep(
+      0.08,
+      0.72,
+      length(vUv - vec2(0.5 - uTravelDirX * 0.04 * (1.0 - mixProgress), 0.48 + bend * 0.03))
+    );
+    float revealMask = clamp(mask + corridor * mixProgress * 0.34 + centerFocus * mixProgress * 0.24, 0.0, 1.0);
+    vec4 fromColor = sampleLayer(
+      uFromTex,
+      fromUv,
+      smearDir,
+      max(0.0, uBlurStrength * (0.56 + uMotionBlurStrength * 0.42))
+    );
+    vec4 toColor = sampleLayer(
+      uToTex,
+      toUv,
+      smearDir,
+      max(0.0, uBlurStrength * (0.42 - reveal * 0.28) + motionAmount)
+    );
+    vec4 toSharp = texture2D(uToTex, clampUv(toUv));
+    toColor = mix(fromColor, toColor, uTargetMixReady * mixProgress);
+    toColor.rgb = mix(toColor.rgb, toSharp.rgb, clamp(settleStrength * 0.76 + mixProgress * 0.22, 0.0, 1.0));
+
+    vec4 color = mix(fromColor, toColor, revealMask * uTargetMixReady);
+
+    float occlusion = edge * uOcclusionOpacity;
+    color.rgb *= 1.0 - occlusion * 0.78;
+    color.rgb += edge * vec3(1.0, 0.94, 0.84) * 0.08 * uGlassAlpha * (0.82 + mixProgress * 0.18);
+
+    float radial = smoothstep(0.92, 0.12, length(vUv - vec2(0.5, 0.44)));
+    float topGlow = smoothstep(0.92, 0.18, 1.0 - vUv.y);
+    vec3 glassTint = vec3(1.0, 0.96, 0.9);
+    color.rgb += glassTint * (0.05 * uGlassAlpha * radial + 0.03 * uGlassAlpha * topGlow) * (1.0 - settleStrength * 0.55);
+    color.rgb *= mix(0.9, 1.0, radial) * mix(0.96, 1.02, settleStrength);
+    color.rgb = mix(color.rgb, color.rgb * 1.04 + vec3(0.014, 0.01, 0.006), settleStrength * 0.32);
+
+    gl_FragColor = vec4(color.rgb, 1.0);
+  }
+`;
 
 function ensureStyles(): void {
   if (document.getElementById(STYLE_ID)) {
@@ -24,19 +163,16 @@ function ensureStyles(): void {
       pointer-events: none;
       overflow: hidden;
       transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1), visibility 180ms cubic-bezier(0.16, 1, 0.3, 1);
-      --vr-travel-blur-px: 24px;
-      --vr-travel-glass-alpha: 0.24;
-      --vr-travel-from-shift: 0%;
-      --vr-travel-to-shift: 0%;
-      --vr-travel-from-scale: 1.02;
-      --vr-travel-to-scale: 1.04;
-      --vr-travel-from-shear: 0deg;
-      --vr-travel-to-shear: 0deg;
-      --vr-travel-seam-x: 100%;
-      --vr-travel-seam-width: 18vw;
-      --vr-travel-seam-opacity: 0.24;
-      --vr-travel-occlusion-opacity: 0.18;
-      --vr-travel-to-opacity: 0;
+      --vr-travel-backdrop-blur: 28px;
+      --vr-travel-backdrop-scale: 1.03;
+      --vr-travel-backdrop-shift: 0%;
+      --vr-travel-from-backdrop-opacity: 1;
+      --vr-travel-backdrop-brightness: 0.92;
+      --vr-travel-target-backdrop-blur: 18px;
+      --vr-travel-target-backdrop-scale: 1.01;
+      --vr-travel-target-backdrop-shift: 0%;
+      --vr-travel-target-backdrop-opacity: 0;
+      --vr-travel-target-reveal-inset: 100%;
       --vr-travel-badge-opacity: 0.88;
     }
 
@@ -46,94 +182,50 @@ function ensureStyles(): void {
       pointer-events: auto;
     }
 
-    .vr-travel-transition__layer,
-    .vr-travel-transition__glass,
-    .vr-travel-transition__grain,
-    .vr-travel-transition__seam,
-    .vr-travel-transition__occlusion,
-    .vr-travel-transition__badge {
+    .vr-travel-transition__fallback,
+    .vr-travel-transition__canvas {
       position: absolute;
       inset: 0;
     }
 
-    .vr-travel-transition__layer {
+    .vr-travel-transition__fallback {
       inset: -7%;
       background-position: center;
-      background-size: cover;
       background-repeat: no-repeat;
+      background-size: cover;
       will-change: transform, filter, opacity, clip-path;
     }
 
-    .vr-travel-transition__from {
-      filter: blur(var(--vr-travel-blur-px)) saturate(0.9) brightness(0.92);
-      transform:
-        translate3d(var(--vr-travel-from-shift), 0, 0)
-        scale(var(--vr-travel-from-scale))
-        skewX(var(--vr-travel-from-shear));
+    .vr-travel-transition__fallback--from {
+      filter: blur(var(--vr-travel-backdrop-blur)) saturate(0.92) brightness(var(--vr-travel-backdrop-brightness));
+      transform: translate3d(var(--vr-travel-backdrop-shift), 0, 0) scale(var(--vr-travel-backdrop-scale));
+      opacity: var(--vr-travel-from-backdrop-opacity);
     }
 
-    .vr-travel-transition__to {
-      opacity: var(--vr-travel-to-opacity);
-      filter: blur(calc(var(--vr-travel-blur-px) * 0.56)) saturate(0.98) brightness(0.98);
-      transform:
-        translate3d(var(--vr-travel-to-shift), 0, 0)
-        scale(var(--vr-travel-to-scale))
-        skewX(var(--vr-travel-to-shear));
+    .vr-travel-transition__fallback--to {
+      filter: blur(var(--vr-travel-target-backdrop-blur)) saturate(0.98) brightness(0.98);
+      transform: translate3d(var(--vr-travel-target-backdrop-shift), 0, 0) scale(var(--vr-travel-target-backdrop-scale));
+      opacity: var(--vr-travel-target-backdrop-opacity);
     }
 
-    .vr-travel-transition__glass {
-      background:
-        radial-gradient(circle at 50% 18%, rgba(255, 246, 232, 0.16), transparent 42%),
-        linear-gradient(180deg, rgba(22, 17, 12, 0.08), rgba(22, 17, 12, 0.24));
-      backdrop-filter: blur(calc(var(--vr-travel-blur-px) * 0.32));
-      opacity: var(--vr-travel-glass-alpha);
-      mix-blend-mode: screen;
+    .vr-travel-transition[data-wipe-from="right"] .vr-travel-transition__fallback--to {
+      clip-path: inset(0 0 0 var(--vr-travel-target-reveal-inset));
     }
 
-    .vr-travel-transition__grain {
-      opacity: 0.12;
-      mix-blend-mode: soft-light;
-      background-image:
-        radial-gradient(circle at 18% 24%, rgba(255,255,255,0.4) 0, transparent 18%),
-        radial-gradient(circle at 80% 16%, rgba(255,255,255,0.32) 0, transparent 14%),
-        radial-gradient(circle at 52% 78%, rgba(255,255,255,0.18) 0, transparent 22%);
+    .vr-travel-transition[data-wipe-from="left"] .vr-travel-transition__fallback--to {
+      clip-path: inset(0 var(--vr-travel-target-reveal-inset) 0 0);
     }
 
-    .vr-travel-transition__occlusion {
-      width: var(--vr-travel-seam-width);
-      left: var(--vr-travel-seam-x);
-      transform: translateX(-50%);
-      opacity: var(--vr-travel-occlusion-opacity);
-      background:
-        linear-gradient(90deg, rgba(0,0,0,0.72), rgba(0,0,0,0.28) 42%, rgba(255,255,255,0.14) 72%, rgba(255,255,255,0));
-      filter: blur(16px);
-      mix-blend-mode: multiply;
-      will-change: transform, opacity, left;
-    }
-
-    .vr-travel-transition[data-wipe-from="right"] .vr-travel-transition__occlusion {
-      transform: translateX(-50%) scaleX(-1);
-    }
-
-    .vr-travel-transition__seam {
-      width: var(--vr-travel-seam-width);
-      left: var(--vr-travel-seam-x);
-      transform: translateX(-50%);
-      opacity: var(--vr-travel-seam-opacity);
-      background:
-        linear-gradient(90deg, rgba(255,255,255,0), rgba(255,244,230,0.72) 40%, rgba(210,169,109,0.32) 58%, rgba(255,255,255,0));
-      filter: blur(10px);
-      will-change: transform, opacity, left;
-    }
-
-    .vr-travel-transition[data-wipe-from="right"] .vr-travel-transition__seam {
-      transform: translateX(-50%) scaleX(-1);
+    .vr-travel-transition__canvas canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     .vr-travel-transition__badge {
-      inset: auto 20px 22px auto;
-      width: auto;
-      height: auto;
+      position: absolute;
+      right: 20px;
+      bottom: 22px;
       display: inline-flex;
       align-items: center;
       gap: 10px;
@@ -176,16 +268,28 @@ function ensureStyles(): void {
 
 export class TravelTransitionOverlay {
   private readonly element: HTMLDivElement;
-  private readonly fromLayer: HTMLDivElement;
-  private readonly toLayer: HTMLDivElement;
-  private readonly glassLayer: HTMLDivElement;
-  private readonly grainLayer: HTMLDivElement;
-  private readonly seamLayer: HTMLDivElement;
-  private readonly occlusionLayer: HTMLDivElement;
+  private readonly fromBackdrop: HTMLDivElement;
+  private readonly toBackdrop: HTMLDivElement;
+  private readonly canvasHost: HTMLDivElement;
   private readonly badge: HTMLDivElement;
   private readonly badgeText: HTMLSpanElement;
+  private renderer: WebGLRenderer | null = null;
+  private scene: Scene | null = null;
+  private camera: OrthographicCamera | null = null;
+  private material: ShaderMaterial | null = null;
+  private quad: Mesh | null = null;
+  private readonly resolution = new Vector2(1, 1);
   private active = false;
-  private targetImageReady = false;
+  private webglEnabled = false;
+  private targetImageLoaded = false;
+  private currentSize = { width: 0, height: 0 };
+  private clearTimer: number | null = null;
+  private fromTexture: Texture | null = null;
+  private toTexture: Texture | null = null;
+  private fromLoadToken = 0;
+  private toLoadToken = 0;
+  private currentFromUrl?: string;
+  private currentToUrl?: string;
 
   constructor() {
     ensureStyles();
@@ -194,41 +298,25 @@ export class TravelTransitionOverlay {
     this.element.className = 'vr-travel-transition';
     this.element.dataset.wipeFrom = 'right';
 
-    this.fromLayer = document.createElement('div');
-    this.fromLayer.className = 'vr-travel-transition__layer vr-travel-transition__from';
+    this.fromBackdrop = document.createElement('div');
+    this.fromBackdrop.className = 'vr-travel-transition__fallback vr-travel-transition__fallback--from';
 
-    this.toLayer = document.createElement('div');
-    this.toLayer.className = 'vr-travel-transition__layer vr-travel-transition__to';
+    this.toBackdrop = document.createElement('div');
+    this.toBackdrop.className = 'vr-travel-transition__fallback vr-travel-transition__fallback--to';
 
-    this.glassLayer = document.createElement('div');
-    this.glassLayer.className = 'vr-travel-transition__glass';
-
-    this.grainLayer = document.createElement('div');
-    this.grainLayer.className = 'vr-travel-transition__grain';
-
-    this.occlusionLayer = document.createElement('div');
-    this.occlusionLayer.className = 'vr-travel-transition__occlusion';
-
-    this.seamLayer = document.createElement('div');
-    this.seamLayer.className = 'vr-travel-transition__seam';
+    this.canvasHost = document.createElement('div');
+    this.canvasHost.className = 'vr-travel-transition__canvas';
 
     this.badge = document.createElement('div');
     this.badge.className = 'vr-travel-transition__badge';
     const dot = document.createElement('span');
     dot.className = 'vr-travel-transition__badge-dot';
     this.badgeText = document.createElement('span');
-    this.badgeText.textContent = 'Moving to next waypoint';
+    this.badgeText.textContent = 'Traveling to next waypoint';
     this.badge.append(dot, this.badgeText);
 
-    this.element.append(
-      this.fromLayer,
-      this.toLayer,
-      this.glassLayer,
-      this.grainLayer,
-      this.occlusionLayer,
-      this.seamLayer,
-      this.badge,
-    );
+    this.element.append(this.fromBackdrop, this.toBackdrop, this.canvasHost, this.badge);
+    this.initWebgl();
   }
 
   getElement(): HTMLElement {
@@ -236,17 +324,26 @@ export class TravelTransitionOverlay {
   }
 
   start(args: TravelTransitionOverlayStartArgs): void {
+    if (this.clearTimer !== null) {
+      window.clearTimeout(this.clearTimer);
+      this.clearTimer = null;
+    }
     this.active = true;
-    this.targetImageReady = Boolean(args.targetImage);
-    this.setImage(this.fromLayer, args.fromImage);
-    this.setImage(this.toLayer, args.targetImage);
-    this.badgeText.textContent = 'Moving to next waypoint';
+    this.targetImageLoaded = false;
+    this.currentFromUrl = args.fromImage;
+    this.currentToUrl = args.targetImage;
+    this.setBackdropImage(this.fromBackdrop, args.fromImage);
+    this.setBackdropImage(this.toBackdrop, args.targetImage);
     this.element.classList.add('is-active');
+    this.badgeText.textContent = 'Turning into travel line';
+    void this.loadTexture('from', args.fromImage);
+    void this.loadTexture('to', args.targetImage);
   }
 
   setTargetImage(imageUrl?: string): void {
-    this.targetImageReady = Boolean(imageUrl);
-    this.setImage(this.toLayer, imageUrl);
+    this.currentToUrl = imageUrl;
+    this.setBackdropImage(this.toBackdrop, imageUrl);
+    void this.loadTexture('to', imageUrl);
   }
 
   render(frame: SceneTransitionFrame): void {
@@ -254,50 +351,44 @@ export class TravelTransitionOverlay {
       return;
     }
 
-    this.element.dataset.stage = frame.stage;
+    this.updateFallbackMotion(frame);
     this.element.dataset.wipeFrom = frame.wipeFrom;
-    this.element.style.setProperty('--vr-travel-blur-px', `${Math.max(frame.blurPx, 0)}px`);
-    this.element.style.setProperty('--vr-travel-glass-alpha', String(frame.glassAlpha));
-    this.element.style.setProperty('--vr-travel-from-shift', `${frame.fromShiftPercent}%`);
-    this.element.style.setProperty('--vr-travel-to-shift', `${frame.toShiftPercent}%`);
-    this.element.style.setProperty('--vr-travel-from-scale', String(frame.zoomScale));
-    this.element.style.setProperty(
-      '--vr-travel-to-scale',
-      String(Number((1.018 + (1 - frame.revealProgress) * 0.016).toFixed(4))),
-    );
-    this.element.style.setProperty('--vr-travel-from-shear', `${frame.shearDeg * 0.45}deg`);
-    this.element.style.setProperty('--vr-travel-to-shear', `${frame.shearDeg}deg`);
-    this.element.style.setProperty(
-      '--vr-travel-seam-width',
-      `${Math.max(12, 10 + frame.distortionStrength * 180)}vw`,
-    );
-    this.element.style.setProperty('--vr-travel-seam-opacity', String(0.12 + frame.motionBlurStrength));
-    this.element.style.setProperty('--vr-travel-occlusion-opacity', String(frame.occlusionOpacity));
-    this.element.style.setProperty(
-      '--vr-travel-badge-opacity',
-      frame.stage === 'settle' ? '0.42' : '0.88',
-    );
-    this.element.style.setProperty(
-      '--vr-travel-to-opacity',
-      this.targetImageReady ? String(Math.max(frame.revealProgress, 0.001)) : '0',
-    );
     this.badgeText.textContent = frame.stage === 'turn-in'
       ? 'Turning into travel line'
       : frame.stage === 'travel'
         ? 'Traveling through scene shell'
         : 'Settling on target scene';
+    this.element.style.setProperty(
+      '--vr-travel-badge-opacity',
+      frame.stage === 'settle' ? '0.46' : '0.88',
+    );
 
-    const reveal = clamp(frame.revealProgress, 0, 1);
-    const seamPercent = frame.wipeFrom === 'right'
-      ? 100 - reveal * 100
-      : reveal * 100;
-    this.element.style.setProperty('--vr-travel-seam-x', `${seamPercent}%`);
-
-    if (frame.wipeFrom === 'right') {
-      this.toLayer.style.clipPath = `inset(0 0 0 ${Math.max(0, (1 - reveal) * 100)}%)`;
-    } else {
-      this.toLayer.style.clipPath = `inset(0 ${Math.max(0, (1 - reveal) * 100)}% 0 0)`;
+    if (!this.webglEnabled || !this.renderer || !this.material) {
+      return;
     }
+
+    this.ensureRendererSize();
+
+    const uniforms = this.material.uniforms;
+    uniforms.uProgress.value = frame.progress;
+    uniforms.uRevealProgress.value = frame.revealProgress;
+    uniforms.uTargetMixProgress.value = frame.targetMixProgress;
+    uniforms.uTravelDirX.value = frame.travelDirX;
+    uniforms.uCurveStrength.value = frame.curveStrength;
+    uniforms.uWipeSoftness.value = frame.wipeSoftness;
+    uniforms.uDistortionStrength.value = frame.distortionStrength;
+    uniforms.uBlurStrength.value = frame.blurPx;
+    uniforms.uMotionBlurStrength.value = frame.motionBlurStrength;
+    uniforms.uGlassAlpha.value = frame.glassAlpha;
+    uniforms.uOcclusionOpacity.value = frame.occlusionOpacity;
+    uniforms.uZoomScale.value = frame.zoomScale;
+    uniforms.uFromShift.value = frame.fromShiftPercent;
+    uniforms.uToShift.value = frame.toShiftPercent;
+    uniforms.uShearRad.value = degreesToRadians(frame.shearDeg);
+    uniforms.uSettleStrength.value = frame.settleStrength;
+    uniforms.uTargetMixReady.value = frame.targetReady && this.targetImageLoaded ? 1 : 0;
+
+    this.renderer.render(this.scene!, this.camera!);
   }
 
   hide(): void {
@@ -306,25 +397,236 @@ export class TravelTransitionOverlay {
     }
     this.active = false;
     this.element.classList.remove('is-active');
-    window.setTimeout(() => {
+    this.clearTimer = window.setTimeout(() => {
       if (this.active) {
         return;
       }
-      this.setImage(this.fromLayer, undefined);
-      this.setImage(this.toLayer, undefined);
-      this.toLayer.style.clipPath = 'inset(0 100% 0 0)';
-    }, 220);
+      this.setBackdropImage(this.fromBackdrop, undefined);
+      this.setBackdropImage(this.toBackdrop, undefined);
+      this.badgeText.textContent = 'Traveling to next waypoint';
+      this.targetImageLoaded = false;
+      this.currentFromUrl = undefined;
+      this.currentToUrl = undefined;
+    }, CLEAR_DELAY_MS);
   }
 
   isActive(): boolean {
     return this.active;
   }
 
-  private setImage(element: HTMLElement, imageUrl?: string): void {
+  private initWebgl(): void {
+    try {
+      this.renderer = new WebGLRenderer({
+        antialias: false,
+        alpha: true,
+        premultipliedAlpha: true,
+      });
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      this.renderer.setClearColor(0x000000, 0);
+
+      this.scene = new Scene();
+      this.camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      this.material = new ShaderMaterial({
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        uniforms: {
+          uFromTex: { value: null },
+          uToTex: { value: null },
+          uResolution: { value: this.resolution },
+          uRevealProgress: { value: 0 },
+          uTargetMixProgress: { value: 0 },
+          uProgress: { value: 0 },
+          uTravelDirX: { value: 1 },
+          uCurveStrength: { value: 0 },
+          uWipeSoftness: { value: 0.16 },
+          uDistortionStrength: { value: 0.22 },
+          uBlurStrength: { value: 24 },
+          uMotionBlurStrength: { value: 0.1 },
+          uGlassAlpha: { value: 0.22 },
+          uOcclusionOpacity: { value: 0.18 },
+          uZoomScale: { value: 1.02 },
+          uFromShift: { value: 0 },
+          uToShift: { value: 0 },
+          uShearRad: { value: 0 },
+          uSettleStrength: { value: 0 },
+          uTargetMixReady: { value: 0 },
+        },
+        vertexShader: VERTEX_SHADER,
+        fragmentShader: FRAGMENT_SHADER,
+      });
+      const geometry = new PlaneGeometry(2, 2);
+      this.quad = new Mesh(geometry, this.material);
+      this.scene.add(this.quad);
+
+      this.canvasHost.appendChild(this.renderer.domElement);
+      this.webglEnabled = true;
+      this.ensureRendererSize();
+    } catch {
+      this.webglEnabled = false;
+      this.renderer = null;
+      this.scene = null;
+      this.camera = null;
+      this.material = null;
+      this.quad = null;
+    }
+  }
+
+  private ensureRendererSize(): void {
+    if (!this.renderer) {
+      return;
+    }
+    const width = Math.max(window.innerWidth, 1);
+    const height = Math.max(window.innerHeight, 1);
+    if (this.currentSize.width === width && this.currentSize.height === height) {
+      return;
+    }
+    this.currentSize = { width, height };
+    this.resolution.set(width, height);
+    this.renderer.setSize(width, height, false);
+  }
+
+  private async loadTexture(slot: TextureSlot, imageUrl?: string): Promise<void> {
+    const tokenKey = slot === 'from' ? 'fromLoadToken' : 'toLoadToken';
+    const urlKey = slot === 'from' ? 'currentFromUrl' : 'currentToUrl';
+    const nextToken = this[tokenKey] + 1;
+    this[tokenKey] = nextToken;
+
+    if (!imageUrl) {
+      this.applyTexture(slot, null, undefined, nextToken);
+      return;
+    }
+    if (this[urlKey] === imageUrl && this.getTexture(slot)) {
+      if (slot === 'to') {
+        this.targetImageLoaded = true;
+      }
+      return;
+    }
+
+    try {
+      const image = await loadImage(imageUrl);
+      const texture = createTexture(image);
+      this.applyTexture(slot, texture, imageUrl, nextToken);
+      if (slot === 'to') {
+        this.targetImageLoaded = true;
+      }
+    } catch {
+      if (slot === 'to') {
+        this.targetImageLoaded = false;
+      }
+      this.applyTexture(slot, null, imageUrl, nextToken);
+    }
+  }
+
+  private applyTexture(
+    slot: TextureSlot,
+    nextTexture: Texture | null,
+    imageUrl: string | undefined,
+    token: number,
+  ): void {
+    const tokenKey = slot === 'from' ? this.fromLoadToken : this.toLoadToken;
+    if (token !== tokenKey) {
+      nextTexture?.dispose();
+      return;
+    }
+
+    const currentTexture = this.getTexture(slot);
+    if (currentTexture && currentTexture !== nextTexture) {
+      currentTexture.dispose();
+    }
+
+    if (slot === 'from') {
+      this.fromTexture = nextTexture;
+      this.currentFromUrl = imageUrl;
+      this.setBackdropImage(this.fromBackdrop, imageUrl);
+      if (this.material) {
+        this.material.uniforms.uFromTex.value = nextTexture;
+        if (!this.toTexture) {
+          this.material.uniforms.uToTex.value = nextTexture;
+        }
+      }
+      return;
+    }
+
+    this.toTexture = nextTexture;
+    this.currentToUrl = imageUrl;
+    this.setBackdropImage(this.toBackdrop, imageUrl);
+    if (this.material) {
+      this.material.uniforms.uToTex.value = nextTexture ?? this.fromTexture;
+    }
+  }
+
+  private getTexture(slot: TextureSlot): Texture | null {
+    return slot === 'from' ? this.fromTexture : this.toTexture;
+  }
+
+  private updateFallbackMotion(frame: SceneTransitionFrame): void {
+    const fallbackBlur = frame.targetReady && this.targetImageLoaded
+      ? Math.max(frame.blurPx * 0.72, 6)
+      : Math.max(frame.blurPx * 1.08, 16);
+    const targetBackdropOpacity = frame.targetReady && this.targetImageLoaded
+      ? Math.min(Math.max(frame.targetMixProgress * 0.88, frame.stage === 'settle' ? 0.68 : 0), 0.94)
+      : 0;
+    this.element.style.setProperty('--vr-travel-backdrop-blur', `${fallbackBlur}px`);
+    this.element.style.setProperty('--vr-travel-backdrop-scale', String(frame.zoomScale));
+    this.element.style.setProperty('--vr-travel-backdrop-shift', `${frame.fromShiftPercent}%`);
+    this.element.style.setProperty(
+      '--vr-travel-from-backdrop-opacity',
+      String(targetBackdropOpacity > 0 ? Math.max(0.48, 1 - frame.targetMixProgress * 0.52) : 1),
+    );
+    this.element.style.setProperty(
+      '--vr-travel-backdrop-brightness',
+      frame.stage === 'settle' ? '0.98' : '0.92',
+    );
+    this.element.style.setProperty(
+      '--vr-travel-target-backdrop-blur',
+      `${Math.max(frame.blurPx * (0.58 - frame.settleStrength * 0.22), 3)}px`,
+    );
+    this.element.style.setProperty(
+      '--vr-travel-target-backdrop-scale',
+      String(Number(Math.max(1, frame.zoomScale - 0.01).toFixed(4))),
+    );
+    this.element.style.setProperty('--vr-travel-target-backdrop-shift', `${frame.toShiftPercent}%`);
+    this.element.style.setProperty('--vr-travel-target-backdrop-opacity', String(targetBackdropOpacity));
+    this.element.style.setProperty(
+      '--vr-travel-target-reveal-inset',
+      `${Math.max(0, (1 - frame.revealProgress) * 100)}%`,
+    );
+  }
+
+  private setBackdropImage(element: HTMLElement, imageUrl?: string): void {
     element.style.backgroundImage = imageUrl ? `url("${imageUrl}")` : '';
   }
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+function createTexture(image: HTMLImageElement): Texture {
+  const texture = new Texture(image);
+  texture.colorSpace = SRGBColorSpace;
+  texture.wrapS = ClampToEdgeWrapping;
+  texture.wrapT = ClampToEdgeWrapping;
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function loadImage(imageUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.decoding = 'async';
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`image load failed: ${imageUrl}`));
+    image.src = imageUrl;
+    if (typeof image.decode === 'function') {
+      image.decode().then(() => resolve(image)).catch(() => {
+        // onload will still resolve for browsers that reject decode() early
+      });
+    }
+  });
+}
+
+function degreesToRadians(value: number): number {
+  return (value * Math.PI) / 180;
 }

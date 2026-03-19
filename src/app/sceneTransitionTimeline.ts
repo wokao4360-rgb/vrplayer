@@ -3,11 +3,16 @@ import type { SceneTransitionPlan } from './sceneTransitionMath.ts';
 export type SceneTransitionStage = 'turn-in' | 'travel' | 'settle';
 
 export type SceneTransitionFrame = {
+  progress: number;
+  stageProgress: number;
+  targetReady: boolean;
   stage: SceneTransitionStage;
   displayWorldYaw: number;
   travelDirX: -1 | 1;
   wipeFrom: 'left' | 'right';
   revealProgress: number;
+  targetMixProgress: number;
+  settleStrength: number;
   wipeSoftness: number;
   distortionStrength: number;
   blurPx: number;
@@ -63,11 +68,16 @@ export function buildSceneTransitionFrame({
     const displayWorldYaw = interpolateAngle(currentWorldYaw, turnInEndYaw, localT);
     const blurPx = mix(BLUR_STRENGTH, BLUR_STRENGTH * 0.82, localT);
     return {
+      progress: round4(normalizedProgress),
+      stageProgress: round4(localT),
+      targetReady,
       stage: 'turn-in',
       displayWorldYaw,
       travelDirX: plan.travelDirX,
       wipeFrom: plan.wipeFrom,
       revealProgress: 0,
+      targetMixProgress: 0,
+      settleStrength: 0,
       wipeSoftness: WIPE_SOFTNESS,
       distortionStrength: DISTORTION_STRENGTH * 0.55,
       blurPx: round2(blurPx),
@@ -91,6 +101,9 @@ export function buildSceneTransitionFrame({
       ? clamp((easedTravel - 0.08) / 0.82, 0, 1)
       : 0;
     const midBell = bellCurve(travelT);
+    const targetMixProgress = targetReady
+      ? clamp(Math.max(revealProgress + 0.16, easedTravel * 0.86 + midBell * 0.14), 0, 0.96)
+      : 0;
     const blurBase = targetReady
       ? mix(BLUR_STRENGTH * 0.82, BLUR_STRENGTH * 0.2, revealProgress)
       : BLUR_STRENGTH * 0.72;
@@ -98,11 +111,16 @@ export function buildSceneTransitionFrame({
     const distortionStrength =
       DISTORTION_STRENGTH * (0.82 + 0.72 * midBell + plan.curveStrength * 0.3);
     return {
+      progress: round4(normalizedProgress),
+      stageProgress: round4(easedTravel),
+      targetReady,
       stage: 'travel',
       displayWorldYaw,
       travelDirX: plan.travelDirX,
       wipeFrom: plan.wipeFrom,
       revealProgress: round3(revealProgress),
+      targetMixProgress: round3(targetMixProgress),
+      settleStrength: 0,
       wipeSoftness: round3(WIPE_SOFTNESS + plan.curveStrength * 0.06),
       distortionStrength: round3(distortionStrength),
       blurPx: round2(blurPx),
@@ -122,12 +140,18 @@ export function buildSceneTransitionFrame({
   const settleStartYaw = interpolateAngle(turnInEndYaw, targetWorldYaw, 1);
   const blurPx = targetReady ? mix(BLUR_STRENGTH * 0.18, 0, settleT) : BLUR_STRENGTH * 0.7;
   const revealProgress = targetReady ? 1 : 0;
+  const targetMixProgress = targetReady ? 1 : 0;
   return {
+    progress: round4(normalizedProgress),
+    stageProgress: round4(settleT),
+    targetReady,
     stage: 'settle',
     displayWorldYaw: interpolateAngle(settleStartYaw, targetWorldYaw, settleT),
     travelDirX: plan.travelDirX,
     wipeFrom: plan.wipeFrom,
     revealProgress,
+    targetMixProgress,
+    settleStrength: round3(targetReady ? settleT : 0),
     wipeSoftness: round3(WIPE_SOFTNESS + plan.curveStrength * 0.04),
     distortionStrength: round3(DISTORTION_STRENGTH * (1 - settleT * 0.72)),
     blurPx: round2(blurPx),

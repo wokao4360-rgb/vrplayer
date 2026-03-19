@@ -1,5 +1,6 @@
 ﻿import { PerspectiveCamera, Vector3 } from '../vendor/three-core';
 import type { SceneHotspot } from '../types/config';
+import type { SceneEnterMeta, SceneEnterView } from '../app/sceneTransitionTypes.ts';
 import type { PanoViewer } from '../viewer/PanoViewer';
 import { yawPitchToScreen } from '../viewer/spatialProjection';
 import { createHotspotSkin } from './hotspots/HotspotSkins.ts';
@@ -10,11 +11,8 @@ import { onSceneFocus, type SceneFocusEvent } from './sceneLinkBus';
 type HotspotsOptions = {
   onEnterScene?: (
     sceneId: string,
-    view?: {
-      yaw?: number;
-      pitch?: number;
-      fov?: number;
-    },
+    view?: SceneEnterView,
+    meta?: SceneEnterMeta,
   ) => void;
   resolveSceneName?: (sceneId: string) => string | undefined;
   museumId?: string; // 用于匹配 hover 事件
@@ -380,10 +378,19 @@ export class Hotspots {
           const targetSceneId = (data as any).targetSceneId as string | undefined;
           if (targetSceneId && this.options.onEnterScene) {
             showToast(`进入 ${this.options.resolveSceneName?.(targetSceneId) || targetSceneId}`, 1000);
+            const rect = instance.getElement().getBoundingClientRect();
+            const hotspotScreenX =
+              window.innerWidth > 0
+                ? Math.max(0, Math.min(1, (rect.left + rect.width * 0.5) / window.innerWidth))
+                : undefined;
             this.options.onEnterScene(targetSceneId, {
               yaw: h.target?.yaw,
               pitch: h.target?.pitch,
               fov: h.target?.fov,
+            }, {
+              source: 'hotspot',
+              hotspotScreenX,
+              hotspotId: h.id,
             });
             return;
           }

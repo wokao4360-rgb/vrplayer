@@ -184,6 +184,7 @@ export class PanoViewer {
 
   // 拾取模式
   private pickMode = false;
+  private interactionLocked = false;
   private pickStartX = 0;
   private pickStartY = 0;
   private pickStartTime = 0;
@@ -293,6 +294,7 @@ export class PanoViewer {
   }
 
   private onPointerDown(e: MouseEvent): void {
+    if (this.interactionLocked) return;
     this.isDragging = true;
     this.lastMouseX = e.clientX;
     this.lastMouseY = e.clientY;
@@ -301,6 +303,7 @@ export class PanoViewer {
   }
 
   private onPointerMove(e: MouseEvent): void {
+    if (this.interactionLocked) return;
     if (!this.isDragging) return;
     
     const deltaX = e.clientX - this.lastMouseX;
@@ -313,6 +316,10 @@ export class PanoViewer {
   }
 
   private onPointerUp(): void {
+    if (this.interactionLocked) {
+      this.isDragging = false;
+      return;
+    }
     this.isDragging = false;
   }
 
@@ -322,6 +329,7 @@ export class PanoViewer {
   private isPinching = false;
 
   private onTouchStart(e: TouchEvent): void {
+    if (this.interactionLocked) return;
     if (e.touches.length === 1) {
       this.isDragging = true;
       this.touchStartX = e.touches[0].clientX;
@@ -343,6 +351,7 @@ export class PanoViewer {
 
   private onTouchMove(e: TouchEvent): void {
     e.preventDefault();
+    if (this.interactionLocked) return;
 
     // 单指拖拽控制（VR模式下也允许）
     if (e.touches.length === 1 && this.isDragging) {
@@ -367,12 +376,19 @@ export class PanoViewer {
   }
 
   private onTouchEnd(): void {
+    if (this.interactionLocked) {
+      this.isDragging = false;
+      this.isPinching = false;
+      this.lastTouchDistance = 0;
+      return;
+    }
     this.isDragging = false;
     this.isPinching = false;
   }
 
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
+    if (this.interactionLocked) return;
     const newFov = this.fov + e.deltaY * 0.1;
     this.setFovInternal(newFov);
     
@@ -1073,6 +1089,15 @@ export class PanoViewer {
       `activatedHighFaces=${activatedHighFaces}\n` +
       `canvas=${canvasSize} zMax=${maxLevel} levels=${levels} highReady=${highReady}\n` +
       `lowReady=${this.tilesLowReady}`;
+  }
+
+  setInteractionLocked(locked: boolean): void {
+    this.interactionLocked = locked;
+    if (locked) {
+      this.isDragging = false;
+      this.isPinching = false;
+      this.lastTouchDistance = 0;
+    }
   }
 
   private renderFrame(dtMs: number): void {

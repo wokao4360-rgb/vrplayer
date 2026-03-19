@@ -1,5 +1,5 @@
 import type { Scene } from '../types/config';
-import { navigateToScene } from '../utils/router';
+import type { SceneEnterMeta } from '../app/sceneTransitionTypes.ts';
 import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
 import { DEFAULT_COVER_DATA_URI } from './placeholders';
 import { toProxiedImageUrl } from '../utils/externalImage';
@@ -9,13 +9,13 @@ type SceneGuideDrawerOptions = {
   museumId: string;
   currentSceneId: string;
   scenes: Scene[];
+  onSceneEnter?: (sceneId: string, meta?: SceneEnterMeta) => void;
   onClose?: () => void;
 };
 
 export class SceneGuideDrawer {
   private element: HTMLElement;
   private isOpen = false;
-  private museumId: string;
   private currentSceneId: string;
   private scenes: Scene[];
   private filteredScenes: Scene[];
@@ -26,13 +26,14 @@ export class SceneGuideDrawer {
   private searchInputEl: HTMLInputElement | null = null;
   private hoveredSceneId: string | null = null;
   private selectedSceneId: string | null = null; // 选中的场景ID（框4需要先选中再进入）
+  private onSceneEnter?: (sceneId: string, meta?: SceneEnterMeta) => void;
   private onClose?: () => void;
 
   constructor(options: SceneGuideDrawerOptions) {
-    this.museumId = options.museumId;
     this.currentSceneId = options.currentSceneId;
     this.scenes = options.scenes;
     this.filteredScenes = options.scenes;
+    this.onSceneEnter = options.onSceneEnter;
     this.onClose = options.onClose;
 
     this.element = document.createElement('div');
@@ -119,7 +120,7 @@ export class SceneGuideDrawer {
       // 框4：只使用选中的场景作为进入来源，如果没有选中则使用当前场景
       const targetSceneId = this.selectedSceneId || this.currentSceneId;
       if (targetSceneId && targetSceneId !== this.currentSceneId) {
-        navigateToScene(this.museumId, targetSceneId);
+        this.onSceneEnter?.(targetSceneId, { source: 'guide-drawer' });
         this.close();
       } else if (targetSceneId === this.currentSceneId) {
         // 如果选中的就是当前场景，直接关闭抽屉即可

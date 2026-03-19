@@ -1,5 +1,6 @@
 import type { Museum, Scene } from '../types/config';
 import type { PanoViewer } from '../viewer/PanoViewer';
+import type { SceneEnterMeta, SceneEnterView } from './sceneTransitionTypes.ts';
 import type { BottomDock } from '../ui/BottomDock';
 import type { TopModeTabs, AppViewMode } from '../ui/TopModeTabs';
 import type { Hotspots } from '../ui/Hotspots';
@@ -90,11 +91,8 @@ type SceneUiRuntimeOptions = {
   onModeChange: (mode: AppViewMode) => void;
   onEnterScene: (
     sceneId: string,
-    view?: {
-      yaw?: number;
-      pitch?: number;
-      fov?: number;
-    },
+    view?: SceneEnterView,
+    meta?: SceneEnterMeta,
   ) => void;
   onOpenInfo: () => void;
   onOpenSettings: () => void;
@@ -252,8 +250,8 @@ export class SceneUiRuntime {
           museumId: this.options.museum.id,
           currentSceneId: this.options.scene.id,
           scenes: this.options.museum.scenes,
-          onSceneClick: (sceneId) => {
-            this.options.onEnterScene(sceneId);
+          onSceneClick: (sceneId, meta) => {
+            this.options.onEnterScene(sceneId, undefined, meta);
           },
           onMoreClick: () => {
             void this.openSceneGuideDrawer();
@@ -390,6 +388,9 @@ export class SceneUiRuntime {
         museumId: this.options.museum.id,
         currentSceneId: this.options.scene.id,
         scenes: this.options.museum.scenes,
+        onSceneEnter: (sceneId, meta) => {
+          this.options.onEnterScene(sceneId, undefined, meta);
+        },
         onClose: () => {
           // no-op
         },

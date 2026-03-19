@@ -516,6 +516,8 @@ export class MuseumShellChrome {
       createGrain(),
       transitionContent,
     );
+    this.transitionLayer.hidden = true;
+    this.transitionLayer.setAttribute('aria-hidden', 'true');
 
     this.element.append(this.coverLayer, this.transitionLayer);
   }
@@ -546,57 +548,33 @@ export class MuseumShellChrome {
     this.coverLayer.classList.remove('is-leaving');
   }
 
+  hideCover(): void {
+    this.coverLayer.classList.remove('is-active', 'is-interactive', 'is-leaving');
+  }
+
   showEnterPreloading(model: MuseumShellTransitionViewModel): void {
-    this.setTransitionModel(model, '即将进入首个场景');
-    this.transitionLayer.dataset.stage = 'enter-preloading';
-    this.transitionLayer.classList.add('is-active', 'is-interactive');
-    this.transitionLayer.classList.remove('is-leaving');
+    void model;
   }
 
   startSceneTransition(model: MuseumShellTransitionViewModel): void {
-    this.setTransitionModel(model, 'Scene handoff');
-    this.transitionLayer.dataset.stage = 'transition';
-    this.transitionLayer.classList.add('is-active', 'is-interactive');
-    this.transitionLayer.classList.remove('is-leaving');
+    void model;
   }
 
   showErrorFallback(model: MuseumShellTransitionViewModel): void {
-    this.setTransitionModel(model, '载入受阻');
-    this.transitionLayer.dataset.stage = 'error';
-    this.transitionLayer.classList.add('is-active', 'is-interactive');
-    this.transitionLayer.classList.remove('is-leaving');
+    void model;
   }
 
   markPreviewReady(options: MuseumShellPreviewReadyOptions = {}): void {
-    if (options.previewImage) {
-      this.transitionPreview.style.backgroundImage = `url("${options.previewImage}")`;
-    }
-    if (options.progressLabel) {
-      this.transitionProgressLabel.textContent = options.progressLabel;
-    }
-    if (options.accentLabel) {
-      this.transitionAccent.textContent = options.accentLabel;
-    }
-    this.transitionLayer.dataset.stage = 'preview-ready';
+    void options;
   }
 
   markSharpening(progressLabel = '低清已接管，正在逐步恢复清晰'): void {
-    this.transitionLayer.dataset.stage = 'sharpening';
-    this.transitionProgressLabel.textContent = progressLabel;
+    void progressLabel;
   }
 
   completeTransition(): void {
-    this.coverLayer.classList.remove('is-active', 'is-interactive');
-    this.coverLayer.classList.add('is-leaving');
-    this.transitionLayer.classList.remove('is-active', 'is-interactive');
-    this.transitionLayer.classList.add('is-leaving');
-    window.setTimeout(() => {
-      this.coverLayer.classList.remove('is-leaving');
-      this.transitionLayer.classList.remove('is-leaving');
-      this.transitionLayer.dataset.stage = 'transition';
-      this.transitionSnapshot.style.backgroundImage = '';
-      this.transitionPreview.style.backgroundImage = '';
-    }, 420);
+    this.transitionSnapshot.style.backgroundImage = '';
+    this.transitionPreview.style.backgroundImage = '';
   }
 
   isCoverVisible(): boolean {

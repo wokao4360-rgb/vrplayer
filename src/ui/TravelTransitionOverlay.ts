@@ -76,11 +76,11 @@ const FRAGMENT_SHADER = `
   vec4 sampleLayer(sampler2D tex, vec2 uv, vec2 dir, float blurPx) {
     vec2 px = 1.0 / max(uResolution, vec2(1.0));
     vec2 delta = dir * blurPx * px;
-    vec4 color = texture2D(tex, clampUv(uv)) * 0.34;
-    color += texture2D(tex, clampUv(uv + delta * 0.45)) * 0.23;
-    color += texture2D(tex, clampUv(uv - delta * 0.45)) * 0.23;
-    color += texture2D(tex, clampUv(uv + delta * 0.9)) * 0.1;
-    color += texture2D(tex, clampUv(uv - delta * 0.9)) * 0.1;
+    vec4 color = texture2D(tex, clampUv(uv)) * 0.42;
+    color += texture2D(tex, clampUv(uv + delta * 0.3)) * 0.24;
+    color += texture2D(tex, clampUv(uv + delta * 0.72)) * 0.18;
+    color += texture2D(tex, clampUv(uv + delta * 1.08)) * 0.1;
+    color += texture2D(tex, clampUv(uv - delta * 0.2)) * 0.06;
     return color;
   }
 
@@ -139,7 +139,26 @@ const FRAGMENT_SHADER = `
       smearDir,
       max(14.0, uBlurStrength * (0.92 + uFromEdgeMix * 0.48))
     );
-    vec4 sourceBase = mix(frostedFrom, fromColor, clamp(sourceMask, 0.0, 1.0));
+    vec4 abstractFrom = sampleLayer(
+      uFromTex,
+      coverUv(vUv, uZoomScale + 0.22 + uFromEdgeMix * 0.06, uFromShift * 1.45, uShearRad * 0.12),
+      smearDir,
+      max(18.0, uBlurStrength * (1.08 + uFromEdgeMix * 0.48))
+    );
+    float centerSuppression = (1.0 - smoothstep(
+      0.14,
+      0.4,
+      length(vUv - vec2(0.5 - uTravelDirX * 0.02 * (1.0 - mixProgress), 0.5 + bend * 0.012))
+    )) * uFromEdgeMix;
+    vec4 sourceBase = mix(frostedFrom, fromColor, clamp(sourceMask * 0.72, 0.0, 1.0));
+    sourceBase = mix(sourceBase, abstractFrom, centerSuppression * 0.88);
+    float sourceLuma = dot(sourceBase.rgb, vec3(0.299, 0.587, 0.114));
+    sourceBase.rgb = mix(
+      sourceBase.rgb,
+      vec3(sourceLuma) * vec3(1.0, 0.975, 0.94),
+      centerSuppression * 0.24
+    );
+    sourceBase.rgb *= mix(1.0, 0.9, centerSuppression * 0.4);
 
     vec4 toBlur = sampleLayer(
       uToTex,
@@ -151,13 +170,13 @@ const FRAGMENT_SHADER = `
     vec4 toMain = mix(
       toBlur,
       toSharp,
-      clamp(0.26 + mixProgress * 0.74 + settleStrength * 0.16, 0.0, 1.0)
+      clamp(0.34 + mixProgress * 0.82 + settleStrength * 0.12, 0.0, 1.0)
     );
 
     float targetPresence = clamp(
-      mask * (0.34 + mixProgress * 0.38) +
-      corridor * (0.08 + uTargetFocus * 0.18) +
-      centerFocus * uTargetFocus,
+      mask * (0.42 + mixProgress * 0.42) +
+      corridor * (0.1 + uTargetFocus * 0.2) +
+      centerFocus * (0.16 + uTargetFocus * 0.42),
       0.0,
       1.0
     ) * uTargetMixReady;

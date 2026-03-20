@@ -139,6 +139,27 @@ test('cover-driven transition demotes source image to edge residue once target i
   assert.ok(frame.targetFocus > 0.6);
 });
 
+test('cover-driven turn-in already suppresses source central ownership before reveal starts', () => {
+  const plan = computeSceneTransitionPlan({
+    currentWorldYaw: 0,
+    targetWorldYaw: 24,
+  });
+
+  const frame = buildSceneTransitionFrame({
+    currentWorldYaw: 0,
+    targetWorldYaw: 24,
+    plan,
+    progress: TURN_IN_RATIO * 0.45,
+    targetReady: false,
+    sourceKind: 'cover',
+  });
+
+  assert.equal(frame.stage, 'turn-in');
+  assert.ok(frame.fromOpacity < 0.25);
+  assert.ok(frame.fromEdgeMix >= 0.97);
+  assert.ok(frame.targetFocus >= 0.14);
+});
+
 test('fov pulse contracts first then rebounds during travel before returning to zero', () => {
   const plan = computeSceneTransitionPlan({
     currentWorldYaw: 0,

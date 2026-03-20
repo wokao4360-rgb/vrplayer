@@ -76,6 +76,7 @@ import {
   queueLatestTransitionIntent,
   consumeQueuedTransitionIntent,
 } from './app/sceneTransitionMath';
+import { resolveSceneTransitionAssets } from './app/sceneTransitionAssets';
 import './ui/uiRefresh.css';
 if (__VR_DEBUG__) {
   void Promise.all([import('./utils/debugHelper'), import('./ui/interactionBus')])
@@ -997,17 +998,20 @@ class App {
     const previewUrl =
       prewarmedPreviewUrl ||
       (resolveAssetUrl(shellScene.preview.url, AssetType.PANO) || shellScene.preview.url);
-    const transitionPreviewImage = previewAlreadyReady ? previewUrl : undefined;
     const coverWasVisible = this.museumShellChrome?.isCoverVisible() === true;
     const previousScene = previousContext?.scene ?? null;
     const previousWorldView = previousContext?.worldView ?? targetView;
     const resolvedCoverHeroUrl =
       resolveAssetUrl(museumShellManifest.cover.heroImage, AssetType.COVER) || museumShellManifest.cover.heroImage;
-    const fromTransitionImage = coverWasVisible
-      ? (transitionPreviewImage ||
-          this.museumShellPreloader.getCoverImageUrl(resolvedCoverHeroUrl) ||
-          resolvedCoverHeroUrl)
-      : (this.captureViewerSnapshot() || this.resolveScenePreviewAsset(previousScene ?? scene));
+    const transitionAssets = resolveSceneTransitionAssets({
+      coverWasVisible,
+      previewUrl,
+      previewAlreadyReady,
+      coverHeroUrl:
+        this.museumShellPreloader.getCoverImageUrl(resolvedCoverHeroUrl) || resolvedCoverHeroUrl,
+      viewerSnapshot: this.captureViewerSnapshot(),
+      previousScenePreviewImage: this.resolveScenePreviewAsset(previousScene ?? scene),
+    });
     const sceneEnterMeta = this.activeSceneEnterMeta ?? { source: 'route' as const };
     this.currentMuseum = museum;
     this.currentScene = scene;
@@ -1040,8 +1044,8 @@ class App {
       sourceKind: coverWasVisible ? 'cover' : 'scene',
       fromMapPoint: previousScene?.mapPoint,
       toMapPoint: scene.mapPoint,
-      fromImage: fromTransitionImage,
-      targetPreviewImage: transitionPreviewImage,
+      fromImage: transitionAssets.fromImage,
+      targetPreviewImage: transitionAssets.targetPreviewImage,
       hotspotScreenX: sceneEnterMeta.hotspotScreenX,
       onInteractionLock: (locked) => {
         this.panoViewer?.setInteractionLocked(locked);

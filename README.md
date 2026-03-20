@@ -112,6 +112,7 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-20 22:40:21] `cover` 进入点位时，transition 的 `fromImage` 不能再在 `previewAlreadyReady=false` 时回退到 `hero-cover`；当前稳定基线：`main.ts` 必须优先把 `shellScene.preview.url / panoLow` 当作 transition source shell，只把 cover hero 留作最后兜底。若后续又出现“封面飞脸 / 王鼎遗像在中央晃糊了”，第一优先检查 `resolveSceneTransitionAssets()` 是否被回退到 `cover hero -> fromImage` 路径。
 - [2026-03-20 09:40:00] cover CTA/导览切点的转场源图不能再把 `hero-cover.jpg` 或 `captureViewerSnapshot()` 当成全屏主体去做大面积 blur/smear；当前稳定基线：`TravelTransitionOverlay` 只允许旧场景保留“源侧边缘遮挡 + 玻璃残影”，中央主视觉必须尽早交给 target preview/low，禁止再出现“中央人物拖影/鬼片感”。
 - [2026-03-20 09:40:00] target preview 未 ready 时，transition progress 只能停在 travel hold，禁止进入 settle 语义或显示任何“已到目标场景”的视觉暗示；若后续又出现 badge/动画已经像 finish 但画面仍是上一场景，第一优先检查 `sceneTransitionGate.ts` 的 `TARGET_READY_HOLD_PROGRESS` 是否回退到 settle 区间。
 - [2026-03-20 19:08:00] `TravelTransitionOverlay` 必须保持“纯视觉层”，禁止再挂任何阶段文案/徽标 DOM；上一轮残留的 `badge` 因 CSS 同规则内 `display: none` 又被 `display: inline-flex` 覆盖，直接把“Settling on target scene”漏到用户视野。后续若线上再出现转场说明文字，第一优先检查 overlay 是否又混入可见文案节点。

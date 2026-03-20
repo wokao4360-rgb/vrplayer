@@ -42,10 +42,10 @@ type BuildSceneTransitionFrameArgs = {
 
 export const TURN_IN_RATIO = 0.22;
 export const WIPE_SOFTNESS = 0.1;
-export const DISTORTION_STRENGTH = 0.15;
+export const DISTORTION_STRENGTH = 0.13;
 export const BLUR_STRENGTH = 16;
 export const FOV_PULSE_IN = -2.6;
-export const FOV_PULSE_OUT = 1.05;
+export const FOV_PULSE_OUT = 0.9;
 
 const SETTLE_RATIO_MIN = 0.12;
 const SETTLE_RATIO_MAX = 0.2;
@@ -85,19 +85,19 @@ export function buildSceneTransitionFrame({
       revealProgress: 0,
       targetMixProgress: 0,
       settleStrength: 0,
-      fromOpacity: round3(sourceKind === 'cover' ? mix(0.48, 0.34, localT) : mix(0.96, 0.82, localT)),
-      fromEdgeMix: round3(sourceKind === 'cover' ? 0.94 : mix(0.46, 0.72, localT)),
-      targetFocus: round3(sourceKind === 'cover' ? mix(0.08, 0.22, localT) : mix(0.04, 0.14, localT)),
+      fromOpacity: round3(sourceKind === 'cover' ? mix(0.22, 0.14, localT) : mix(0.92, 0.76, localT)),
+      fromEdgeMix: round3(sourceKind === 'cover' ? 0.98 : mix(0.52, 0.76, localT)),
+      targetFocus: round3(sourceKind === 'cover' ? mix(0.16, 0.26, localT) : mix(0.06, 0.16, localT)),
       wipeSoftness: WIPE_SOFTNESS,
-      distortionStrength: DISTORTION_STRENGTH * 0.55,
+      distortionStrength: DISTORTION_STRENGTH * (sourceKind === 'cover' ? 0.42 : 0.5),
       blurPx: round2(blurPx),
       glassAlpha: TARGET_NOT_READY_GLASS_ALPHA,
-      motionBlurStrength: 0.05,
+      motionBlurStrength: 0.035,
       fovDelta: round2(FOV_PULSE_IN * (0.6 + 0.4 * localT)),
       zoomScale: round4(1 + 0.012 * localT),
-      fromShiftPercent: round2(plan.travelDirX * (sourceKind === 'cover' ? 2.8 : 1.6) * localT),
+      fromShiftPercent: round2(plan.travelDirX * (sourceKind === 'cover' ? 1.8 : 1.4) * localT),
       toShiftPercent: round2(plan.travelDirX * 5.8 * (1 - localT)),
-      shearDeg: round2(plan.travelDirX * (1.8 + plan.curveStrength * 3.6) * localT),
+      shearDeg: round2(plan.travelDirX * (1.1 + plan.curveStrength * 2.6) * localT),
       curveStrength: plan.curveStrength,
       occlusionOpacity: round3((0.08 + plan.curveStrength * 0.12) * localT),
     };
@@ -108,43 +108,45 @@ export function buildSceneTransitionFrame({
     const easedTravel = easeInOutCubic(travelT);
     const displayWorldYaw = interpolateAngle(turnInEndYaw, targetWorldYaw, easedTravel);
     const revealProgress = targetReady
-      ? clamp((easedTravel - 0.02) / 0.72, 0, 1)
+      ? clamp((easedTravel - 0.0) / 0.66, 0, 1)
       : 0;
     const midBell = bellCurve(travelT);
     const targetMixProgress = targetReady
       ? clamp(
           Math.max(
-            0.22 + easedTravel * 0.62,
-            0.28 + revealProgress * 0.72,
-            0.18 + midBell * 0.2,
+            (sourceKind === 'cover' ? 0.42 : 0.28) + easedTravel * (sourceKind === 'cover' ? 0.5 : 0.58),
+            (sourceKind === 'cover' ? 0.46 : 0.3) + revealProgress * (sourceKind === 'cover' ? 0.6 : 0.66),
+            0.18 + midBell * 0.16,
           ),
           0,
           0.97,
         )
       : 0;
     const blurBase = targetReady
-      ? mix(BLUR_STRENGTH * 0.72, BLUR_STRENGTH * 0.16, revealProgress)
+      ? mix(BLUR_STRENGTH * (sourceKind === 'cover' ? 0.54 : 0.62), BLUR_STRENGTH * 0.12, revealProgress)
       : BLUR_STRENGTH * (sourceKind === 'cover' ? 0.96 : 0.7);
     const blurPx = blurBase + BLUR_STRENGTH * 0.08 * midBell;
     const distortionStrength =
-      DISTORTION_STRENGTH * (0.84 + 0.32 * midBell + plan.curveStrength * 0.18);
+      DISTORTION_STRENGTH * (0.72 + 0.2 * midBell + plan.curveStrength * 0.12);
     const fromOpacity = targetReady
       ? sourceKind === 'cover'
-        ? mix(0.26, 0.04, targetMixProgress)
-        : mix(0.52, 0.08, targetMixProgress)
+        ? mix(0.16, 0.02, targetMixProgress)
+        : mix(0.44, 0.06, targetMixProgress)
       : sourceKind === 'cover'
-        ? 0.42
-        : 0.84;
+        ? 0.24
+        : 0.78;
     const fromEdgeMix = sourceKind === 'cover'
-      ? 0.96
+      ? 0.98
       : targetReady
-        ? mix(0.68, 0.92, targetMixProgress)
-        : 0.58;
+        ? mix(0.74, 0.94, targetMixProgress)
+        : 0.64;
     const targetFocus = targetReady
       ? sourceKind === 'cover'
-        ? clamp(0.34 + targetMixProgress * 0.74, 0, 1)
-        : clamp(0.24 + targetMixProgress * 0.66, 0, 1)
-      : 0.06;
+        ? clamp(0.48 + targetMixProgress * 0.58, 0, 1)
+        : clamp(0.32 + targetMixProgress * 0.56, 0, 1)
+      : sourceKind === 'cover'
+        ? 0.12
+        : 0.08;
     return {
       progress: round4(normalizedProgress),
       stageProgress: round4(easedTravel),
@@ -164,14 +166,14 @@ export function buildSceneTransitionFrame({
       distortionStrength: round3(distortionStrength),
       blurPx: round2(blurPx),
       glassAlpha: round3(targetReady ? DEFAULT_GLASS_ALPHA : TARGET_NOT_READY_GLASS_ALPHA),
-      motionBlurStrength: round3(0.05 + midBell * 0.11),
+      motionBlurStrength: round3(0.035 + midBell * 0.08),
       fovDelta: round2(resolveTravelFovDelta(normalizedProgress, settleStart)),
       zoomScale: round4(1 + 0.015 + midBell * 0.02),
-      fromShiftPercent: round2(plan.travelDirX * mix(sourceKind === 'cover' ? 3.2 : 1.8, sourceKind === 'cover' ? 7.2 : 4.4, easedTravel)),
+      fromShiftPercent: round2(plan.travelDirX * mix(sourceKind === 'cover' ? 2.2 : 1.8, sourceKind === 'cover' ? 5.2 : 4.2, easedTravel)),
       toShiftPercent: round2(plan.travelDirX * mix(5.4, 0.4, revealProgress)),
-      shearDeg: round2(plan.travelDirX * (2.1 + plan.curveStrength * 5.2) * midBell),
+      shearDeg: round2(plan.travelDirX * (1.4 + plan.curveStrength * 3.4) * midBell),
       curveStrength: plan.curveStrength,
-      occlusionOpacity: round3((0.12 + plan.curveStrength * OCCLUSION_ALPHA) * midBell),
+      occlusionOpacity: round3((0.1 + plan.curveStrength * (OCCLUSION_ALPHA * 0.8)) * midBell),
     };
   }
 

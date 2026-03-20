@@ -20,7 +20,7 @@ test('small forward hop keeps short duration with no artificial arc', () => {
   assert.equal(plan.durationMs, 480);
   assert.equal(plan.travelDirX, 1);
   assert.equal(plan.wipeFrom, 'right');
-  assert.equal(plan.turnLead, 2.7);
+  assert.equal(plan.turnLead, 1.9);
   assert.equal(plan.curveStrength, 0);
 });
 
@@ -35,7 +35,7 @@ test('medium side hop biases into a curved travel heading', () => {
   assert.equal(plan.durationMs, 620);
   assert.equal(plan.travelDirX, 1);
   assert.equal(plan.wipeFrom, 'right');
-  assert.ok(plan.turnLead > 14 && plan.turnLead < 16);
+  assert.ok(plan.turnLead > 10 && plan.turnLead < 12);
   assert.ok(plan.curveStrength > 0.5);
 });
 
@@ -50,7 +50,7 @@ test('large left turn uses large-turn duration and left-origin wipe', () => {
   assert.equal(plan.durationMs, 760);
   assert.equal(plan.travelDirX, -1);
   assert.equal(plan.wipeFrom, 'left');
-  assert.equal(plan.turnLead, 28);
+  assert.equal(plan.turnLead, 18);
   assert.equal(plan.settleMs, 140);
 });
 

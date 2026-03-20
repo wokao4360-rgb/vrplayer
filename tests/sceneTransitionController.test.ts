@@ -97,3 +97,18 @@ test('high release mode only exits hold after sharp ready or failure fallback', 
   assert.equal(isTransitionReleaseReady(sharpReadyState, 'high'), true);
   assert.equal(isTransitionReleaseReady(failedState, 'high'), true);
 });
+
+test('transition never reaches settle band before target preview is ready', () => {
+  const state = createState();
+
+  const progress = computeSceneTransitionProgress({
+    ts: 4000,
+    startTs: 0,
+    durationMs: 620,
+    settleMs: 120,
+    state,
+    releaseMode: 'high',
+  });
+
+  assert.ok(progress < 0.8);
+});

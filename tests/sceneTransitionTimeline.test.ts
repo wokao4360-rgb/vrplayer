@@ -118,6 +118,27 @@ test('when target is not ready, transition keeps previous scene disguise and del
   assert.ok(frame.glassAlpha > 0.2);
 });
 
+test('cover-driven transition demotes source image to edge residue once target is ready', () => {
+  const plan = computeSceneTransitionPlan({
+    currentWorldYaw: 0,
+    targetWorldYaw: 24,
+  });
+
+  const frame = buildSceneTransitionFrame({
+    currentWorldYaw: 0,
+    targetWorldYaw: 24,
+    plan,
+    progress: 0.54,
+    targetReady: true,
+    sourceKind: 'cover',
+  });
+
+  assert.equal(frame.stage, 'travel');
+  assert.ok(frame.fromOpacity < 0.3);
+  assert.ok(frame.fromEdgeMix > 0.85);
+  assert.ok(frame.targetFocus > 0.6);
+});
+
 test('fov pulse contracts first then rebounds during travel before returning to zero', () => {
   const plan = computeSceneTransitionPlan({
     currentWorldYaw: 0,

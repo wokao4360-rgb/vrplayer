@@ -22,8 +22,8 @@ export type TransitionProgressArgs = {
   releaseMode?: SceneTransitionReleaseMode;
 };
 
-export const TARGET_READY_HOLD_PROGRESS = 0.92;
-export const POST_READY_DURATION_MS = 220;
+export const TARGET_READY_HOLD_PROGRESS = 0.74;
+export const POST_READY_DURATION_MS = 180;
 
 export function isTransitionReleaseReady(
   state: Pick<TransitionProgressState, 'lowReady' | 'sharpReady' | 'failed'>,

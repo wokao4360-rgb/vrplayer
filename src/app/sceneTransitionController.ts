@@ -20,6 +20,7 @@ export type SceneTransitionView = {
 export type SceneTransitionControllerStartArgs = {
   currentWorldView: SceneTransitionView;
   targetWorldView: SceneTransitionView;
+  sourceKind?: 'scene' | 'cover';
   fromMapPoint?: MapPoint;
   toMapPoint?: MapPoint;
   fromImage?: string;
@@ -204,6 +205,7 @@ export class TransitionSession {
       plan: this.plan,
       progress,
       targetReady: this.state.targetReady,
+      sourceKind: this.args.sourceKind ?? 'scene',
     });
     this.overlay.render(frame);
     this.driveCamera(frame);

@@ -40,8 +40,8 @@ export const MIN_HOP_MS = 420;
 export const MAX_HOP_MS = 850;
 export const SETTLE_MS = 120;
 export const LARGE_TURN_SETTLE_MS = 140;
-export const TURN_LEAD_FACTOR = 0.45;
-export const MAX_TURN_LEAD_DEG = 28;
+export const TURN_LEAD_FACTOR = 0.32;
+export const MAX_TURN_LEAD_DEG = 18;
 
 export function shortestAngleDelta(fromDeg: number, toDeg: number): number {
   let delta = (toDeg - fromDeg) % 360;

@@ -1,4 +1,4 @@
-var x=Object.defineProperty;var A=(h,e,t)=>e in h?x(h,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):h[e]=t;var s=(h,e,t)=>A(h,typeof e!="symbol"?e+"":e,t);import{r as C,A as y}from"./index-BWHbw8vI.js";import{toProxiedImageUrl as L}from"./externalImage-xWvUQBE6.js";import{g as N}from"./index-DnDnySW2.js";import"./three-renderer-DNNhgqDo.js";const b="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
+var x=Object.defineProperty;var A=(h,e,t)=>e in h?x(h,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):h[e]=t;var s=(h,e,t)=>A(h,typeof e!="symbol"?e+"":e,t);import{r as C,A as y}from"./index-E7-e8OFT.js";import{toProxiedImageUrl as L}from"./externalImage-BCMR0tyc.js";import{g as N}from"./index-DnDnySW2.js";import"./three-renderer-DNNhgqDo.js";const b="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stop-color="#1F2933"/>

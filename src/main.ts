@@ -997,17 +997,17 @@ class App {
     const previewUrl =
       prewarmedPreviewUrl ||
       (resolveAssetUrl(shellScene.preview.url, AssetType.PANO) || shellScene.preview.url);
-    const transitionPreviewImage = prewarmedPreviewUrl || undefined;
+    const transitionPreviewImage = previewAlreadyReady ? previewUrl : undefined;
     const coverWasVisible = this.museumShellChrome?.isCoverVisible() === true;
     const previousScene = previousContext?.scene ?? null;
     const previousWorldView = previousContext?.worldView ?? targetView;
     const resolvedCoverHeroUrl =
       resolveAssetUrl(museumShellManifest.cover.heroImage, AssetType.COVER) || museumShellManifest.cover.heroImage;
-    const fromTransitionImage =
-      this.captureViewerSnapshot() ||
-      (coverWasVisible
-        ? this.museumShellPreloader.getCoverImageUrl(resolvedCoverHeroUrl) || resolvedCoverHeroUrl
-        : this.resolveScenePreviewAsset(previousScene ?? scene));
+    const fromTransitionImage = coverWasVisible
+      ? (transitionPreviewImage ||
+          this.museumShellPreloader.getCoverImageUrl(resolvedCoverHeroUrl) ||
+          resolvedCoverHeroUrl)
+      : (this.captureViewerSnapshot() || this.resolveScenePreviewAsset(previousScene ?? scene));
     const sceneEnterMeta = this.activeSceneEnterMeta ?? { source: 'route' as const };
     this.currentMuseum = museum;
     this.currentScene = scene;
@@ -1037,6 +1037,7 @@ class App {
     const transitionSession = sceneTransitionController.start({
       currentWorldView: previousWorldView,
       targetWorldView: targetView,
+      sourceKind: coverWasVisible ? 'cover' : 'scene',
       fromMapPoint: previousScene?.mapPoint,
       toMapPoint: scene.mapPoint,
       fromImage: fromTransitionImage,

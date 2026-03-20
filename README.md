@@ -112,6 +112,7 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-20 23:40:30] `scene -> scene` 且 `targetReady=false` 时，不能只靠旧场景 blur 顶住；当前稳定基线是 `TravelTransitionOverlay` 在 `targetImageLoaded=true` 后允许极低权重的 `target preview shell` 以重模糊玻璃影提前介入，但真正 `target reveal / mix ready` 仍必须继续受 `frame.targetReady && overlay.targetImageLoaded` 共同约束。若后续又回到“中段看起来还是上一个点位本体”，优先检查 `uTargetPreviewLoaded`、`previewPresence` 和 fallback target backdrop 的预览壳层注入是否被删回。
 - [2026-03-20 22:40:21] `cover` 进入点位时，transition 的 `fromImage` 不能再在 `previewAlreadyReady=false` 时回退到 `hero-cover`；当前稳定基线：`main.ts` 必须优先把 `shellScene.preview.url / panoLow` 当作 transition source shell，只把 cover hero 留作最后兜底。若后续又出现“封面飞脸 / 王鼎遗像在中央晃糊了”，第一优先检查 `resolveSceneTransitionAssets()` 是否被回退到 `cover hero -> fromImage` 路径。
 - [2026-03-20 09:40:00] cover CTA/导览切点的转场源图不能再把 `hero-cover.jpg` 或 `captureViewerSnapshot()` 当成全屏主体去做大面积 blur/smear；当前稳定基线：`TravelTransitionOverlay` 只允许旧场景保留“源侧边缘遮挡 + 玻璃残影”，中央主视觉必须尽早交给 target preview/low，禁止再出现“中央人物拖影/鬼片感”。
 - [2026-03-20 09:40:00] target preview 未 ready 时，transition progress 只能停在 travel hold，禁止进入 settle 语义或显示任何“已到目标场景”的视觉暗示；若后续又出现 badge/动画已经像 finish 但画面仍是上一场景，第一优先检查 `sceneTransitionGate.ts` 的 `TARGET_READY_HOLD_PROGRESS` 是否回退到 settle 区间。

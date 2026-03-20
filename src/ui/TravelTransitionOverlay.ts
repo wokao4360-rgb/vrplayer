@@ -54,6 +54,7 @@ const FRAGMENT_SHADER = `
   uniform float uToShift;
   uniform float uShearRad;
   uniform float uSettleStrength;
+  uniform float uTargetPreviewLoaded;
   uniform float uTargetMixReady;
   uniform float uFromOpacity;
   uniform float uFromEdgeMix;
@@ -88,6 +89,7 @@ const FRAGMENT_SHADER = `
     float reveal = clamp(uRevealProgress, 0.0, 1.0);
     float mixProgress = clamp(uTargetMixProgress, 0.0, 1.0);
     float settleStrength = clamp(uSettleStrength, 0.0, 1.0);
+    float previewReady = clamp(uTargetPreviewLoaded, 0.0, 1.0);
     float targetHold = 1.0 - uTargetMixReady;
     float soft = max(0.01, uWipeSoftness * 0.58);
     float seam = uTravelDirX > 0.0 ? 1.0 - reveal : reveal;
@@ -177,6 +179,12 @@ const FRAGMENT_SHADER = `
       smearDir,
       max(0.0, uBlurStrength * (0.24 - reveal * 0.14) + motionAmount * 0.45)
     );
+    vec4 toPreview = sampleLayer(
+      uToTex,
+      coverUv(vUv, uZoomScale + 0.03, uToShift * 0.35, uShearRad * 0.42),
+      smearDir,
+      max(18.0, uBlurStrength * 1.42 + motionAmount * 0.52)
+    );
     vec4 toSharp = texture2D(uToTex, clampUv(toUv));
     vec4 toMain = mix(
       toBlur,
@@ -191,8 +199,15 @@ const FRAGMENT_SHADER = `
       0.0,
       1.0
     ) * uTargetMixReady;
+    float previewPresence = previewReady * targetHold * clamp(
+      corridor * (0.1 + uTargetFocus * 0.16) +
+      centerFocus * (0.06 + uTargetFocus * 0.16),
+      0.0,
+      0.22
+    );
 
-    vec4 color = mix(sourceBase, toMain, targetPresence);
+    vec4 color = mix(sourceBase, toPreview, previewPresence);
+    color = mix(color, toMain, targetPresence);
 
     float occlusion = edge * uOcclusionOpacity * (0.72 + uFromOpacity * 0.28);
     color.rgb *= 1.0 - occlusion * 0.62;
@@ -404,6 +419,7 @@ export class TravelTransitionOverlay {
     uniforms.uToShift.value = frame.toShiftPercent;
     uniforms.uShearRad.value = degreesToRadians(frame.shearDeg);
     uniforms.uSettleStrength.value = frame.settleStrength;
+    uniforms.uTargetPreviewLoaded.value = this.targetImageLoaded ? 1 : 0;
     uniforms.uTargetMixReady.value = frame.targetReady && this.targetImageLoaded ? 1 : 0;
     uniforms.uFromOpacity.value = frame.fromOpacity;
     uniforms.uFromEdgeMix.value = frame.fromEdgeMix;
@@ -470,6 +486,7 @@ export class TravelTransitionOverlay {
           uToShift: { value: 0 },
           uShearRad: { value: 0 },
           uSettleStrength: { value: 0 },
+          uTargetPreviewLoaded: { value: 0 },
           uTargetMixReady: { value: 0 },
           uFromOpacity: { value: 1 },
           uFromEdgeMix: { value: 0 },
@@ -587,8 +604,10 @@ export class TravelTransitionOverlay {
     const fallbackBlur = frame.targetReady && this.targetImageLoaded
       ? Math.max(frame.blurPx * 0.7, 6)
       : Math.max(frame.blurPx * (frame.sourceKind === 'cover' ? 1.35 : 1.22), frame.sourceKind === 'cover' ? 24 : 18);
-    const targetBackdropOpacity = frame.targetReady && this.targetImageLoaded
-      ? Math.min(Math.max(frame.targetMixProgress * 0.82 + frame.targetFocus * 0.12, frame.stage === 'settle' ? 0.72 : 0), 0.96)
+    const targetBackdropOpacity = this.targetImageLoaded
+      ? frame.targetReady
+        ? Math.min(Math.max(frame.targetMixProgress * 0.82 + frame.targetFocus * 0.12, frame.stage === 'settle' ? 0.72 : 0), 0.96)
+        : Math.min(0.16, 0.06 + frame.targetFocus * 0.22)
       : 0;
     const fromCenterCutInner = frame.sourceKind === 'cover'
       ? 24 + frame.fromEdgeMix * 12
@@ -625,7 +644,9 @@ export class TravelTransitionOverlay {
     this.element.style.setProperty('--vr-travel-target-backdrop-opacity', String(targetBackdropOpacity));
     this.element.style.setProperty(
       '--vr-travel-target-reveal-inset',
-      `${Math.max(0, (1 - frame.revealProgress) * 100)}%`,
+      `${this.targetImageLoaded && !frame.targetReady
+        ? Math.max(76, 92 - frame.targetFocus * 44)
+        : Math.max(0, (1 - frame.revealProgress) * 100)}%`,
     );
   }
 

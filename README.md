@@ -114,6 +114,7 @@ git push origin main
 
 - [2026-03-20 09:40:00] cover CTA/导览切点的转场源图不能再把 `hero-cover.jpg` 或 `captureViewerSnapshot()` 当成全屏主体去做大面积 blur/smear；当前稳定基线：`TravelTransitionOverlay` 只允许旧场景保留“源侧边缘遮挡 + 玻璃残影”，中央主视觉必须尽早交给 target preview/low，禁止再出现“中央人物拖影/鬼片感”。
 - [2026-03-20 09:40:00] target preview 未 ready 时，transition progress 只能停在 travel hold，禁止进入 settle 语义或显示任何“已到目标场景”的视觉暗示；若后续又出现 badge/动画已经像 finish 但画面仍是上一场景，第一优先检查 `sceneTransitionGate.ts` 的 `TARGET_READY_HOLD_PROGRESS` 是否回退到 settle 区间。
+- [2026-03-20 19:08:00] `TravelTransitionOverlay` 必须保持“纯视觉层”，禁止再挂任何阶段文案/徽标 DOM；上一轮残留的 `badge` 因 CSS 同规则内 `display: none` 又被 `display: inline-flex` 覆盖，直接把“Settling on target scene”漏到用户视野。后续若线上再出现转场说明文字，第一优先检查 overlay 是否又混入可见文案节点。
 - [2026-03-19 15:10:00] 场景切换在 target scene commit 之后，transition camera 的 yaw 语义必须立即切到 target scene 再做 `worldYawToInternalYaw()`；禁止 commit 后继续拿 previous scene 做 world/internal 转换补偿。当前稳定基线：`SceneTransitionController.onCameraFrame` 只透出 `useTargetScene` 上下文，`main.ts` 只复用现有唯一入口 `worldYawToInternalYaw()/internalYawToWorldYaw()`，不允许再新增第二次取反或组件内私有补偿。
 - [2026-03-19 15:10:00] `TravelTransitionOverlay` 现已固定为“WebGL compositing shader + from/to 双层 blurred fallback backdrop”架构：target preview/low 未 ready 时继续用模糊后的上一点位顶住，target ready 后通过 directional wipe + local distortion + targetMix/settle 接管；禁止退回等待页、黑屏、白屏或单层 CSS 假过渡。
 

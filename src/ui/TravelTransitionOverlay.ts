@@ -88,6 +88,7 @@ const FRAGMENT_SHADER = `
     float reveal = clamp(uRevealProgress, 0.0, 1.0);
     float mixProgress = clamp(uTargetMixProgress, 0.0, 1.0);
     float settleStrength = clamp(uSettleStrength, 0.0, 1.0);
+    float targetHold = 1.0 - uTargetMixReady;
     float soft = max(0.01, uWipeSoftness * 0.58);
     float seam = uTravelDirX > 0.0 ? 1.0 - reveal : reveal;
     float mask = uTravelDirX > 0.0
@@ -149,16 +150,26 @@ const FRAGMENT_SHADER = `
       0.14,
       0.4,
       length(vUv - vec2(0.5 - uTravelDirX * 0.02 * (1.0 - mixProgress), 0.5 + bend * 0.012))
-    )) * uFromEdgeMix;
-    vec4 sourceBase = mix(frostedFrom, fromColor, clamp(sourceMask * 0.72, 0.0, 1.0));
-    sourceBase = mix(sourceBase, abstractFrom, centerSuppression * 0.88);
+    )) * min(1.0, uFromEdgeMix * (1.0 + targetHold * 0.55));
+    vec4 sourceBase = mix(
+      frostedFrom,
+      fromColor,
+      clamp(sourceMask * mix(0.72, 0.44, targetHold), 0.0, 1.0)
+    );
+    sourceBase = mix(sourceBase, abstractFrom, centerSuppression * mix(0.88, 1.0, targetHold));
     float sourceLuma = dot(sourceBase.rgb, vec3(0.299, 0.587, 0.114));
+    float holdCorridor = targetHold * corridor * (0.08 + edge * 0.22 + centerFocus * 0.18);
     sourceBase.rgb = mix(
       sourceBase.rgb,
       vec3(sourceLuma) * vec3(1.0, 0.975, 0.94),
-      centerSuppression * 0.24
+      centerSuppression * (0.24 + targetHold * 0.16) + holdCorridor * 0.22
     );
-    sourceBase.rgb *= mix(1.0, 0.9, centerSuppression * 0.4);
+    sourceBase.rgb = mix(
+      sourceBase.rgb,
+      vec3(sourceLuma) * vec3(0.95, 0.92, 0.88),
+      holdCorridor * 0.42
+    );
+    sourceBase.rgb *= mix(1.0, 0.84, centerSuppression * (0.4 + targetHold * 0.26) + holdCorridor * 0.18);
 
     vec4 toBlur = sampleLayer(
       uToTex,
@@ -575,13 +586,15 @@ export class TravelTransitionOverlay {
   private updateFallbackMotion(frame: SceneTransitionFrame): void {
     const fallbackBlur = frame.targetReady && this.targetImageLoaded
       ? Math.max(frame.blurPx * 0.7, 6)
-      : Math.max(frame.blurPx * (frame.sourceKind === 'cover' ? 1.35 : 1.08), frame.sourceKind === 'cover' ? 24 : 16);
+      : Math.max(frame.blurPx * (frame.sourceKind === 'cover' ? 1.35 : 1.22), frame.sourceKind === 'cover' ? 24 : 18);
     const targetBackdropOpacity = frame.targetReady && this.targetImageLoaded
       ? Math.min(Math.max(frame.targetMixProgress * 0.82 + frame.targetFocus * 0.12, frame.stage === 'settle' ? 0.72 : 0), 0.96)
       : 0;
     const fromCenterCutInner = frame.sourceKind === 'cover'
       ? 24 + frame.fromEdgeMix * 12
-      : 12 + frame.fromEdgeMix * 10;
+      : frame.targetReady
+        ? 12 + frame.fromEdgeMix * 10
+        : 22 + frame.fromEdgeMix * 12;
     this.element.style.setProperty('--vr-travel-backdrop-blur', `${fallbackBlur}px`);
     this.element.style.setProperty(
       '--vr-travel-backdrop-scale',
@@ -590,7 +603,7 @@ export class TravelTransitionOverlay {
     this.element.style.setProperty('--vr-travel-backdrop-shift', `${frame.fromShiftPercent}%`);
     this.element.style.setProperty(
       '--vr-travel-from-backdrop-opacity',
-      String(Number((frame.fromOpacity * (frame.sourceKind === 'cover' ? 0.74 : 0.9)).toFixed(3))),
+      String(Number((frame.fromOpacity * (frame.sourceKind === 'cover' ? 0.74 : (frame.targetReady ? 0.9 : 0.72))).toFixed(3))),
     );
     this.element.style.setProperty(
       '--vr-travel-backdrop-brightness',

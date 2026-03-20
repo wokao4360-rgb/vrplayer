@@ -114,8 +114,11 @@ test('when target is not ready, transition keeps previous scene disguise and del
   assert.equal(frame.revealProgress, 0);
   assert.equal(frame.targetMixProgress, 0);
   assert.equal(frame.settleStrength, 0);
-  assert.ok(frame.blurPx > BLUR_STRENGTH * 0.5);
+  assert.ok(frame.blurPx > BLUR_STRENGTH * 0.9);
   assert.ok(frame.glassAlpha > 0.2);
+  assert.ok(frame.fromOpacity < 0.55);
+  assert.ok(frame.fromEdgeMix > 0.82);
+  assert.ok(frame.targetFocus >= 0.14);
 });
 
 test('cover-driven transition demotes source image to edge residue once target is ready', () => {

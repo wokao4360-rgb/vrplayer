@@ -85,9 +85,9 @@ export function buildSceneTransitionFrame({
       revealProgress: 0,
       targetMixProgress: 0,
       settleStrength: 0,
-      fromOpacity: round3(sourceKind === 'cover' ? mix(0.22, 0.14, localT) : mix(0.92, 0.76, localT)),
-      fromEdgeMix: round3(sourceKind === 'cover' ? 0.98 : mix(0.52, 0.76, localT)),
-      targetFocus: round3(sourceKind === 'cover' ? mix(0.16, 0.26, localT) : mix(0.06, 0.16, localT)),
+      fromOpacity: round3(sourceKind === 'cover' ? mix(0.22, 0.14, localT) : mix(0.88, 0.68, localT)),
+      fromEdgeMix: round3(sourceKind === 'cover' ? 0.98 : mix(0.62, 0.84, localT)),
+      targetFocus: round3(sourceKind === 'cover' ? mix(0.16, 0.26, localT) : mix(0.08, 0.18, localT)),
       wipeSoftness: WIPE_SOFTNESS,
       distortionStrength: DISTORTION_STRENGTH * (sourceKind === 'cover' ? 0.42 : 0.5),
       blurPx: round2(blurPx),
@@ -124,7 +124,7 @@ export function buildSceneTransitionFrame({
       : 0;
     const blurBase = targetReady
       ? mix(BLUR_STRENGTH * (sourceKind === 'cover' ? 0.54 : 0.62), BLUR_STRENGTH * 0.12, revealProgress)
-      : BLUR_STRENGTH * (sourceKind === 'cover' ? 0.96 : 0.7);
+      : BLUR_STRENGTH * (sourceKind === 'cover' ? 0.96 : 0.98);
     const blurPx = blurBase + BLUR_STRENGTH * 0.08 * midBell;
     const distortionStrength =
       DISTORTION_STRENGTH * (0.72 + 0.2 * midBell + plan.curveStrength * 0.12);
@@ -134,19 +134,19 @@ export function buildSceneTransitionFrame({
         : mix(0.44, 0.06, targetMixProgress)
       : sourceKind === 'cover'
         ? 0.24
-        : 0.78;
+        : mix(0.62, 0.44, easedTravel);
     const fromEdgeMix = sourceKind === 'cover'
       ? 0.98
       : targetReady
         ? mix(0.74, 0.94, targetMixProgress)
-        : 0.64;
+        : mix(0.82, 0.9, easedTravel);
     const targetFocus = targetReady
       ? sourceKind === 'cover'
         ? clamp(0.48 + targetMixProgress * 0.58, 0, 1)
         : clamp(0.32 + targetMixProgress * 0.56, 0, 1)
       : sourceKind === 'cover'
         ? 0.12
-        : 0.08;
+        : mix(0.14, 0.24, midBell);
     return {
       progress: round4(normalizedProgress),
       stageProgress: round4(easedTravel),
@@ -179,7 +179,7 @@ export function buildSceneTransitionFrame({
 
   const settleT = easeOutQuad(safeRatio(normalizedProgress - settleStart, 1 - settleStart));
   const settleStartYaw = interpolateAngle(turnInEndYaw, targetWorldYaw, 1);
-  const blurPx = targetReady ? mix(BLUR_STRENGTH * 0.18, 0, settleT) : BLUR_STRENGTH * 0.7;
+  const blurPx = targetReady ? mix(BLUR_STRENGTH * 0.18, 0, settleT) : BLUR_STRENGTH * 0.96;
   const revealProgress = targetReady ? 1 : 0;
   const targetMixProgress = targetReady ? 1 : 0;
   return {
@@ -194,9 +194,9 @@ export function buildSceneTransitionFrame({
     revealProgress,
     targetMixProgress,
     settleStrength: round3(targetReady ? settleT : 0),
-    fromOpacity: round3(targetReady ? mix(sourceKind === 'cover' ? 0.04 : 0.08, 0, settleT) : (sourceKind === 'cover' ? 0.28 : 0.72)),
+    fromOpacity: round3(targetReady ? mix(sourceKind === 'cover' ? 0.04 : 0.08, 0, settleT) : (sourceKind === 'cover' ? 0.28 : 0.42)),
     fromEdgeMix: round3(sourceKind === 'cover' ? 1 : mix(0.84, 0.96, settleT)),
-    targetFocus: round3(targetReady ? 1 : 0.06),
+    targetFocus: round3(targetReady ? 1 : 0.14),
     wipeSoftness: round3(WIPE_SOFTNESS + plan.curveStrength * 0.02),
     distortionStrength: round3(DISTORTION_STRENGTH * (1 - settleT * 0.8)),
     blurPx: round2(blurPx),

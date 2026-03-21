@@ -3440,3 +3440,20 @@ body{
     transition: none !important;
   }
 }
+
+.vr-modal-settings-share-hint{
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.64);
+}
+
+.vr-modal-settings-share-group{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vr-modal-settings-share-btn{
+  min-width: 72px;
+}

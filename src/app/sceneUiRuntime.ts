@@ -7,7 +7,6 @@ import type { Hotspots } from '../ui/Hotspots';
 import type { VideoPlayer } from '../ui/VideoPlayer';
 import type { GuideTray } from '../ui/GuideTray';
 import type { SceneGuideDrawer } from '../ui/SceneGuideDrawer';
-import type { QualityIndicator } from '../ui/QualityIndicator';
 import { LoadStatus } from '../types/loadStatus';
 import { WarmupScheduler, type WarmupQueueTask } from './warmupScheduler';
 
@@ -124,7 +123,6 @@ export class SceneUiRuntime {
   private videoPlayer: VideoPlayer | null = null;
   private guideTray: GuideTray | null = null;
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
-  private qualityIndicator: QualityIndicator | null = null;
   private handleMetricsEvent: ((event: Event) => void) | null = null;
 
   constructor(options: SceneUiRuntimeOptions) {
@@ -153,10 +151,6 @@ export class SceneUiRuntime {
 
   getSceneGuideDrawer(): SceneGuideDrawer | null {
     return this.sceneGuideDrawer;
-  }
-
-  getQualityIndicator(): QualityIndicator | null {
-    return this.qualityIndicator;
   }
 
   async mountCore(): Promise<void> {
@@ -335,8 +329,6 @@ export class SceneUiRuntime {
       this.handleMetricsEvent = null;
     }
 
-    this.qualityIndicator?.remove();
-    this.qualityIndicator = null;
     this.sceneGuideDrawer?.remove();
     this.sceneGuideDrawer = null;
     this.guideTray?.remove();

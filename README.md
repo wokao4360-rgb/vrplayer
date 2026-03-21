@@ -112,6 +112,8 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-21 19:47:43] 线上观众侧页面禁止再暴露任何“低清/高清/降级/加载进度”状态提示；当前稳定基线是彻底移除 `QualityIndicator` 运行链路，并且 `main.ts` / `sceneUiRuntime.ts` / 设置弹层 / shell 文案都不再根据 `LOW_READY/HIGH_READY/DEGRADED` 生成用户可见提示。若后续线上又出现“正在加载低清图”“已切换至高清”等文案，先查这几处是否把状态 UI 接回来了。
+- [2026-03-21 19:47:43] “分享当前视角”链接必须在用户点击分享动作的瞬间，用当前 viewer 视角重新序列化 `museum/scene/yaw/pitch/fov`，并清掉 `debug/editor/tilesDebug/fresh` 等临时查询参数；不要直接拿地址栏旧 query 原样外发，否则容易把调试参数和过期视角一起分享出去。
 - [2026-03-21 17:24:09] `SceneTransitionController` / `TravelTransitionOverlay` 链路里，`targetPreviewImage` 或 preview shell ready 绝不等于 target scene ready；当前稳定基线：只有 `loadCommitted=true` 且收到目标场景 `LOW_READY/HIGH_READY/DEGRADED` 后，`isTargetSceneReadyForReveal()` 才能返回 true。若后续又回到“目标预览一有图就整张铺到中央”，第一优先检查 `markTargetReady()`、`isTargetSceneReadyForReveal()` 和 preview image 注入是否重新耦合了。
 - [2026-03-21 17:24:09] transition reveal 的时间线必须锚定 `targetReadyProgress`，不能直接沿用全局 `progress`；当前稳定基线：`sceneTransitionTimeline.ts` 里的 `resolveTargetRevealState()` 必须从 `targetReadyProgress` 重新起算 `revealProgress / targetMixProgress / targetFocus`，避免 target 晚 ready 时直接跳成整张 target pano 平板。若后续又出现“目标低清刚 ready 就整张贴上来”，第一优先检查这条 ready-anchored reveal 逻辑是否被回退。
 - [2026-03-21 17:24:09] `showScene()` 安装新一轮 `setOnStatusChange()` 后，未 `commitSceneLoad()` 前的 ready 事件不属于目标场景，禁止推进 transition、shell ready 或新场景 UI；当前稳定基线：只有 `shouldForwardCommittedSceneStatus(sceneLoadCommitted, status)` 为 true 时，才允许 `transitionSession.markStatus()`、`SCENE_LOW_READY/HIGH_READY/DEGRADED_READY`、`mountCore()`、`scheduleFeatureWarmup()`、`loading.hide()` 进入目标场景链路。若后续又出现旧场景 ready 污染新转场，先查这层 gate。

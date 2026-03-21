@@ -568,7 +568,7 @@ export class MuseumShellChrome {
     void options;
   }
 
-  markSharpening(progressLabel = '低清已接管，正在逐步恢复清晰'): void {
+  markSharpening(progressLabel = '正在切换场景'): void {
     void progressLabel;
   }
 
@@ -587,7 +587,7 @@ export class MuseumShellChrome {
     this.transitionEyebrow.textContent = model.eyebrow || '正在切换展点';
     this.transitionTitle.textContent = model.title;
     this.transitionSubtitle.textContent = model.subtitle;
-    this.transitionNote.textContent = model.note || '先保留上一帧，再让目标场景低清接管。';
+    this.transitionNote.textContent = model.note || '沿着当前导览方向进入下一场景。';
     this.transitionProgressLabel.textContent =
       model.progressLabel || '正在准备下一段漫游画面';
     this.transitionBackground.style.backgroundImage = model.backgroundImage

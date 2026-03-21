@@ -1,10 +1,20 @@
-import type { Scene } from '../../types/config';
+import type { Museum, Scene } from '../../types/config';
 import type { PanoViewer } from '../../viewer/PanoViewer';
 import { mountModal, type MountedModal } from '../Modal';
 import { showToast } from '../toast';
+import { copyText } from '../copyText';
 import { isMouseDevice, isTouchDevice } from '../../utils/deviceDetect';
 import { ZH_CN } from '../../i18n/zh-CN';
-import { worldYawToInternalYaw } from '../../viewer/cubemapViewSemantics';
+import { internalYawToWorldYaw, worldYawToInternalYaw } from '../../viewer/cubemapViewSemantics';
+import {
+  buildMailShareUrl,
+  buildQqShareUrl,
+  buildSceneShareText,
+  buildSceneShareTitle,
+  buildSceneShareUrl,
+  buildWeiboShareUrl,
+  type SceneSharePayload,
+} from '../../app/sceneShare';
 
 type DockCloseTab = 'info' | 'settings';
 
@@ -20,12 +30,50 @@ type OpenInfoModalOptions = {
 };
 
 type OpenSettingsModalOptions = {
+  currentMuseum: Museum | null;
   currentScene: Scene | null;
   panoViewer: PanoViewer | null;
   bottomDock: DockLike | null;
   onToggleVrMode: (viewerContainer: HTMLElement) => Promise<boolean>;
   onDockTabClose: (tab: DockCloseTab) => void;
 };
+
+function openShareWindow(url: string): void {
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function resolveSceneSharePayload(options: OpenSettingsModalOptions): SceneSharePayload | null {
+  if (!options.currentMuseum || !options.currentScene) {
+    return null;
+  }
+
+  const currentView = options.panoViewer?.getCurrentView();
+  const shareView = currentView
+    ? {
+        yaw: internalYawToWorldYaw(options.currentScene, currentView.yaw),
+        pitch: currentView.pitch,
+        fov: currentView.fov,
+      }
+    : {
+        yaw: options.currentScene.initialView?.yaw ?? 0,
+        pitch: options.currentScene.initialView?.pitch ?? 0,
+        fov: options.currentScene.initialView?.fov ?? 75,
+      };
+
+  return {
+    baseUrl: window.location.href,
+    museumId: options.currentMuseum.id,
+    sceneId: options.currentScene.id,
+    museumName: options.currentMuseum.name,
+    sceneName: options.currentScene.name,
+    view: shareView,
+  };
+}
+
+async function copyShareUrl(payload: SceneSharePayload, successMessage: string): Promise<void> {
+  const ok = await copyText(buildSceneShareUrl(payload));
+  showToast(ok ? successMessage : '复制失败，请稍后重试', 1600);
+}
 
 function createInfoRow(labelText: string, valueText: string): HTMLDivElement {
   const row = document.createElement('div');
@@ -187,8 +235,112 @@ export function openSettingsModal(options: OpenSettingsModalOptions): MountedMod
   zoomRow.appendChild(zoomLabel);
   zoomRow.appendChild(zoomGroup);
 
+  const shareLabel = document.createElement('div');
+  shareLabel.className = 'vr-modal-settings-item-label';
+  shareLabel.textContent = '分享当前视角';
+
+  const shareHint = document.createElement('div');
+  shareHint.className = 'vr-modal-settings-share-hint';
+  shareHint.textContent = '复制当前视角链接，或发到 QQ、微信、微博、邮件。移动端可直接调用系统分享。';
+
+  const shareGroup = document.createElement('div');
+  shareGroup.className = 'vr-modal-settings-share-group';
+
+  const createShareButton = (label: string, action: string, onClick: () => void | Promise<void>) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'vr-modal-settings-row-btn vr-modal-settings-share-btn';
+    button.textContent = label;
+    button.setAttribute('data-share-action', action);
+    button.addEventListener('click', () => {
+      void onClick();
+    });
+    shareGroup.appendChild(button);
+  };
+
+  createShareButton('复制链接', 'copy', async () => {
+    const payload = resolveSceneSharePayload(options);
+    if (!payload) {
+      showToast('当前场景尚未就绪，暂时无法分享', 1500);
+      return;
+    }
+    await copyShareUrl(payload, '当前视角链接已复制');
+  });
+
+  createShareButton('系统分享', 'native', async () => {
+    const payload = resolveSceneSharePayload(options);
+    if (!payload) {
+      showToast('当前场景尚未就绪，暂时无法分享', 1500);
+      return;
+    }
+
+    const shareUrl = buildSceneShareUrl(payload);
+    const canNativeShare =
+      typeof navigator !== 'undefined' &&
+      typeof navigator.share === 'function';
+
+    if (canNativeShare) {
+      try {
+        await navigator.share({
+          title: buildSceneShareTitle(payload),
+          text: buildSceneShareText(payload),
+          url: shareUrl,
+        });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+
+    await copyShareUrl(payload, '当前设备不支持系统分享，已复制链接');
+  });
+
+  createShareButton('QQ', 'qq', () => {
+    const payload = resolveSceneSharePayload(options);
+    if (!payload) {
+      showToast('当前场景尚未就绪，暂时无法分享', 1500);
+      return;
+    }
+    openShareWindow(buildQqShareUrl(payload));
+  });
+
+  createShareButton('微信', 'wechat', async () => {
+    const payload = resolveSceneSharePayload(options);
+    if (!payload) {
+      showToast('当前场景尚未就绪，暂时无法分享', 1500);
+      return;
+    }
+    await copyShareUrl(payload, '链接已复制，请到微信中粘贴发送');
+  });
+
+  createShareButton('微博', 'weibo', () => {
+    const payload = resolveSceneSharePayload(options);
+    if (!payload) {
+      showToast('当前场景尚未就绪，暂时无法分享', 1500);
+      return;
+    }
+    openShareWindow(buildWeiboShareUrl(payload));
+  });
+
+  createShareButton('邮件', 'mail', () => {
+    const payload = resolveSceneSharePayload(options);
+    if (!payload) {
+      showToast('当前场景尚未就绪，暂时无法分享', 1500);
+      return;
+    }
+    window.location.href = buildMailShareUrl(payload);
+  });
+
+  const shareRow = document.createElement('div');
+  shareRow.appendChild(shareLabel);
+  shareRow.appendChild(shareHint);
+  shareRow.appendChild(shareGroup);
+
   container.appendChild(resetRow);
   container.appendChild(zoomRow);
+  container.appendChild(shareRow);
   container.appendChild(vrRow);
 
   options.bottomDock?.setMoreOpen(true);

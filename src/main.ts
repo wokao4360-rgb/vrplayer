@@ -19,7 +19,6 @@ import type { ConfigErrorPanel } from './ui/ConfigErrorPanel';
 import type { DebugPanel } from './ui/DebugPanel';
 import type { ConfigStudio } from './ui/ConfigStudio';
 import { LoadStatus } from './types/loadStatus';
-import type { QualityIndicator } from './ui/QualityIndicator';
 import './ui/ui.css';
 import type { TopRightControls } from './ui/TopRightControls';
 import type { BrandMark } from './ui/BrandMark';
@@ -152,7 +151,6 @@ class App {
   private loading: Loading;
   private debugPanel: DebugPanel | null = null;
   private configStudio: ConfigStudio | null = null;
-  private qualityIndicator: QualityIndicator | null = null;
   private northCalibrationPanel: NorthCalibrationPanel | null = null;
   private currentMuseum: Museum | null = null;
   private currentScene: Scene | null = null;
@@ -1236,7 +1234,6 @@ class App {
       this.videoPlayer = this.sceneUiRuntime?.getVideoPlayer() ?? null;
       this.guideTray = this.sceneUiRuntime?.getGuideTray() ?? null;
       this.sceneGuideDrawer = this.sceneUiRuntime?.getSceneGuideDrawer() ?? null;
-      this.qualityIndicator = this.sceneUiRuntime?.getQualityIndicator() ?? null;
     };
     let coreUiRequested = false;
     let chatInitRequested = false;
@@ -1358,9 +1355,6 @@ class App {
         message: error instanceof Error ? error.message : 'scene load failed',
       });
       transitionSession.markError();
-      if (this.qualityIndicator) {
-        this.qualityIndicator.updateStatus(LoadStatus.ERROR);
-      }
     });
     if (runtimePlan.viewStrategy === 'reset-to-target') {
       const worldTargetYaw = targetView.yaw;
@@ -1482,7 +1476,6 @@ class App {
     this.videoPlayer = null;
     this.guideTray = null;
     this.sceneGuideDrawer = null;
-    this.qualityIndicator = null;
     if (!preserveViewerShell && this.panoViewer) {
       this.panoViewer.dispose();
       this.panoViewer = null;
@@ -1717,6 +1710,7 @@ class App {
     this.settingsModalMounted = null;
     const { openSettingsModal } = await this.loadAppModalsModule();
     this.settingsModalMounted = openSettingsModal({
+      currentMuseum: this.currentMuseum,
       currentScene: this.currentScene,
       panoViewer: this.panoViewer,
       bottomDock: this.bottomDock,

@@ -60,6 +60,28 @@ test('main travel stage drives reveal from right side with strong seam distortio
   assert.equal(frame.travelDirX, 1);
 });
 
+test('late target readiness starts reveal from a restrained state instead of exposing a flat target pano immediately', () => {
+  const plan = computeSceneTransitionPlan({
+    currentWorldYaw: 0,
+    targetWorldYaw: 28,
+  });
+
+  const frame = buildSceneTransitionFrame({
+    currentWorldYaw: 0,
+    targetWorldYaw: 28,
+    plan,
+    progress: 0.74,
+    targetReady: true,
+    targetReadyProgress: 0.74,
+  });
+
+  assert.equal(frame.stage, 'travel');
+  assert.ok(frame.revealProgress <= 0.05);
+  assert.ok(frame.targetMixProgress <= 0.08);
+  assert.ok(frame.targetFocus <= 0.28);
+  assert.ok(frame.blurPx >= BLUR_STRENGTH * 0.28);
+});
+
 test('left-biased transition reveals from left and settles exactly on target yaw/fov', () => {
   const plan = computeSceneTransitionPlan({
     currentWorldYaw: 48,
@@ -115,7 +137,8 @@ test('when target is not ready, transition keeps previous scene disguise and del
   assert.equal(frame.targetMixProgress, 0);
   assert.equal(frame.settleStrength, 0);
   assert.ok(frame.blurPx > BLUR_STRENGTH * 0.75);
-  assert.ok(frame.glassAlpha > 0.2);
+  assert.ok(frame.glassAlpha >= 0.18);
+  assert.ok(frame.glassAlpha <= 0.2);
   assert.ok(frame.fromOpacity < 0.32);
   assert.ok(frame.fromEdgeMix > 0.92);
   assert.ok(frame.targetFocus >= 0.3);
@@ -181,6 +204,40 @@ test('cover-driven turn-in already suppresses source central ownership before re
   assert.ok(frame.fromOpacity < 0.25);
   assert.ok(frame.fromEdgeMix >= 0.97);
   assert.ok(frame.targetFocus >= 0.14);
+});
+
+test('late target readiness starts reveal from its actual ready point instead of jumping to a full pano plate', () => {
+  const plan = computeSceneTransitionPlan({
+    currentWorldYaw: 0,
+    targetWorldYaw: 28,
+  });
+
+  const readyAtProgress = 0.72;
+  const frameAtReady = buildSceneTransitionFrame({
+    currentWorldYaw: 0,
+    targetWorldYaw: 28,
+    plan,
+    progress: readyAtProgress,
+    targetReady: true,
+    targetReadyProgress: readyAtProgress,
+  });
+  const frameAfterReady = buildSceneTransitionFrame({
+    currentWorldYaw: 0,
+    targetWorldYaw: 28,
+    plan,
+    progress: 0.8,
+    targetReady: true,
+    targetReadyProgress: readyAtProgress,
+  });
+
+  assert.equal(frameAtReady.stage, 'travel');
+  assert.equal(frameAtReady.revealProgress, 0);
+  assert.ok(frameAtReady.targetMixProgress < 0.32);
+  assert.ok(frameAtReady.targetFocus < 0.58);
+
+  assert.ok(frameAfterReady.revealProgress > frameAtReady.revealProgress);
+  assert.ok(frameAfterReady.targetMixProgress > frameAtReady.targetMixProgress);
+  assert.ok(frameAfterReady.targetFocus > frameAtReady.targetFocus);
 });
 
 test('fov pulse contracts first then rebounds during travel before returning to zero', () => {

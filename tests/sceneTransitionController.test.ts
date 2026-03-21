@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   TARGET_READY_HOLD_PROGRESS,
   computeSceneTransitionProgress,
+  isTargetSceneReadyForReveal,
   isTransitionReleaseReady,
   type TransitionProgressState,
 } from '../src/app/sceneTransitionGate.ts';
@@ -52,6 +53,7 @@ test('low release mode may continue once low scene is ready', () => {
   const state = createState({
     targetReady: true,
     lowReady: true,
+    loadCommitted: true,
     currentProgress: 0.4,
     targetReadyAtTs: 120,
     targetReadyProgress: 0.18,
@@ -78,6 +80,7 @@ test('high release mode only exits hold after sharp ready or failure fallback', 
     targetReady: true,
     lowReady: true,
     sharpReady: true,
+    loadCommitted: true,
     currentProgress: 0.72,
     targetReadyAtTs: 140,
     targetReadyProgress: 0.22,
@@ -87,6 +90,7 @@ test('high release mode only exits hold after sharp ready or failure fallback', 
   const failedState = createState({
     targetReady: true,
     failed: true,
+    loadCommitted: true,
     currentProgress: 0.72,
     targetReadyAtTs: 140,
     targetReadyProgress: 0.22,
@@ -111,4 +115,49 @@ test('transition never reaches settle band before target preview is ready', () =
   });
 
   assert.ok(progress < 0.8);
+});
+
+test('preview shell readiness alone does not count as target reveal readiness', () => {
+  const previewOnlyState = createState({
+    targetReady: true,
+    lowReady: false,
+    sharpReady: false,
+    failed: false,
+  });
+  const lowReadyState = createState({
+    targetReady: true,
+    lowReady: true,
+    loadCommitted: true,
+  });
+  const failedState = createState({
+    targetReady: true,
+    failed: true,
+  });
+
+  assert.equal(isTargetSceneReadyForReveal(previewOnlyState), false);
+  assert.equal(isTargetSceneReadyForReveal(lowReadyState), true);
+  assert.equal(isTargetSceneReadyForReveal(failedState), true);
+});
+
+test('release readiness ignores low/high status before target scene load is committed', () => {
+  const lowReadyUncommitted = createState({
+    targetReady: true,
+    lowReady: true,
+    loadCommitted: false,
+  });
+  const sharpReadyUncommitted = createState({
+    targetReady: true,
+    lowReady: true,
+    sharpReady: true,
+    loadCommitted: false,
+  });
+  const failedUncommitted = createState({
+    targetReady: true,
+    failed: true,
+    loadCommitted: false,
+  });
+
+  assert.equal(isTransitionReleaseReady(lowReadyUncommitted, 'low'), false);
+  assert.equal(isTransitionReleaseReady(sharpReadyUncommitted, 'high'), false);
+  assert.equal(isTransitionReleaseReady(failedUncommitted, 'high'), true);
 });

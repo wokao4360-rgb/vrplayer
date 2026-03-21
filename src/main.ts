@@ -77,6 +77,11 @@ import {
   consumeQueuedTransitionIntent,
 } from './app/sceneTransitionMath';
 import { resolveSceneTransitionAssets } from './app/sceneTransitionAssets';
+import {
+  resolveRuntimeTransitionScene,
+  shouldForwardCommittedSceneStatus,
+  shouldCommitSceneLoad,
+} from './app/sceneTransitionRuntime.ts';
 import './ui/uiRefresh.css';
 if (__VR_DEBUG__) {
   void Promise.all([import('./utils/debugHelper'), import('./ui/interactionBus')])
@@ -1038,7 +1043,21 @@ class App {
     const viewerContainer = await this.ensureViewerShell(debugMode);
     const shellChrome = await this.ensureMuseumShellChrome();
     const sceneTransitionController = this.ensureSceneTransitionController();
-    const transitionSession = sceneTransitionController.start({
+    const latestPreviewUrl = this.museumShellPreloader.getPreviewUrl(scene.id) ?? undefined;
+    const runtimeSceneData = resolveRuntimeTransitionScene(scene, latestPreviewUrl);
+    let sceneLoadCommitted = false;
+    let transitionSession: TransitionSession | null = null;
+    const commitSceneLoad = (): void => {
+      if (sceneLoadCommitted || !this.panoViewer) {
+        return;
+      }
+      sceneLoadCommitted = true;
+      transitionSession?.markLoadCommitted();
+      this.panoViewer.loadScene(runtimeSceneData, { preserveView: true });
+      this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
+      this.bindRouteViewSync();
+    };
+    transitionSession = sceneTransitionController.start({
       currentWorldView: previousWorldView,
       targetWorldView: targetView,
       sourceKind: coverWasVisible ? 'cover' : 'scene',
@@ -1053,7 +1072,10 @@ class App {
       releaseMode: 'high',
       onCameraFrame: (view, context) => {
         if (!this.panoViewer) return;
-        const yawScene = context.useTargetScene ? scene : previousScene ?? scene;
+        if (!sceneLoadCommitted && shouldCommitSceneLoad(context.frame)) {
+          commitSceneLoad();
+        }
+        const yawScene = sceneLoadCommitted || context.useTargetScene ? scene : previousScene ?? scene;
         const internalYaw = worldYawToInternalYaw(yawScene, view.yaw);
         this.panoViewer.setView(internalYaw, view.pitch, view.fov);
       },
@@ -1250,19 +1272,26 @@ class App {
     };
     // 璁剧疆鍔犺浇鐘舵€佸彉鍖栧洖璋?
     this.panoViewer.setOnStatusChange((status) => {
-      this.sceneUiRuntime?.handleStatusChange(status);
-      syncSceneUiRuntimeRefs();
+      const committedReadyStatus = shouldForwardCommittedSceneStatus(sceneLoadCommitted, status);
+      if (sceneLoadCommitted) {
+        this.sceneUiRuntime?.handleStatusChange(status);
+        syncSceneUiRuntimeRefs();
+      }
       if (
         (runtimePlan.shellStrategy === 'reuse-shell' || this.museumShellState.overlayVisible) &&
+        committedReadyStatus &&
         status === LoadStatus.LOW_READY &&
         !lowSceneReady
       ) {
         lowSceneReady = true;
         this.applyMuseumShellEvent({ type: 'SCENE_LOW_READY', sceneId: scene.id });
       }
-      transitionSession.markStatus(status);
+      if (committedReadyStatus) {
+        transitionSession.markStatus(status);
+      }
       if (
         (runtimePlan.shellStrategy === 'reuse-shell' || this.museumShellState.overlayVisible) &&
+        committedReadyStatus &&
         (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED)
       ) {
         if (status === LoadStatus.HIGH_READY) {
@@ -1272,6 +1301,7 @@ class App {
         }
       }
       if (
+        sceneLoadCommitted &&
         !coreUiRequested &&
         (status === LoadStatus.LOW_READY ||
           status === LoadStatus.HIGH_READY ||
@@ -1281,10 +1311,11 @@ class App {
           ensureCoreSceneUi();
         }, 0);
       }
-      if (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED) {
+      if (sceneLoadCommitted && (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED)) {
         this.sceneUiRuntime?.scheduleFeatureWarmup(status === LoadStatus.HIGH_READY ? 'immediate' : 'idle');
       }
       if (
+        sceneLoadCommitted &&
         !chatInitRequested &&
         (status === LoadStatus.LOW_READY ||
           status === LoadStatus.HIGH_READY ||
@@ -1295,9 +1326,10 @@ class App {
         void this.chatRuntime?.ensureInit();
       }
       if (
-        status === LoadStatus.LOW_READY ||
-        status === LoadStatus.HIGH_READY ||
-        status === LoadStatus.DEGRADED
+        sceneLoadCommitted &&
+        (status === LoadStatus.LOW_READY ||
+          status === LoadStatus.HIGH_READY ||
+          status === LoadStatus.DEGRADED)
       ) {
         this.loading.hide();
       }
@@ -1340,15 +1372,6 @@ class App {
       
       this.panoViewer.setView(internalTargetYaw, targetPitch, targetFov);
     }
-    const latestPreviewUrl = this.museumShellPreloader.getPreviewUrl(scene.id);
-    const runtimeSceneData =
-      latestPreviewUrl
-        ? ({ ...scene, panoLow: latestPreviewUrl } as Scene)
-        : scene;
-    transitionSession.markLoadCommitted();
-    this.panoViewer.loadScene(runtimeSceneData, { preserveView: true });
-    this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
-    this.bindRouteViewSync();
   }
   private async mountTopRightControls(viewerContainer: HTMLElement, scene: Scene, devMode: boolean): Promise<void> {
     try {

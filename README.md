@@ -112,6 +112,10 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-21 17:24:09] `SceneTransitionController` / `TravelTransitionOverlay` 链路里，`targetPreviewImage` 或 preview shell ready 绝不等于 target scene ready；当前稳定基线：只有 `loadCommitted=true` 且收到目标场景 `LOW_READY/HIGH_READY/DEGRADED` 后，`isTargetSceneReadyForReveal()` 才能返回 true。若后续又回到“目标预览一有图就整张铺到中央”，第一优先检查 `markTargetReady()`、`isTargetSceneReadyForReveal()` 和 preview image 注入是否重新耦合了。
+- [2026-03-21 17:24:09] transition reveal 的时间线必须锚定 `targetReadyProgress`，不能直接沿用全局 `progress`；当前稳定基线：`sceneTransitionTimeline.ts` 里的 `resolveTargetRevealState()` 必须从 `targetReadyProgress` 重新起算 `revealProgress / targetMixProgress / targetFocus`，避免 target 晚 ready 时直接跳成整张 target pano 平板。若后续又出现“目标低清刚 ready 就整张贴上来”，第一优先检查这条 ready-anchored reveal 逻辑是否被回退。
+- [2026-03-21 17:24:09] `showScene()` 安装新一轮 `setOnStatusChange()` 后，未 `commitSceneLoad()` 前的 ready 事件不属于目标场景，禁止推进 transition、shell ready 或新场景 UI；当前稳定基线：只有 `shouldForwardCommittedSceneStatus(sceneLoadCommitted, status)` 为 true 时，才允许 `transitionSession.markStatus()`、`SCENE_LOW_READY/HIGH_READY/DEGRADED_READY`、`mountCore()`、`scheduleFeatureWarmup()`、`loading.hide()` 进入目标场景链路。若后续又出现旧场景 ready 污染新转场，先查这层 gate。
+
 - [2026-03-21 12:53:38] `Loading` 旧等待层禁止在 hidden 状态继续把 spinner / “加载中...” 留在 DOM 或可访问树里；当前稳定基线：`Loading.ts` 只能在 `show()` 时注入内容，`hide()` 后必须清空内容并恢复 `aria-hidden=true`。若后续切点验收里又看到等待页文案或自动化快照仍能抓到“加载中...”，第一优先检查 `Loading.ts` 是否在 constructor 或 hidden 状态提前 render。
 - [2026-03-21 00:46:00] 转场与场景进入链路禁止再向用户暴露任何状态 badge/toast；当前稳定基线：`SceneUiRuntime` 不再挂 `QualityIndicator`，`Hotspots` 不再在 scene jump 前弹“进入 xxx”，`PanoViewer` 的瓦片/高清失败提示只留日志不再 show toast。若后续线上又出现“正在加载低清图”“已切换至高清”或进入提示，第一优先检查 `sceneUiRuntime.ts`、`Hotspots.ts`、`PanoViewer.ts` 是否把状态 UI 恢复了。
 - [2026-03-21 00:35:00] `scene -> scene` 转场禁止再把 `captureViewerSnapshot()` 当默认中央 source；当前稳定基线：`resolveSceneTransitionAssets()` 必须优先用 target `previewUrl` 作为 transition shell，`viewerSnapshot` 只能留在没有 target/previous preview 时兜底。若后续又回到“旧场景整张糊在中央”或“街景/人物鬼影占屏”，第一优先检查 `sceneTransitionAssets.ts` 是否把 `viewerSnapshot` 又提回 `fromImage` 首选。

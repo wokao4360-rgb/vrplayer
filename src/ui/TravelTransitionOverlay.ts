@@ -11,6 +11,7 @@ import {
   Vector2,
   WebGLRenderer,
 } from '../vendor/three-core.ts';
+import { resolveTravelOverlayPresentation } from '../app/sceneTransitionOverlayPresentation.ts';
 import type { SceneTransitionFrame } from '../app/sceneTransitionTimeline.ts';
 
 type TravelTransitionOverlayStartArgs = {
@@ -113,10 +114,10 @@ const FRAGMENT_SHADER = `
     toUv.y += edge * uCurveStrength * 0.006 * bend;
 
     vec2 smearDir = normalize(vec2(uTravelDirX, bend * 0.26 + 0.0001));
-    float corridor = 1.0 - smoothstep(0.06, 0.34, abs(vUv.y - 0.5 - bend * 0.028));
+    float corridor = 1.0 - smoothstep(0.04, 0.22, abs(vUv.y - 0.5 - bend * 0.024));
     float centerFocus = 1.0 - smoothstep(
       0.08,
-      0.62,
+      0.42,
       length(vUv - vec2(0.5 - uTravelDirX * 0.05 * (1.0 - mixProgress), 0.49 + bend * 0.02))
     );
     float edgeBand = max(
@@ -163,24 +164,27 @@ const FRAGMENT_SHADER = `
       fromColor,
       clamp(sourceMask * mix(0.56, 0.26, targetHold), 0.0, 1.0)
     );
-    sourceBase = mix(
-      sourceBase,
-      abstractFrom,
-      centerSuppression * mix(0.92, 1.0, targetHold) + corridor * targetHold * 0.16
+    float abstractResidue = clamp(
+      edge * (0.22 + targetHold * 0.16) +
+      edgeBand * 0.08 +
+      max(0.0, sourceSideResidue - 0.24) * 0.12,
+      0.0,
+      0.42
     );
+    sourceBase = mix(sourceBase, abstractFrom, abstractResidue);
     float sourceLuma = dot(sourceBase.rgb, vec3(0.299, 0.587, 0.114));
-    float holdCorridor = targetHold * corridor * (0.12 + edge * 0.28 + centerFocus * 0.24);
+    float holdCorridor = targetHold * corridor * (0.06 + edge * 0.16 + centerFocus * 0.08);
     sourceBase.rgb = mix(
       sourceBase.rgb,
       vec3(sourceLuma) * vec3(1.0, 0.975, 0.94),
-      centerSuppression * (0.3 + targetHold * 0.22) + holdCorridor * 0.28
+      centerSuppression * (0.08 + targetHold * 0.06) + holdCorridor * 0.14
     );
     sourceBase.rgb = mix(
       sourceBase.rgb,
       vec3(sourceLuma) * vec3(0.95, 0.92, 0.88),
-      holdCorridor * 0.5
+      holdCorridor * 0.18
     );
-    sourceBase.rgb *= mix(1.0, 0.78, centerSuppression * (0.52 + targetHold * 0.3) + holdCorridor * 0.24);
+    sourceBase.rgb *= mix(1.0, 0.94, centerSuppression * (0.12 + targetHold * 0.08) + holdCorridor * 0.08);
 
     vec4 toBlur = sampleLayer(
       uToTex,
@@ -192,13 +196,13 @@ const FRAGMENT_SHADER = `
       uToTex,
       coverUv(vUv, uZoomScale + 0.03, uToShift * 0.35, uShearRad * 0.42),
       smearDir,
-      max(18.0, uBlurStrength * 1.42 + motionAmount * 0.52)
+      max(14.0, uBlurStrength * (0.96 + targetHold * 0.44) + motionAmount * 0.28)
     );
     vec4 toSharp = texture2D(uToTex, clampUv(toUv));
     vec4 toMain = mix(
       toBlur,
       toSharp,
-      clamp(0.34 + mixProgress * 0.82 + settleStrength * 0.12, 0.0, 1.0)
+      clamp(0.52 + mixProgress * 0.66 + settleStrength * 0.18, 0.0, 1.0)
     );
 
     float targetCoreGate = clamp(
@@ -210,24 +214,25 @@ const FRAGMENT_SHADER = `
     );
     float targetPresence = clamp(
       mask * (0.22 + mixProgress * 0.58) +
-      corridor * (0.14 + uTargetFocus * 0.24) +
-      centerFocus * (0.08 + uTargetFocus * 0.32),
+      corridor * (0.08 + uTargetFocus * 0.16) +
+      centerFocus * (0.04 + uTargetFocus * 0.16),
       0.0,
       1.0
     ) * mixReady * targetCoreGate;
     float preRevealHold = 1.0 - clamp(targetCoreGate * 1.4 + reveal * 0.3, 0.0, 1.0);
     float previewPresence = previewReady * clamp(
       targetHold * (
-        corridor * (0.18 + uTargetFocus * 0.28) +
-        centerFocus * (0.12 + uTargetFocus * 0.24)
+        edge * (0.05 + uTargetFocus * 0.06) +
+        corridor * (0.018 + uTargetFocus * 0.028) +
+        centerFocus * (0.003 + uTargetFocus * 0.006)
       ) +
-      (1.0 - smoothstep(0.18, 0.84, mixProgress)) * (
-        corridor * (0.08 + uTargetFocus * 0.12) +
-        centerFocus * (0.06 + uTargetFocus * 0.1)
+      (1.0 - smoothstep(0.18, 0.72, mixProgress)) * (
+        edge * (0.018 + uTargetFocus * 0.016) +
+        corridor * (0.006 + uTargetFocus * 0.01)
       ),
       0.0,
-      0.46
-    ) * mix(1.0, 0.42, preRevealHold);
+      0.07
+    ) * mix(1.0, 0.18, preRevealHold);
 
     vec4 color = mix(sourceBase, toPreview, previewPresence);
     color = mix(color, toMain, targetPresence);
@@ -239,24 +244,24 @@ const FRAGMENT_SHADER = `
     float radial = smoothstep(0.92, 0.12, length(vUv - vec2(0.5, 0.44)));
     float topGlow = smoothstep(0.92, 0.18, 1.0 - vUv.y);
     vec3 glassTint = vec3(1.0, 0.97, 0.92);
-    color.rgb += glassTint * (0.04 * uGlassAlpha * radial + 0.02 * uGlassAlpha * topGlow) * (1.0 - settleStrength * 0.6);
+    color.rgb += glassTint * (0.022 * uGlassAlpha * radial + 0.003 * uGlassAlpha * topGlow * edge) * (1.0 - settleStrength * 0.6);
     color.rgb *= mix(0.92, 1.0, radial) * mix(0.98, 1.015, settleStrength);
     color.rgb = mix(color.rgb, color.rgb * 1.03 + vec3(0.008, 0.006, 0.004), settleStrength * 0.22);
     float liveWindow = targetHold * clamp(
-      centerFocus * 0.44 +
-      corridor * 0.26 +
-      (1.0 - sourceSideResidue) * 0.12 -
-      edge * 0.1,
+      centerFocus * 0.62 +
+      corridor * 0.34 +
+      (1.0 - sourceSideResidue) * 0.08 -
+      edge * 0.08,
       0.0,
-      0.58
+      0.74
     );
     float directionalVeil = targetHold * (
       uTravelDirX > 0.0
         ? smoothstep(0.0, 0.28 + uCurveStrength * 0.1, vUv.x) * (1.0 - smoothstep(0.58, 0.88, vUv.x))
         : smoothstep(0.0, 0.28 + uCurveStrength * 0.1, 1.0 - vUv.x) * (1.0 - smoothstep(0.58, 0.88, 1.0 - vUv.x))
     );
-    color.rgb *= 1.0 - directionalVeil * 0.14;
-    float outputAlpha = clamp((1.0 - liveWindow * 1.6) * mix(1.0, 0.38, preRevealHold), 0.18, 1.0);
+    color.rgb *= 1.0 - directionalVeil * 0.06;
+    float outputAlpha = clamp((1.0 - liveWindow * 1.95) * mix(0.72, 0.16, preRevealHold), 0.02, 0.82);
 
     gl_FragColor = vec4(color.rgb, outputAlpha);
   }
@@ -432,15 +437,9 @@ export class TravelTransitionOverlay {
       return;
     }
 
-    const stageOpacity = frame.sourceKind === 'scene'
-      ? frame.stage === 'turn-in'
-        ? 0.16 + frame.stageProgress * 0.22
-        : frame.stage === 'travel'
-          ? Math.min(1, 0.38 + frame.targetFocus * 0.24 + frame.revealProgress * 0.26)
-          : 0.72
-      : 1;
-    this.element.style.opacity = String(Number(stageOpacity.toFixed(3)));
-    this.updateFallbackMotion(frame);
+    const presentation = resolveTravelOverlayPresentation(frame, this.targetImageLoaded);
+    this.element.style.opacity = String(presentation.stageOpacity);
+    this.updateFallbackMotion(frame, presentation);
     this.element.dataset.wipeFrom = frame.wipeFrom;
 
     if (!this.webglEnabled || !this.renderer || !this.material) {
@@ -476,7 +475,7 @@ export class TravelTransitionOverlay {
               frame.stage === 'settle' ? 0.72 : 0.14,
             ),
           )
-        : Math.min(0.32, 0.08 + frame.targetFocus * 0.44)
+        : 0
       : 0;
     uniforms.uFromOpacity.value = frame.fromOpacity;
     uniforms.uFromEdgeMix.value = frame.fromEdgeMix;
@@ -490,6 +489,12 @@ export class TravelTransitionOverlay {
       return;
     }
     this.active = false;
+    this.element.style.opacity = '0';
+    this.element.style.setProperty('--vr-travel-from-backdrop-opacity', '0');
+    this.element.style.setProperty('--vr-travel-target-backdrop-opacity', '0');
+    this.element.style.setProperty('--vr-travel-target-reveal-inset', '100%');
+    this.element.style.setProperty('--vr-travel-backdrop-blur', '0px');
+    this.element.style.setProperty('--vr-travel-target-backdrop-blur', '0px');
     this.element.classList.remove('is-active');
     this.clearTimer = window.setTimeout(() => {
       if (this.active) {
@@ -658,27 +663,11 @@ export class TravelTransitionOverlay {
     return slot === 'from' ? this.fromTexture : this.toTexture;
   }
 
-  private updateFallbackMotion(frame: SceneTransitionFrame): void {
-    const fallbackBlur = frame.targetReady && this.targetImageLoaded
-      ? Math.max(frame.blurPx * 0.7, 6)
-      : Math.max(frame.blurPx * (frame.sourceKind === 'cover' ? 1.35 : 1.12), frame.sourceKind === 'cover' ? 24 : 14);
-    const targetBackdropOpacity = this.targetImageLoaded
-      ? frame.targetReady
-        ? Math.min(
-            Math.max(
-              frame.targetMixProgress * 0.64 + frame.targetFocus * 0.22,
-              frame.stage === 'settle' ? 0.68 : 0.18,
-            ),
-            0.96,
-          )
-        : Math.min(0.16, 0.06 + frame.targetFocus * 0.22)
-      : 0;
-    const fromCenterCutInner = frame.sourceKind === 'cover'
-      ? 24 + frame.fromEdgeMix * 12
-      : frame.targetReady
-        ? 18 + frame.fromEdgeMix * 14
-        : 30 + frame.fromEdgeMix * 16;
-    this.element.style.setProperty('--vr-travel-backdrop-blur', `${fallbackBlur}px`);
+  private updateFallbackMotion(
+    frame: SceneTransitionFrame,
+    presentation = resolveTravelOverlayPresentation(frame, this.targetImageLoaded),
+  ): void {
+    this.element.style.setProperty('--vr-travel-backdrop-blur', `${presentation.fallbackBlur}px`);
     this.element.style.setProperty(
       '--vr-travel-backdrop-scale',
       String(Number((frame.zoomScale + frame.fromEdgeMix * (frame.sourceKind === 'cover' ? 0.08 : 0.03)).toFixed(4))),
@@ -686,37 +675,22 @@ export class TravelTransitionOverlay {
     this.element.style.setProperty('--vr-travel-backdrop-shift', `${frame.fromShiftPercent}%`);
     this.element.style.setProperty(
       '--vr-travel-from-backdrop-opacity',
-      String(Number((frame.fromOpacity * (frame.sourceKind === 'cover' ? 0.74 : (frame.targetReady ? 0.76 : 0.58))).toFixed(3))),
+      String(presentation.fromBackdropOpacity),
     );
-    this.element.style.setProperty(
-      '--vr-travel-backdrop-brightness',
-      frame.sourceKind === 'cover'
-        ? (frame.stage === 'settle' ? '0.9' : '0.8')
-        : (frame.stage === 'settle' ? '0.98' : '0.92'),
-    );
-    this.element.style.setProperty('--vr-travel-from-cut-inner', `${fromCenterCutInner}%`);
-    this.element.style.setProperty('--vr-travel-from-cut-outer', `${Math.min(fromCenterCutInner + 18, 100)}%`);
+    this.element.style.setProperty('--vr-travel-backdrop-brightness', String(presentation.backdropBrightness));
+    this.element.style.setProperty('--vr-travel-from-cut-inner', `${presentation.fromCenterCutInner}%`);
+    this.element.style.setProperty('--vr-travel-from-cut-outer', `${presentation.fromCenterCutOuter}%`);
     this.element.style.setProperty(
       '--vr-travel-target-backdrop-blur',
-      `${Math.max(frame.blurPx * (0.5 - frame.settleStrength * 0.18), 3)}px`,
+      `${presentation.targetBackdropBlur}px`,
     );
     this.element.style.setProperty(
       '--vr-travel-target-backdrop-scale',
       String(Number(Math.max(1, frame.zoomScale - 0.01).toFixed(4))),
     );
     this.element.style.setProperty('--vr-travel-target-backdrop-shift', `${frame.toShiftPercent}%`);
-    this.element.style.setProperty('--vr-travel-target-backdrop-opacity', String(targetBackdropOpacity));
-    this.element.style.setProperty(
-      '--vr-travel-target-reveal-inset',
-      `${this.targetImageLoaded
-        ? Math.max(
-            0,
-            (1 - (frame.targetReady
-              ? Math.max(frame.revealProgress, frame.targetMixProgress * 0.46 + frame.targetFocus * 0.16)
-              : Math.max(0.12, frame.targetFocus * 0.28))) * 100,
-          )
-        : Math.max(0, (1 - frame.revealProgress) * 100)}%`,
-    );
+    this.element.style.setProperty('--vr-travel-target-backdrop-opacity', String(presentation.targetBackdropOpacity));
+    this.element.style.setProperty('--vr-travel-target-reveal-inset', `${presentation.targetRevealInset}%`);
   }
 
   private setBackdropImage(element: HTMLElement, imageUrl?: string): void {

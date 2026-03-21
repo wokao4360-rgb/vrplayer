@@ -6,10 +6,12 @@ import { TravelTransitionOverlay } from '../ui/TravelTransitionOverlay.ts';
 import { buildSceneTransitionCameraView } from './sceneTransitionCamera.ts';
 import {
   computeSceneTransitionProgress,
+  isTargetSceneReadyForReveal,
   isTransitionReleaseReady,
   type SceneTransitionReleaseMode,
   type TransitionProgressState,
 } from './sceneTransitionGate.ts';
+import { createInitialTransitionProgressState } from './sceneTransitionRuntime.ts';
 
 export type SceneTransitionView = {
   yaw: number;
@@ -94,18 +96,7 @@ export class TransitionSession {
       fromMapPoint: args.fromMapPoint,
       toMapPoint: args.toMapPoint,
     });
-    this.state = {
-      targetReady: Boolean(args.targetPreviewImage),
-      lowReady: false,
-      sharpReady: false,
-      loadCommitted: false,
-      failed: false,
-      currentProgress: 0,
-      targetReadyAtTs: args.targetPreviewImage ? 0 : null,
-      targetReadyProgress: args.targetPreviewImage ? 0.18 : 0,
-      releaseAtTs: null,
-      releaseProgress: 0,
-    };
+    this.state = createInitialTransitionProgressState(args.targetPreviewImage);
     this.completionPromise = new Promise<TransitionCompletion>((resolve) => {
       this.resolveCompletion = resolve;
     });
@@ -126,7 +117,6 @@ export class TransitionSession {
       return;
     }
     this.overlay.setTargetImage(imageUrl);
-    this.markTargetReady();
   }
 
   markTargetReady(): void {
@@ -204,7 +194,8 @@ export class TransitionSession {
       targetWorldYaw: this.args.targetWorldView.yaw,
       plan: this.plan,
       progress,
-      targetReady: this.state.targetReady,
+      targetReady: isTargetSceneReadyForReveal(this.state),
+      targetReadyProgress: this.state.targetReadyProgress,
       sourceKind: this.args.sourceKind ?? 'scene',
     });
     this.overlay.render(frame);

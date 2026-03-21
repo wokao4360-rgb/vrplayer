@@ -26,16 +26,25 @@ export const TARGET_READY_HOLD_PROGRESS = 0.74;
 export const POST_READY_DURATION_MS = 180;
 
 export function isTransitionReleaseReady(
-  state: Pick<TransitionProgressState, 'lowReady' | 'sharpReady' | 'failed'>,
+  state: Pick<TransitionProgressState, 'lowReady' | 'sharpReady' | 'failed' | 'loadCommitted'>,
   releaseMode: SceneTransitionReleaseMode = 'high',
 ): boolean {
   if (state.failed) {
     return true;
   }
+  if (!state.loadCommitted) {
+    return false;
+  }
   if (releaseMode === 'low') {
     return state.lowReady || state.sharpReady;
   }
   return state.sharpReady;
+}
+
+export function isTargetSceneReadyForReveal(
+  state: Pick<TransitionProgressState, 'lowReady' | 'sharpReady' | 'failed' | 'loadCommitted'>,
+): boolean {
+  return state.failed || (state.loadCommitted && (state.lowReady || state.sharpReady));
 }
 
 export function computeSceneTransitionProgress({

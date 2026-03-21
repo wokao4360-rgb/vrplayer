@@ -37,6 +37,7 @@ type BuildSceneTransitionFrameArgs = {
   plan: SceneTransitionPlan;
   progress: number;
   targetReady: boolean;
+  targetReadyProgress?: number;
   sourceKind?: 'scene' | 'cover';
 };
 
@@ -49,9 +50,9 @@ export const FOV_PULSE_OUT = 0.9;
 
 const SETTLE_RATIO_MIN = 0.12;
 const SETTLE_RATIO_MAX = 0.2;
-const DEFAULT_GLASS_ALPHA = 0.22;
-const TARGET_NOT_READY_GLASS_ALPHA = 0.3;
-const OCCLUSION_ALPHA = 0.34;
+const DEFAULT_GLASS_ALPHA = 0.14;
+const TARGET_NOT_READY_GLASS_ALPHA = 0.18;
+const OCCLUSION_ALPHA = 0.22;
 
 export function buildSceneTransitionFrame({
   currentWorldYaw,
@@ -59,6 +60,7 @@ export function buildSceneTransitionFrame({
   plan,
   progress,
   targetReady,
+  targetReadyProgress,
   sourceKind = 'scene',
 }: BuildSceneTransitionFrameArgs): SceneTransitionFrame {
   const normalizedProgress = clamp(progress, 0, 1);
@@ -68,6 +70,13 @@ export function buildSceneTransitionFrame({
   const turnInEndYaw = normalizeSignedAngle(
     currentWorldYaw + plan.travelDirX * plan.turnLead,
   );
+  const targetRevealState = resolveTargetRevealState({
+    normalizedProgress,
+    settleStart,
+    targetReady,
+    targetReadyProgress,
+    sourceKind,
+  });
 
   if (normalizedProgress <= TURN_IN_RATIO) {
     const localT = easeOutCubic(safeRatio(normalizedProgress, TURN_IN_RATIO));
@@ -107,43 +116,31 @@ export function buildSceneTransitionFrame({
     const travelT = safeRatio(normalizedProgress - TURN_IN_RATIO, settleStart - TURN_IN_RATIO);
     const easedTravel = easeInOutCubic(travelT);
     const displayWorldYaw = interpolateAngle(turnInEndYaw, targetWorldYaw, easedTravel);
-    const revealProgress = targetReady
-      ? clamp((easedTravel - 0.0) / 0.66, 0, 1)
-      : 0;
     const midBell = bellCurve(travelT);
-    const targetMixProgress = targetReady
-      ? clamp(
-          Math.max(
-            (sourceKind === 'cover' ? 0.42 : 0.28) + easedTravel * (sourceKind === 'cover' ? 0.5 : 0.58),
-            (sourceKind === 'cover' ? 0.46 : 0.3) + revealProgress * (sourceKind === 'cover' ? 0.6 : 0.66),
-            0.18 + midBell * 0.16,
-          ),
-          0,
-          0.97,
-        )
-      : 0;
     const blurBase = targetReady
-      ? mix(BLUR_STRENGTH * (sourceKind === 'cover' ? 0.54 : 0.56), BLUR_STRENGTH * 0.12, revealProgress)
-      : BLUR_STRENGTH * (sourceKind === 'cover' ? 0.96 : 0.86);
+      ? mix(
+          BLUR_STRENGTH * (sourceKind === 'cover' ? 0.54 : 0.38),
+          BLUR_STRENGTH * 0.08,
+          targetRevealState.revealProgress,
+        )
+      : BLUR_STRENGTH * (sourceKind === 'cover' ? 0.96 : 0.7);
     const blurPx = blurBase + BLUR_STRENGTH * 0.08 * midBell;
     const distortionStrength =
       DISTORTION_STRENGTH * (0.72 + 0.2 * midBell + plan.curveStrength * 0.12);
     const fromOpacity = targetReady
       ? sourceKind === 'cover'
-        ? mix(0.16, 0.02, targetMixProgress)
-        : mix(0.36, 0.03, targetMixProgress)
+        ? mix(0.16, 0.02, targetRevealState.targetMixProgress)
+        : mix(0.36, 0.03, targetRevealState.targetMixProgress)
       : sourceKind === 'cover'
         ? 0.24
         : mix(0.28, 0.14, easedTravel);
     const fromEdgeMix = sourceKind === 'cover'
       ? 0.98
       : targetReady
-        ? mix(0.82, 0.96, targetMixProgress)
+        ? mix(0.82, 0.96, targetRevealState.targetMixProgress)
         : mix(0.92, 0.98, easedTravel);
     const targetFocus = targetReady
-      ? sourceKind === 'cover'
-        ? clamp(0.48 + targetMixProgress * 0.58, 0, 1)
-        : clamp(0.4 + targetMixProgress * 0.58, 0, 1)
+      ? targetRevealState.targetFocus
       : sourceKind === 'cover'
         ? 0.12
         : mix(0.28, 0.42, midBell);
@@ -156,8 +153,8 @@ export function buildSceneTransitionFrame({
       displayWorldYaw,
       travelDirX: plan.travelDirX,
       wipeFrom: plan.wipeFrom,
-      revealProgress: round3(revealProgress),
-      targetMixProgress: round3(targetMixProgress),
+      revealProgress: round3(targetRevealState.revealProgress),
+      targetMixProgress: round3(targetRevealState.targetMixProgress),
       settleStrength: 0,
       fromOpacity: round3(fromOpacity),
       fromEdgeMix: round3(fromEdgeMix),
@@ -170,7 +167,7 @@ export function buildSceneTransitionFrame({
       fovDelta: round2(resolveTravelFovDelta(normalizedProgress, settleStart)),
       zoomScale: round4(1 + 0.015 + midBell * 0.02),
       fromShiftPercent: round2(plan.travelDirX * mix(sourceKind === 'cover' ? 2.2 : 1.8, sourceKind === 'cover' ? 5.2 : 4.2, easedTravel)),
-      toShiftPercent: round2(plan.travelDirX * mix(5.4, 0.4, revealProgress)),
+      toShiftPercent: round2(plan.travelDirX * mix(5.4, 0.4, targetRevealState.revealProgress)),
       shearDeg: round2(plan.travelDirX * (1.4 + plan.curveStrength * 3.4) * midBell),
       curveStrength: plan.curveStrength,
       occlusionOpacity: round3((0.1 + plan.curveStrength * (OCCLUSION_ALPHA * 0.8)) * midBell),
@@ -180,8 +177,15 @@ export function buildSceneTransitionFrame({
   const settleT = easeOutQuad(safeRatio(normalizedProgress - settleStart, 1 - settleStart));
   const settleStartYaw = interpolateAngle(turnInEndYaw, targetWorldYaw, 1);
   const blurPx = targetReady ? mix(BLUR_STRENGTH * 0.18, 0, settleT) : BLUR_STRENGTH * 0.82;
-  const revealProgress = targetReady ? 1 : 0;
-  const targetMixProgress = targetReady ? 1 : 0;
+  const revealProgress = targetReady
+    ? round3(mix(targetRevealState.revealProgress, 1, settleT))
+    : 0;
+  const targetMixProgress = targetReady
+    ? round3(mix(targetRevealState.targetMixProgress, 1, settleT))
+    : 0;
+  const targetFocus = targetReady
+    ? round3(mix(targetRevealState.targetFocus, 1, settleT))
+    : 0.34;
   return {
     progress: round4(normalizedProgress),
     stageProgress: round4(settleT),
@@ -194,9 +198,19 @@ export function buildSceneTransitionFrame({
     revealProgress,
     targetMixProgress,
     settleStrength: round3(targetReady ? settleT : 0),
-    fromOpacity: round3(targetReady ? mix(sourceKind === 'cover' ? 0.04 : 0.06, 0, settleT) : (sourceKind === 'cover' ? 0.28 : 0.16)),
+    fromOpacity: round3(
+      targetReady
+        ? mix(
+            sourceKind === 'cover'
+              ? mix(0.08, 0.02, targetRevealState.targetMixProgress)
+              : mix(0.12, 0.04, targetRevealState.targetMixProgress),
+            0,
+            settleT,
+          )
+        : (sourceKind === 'cover' ? 0.28 : 0.16),
+    ),
     fromEdgeMix: round3(sourceKind === 'cover' ? 1 : (targetReady ? mix(0.9, 0.98, settleT) : 0.98)),
-    targetFocus: round3(targetReady ? 1 : 0.34),
+    targetFocus,
     wipeSoftness: round3(WIPE_SOFTNESS + plan.curveStrength * 0.02),
     distortionStrength: round3(DISTORTION_STRENGTH * (1 - settleT * 0.8)),
     blurPx: round2(blurPx),
@@ -231,6 +245,63 @@ function resolveTravelFovDelta(progress: number, settleStart: number): number {
     );
   }
   return 0.45;
+}
+
+function resolveTargetRevealState({
+  normalizedProgress,
+  settleStart,
+  targetReady,
+  targetReadyProgress,
+  sourceKind,
+}: {
+  normalizedProgress: number;
+  settleStart: number;
+  targetReady: boolean;
+  targetReadyProgress?: number;
+  sourceKind: 'scene' | 'cover';
+}): {
+  revealProgress: number;
+  targetMixProgress: number;
+  targetFocus: number;
+} {
+  if (!targetReady) {
+    return {
+      revealProgress: 0,
+      targetMixProgress: 0,
+      targetFocus: 0,
+    };
+  }
+
+  const readyProgress = clamp(
+    targetReadyProgress ?? TURN_IN_RATIO,
+    0,
+    Math.min(normalizedProgress, settleStart),
+  );
+  const readyWindow = Math.max((1 - readyProgress) * 0.85, 0.001);
+  const readyDelta = Math.max(normalizedProgress - readyProgress, 0);
+  const revealRatio = safeRatio(readyDelta, readyWindow);
+  const revealProgress = easeInOutCubic(revealRatio);
+  const mixLead = easeOutQuad(safeRatio(readyDelta, readyWindow * 1.08));
+  const targetMixProgress = clamp(
+    (sourceKind === 'cover' ? 0.03 : 0.02) +
+      revealProgress * (sourceKind === 'cover' ? 0.86 : 0.82) +
+      mixLead * (sourceKind === 'cover' ? 0.1 : 0.08),
+    0,
+    0.97,
+  );
+  const targetFocus = clamp(
+    (sourceKind === 'cover' ? 0.23 : 0.14) +
+      revealProgress * (sourceKind === 'cover' ? 0.69 : 0.58) +
+      mixLead * (sourceKind === 'cover' ? 0.1 : 0.08),
+    0,
+    1,
+  );
+
+  return {
+    revealProgress,
+    targetMixProgress,
+    targetFocus,
+  };
 }
 
 function interpolateAngle(from: number, to: number, t: number): number {

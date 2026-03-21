@@ -17,7 +17,6 @@ let hotspotsModulePromise: Promise<typeof import('../ui/Hotspots')> | null = nul
 let videoPlayerModulePromiseShared: Promise<typeof import('../ui/VideoPlayer')> | null = null;
 let guideTrayModulePromiseShared: Promise<typeof import('../ui/GuideTray')> | null = null;
 let sceneGuideDrawerModulePromiseShared: Promise<typeof import('../ui/SceneGuideDrawer')> | null = null;
-let qualityIndicatorModulePromiseShared: Promise<typeof import('../ui/QualityIndicator')> | null = null;
 
 function loadBottomDockModule(): Promise<typeof import('../ui/BottomDock')> {
   if (!bottomDockModulePromise) {
@@ -61,13 +60,6 @@ function loadSceneGuideDrawerModuleShared(): Promise<typeof import('../ui/SceneG
   return sceneGuideDrawerModulePromiseShared;
 }
 
-function loadQualityIndicatorModuleShared(): Promise<typeof import('../ui/QualityIndicator')> {
-  if (!qualityIndicatorModulePromiseShared) {
-    qualityIndicatorModulePromiseShared = import('../ui/QualityIndicator');
-  }
-  return qualityIndicatorModulePromiseShared;
-}
-
 export async function prewarmSceneUiRuntimeModules(): Promise<void> {
   await Promise.allSettled([
     loadBottomDockModule(),
@@ -76,7 +68,6 @@ export async function prewarmSceneUiRuntimeModules(): Promise<void> {
     loadVideoPlayerModuleShared(),
     loadGuideTrayModuleShared(),
     loadSceneGuideDrawerModuleShared(),
-    loadQualityIndicatorModuleShared(),
   ]);
 }
 
@@ -309,7 +300,6 @@ export class SceneUiRuntime {
   }
 
   handleStatusChange(status: LoadStatus): void {
-    this.qualityIndicator?.updateStatus(status);
     if (
       !this.observerMounted &&
       !this.observerMounting &&
@@ -408,32 +398,6 @@ export class SceneUiRuntime {
     }
     this.observerMounting = true;
     try {
-      const { QualityIndicator } = await this.loadQualityIndicatorModule();
-      if (this.observerMounted || this.disposed || !this.isAlive()) {
-        return;
-      }
-
-      if (!this.qualityIndicator) {
-        this.qualityIndicator = new QualityIndicator();
-        this.options.appElement.appendChild(this.qualityIndicator.getElement());
-      }
-
-      const panoViewer = this.options.getPanoViewer();
-      if (panoViewer) {
-        this.qualityIndicator.updateStatus(panoViewer.getLoadStatus());
-      }
-
-      if (!this.handleMetricsEvent) {
-        this.handleMetricsEvent = (event: Event) => {
-          if (!this.qualityIndicator) {
-            return;
-          }
-          const detail = (event as CustomEvent).detail || {};
-          this.qualityIndicator.updateMetrics(detail);
-        };
-        window.addEventListener('vr:metrics', this.handleMetricsEvent);
-      }
-
       this.observerMounted = true;
     } finally {
       this.observerMounting = false;
@@ -450,10 +414,6 @@ export class SceneUiRuntime {
 
   private loadSceneGuideDrawerModule(): Promise<typeof import('../ui/SceneGuideDrawer')> {
     return loadSceneGuideDrawerModuleShared();
-  }
-
-  private loadQualityIndicatorModule(): Promise<typeof import('../ui/QualityIndicator')> {
-    return loadQualityIndicatorModuleShared();
   }
 
   private isAlive(): boolean {

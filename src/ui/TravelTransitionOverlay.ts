@@ -90,7 +90,8 @@ const FRAGMENT_SHADER = `
     float mixProgress = clamp(uTargetMixProgress, 0.0, 1.0);
     float settleStrength = clamp(uSettleStrength, 0.0, 1.0);
     float previewReady = clamp(uTargetPreviewLoaded, 0.0, 1.0);
-    float targetHold = 1.0 - uTargetMixReady;
+    float mixReady = clamp(uTargetMixReady, 0.0, 1.0);
+    float targetHold = 1.0 - mixReady;
     float soft = max(0.01, uWipeSoftness * 0.58);
     float seam = uTravelDirX > 0.0 ? 1.0 - reveal : reveal;
     float mask = uTravelDirX > 0.0
@@ -122,12 +123,16 @@ const FRAGMENT_SHADER = `
       1.0 - smoothstep(0.02, 0.14 + uCurveStrength * 0.04, vUv.x),
       1.0 - smoothstep(0.02, 0.14 + uCurveStrength * 0.04, 1.0 - vUv.x)
     );
+    float sourceSideResidue = uTravelDirX > 0.0
+      ? 1.0 - smoothstep(0.2, 0.62, vUv.x)
+      : 1.0 - smoothstep(0.2, 0.62, 1.0 - vUv.x);
     float centerCut = 1.0 - smoothstep(
       0.16,
       0.34 + (1.0 - uFromEdgeMix) * 0.12,
       length(vUv - vec2(0.5 - uTravelDirX * 0.03 * (1.0 - mixProgress), 0.5 + bend * 0.015))
     );
-    float sourceMask = mix(1.0 - centerCut, max(edgeBand, edge), clamp(uFromEdgeMix, 0.0, 1.0));
+    float sourceResidueMask = max(edge, edgeBand * max(0.42, sourceSideResidue));
+    float sourceMask = mix(1.0 - centerCut, sourceResidueMask, clamp(uFromEdgeMix, 0.0, 1.0));
     sourceMask *= clamp(uFromOpacity, 0.0, 1.0);
 
     vec4 fromColor = sampleLayer(
@@ -149,29 +154,33 @@ const FRAGMENT_SHADER = `
       max(18.0, uBlurStrength * (1.08 + uFromEdgeMix * 0.48))
     );
     float centerSuppression = (1.0 - smoothstep(
-      0.14,
-      0.4,
+      0.12,
+      0.34,
       length(vUv - vec2(0.5 - uTravelDirX * 0.02 * (1.0 - mixProgress), 0.5 + bend * 0.012))
     )) * min(1.0, uFromEdgeMix * (1.0 + targetHold * 0.55));
     vec4 sourceBase = mix(
       frostedFrom,
       fromColor,
-      clamp(sourceMask * mix(0.72, 0.44, targetHold), 0.0, 1.0)
+      clamp(sourceMask * mix(0.56, 0.26, targetHold), 0.0, 1.0)
     );
-    sourceBase = mix(sourceBase, abstractFrom, centerSuppression * mix(0.88, 1.0, targetHold));
+    sourceBase = mix(
+      sourceBase,
+      abstractFrom,
+      centerSuppression * mix(0.92, 1.0, targetHold) + corridor * targetHold * 0.16
+    );
     float sourceLuma = dot(sourceBase.rgb, vec3(0.299, 0.587, 0.114));
-    float holdCorridor = targetHold * corridor * (0.08 + edge * 0.22 + centerFocus * 0.18);
+    float holdCorridor = targetHold * corridor * (0.12 + edge * 0.28 + centerFocus * 0.24);
     sourceBase.rgb = mix(
       sourceBase.rgb,
       vec3(sourceLuma) * vec3(1.0, 0.975, 0.94),
-      centerSuppression * (0.24 + targetHold * 0.16) + holdCorridor * 0.22
+      centerSuppression * (0.3 + targetHold * 0.22) + holdCorridor * 0.28
     );
     sourceBase.rgb = mix(
       sourceBase.rgb,
       vec3(sourceLuma) * vec3(0.95, 0.92, 0.88),
-      holdCorridor * 0.42
+      holdCorridor * 0.5
     );
-    sourceBase.rgb *= mix(1.0, 0.84, centerSuppression * (0.4 + targetHold * 0.26) + holdCorridor * 0.18);
+    sourceBase.rgb *= mix(1.0, 0.78, centerSuppression * (0.52 + targetHold * 0.3) + holdCorridor * 0.24);
 
     vec4 toBlur = sampleLayer(
       uToTex,
@@ -192,19 +201,33 @@ const FRAGMENT_SHADER = `
       clamp(0.34 + mixProgress * 0.82 + settleStrength * 0.12, 0.0, 1.0)
     );
 
-    float targetPresence = clamp(
-      mask * (0.42 + mixProgress * 0.42) +
-      corridor * (0.1 + uTargetFocus * 0.2) +
-      centerFocus * (0.16 + uTargetFocus * 0.42),
+    float targetCoreGate = clamp(
+      reveal * 1.12 +
+      mixProgress * 0.38 +
+      settleStrength * 0.24,
       0.0,
       1.0
-    ) * uTargetMixReady;
-    float previewPresence = previewReady * targetHold * clamp(
-      corridor * (0.1 + uTargetFocus * 0.16) +
-      centerFocus * (0.06 + uTargetFocus * 0.16),
-      0.0,
-      0.22
     );
+    float targetPresence = clamp(
+      mask * (0.22 + mixProgress * 0.58) +
+      corridor * (0.14 + uTargetFocus * 0.24) +
+      centerFocus * (0.08 + uTargetFocus * 0.32),
+      0.0,
+      1.0
+    ) * mixReady * targetCoreGate;
+    float preRevealHold = 1.0 - clamp(targetCoreGate * 1.4 + reveal * 0.3, 0.0, 1.0);
+    float previewPresence = previewReady * clamp(
+      targetHold * (
+        corridor * (0.18 + uTargetFocus * 0.28) +
+        centerFocus * (0.12 + uTargetFocus * 0.24)
+      ) +
+      (1.0 - smoothstep(0.18, 0.84, mixProgress)) * (
+        corridor * (0.08 + uTargetFocus * 0.12) +
+        centerFocus * (0.06 + uTargetFocus * 0.1)
+      ),
+      0.0,
+      0.46
+    ) * mix(1.0, 0.42, preRevealHold);
 
     vec4 color = mix(sourceBase, toPreview, previewPresence);
     color = mix(color, toMain, targetPresence);
@@ -219,8 +242,23 @@ const FRAGMENT_SHADER = `
     color.rgb += glassTint * (0.04 * uGlassAlpha * radial + 0.02 * uGlassAlpha * topGlow) * (1.0 - settleStrength * 0.6);
     color.rgb *= mix(0.92, 1.0, radial) * mix(0.98, 1.015, settleStrength);
     color.rgb = mix(color.rgb, color.rgb * 1.03 + vec3(0.008, 0.006, 0.004), settleStrength * 0.22);
+    float liveWindow = targetHold * clamp(
+      centerFocus * 0.44 +
+      corridor * 0.26 +
+      (1.0 - sourceSideResidue) * 0.12 -
+      edge * 0.1,
+      0.0,
+      0.58
+    );
+    float directionalVeil = targetHold * (
+      uTravelDirX > 0.0
+        ? smoothstep(0.0, 0.28 + uCurveStrength * 0.1, vUv.x) * (1.0 - smoothstep(0.58, 0.88, vUv.x))
+        : smoothstep(0.0, 0.28 + uCurveStrength * 0.1, 1.0 - vUv.x) * (1.0 - smoothstep(0.58, 0.88, 1.0 - vUv.x))
+    );
+    color.rgb *= 1.0 - directionalVeil * 0.14;
+    float outputAlpha = clamp((1.0 - liveWindow * 1.6) * mix(1.0, 0.38, preRevealHold), 0.18, 1.0);
 
-    gl_FragColor = vec4(color.rgb, 1.0);
+    gl_FragColor = vec4(color.rgb, outputAlpha);
   }
 `;
 
@@ -375,6 +413,7 @@ export class TravelTransitionOverlay {
     this.targetImageLoaded = false;
     this.currentFromUrl = args.fromImage;
     this.currentToUrl = args.targetImage;
+    this.element.style.opacity = '';
     this.setBackdropImage(this.fromBackdrop, args.fromImage);
     this.setBackdropImage(this.toBackdrop, args.targetImage);
     this.element.classList.add('is-active');
@@ -393,6 +432,14 @@ export class TravelTransitionOverlay {
       return;
     }
 
+    const stageOpacity = frame.sourceKind === 'scene'
+      ? frame.stage === 'turn-in'
+        ? 0.16 + frame.stageProgress * 0.22
+        : frame.stage === 'travel'
+          ? Math.min(1, 0.38 + frame.targetFocus * 0.24 + frame.revealProgress * 0.26)
+          : 0.72
+      : 1;
+    this.element.style.opacity = String(Number(stageOpacity.toFixed(3)));
     this.updateFallbackMotion(frame);
     this.element.dataset.wipeFrom = frame.wipeFrom;
 
@@ -420,7 +467,17 @@ export class TravelTransitionOverlay {
     uniforms.uShearRad.value = degreesToRadians(frame.shearDeg);
     uniforms.uSettleStrength.value = frame.settleStrength;
     uniforms.uTargetPreviewLoaded.value = this.targetImageLoaded ? 1 : 0;
-    uniforms.uTargetMixReady.value = frame.targetReady && this.targetImageLoaded ? 1 : 0;
+    uniforms.uTargetMixReady.value = this.targetImageLoaded
+      ? frame.targetReady
+        ? Math.min(
+            1,
+            Math.max(
+              frame.targetMixProgress * 0.76 + frame.targetFocus * 0.22,
+              frame.stage === 'settle' ? 0.72 : 0.14,
+            ),
+          )
+        : Math.min(0.32, 0.08 + frame.targetFocus * 0.44)
+      : 0;
     uniforms.uFromOpacity.value = frame.fromOpacity;
     uniforms.uFromEdgeMix.value = frame.fromEdgeMix;
     uniforms.uTargetFocus.value = frame.targetFocus;
@@ -438,6 +495,7 @@ export class TravelTransitionOverlay {
       if (this.active) {
         return;
       }
+      this.element.style.opacity = '';
       this.setBackdropImage(this.fromBackdrop, undefined);
       this.setBackdropImage(this.toBackdrop, undefined);
       this.targetImageLoaded = false;
@@ -603,17 +661,23 @@ export class TravelTransitionOverlay {
   private updateFallbackMotion(frame: SceneTransitionFrame): void {
     const fallbackBlur = frame.targetReady && this.targetImageLoaded
       ? Math.max(frame.blurPx * 0.7, 6)
-      : Math.max(frame.blurPx * (frame.sourceKind === 'cover' ? 1.35 : 1.22), frame.sourceKind === 'cover' ? 24 : 18);
+      : Math.max(frame.blurPx * (frame.sourceKind === 'cover' ? 1.35 : 1.12), frame.sourceKind === 'cover' ? 24 : 14);
     const targetBackdropOpacity = this.targetImageLoaded
       ? frame.targetReady
-        ? Math.min(Math.max(frame.targetMixProgress * 0.82 + frame.targetFocus * 0.12, frame.stage === 'settle' ? 0.72 : 0), 0.96)
+        ? Math.min(
+            Math.max(
+              frame.targetMixProgress * 0.64 + frame.targetFocus * 0.22,
+              frame.stage === 'settle' ? 0.68 : 0.18,
+            ),
+            0.96,
+          )
         : Math.min(0.16, 0.06 + frame.targetFocus * 0.22)
       : 0;
     const fromCenterCutInner = frame.sourceKind === 'cover'
       ? 24 + frame.fromEdgeMix * 12
       : frame.targetReady
-        ? 12 + frame.fromEdgeMix * 10
-        : 22 + frame.fromEdgeMix * 12;
+        ? 18 + frame.fromEdgeMix * 14
+        : 30 + frame.fromEdgeMix * 16;
     this.element.style.setProperty('--vr-travel-backdrop-blur', `${fallbackBlur}px`);
     this.element.style.setProperty(
       '--vr-travel-backdrop-scale',
@@ -622,7 +686,7 @@ export class TravelTransitionOverlay {
     this.element.style.setProperty('--vr-travel-backdrop-shift', `${frame.fromShiftPercent}%`);
     this.element.style.setProperty(
       '--vr-travel-from-backdrop-opacity',
-      String(Number((frame.fromOpacity * (frame.sourceKind === 'cover' ? 0.74 : (frame.targetReady ? 0.9 : 0.72))).toFixed(3))),
+      String(Number((frame.fromOpacity * (frame.sourceKind === 'cover' ? 0.74 : (frame.targetReady ? 0.76 : 0.58))).toFixed(3))),
     );
     this.element.style.setProperty(
       '--vr-travel-backdrop-brightness',
@@ -644,8 +708,13 @@ export class TravelTransitionOverlay {
     this.element.style.setProperty('--vr-travel-target-backdrop-opacity', String(targetBackdropOpacity));
     this.element.style.setProperty(
       '--vr-travel-target-reveal-inset',
-      `${this.targetImageLoaded && !frame.targetReady
-        ? Math.max(76, 92 - frame.targetFocus * 44)
+      `${this.targetImageLoaded
+        ? Math.max(
+            0,
+            (1 - (frame.targetReady
+              ? Math.max(frame.revealProgress, frame.targetMixProgress * 0.46 + frame.targetFocus * 0.16)
+              : Math.max(0.12, frame.targetFocus * 0.28))) * 100,
+          )
         : Math.max(0, (1 - frame.revealProgress) * 100)}%`,
     );
   }

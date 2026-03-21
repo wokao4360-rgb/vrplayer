@@ -112,6 +112,9 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
+- [2026-03-21 12:53:38] `Loading` 旧等待层禁止在 hidden 状态继续把 spinner / “加载中...” 留在 DOM 或可访问树里；当前稳定基线：`Loading.ts` 只能在 `show()` 时注入内容，`hide()` 后必须清空内容并恢复 `aria-hidden=true`。若后续切点验收里又看到等待页文案或自动化快照仍能抓到“加载中...”，第一优先检查 `Loading.ts` 是否在 constructor 或 hidden 状态提前 render。
+- [2026-03-21 00:46:00] 转场与场景进入链路禁止再向用户暴露任何状态 badge/toast；当前稳定基线：`SceneUiRuntime` 不再挂 `QualityIndicator`，`Hotspots` 不再在 scene jump 前弹“进入 xxx”，`PanoViewer` 的瓦片/高清失败提示只留日志不再 show toast。若后续线上又出现“正在加载低清图”“已切换至高清”或进入提示，第一优先检查 `sceneUiRuntime.ts`、`Hotspots.ts`、`PanoViewer.ts` 是否把状态 UI 恢复了。
+- [2026-03-21 00:35:00] `scene -> scene` 转场禁止再把 `captureViewerSnapshot()` 当默认中央 source；当前稳定基线：`resolveSceneTransitionAssets()` 必须优先用 target `previewUrl` 作为 transition shell，`viewerSnapshot` 只能留在没有 target/previous preview 时兜底。若后续又回到“旧场景整张糊在中央”或“街景/人物鬼影占屏”，第一优先检查 `sceneTransitionAssets.ts` 是否把 `viewerSnapshot` 又提回 `fromImage` 首选。
 - [2026-03-20 23:40:30] `scene -> scene` 且 `targetReady=false` 时，不能只靠旧场景 blur 顶住；当前稳定基线是 `TravelTransitionOverlay` 在 `targetImageLoaded=true` 后允许极低权重的 `target preview shell` 以重模糊玻璃影提前介入，但真正 `target reveal / mix ready` 仍必须继续受 `frame.targetReady && overlay.targetImageLoaded` 共同约束。若后续又回到“中段看起来还是上一个点位本体”，优先检查 `uTargetPreviewLoaded`、`previewPresence` 和 fallback target backdrop 的预览壳层注入是否被删回。
 - [2026-03-20 22:40:21] `cover` 进入点位时，transition 的 `fromImage` 不能再在 `previewAlreadyReady=false` 时回退到 `hero-cover`；当前稳定基线：`main.ts` 必须优先把 `shellScene.preview.url / panoLow` 当作 transition source shell，只把 cover hero 留作最后兜底。若后续又出现“封面飞脸 / 王鼎遗像在中央晃糊了”，第一优先检查 `resolveSceneTransitionAssets()` 是否被回退到 `cover hero -> fromImage` 路径。
 - [2026-03-20 09:40:00] cover CTA/导览切点的转场源图不能再把 `hero-cover.jpg` 或 `captureViewerSnapshot()` 当成全屏主体去做大面积 blur/smear；当前稳定基线：`TravelTransitionOverlay` 只允许旧场景保留“源侧边缘遮挡 + 玻璃残影”，中央主视觉必须尽早交给 target preview/low，禁止再出现“中央人物拖影/鬼片感”。

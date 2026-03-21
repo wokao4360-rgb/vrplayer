@@ -32,9 +32,9 @@ export function resolveSceneTransitionAssets(
 
   return {
     fromImage: firstNonEmpty(
-      args.viewerSnapshot,
       args.previousScenePreviewImage,
       previewImage,
+      args.viewerSnapshot,
       args.coverHeroUrl,
     ),
     targetPreviewImage,

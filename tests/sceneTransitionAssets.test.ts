@@ -18,7 +18,7 @@ test('cover-driven transition uses target preview shell instead of cover hero as
   assert.equal(assets.targetPreviewImage, undefined);
 });
 
-test('scene-to-scene transition prefers live viewer snapshot over previous low preview shell', () => {
+test('scene-to-scene transition prefers previous low preview shell before any live snapshot fallback', () => {
   const assets = resolveSceneTransitionAssets({
     coverWasVisible: false,
     previewUrl: '/assets/panos/wangding/culture_achievement-low.jpg',
@@ -28,7 +28,7 @@ test('scene-to-scene transition prefers live viewer snapshot over previous low p
     previousScenePreviewImage: '/assets/panos/wangding/south_gate-low.jpg',
   });
 
-  assert.equal(assets.fromImage, 'data:image/jpeg;base64,current-view');
+  assert.equal(assets.fromImage, '/assets/panos/wangding/south_gate-low.jpg');
   assert.equal(
     assets.targetPreviewImage,
     '/assets/panos/wangding/culture_achievement-low.jpg',

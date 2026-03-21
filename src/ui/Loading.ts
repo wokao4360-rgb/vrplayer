@@ -1,4 +1,4 @@
-﻿import { isFullscreen } from '../utils/fullscreenState';
+﻿import { isFullscreen } from '../utils/fullscreenState.ts';
 
 export class Loading {
   private element: HTMLElement;
@@ -6,7 +6,7 @@ export class Loading {
   constructor() {
     this.element = document.createElement('div');
     this.element.className = 'loading-overlay';
-    this.render();
+    this.element.setAttribute('aria-hidden', 'true');
     this.applyStyles();
 
     // 监听全屏状态变化
@@ -26,6 +26,11 @@ export class Loading {
         <p class="loading-text">加载中...</p>
       </div>
     `;
+  }
+
+  private clearContent(): void {
+    this.element.innerHTML = '';
+    this.element.setAttribute('aria-hidden', 'true');
   }
 
   private applyStyles(): void {
@@ -81,11 +86,14 @@ export class Loading {
     if (isFullscreen()) {
       return;
     }
+    this.render();
     this.element.classList.add('show');
+    this.element.setAttribute('aria-hidden', 'false');
   }
 
   hide(): void {
     this.element.classList.remove('show');
+    this.clearContent();
   }
 
   getElement(): HTMLElement {

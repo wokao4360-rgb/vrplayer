@@ -11,7 +11,6 @@ import type { SceneHotspot } from '../types/config';
 import { interactionBus } from '../ui/interactionBus';
 import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/externalImage';
 import { ZoomHud } from '../ui/ZoomHud';
-import { showToast } from '../ui/toast';
 import { TileCanvasPano, TileMeshFallbackRequiredError } from './TileCanvasPano';
 import { fetchTileManifest, type TileManifest } from './tileManifest';
 import { PanoLifecycleRuntime } from './panoLifecycleRuntime';
@@ -616,7 +615,6 @@ export class PanoViewer {
           console.error('瓦片加载失败', err);
           this.tilesLastError = err instanceof Error ? err.message : String(err);
           if (allowLegacyTileFallback) {
-            showToast('瓦片加载失败，已回退到全景图', 2000);
             this.fallbackToLegacy(sceneData, tilesConfig);
             return;
           }
@@ -624,7 +622,6 @@ export class PanoViewer {
             this.isDegradedMode = true;
             this.updateLoadStatus(LoadStatus.DEGRADED);
             this.setRenderSource('low', 'AVIF 加载失败，禁用 KTX/JPG fallback');
-            showToast('AVIF 高清加载失败，保留 AVIF 低清', 2000);
             return;
           }
           this.updateLoadStatus(LoadStatus.ERROR);
@@ -1486,7 +1483,6 @@ export class PanoViewer {
       panoTiles: undefined,
     };
     if (fallbackScene.pano || fallbackScene.panoLow) {
-      showToast('瓦片加载失败，已回退到全景图', 2000);
       this.setRenderSource('fallback', 'tiles 失败自动回退');
       this.loadScene(fallbackScene, { preserveView: true });
     } else {

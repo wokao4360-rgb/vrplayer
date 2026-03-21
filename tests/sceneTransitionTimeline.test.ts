@@ -114,11 +114,31 @@ test('when target is not ready, transition keeps previous scene disguise and del
   assert.equal(frame.revealProgress, 0);
   assert.equal(frame.targetMixProgress, 0);
   assert.equal(frame.settleStrength, 0);
-  assert.ok(frame.blurPx > BLUR_STRENGTH * 0.9);
+  assert.ok(frame.blurPx > BLUR_STRENGTH * 0.75);
   assert.ok(frame.glassAlpha > 0.2);
-  assert.ok(frame.fromOpacity < 0.55);
-  assert.ok(frame.fromEdgeMix > 0.82);
-  assert.ok(frame.targetFocus >= 0.14);
+  assert.ok(frame.fromOpacity < 0.32);
+  assert.ok(frame.fromEdgeMix > 0.92);
+  assert.ok(frame.targetFocus >= 0.3);
+});
+
+test('scene-driven turn-in already strips central ownership away from the previous scene before reveal starts', () => {
+  const plan = computeSceneTransitionPlan({
+    currentWorldYaw: 0,
+    targetWorldYaw: 22,
+  });
+
+  const frame = buildSceneTransitionFrame({
+    currentWorldYaw: 0,
+    targetWorldYaw: 22,
+    plan,
+    progress: TURN_IN_RATIO * 0.45,
+    targetReady: false,
+  });
+
+  assert.equal(frame.stage, 'turn-in');
+  assert.ok(frame.fromOpacity < 0.62);
+  assert.ok(frame.fromEdgeMix > 0.88);
+  assert.ok(frame.targetFocus >= 0.18);
 });
 
 test('cover-driven transition demotes source image to edge residue once target is ready', () => {

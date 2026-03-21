@@ -377,7 +377,6 @@ export class Hotspots {
         if (isScene) {
           const targetSceneId = (data as any).targetSceneId as string | undefined;
           if (targetSceneId && this.options.onEnterScene) {
-            showToast(`进入 ${this.options.resolveSceneName?.(targetSceneId) || targetSceneId}`, 1000);
             const rect = instance.getElement().getBoundingClientRect();
             const hotspotScreenX =
               window.innerWidth > 0

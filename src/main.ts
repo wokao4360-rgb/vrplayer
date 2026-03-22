@@ -57,7 +57,19 @@ import {
   resolveMuseumShellRoute,
 } from './app/museumShellState';
 import type { MuseumSceneRuntimePlan } from './app/museumShellState';
-import { buildSameMuseumSceneMotion, sampleSameMuseumSceneMotion } from './app/sceneMotion';
+import {
+  consumeQueuedTransitionIntent,
+  createTransitionIntentState,
+  queueLatestTransitionIntent,
+} from './app/sceneTransitionMath';
+import { resolveSceneTransitionAssets } from './app/sceneTransitionAssets';
+import { SceneTransitionController, type TransitionSession } from './app/sceneTransitionController';
+import {
+  resolveRuntimeTransitionScene,
+  shouldCommitSceneLoad,
+  shouldForwardCommittedSceneStatus,
+} from './app/sceneTransitionRuntime';
+import type { SceneEnterMeta, SceneEnterView } from './app/sceneTransitionTypes';
 import type { MuseumShellChrome, MuseumShellTransitionViewModel } from './ui/MuseumShellChrome';
 import './ui/uiRefresh.css';
 if (__VR_DEBUG__) {
@@ -135,12 +147,16 @@ class App {
   private currentScene: Scene | null = null;
   private viewerContainer: HTMLElement | null = null;
   private museumShellChrome: MuseumShellChrome | null = null;
+  private sceneTransitionController: SceneTransitionController | null = null;
+  private activeTransitionSession: TransitionSession | null = null;
+  private transitionIntentState = createTransitionIntentState();
+  private activeSceneEnterMeta: SceneEnterMeta | null = null;
+  private pendingSceneEnterMeta: SceneEnterMeta | null = null;
   private sceneUiRuntime: SceneUiRuntime | null = null;
   private chatRuntime: ChatRuntime | null = null;
   private viewSessionRuntime: ViewSessionRuntime;
   private readonly enteredMuseumIds = new Set<string>();
   private routeViewSyncDisposer: (() => void) | null = null;
-  private sceneMotionDisposer: (() => void) | null = null;
   private lastRouteViewSyncAt = 0;
   private lastRouteViewSignature = '';
   private hasBoundFullscreenEvents = false;
@@ -189,7 +205,7 @@ class App {
         this.topModeTabs?.setMode('tour');
       },
       navigateToScene: (museumId, sceneId) => {
-        navigateToScene(museumId, sceneId);
+        this.requestSceneEntry(museumId, sceneId, undefined, { source: 'guide-drawer' });
       },
       loadSceneGraphModule: () => this.loadSceneGraphModule(),
       loadStructureView2DModule: () => this.loadStructureView2DModule(),
@@ -354,6 +370,12 @@ class App {
     }
     return this.museumShellChrome;
   }
+  private ensureSceneTransitionController(): SceneTransitionController {
+    if (!this.sceneTransitionController) {
+      this.sceneTransitionController = new SceneTransitionController(this.appElement);
+    }
+    return this.sceneTransitionController;
+  }
   private buildMuseumTransitionModel(museum: Museum, scene: Scene): MuseumShellTransitionViewModel {
     return {
       brandTitle: resolveLandingContent(this.config).brandTitle,
@@ -392,12 +414,7 @@ class App {
     const shellChrome = await this.ensureMuseumShellChrome();
     shellChrome.setCoverAction(() => {
       this.enteredMuseumIds.add(museum.id);
-      const route = parseRoute();
-      if (route.museumId === museum.id && route.sceneId === targetSceneId) {
-        void this.handleRoute();
-        return;
-      }
-      navigateToScene(museum.id, targetSceneId);
+      this.requestSceneEntry(museum.id, targetSceneId, undefined, { source: 'cover-cta' });
     });
     shellChrome.showCover(
       buildMuseumCoverModel({
@@ -457,13 +474,37 @@ class App {
       return '';
     }
   }
-  private cancelSceneMotion(): void {
-    if (!this.sceneMotionDisposer) {
+  private requestSceneEntry(
+    museumId: string,
+    sceneId: string,
+    view?: SceneEnterView,
+    meta: SceneEnterMeta = { source: 'route' },
+  ): void {
+    const nextIntent = { museumId, sceneId, view };
+    if (this.activeTransitionSession?.isActive()) {
+      this.transitionIntentState = queueLatestTransitionIntent(this.transitionIntentState, nextIntent);
+      this.pendingSceneEnterMeta = meta;
       return;
     }
-    const dispose = this.sceneMotionDisposer;
-    this.sceneMotionDisposer = null;
-    dispose();
+    this.transitionIntentState = queueLatestTransitionIntent(createTransitionIntentState(), nextIntent);
+    this.activeSceneEnterMeta = meta;
+    navigateToScene(museumId, sceneId, view, {
+      focusSource: meta.source === 'hotspot' ? 'pano' : 'dock',
+    });
+  }
+  private flushQueuedSceneEntry(): void {
+    const { next, state } = consumeQueuedTransitionIntent(this.transitionIntentState);
+    this.transitionIntentState = state;
+    this.activeSceneEnterMeta = null;
+    if (!next) {
+      this.pendingSceneEnterMeta = null;
+      return;
+    }
+    const meta = this.pendingSceneEnterMeta ?? { source: 'route' as const };
+    this.pendingSceneEnterMeta = null;
+    window.setTimeout(() => {
+      this.requestSceneEntry(next.museumId, next.sceneId, next.view, meta);
+    }, 0);
   }
   private detachRouteViewSync(): void {
     if (this.routeViewSyncDisposer) {
@@ -762,12 +803,29 @@ class App {
         fov: route.fov,
       },
     });
+    const previousContext =
+      runtimePlan.shellStrategy === 'reuse-shell' && this.currentScene && this.panoViewer
+        ? (() => {
+            const currentView = this.panoViewer!.getCurrentView();
+            return {
+              scene: this.currentScene!,
+              worldView: {
+                yaw: internalYawToWorldYaw(this.currentScene!, currentView.yaw),
+                pitch: currentView.pitch,
+                fov: currentView.fov,
+              },
+            };
+          })()
+        : {
+            scene: null,
+            worldView: null,
+          };
     this.clearView({
       preserveViewerShell: runtimePlan.shellStrategy === 'reuse-shell',
       preserveMuseumShell:
         runtimePlan.shellStrategy === 'reuse-shell' || this.museumShellChrome?.isCoverVisible() === true,
     });
-    await this.showScene(museum, scene, runtimePlan);
+    await this.showScene(museum, scene, runtimePlan, previousContext);
   }
   private async showMuseumList(): Promise<void> {
     if (!this.config) return;
@@ -798,12 +856,15 @@ class App {
     museum: Museum,
     scene: Scene,
     runtimePlan: MuseumSceneRuntimePlan,
+    previousContext?: {
+      scene: Scene | null;
+      worldView: { yaw: number; pitch: number; fov: number } | null;
+    },
   ): Promise<void> {
     const route = parseRoute();
     const viewerDrivenTransition = runtimePlan.transitionDriver === 'viewer';
     const debugMode = isDebugMode();
     const devMode = isDevMode();
-    this.cancelSceneMotion();
     this.currentMuseum = museum;
     this.currentScene = viewerDrivenTransition ? null : scene;
     this.enteredMuseumIds.add(museum.id);
@@ -811,6 +872,7 @@ class App {
     this.setDocumentTitle(scene.name, museum.name, this.config?.appName);
     const viewerContainer = await this.ensureViewerShell(debugMode);
     const shellChrome = await this.ensureMuseumShellChrome();
+    const coverWasVisible = shellChrome.isCoverVisible();
     const transitionModel = this.buildMuseumTransitionModel(museum, scene);
     if (viewerDrivenTransition) {
       shellChrome.completeTransition();
@@ -827,6 +889,35 @@ class App {
     if (!viewerDrivenTransition) {
       void this.mountTopRightControls(viewerContainer, scene, devMode);
     }
+    const previousScene = previousContext?.scene ?? null;
+    const worldTargetYaw = route.yaw !== undefined ? route.yaw : (scene.initialView.yaw || 0);
+    const targetPitch = route.pitch !== undefined ? route.pitch : (scene.initialView.pitch || 0);
+    const targetFov = route.fov !== undefined ? route.fov : (scene.initialView.fov || 75);
+    const previousWorldView = previousContext?.worldView ?? {
+      yaw: worldTargetYaw,
+      pitch: targetPitch,
+      fov: targetFov,
+    };
+    const previewUrl = this.resolveScenePreviewAsset(scene) || undefined;
+    const transitionAssets = resolveSceneTransitionAssets({
+      coverWasVisible,
+      previewUrl,
+      previewAlreadyReady: Boolean(previewUrl),
+      coverHeroUrl: resolveAssetUrl(museum.cover, AssetType.COVER) || museum.cover,
+      viewerSnapshot: this.captureViewerSnapshot(),
+      previousScenePreviewImage: previousScene ? this.resolveScenePreviewAsset(previousScene) : '',
+    });
+    const runtimeSceneData = resolveRuntimeTransitionScene(scene, previewUrl);
+    const sceneEnterMeta = this.activeSceneEnterMeta ?? { source: 'route' as const };
+    this.activeSceneEnterMeta = null;
+    const targetWorldView = {
+      yaw: worldTargetYaw,
+      pitch: targetPitch,
+      fov: targetFov,
+    };
+    let cameraMotionYielded = false;
+    let transitionSession: TransitionSession | null = null;
+    let sceneLoadCommitted = !viewerDrivenTransition;
     // 鏂?UI锛氬乏涓婅鍦烘櫙鏍囬锛堝瑙嗛鏍硷級
     this.sceneTitleEl = document.createElement('div');
     this.sceneTitleEl.className = 'vr-scenetitle';
@@ -909,8 +1000,8 @@ class App {
       onModeChange: (mode) => {
         this.setMode(mode);
       },
-      onEnterScene: (sceneId, view) => {
-        navigateToScene(museum.id, sceneId, view);
+      onEnterScene: (sceneId, view, meta) => {
+        this.requestSceneEntry(museum.id, sceneId, view, meta ?? { source: 'route' });
       },
       onOpenInfo: () => {
         void this.openInfoModal();
@@ -937,7 +1028,6 @@ class App {
     let coreUiRequested = false;
     let chatInitRequested = false;
     let transitionSettled = false;
-    let sceneCommitted = !viewerDrivenTransition;
     let chatInitFallbackTimer: number | null = window.setTimeout(() => {
       if (chatInitRequested) return;
       chatInitRequested = true;
@@ -984,15 +1074,12 @@ class App {
           }
         });
     };
-    const worldTargetYaw = route.yaw !== undefined ? route.yaw : (scene.initialView.yaw || 0);
-    const targetPitch = route.pitch !== undefined ? route.pitch : (scene.initialView.pitch || 0);
-    const targetFov = route.fov !== undefined ? route.fov : (scene.initialView.fov || 75);
-    const internalTargetYaw = worldYawToInternalYaw(scene, worldTargetYaw);
-    const commitViewerScene = () => {
-      if (!viewerDrivenTransition || sceneCommitted || !this.panoViewer) {
+    const commitSceneLoad = (): void => {
+      if (sceneLoadCommitted || !this.panoViewer) {
         return;
       }
-      sceneCommitted = true;
+      sceneLoadCommitted = true;
+      transitionSession?.markLoadCommitted();
       this.currentMuseum = museum;
       this.currentScene = scene;
       this.hideUIError();
@@ -1000,18 +1087,68 @@ class App {
       syncSceneUiRuntimeRefs();
       ensureChatRuntime();
       void this.mountTopRightControls(viewerContainer, scene, devMode);
-      this.panoViewer.loadScene(scene, {
+      this.panoViewer.loadScene(runtimeSceneData, {
         preserveView: true,
-        allowPendingBlack: true,
         silentFallback: true,
       });
       this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
       this.bindRouteViewSync();
     };
+    if (viewerDrivenTransition) {
+      const sceneTransitionController = this.ensureSceneTransitionController();
+      transitionSession = sceneTransitionController.start({
+        currentWorldView: previousWorldView,
+        targetWorldView,
+        sourceKind: coverWasVisible ? 'cover' : 'scene',
+        fromMapPoint: previousScene?.mapPoint,
+        toMapPoint: scene.mapPoint,
+        fromImage: transitionAssets.fromImage,
+        targetPreviewImage: transitionAssets.targetPreviewImage,
+        hotspotScreenX: sceneEnterMeta.hotspotScreenX,
+        releaseMode: 'low',
+        onCameraFrame: (view, context) => {
+          if (!this.panoViewer) {
+            return;
+          }
+          if (this.panoViewer.isInteracting()) {
+            cameraMotionYielded = true;
+            if (!sceneLoadCommitted) {
+              commitSceneLoad();
+            }
+            return;
+          }
+          if (!sceneLoadCommitted && shouldCommitSceneLoad(context.frame)) {
+            commitSceneLoad();
+          }
+          if (cameraMotionYielded) {
+            return;
+          }
+          const yawScene = sceneLoadCommitted || context.useTargetScene ? scene : previousScene ?? scene;
+          const internalYaw = worldYawToInternalYaw(yawScene, view.yaw);
+          this.panoViewer.setView(internalYaw, view.pitch, view.fov);
+        },
+      });
+      this.activeTransitionSession = transitionSession;
+      void transitionSession.waitForCompletion().then((result) => {
+        if (this.activeTransitionSession === transitionSession) {
+          this.activeTransitionSession = null;
+        }
+        if (result === 'completed') {
+          this.flushQueuedSceneEntry();
+          return;
+        }
+        this.transitionIntentState = createTransitionIntentState();
+        this.pendingSceneEnterMeta = null;
+        this.activeSceneEnterMeta = null;
+      });
+    }
     // 璁剧疆鍔犺浇鐘舵€佸彉鍖栧洖璋?
     this.panoViewer.setOnStatusChange((status) => {
-      this.sceneUiRuntime?.handleStatusChange(status);
-      syncSceneUiRuntimeRefs();
+      const committedReadyStatus = shouldForwardCommittedSceneStatus(sceneLoadCommitted, status);
+      if (sceneLoadCommitted) {
+        this.sceneUiRuntime?.handleStatusChange(status);
+        syncSceneUiRuntimeRefs();
+      }
       if (
         !viewerDrivenTransition &&
         (runtimePlan.shellStrategy === 'reuse-shell' || shellChrome.isCoverVisible()) &&
@@ -1019,8 +1156,11 @@ class App {
       ) {
         settleTransition(status);
       }
+      if (committedReadyStatus) {
+        transitionSession?.markStatus(status);
+      }
       if (
-        !viewerDrivenTransition &&
+        sceneLoadCommitted &&
         !coreUiRequested &&
         (status === LoadStatus.LOW_READY ||
           status === LoadStatus.HIGH_READY ||
@@ -1034,7 +1174,7 @@ class App {
         this.sceneUiRuntime?.scheduleFeatureWarmup(status === LoadStatus.HIGH_READY ? 'immediate' : 'idle');
       }
       if (
-        !viewerDrivenTransition &&
+        sceneLoadCommitted &&
         !chatInitRequested &&
         (status === LoadStatus.LOW_READY ||
           status === LoadStatus.HIGH_READY ||
@@ -1043,9 +1183,10 @@ class App {
         ensureChatRuntime();
       }
       if (
-        status === LoadStatus.LOW_READY ||
-        status === LoadStatus.HIGH_READY ||
-        status === LoadStatus.DEGRADED
+        sceneLoadCommitted &&
+        (status === LoadStatus.LOW_READY ||
+          status === LoadStatus.HIGH_READY ||
+          status === LoadStatus.DEGRADED)
       ) {
         this.loading.hide();
       }
@@ -1053,7 +1194,9 @@ class App {
     // 鍔犺浇鍦烘櫙
     this.panoViewer.setOnLoad(() => {
       ensureCoreSceneUi();
-      ensureChatRuntime();
+      if (!chatInitRequested) {
+        ensureChatRuntime();
+      }
       clearChatInitFallback();
       this.loading.hide();
       this.hideUIError();
@@ -1068,68 +1211,25 @@ class App {
       console.error('加载场景失败:', error);
       this.loading.hide();
       this.showError('加载全景图失败，请检查网络连接');
-      shellChrome.showErrorFallback({
-        ...this.buildMuseumTransitionModel(museum, scene),
-        snapshotImage: this.captureViewerSnapshot() || transitionModel.snapshotImage,
-        progressLabel: '转场失败，请检查资源后重试',
-      });
-      if (this.qualityIndicator) {
-        this.qualityIndicator.updateStatus(LoadStatus.ERROR);
+      if (viewerDrivenTransition) {
+        transitionSession?.markError();
+      } else {
+        shellChrome.showErrorFallback({
+          ...this.buildMuseumTransitionModel(museum, scene),
+          snapshotImage: this.captureViewerSnapshot() || transitionModel.snapshotImage,
+          progressLabel: '转场失败，请检查资源后重试',
+        });
       }
     });
-    if (viewerDrivenTransition && this.panoViewer) {
-      const currentView = this.panoViewer.getCurrentView();
-      let motionTargetYaw = internalTargetYaw;
-      let motionTargetPitch = targetPitch;
-      let motionTargetFov = targetFov;
-      if (runtimePlan.viewStrategy === 'preserve-current') {
-        const sceneInitialYaw = worldYawToInternalYaw(scene, scene.initialView.yaw || 0);
-        const yawDelta = normalizeAngleDelta(sceneInitialYaw - currentView.yaw);
-        motionTargetYaw = currentView.yaw + clamp(yawDelta * 0.45, -18, 18);
-        motionTargetPitch =
-          currentView.pitch + clamp(((scene.initialView.pitch ?? currentView.pitch) - currentView.pitch) * 0.4, -3, 3);
-        motionTargetFov = clamp(currentView.fov - 2.4, 55, 85);
-      }
-      const motion = buildSameMuseumSceneMotion({
-        currentYaw: currentView.yaw,
-        currentPitch: currentView.pitch,
-        currentFov: currentView.fov,
-        targetYaw: motionTargetYaw,
-        targetPitch: motionTargetPitch,
-        targetFov: motionTargetFov,
-      });
-      let elapsedMs = 0;
-      const disposeMotion = this.panoViewer.onFrame((dtMs) => {
-        if (!this.panoViewer) {
-          this.cancelSceneMotion();
-          return;
-        }
-        if (this.panoViewer.isInteracting()) {
-          commitViewerScene();
-          this.cancelSceneMotion();
-          return;
-        }
-        elapsedMs = Math.min(elapsedMs + dtMs, motion.totalMs);
-        const sample = sampleSameMuseumSceneMotion(motion, elapsedMs);
-        this.panoViewer.setView(sample.yaw, sample.pitch, sample.fov);
-        if (sample.didCommit) {
-          commitViewerScene();
-        }
-        if (sample.done) {
-          this.cancelSceneMotion();
-        }
-      });
-      this.sceneMotionDisposer = () => {
-        disposeMotion();
-      };
-      return;
-    }
     if (runtimePlan.viewStrategy === 'reset-to-target') {
+      const internalTargetYaw = worldYawToInternalYaw(scene, worldTargetYaw);
       this.panoViewer.setView(internalTargetYaw, targetPitch, targetFov);
     }
-    this.panoViewer.loadScene(scene, { preserveView: true });
-    this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
-    this.bindRouteViewSync();
+    if (!viewerDrivenTransition) {
+      this.panoViewer.loadScene(scene, { preserveView: true });
+      this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
+      this.bindRouteViewSync();
+    }
   }
   private async mountTopRightControls(viewerContainer: HTMLElement, scene: Scene, devMode: boolean): Promise<void> {
     try {
@@ -1226,7 +1326,8 @@ class App {
     const preserveViewerShell = options.preserveViewerShell === true;
     const preserveMuseumShell = options.preserveMuseumShell === true;
     this.viewSessionRuntime.clearOverlayState();
-    this.cancelSceneMotion();
+    this.activeTransitionSession?.cancel();
+    this.activeTransitionSession = null;
     this.detachRouteViewSync();
     if (this.handlePickEvent) {
       window.removeEventListener('vr:pick', this.handlePickEvent);

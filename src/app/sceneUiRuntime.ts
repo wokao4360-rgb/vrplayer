@@ -11,6 +11,7 @@ import {
   type QualityIndicator,
 } from '../ui/QualityIndicator';
 import { LoadStatus } from '../types/loadStatus';
+import type { SceneEnterMeta } from './sceneTransitionTypes';
 import { WarmupScheduler, type WarmupQueueTask } from './warmupScheduler';
 
 type SceneUiRuntimeOptions = {
@@ -29,6 +30,7 @@ type SceneUiRuntimeOptions = {
       pitch?: number;
       fov?: number;
     },
+    meta?: SceneEnterMeta,
   ) => void;
   onOpenInfo: () => void;
   onOpenSettings: () => void;
@@ -192,7 +194,7 @@ export class SceneUiRuntime {
           currentSceneId: this.options.scene.id,
           scenes: this.options.museum.scenes,
           onSceneClick: (sceneId) => {
-            this.options.onEnterScene(sceneId);
+            this.options.onEnterScene(sceneId, undefined, { source: 'guide-tray' });
           },
           onMoreClick: () => {
             void this.openSceneGuideDrawer();
@@ -324,6 +326,9 @@ export class SceneUiRuntime {
         scenes: this.options.museum.scenes,
         onClose: () => {
           // no-op
+        },
+        onEnterScene: (sceneId, view, meta) => {
+          this.options.onEnterScene(sceneId, view, meta ?? { source: 'guide-drawer' });
         },
       });
       this.options.appElement.appendChild(this.sceneGuideDrawer.getElement());

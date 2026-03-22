@@ -4,12 +4,22 @@ import { AssetType, resolveAssetUrl } from '../utils/assetResolver';
 import { DEFAULT_COVER_DATA_URI } from './placeholders';
 import { toProxiedImageUrl } from '../utils/externalImage';
 import { getIcon } from './icons';
+import type { SceneEnterMeta } from '../app/sceneTransitionTypes';
 
 type SceneGuideDrawerOptions = {
   museumId: string;
   currentSceneId: string;
   scenes: Scene[];
   onClose?: () => void;
+  onEnterScene?: (
+    sceneId: string,
+    view?: {
+      yaw?: number;
+      pitch?: number;
+      fov?: number;
+    },
+    meta?: SceneEnterMeta,
+  ) => void;
 };
 
 export class SceneGuideDrawer {
@@ -27,6 +37,7 @@ export class SceneGuideDrawer {
   private hoveredSceneId: string | null = null;
   private selectedSceneId: string | null = null; // 选中的场景ID（框4需要先选中再进入）
   private onClose?: () => void;
+  private onEnterScene?: SceneGuideDrawerOptions['onEnterScene'];
 
   constructor(options: SceneGuideDrawerOptions) {
     this.museumId = options.museumId;
@@ -34,6 +45,7 @@ export class SceneGuideDrawer {
     this.scenes = options.scenes;
     this.filteredScenes = options.scenes;
     this.onClose = options.onClose;
+    this.onEnterScene = options.onEnterScene;
 
     this.element = document.createElement('div');
     this.element.className = 'vr-guide-drawer';
@@ -119,7 +131,11 @@ export class SceneGuideDrawer {
       // 框4：只使用选中的场景作为进入来源，如果没有选中则使用当前场景
       const targetSceneId = this.selectedSceneId || this.currentSceneId;
       if (targetSceneId && targetSceneId !== this.currentSceneId) {
-        navigateToScene(this.museumId, targetSceneId);
+        if (this.onEnterScene) {
+          this.onEnterScene(targetSceneId, undefined, { source: 'guide-drawer' });
+        } else {
+          navigateToScene(this.museumId, targetSceneId);
+        }
         this.close();
       } else if (targetSceneId === this.currentSceneId) {
         // 如果选中的就是当前场景，直接关闭抽屉即可

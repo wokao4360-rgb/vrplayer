@@ -6,9 +6,18 @@ import { createHotspotSkin } from './hotspots/HotspotSkins.ts';
 import { openVrModal } from './modals/ModalHost';
 import { showToast } from './toast';
 import { onSceneFocus, type SceneFocusEvent } from './sceneLinkBus';
+import type { SceneEnterMeta } from '../app/sceneTransitionTypes';
 
 type HotspotsOptions = {
-  onEnterScene?: (sceneId: string) => void;
+  onEnterScene?: (
+    sceneId: string,
+    view?: {
+      yaw?: number;
+      pitch?: number;
+      fov?: number;
+    },
+    meta?: SceneEnterMeta,
+  ) => void;
   resolveSceneName?: (sceneId: string) => string | undefined;
   museumId?: string; // 用于匹配 hover 事件
 };
@@ -373,7 +382,15 @@ export class Hotspots {
           const targetSceneId = (data as any).targetSceneId as string | undefined;
           if (targetSceneId && this.options.onEnterScene) {
             showToast(`进入 ${this.options.resolveSceneName?.(targetSceneId) || targetSceneId}`, 1000);
-            this.options.onEnterScene(targetSceneId);
+            this.options.onEnterScene(targetSceneId, {
+              yaw: h.target?.yaw,
+              pitch: h.target?.pitch,
+              fov: h.target?.fov,
+            }, {
+              source: 'hotspot',
+              hotspotScreenX: clamp(hotspotScreenRatio(e), 0, 1),
+              hotspotId: data.id,
+            });
             return;
           }
         }
@@ -401,6 +418,15 @@ export class Hotspots {
     }
     this.element.remove();
   }
+}
+
+function hotspotScreenRatio(event: MouseEvent): number {
+  const width = Math.max(window.innerWidth || 0, 1);
+  return event.clientX / width;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 

@@ -418,7 +418,9 @@ export class TravelTransitionOverlay {
     this.targetImageLoaded = false;
     this.currentFromUrl = args.fromImage;
     this.currentToUrl = args.targetImage;
-    this.element.style.opacity = '';
+    this.element.style.opacity = '1';
+    this.element.style.visibility = 'visible';
+    this.element.style.pointerEvents = 'none';
     this.setBackdropImage(this.fromBackdrop, args.fromImage);
     this.setBackdropImage(this.toBackdrop, args.targetImage);
     this.element.classList.add('is-active');
@@ -438,6 +440,8 @@ export class TravelTransitionOverlay {
     }
 
     const presentation = resolveTravelOverlayPresentation(frame, this.targetImageLoaded);
+    this.element.style.visibility = 'visible';
+    this.element.style.pointerEvents = 'none';
     this.element.style.opacity = String(presentation.stageOpacity);
     this.updateFallbackMotion(frame, presentation);
     this.element.dataset.wipeFrom = frame.wipeFrom;
@@ -490,6 +494,8 @@ export class TravelTransitionOverlay {
     }
     this.active = false;
     this.element.style.opacity = '0';
+    this.element.style.visibility = 'hidden';
+    this.element.style.pointerEvents = 'none';
     this.element.style.setProperty('--vr-travel-from-backdrop-opacity', '0');
     this.element.style.setProperty('--vr-travel-target-backdrop-opacity', '0');
     this.element.style.setProperty('--vr-travel-target-reveal-inset', '100%');
@@ -501,6 +507,8 @@ export class TravelTransitionOverlay {
         return;
       }
       this.element.style.opacity = '';
+      this.element.style.visibility = '';
+      this.element.style.pointerEvents = '';
       this.setBackdropImage(this.fromBackdrop, undefined);
       this.setBackdropImage(this.toBackdrop, undefined);
       this.targetImageLoaded = false;

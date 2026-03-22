@@ -61,6 +61,18 @@ git push origin main
 
 - 远端存在新 commit（与本地一致）
 - Pages 已部署到该 commit
+- 推到 `main` 后，GitHub Actions `Deploy Cloudflare Pages` 会自动把当前提交里的 `docs/` 发布到 Cloudflare Pages
+
+Cloudflare 自动部署前置项：
+
+- GitHub Secret：`CLOUDFLARE_API_TOKEN`
+- GitHub Secret：`CLOUDFLARE_ACCOUNT_ID`
+- GitHub Variable：`CLOUDFLARE_PAGES_PROJECT_NAME`
+
+注意：
+
+- 自动部署 Cloudflare 不会替代本地发布源链；仍然必须先执行 `npm run build -> robocopy .\dist .\docs /MIR -> git push origin main`
+- GitHub Action 部署的是仓库里已经提交的 `docs/`，不是未提交的本地 `dist/`
 
 ---
 
@@ -112,8 +124,11 @@ git push origin main
 
 ## Agent Notes (Persistent)
 
-- [2026-03-22 11:48:00] `Loading` ???????????DOM ????????`Loading.show()` ????? `<p class="loading-text">???...</p>`?`hide()` ???? overlay ???????? `opacity:0` ???????? DOM???????? `body.innerText`/???????????...????? [src/ui/Loading.ts](/D:/Projects/vrplayer/src/ui/Loading.ts) ???????? innerHTML?
-- [2026-03-22 11:36:00] ?? `scene` ??????? `viewer` ???`resolveMuseumSceneRuntimePlan().transitionDriver === 'viewer'` ??`showScene()` ?????? `MuseumShellChrome.startSceneTransition()`?????pre-commit ?? motion -> hard commit -> settle??`PanoViewer.loadScene(..., { allowPendingBlack: true, silentFallback: true })` ????????????? low/high ? ready ???? renderer ??????????????cover??? pano ? shell ?????????????????????? commit ?? scene ??????? motion????????? ready?
+- [2026-03-22 17:10:41] Cloudflare 现已补齐“push main 后自动部署”这条 CI 线：GitHub Actions `Deploy Cloudflare Pages` 会直接把当前提交里的 `docs/` 发布到 `CLOUDFLARE_PAGES_PROJECT_NAME`。这条自动化只接管 Cloudflare 部署，不会替代 `build -> dist -> docs` 源链；以后若线上还是旧版本，先查本次 push 里的 `docs/**` 是否已同步，再查 Actions 里的 Cloudflare deploy job。
+- [2026-03-22 11:48:00] `Loading` 组件的隐藏态现已要求“DOM 也无文案残留”：`Loading.show()` 才允许注入 `<p class="loading-text">加载中...</p>`，`hide()` 必须清空 overlay 子节点，不能只靠 `opacity:0` 留一份隐藏文字在 DOM。后续若自动化用 `body.innerText`/可访问树仍扫到“加载中...”，先回查 [src/ui/Loading.ts](/D:/Projects/vrplayer/src/ui/Loading.ts) 是否又退回成常驻 innerHTML。
+- [2026-03-22 11:36:00] 同馆 `scene` 切点现已收口为 `viewer` 主导：`resolveMuseumSceneRuntimePlan().transitionDriver === 'viewer'` 时，`showScene()` 不允许再调用 `MuseumShellChrome.startSceneTransition()`，而是走“pre-commit 相机 motion -> hard commit -> settle”。`PanoViewer.loadScene(..., { allowPendingBlack: true, silentFallback: true })` 是这条链路的固定兜底，目标 low/high 未 ready 时只能露 renderer 黑底，不允许再把旧场景截图、cover、模糊 pano 或 shell 文案接回主视觉。点击后若用户先拖动，必须立即 commit 目标 scene 并取消剩余脚本 motion，不能继续锁交互等 ready。
+- [2026-03-16 16:42:00] 单馆漫游壳层现已锁定为“`?museum=<id>` 先出馆级 cover gate，点击 CTA 后再进入 scene；同馆 `scene` 切换只做 shallow route，不允许销毁 `PanoViewer` 根实例”。当前稳定链路是：`resolveMuseumShellRoute -> cover gate / scene`，`resolveMuseumSceneRuntimePlan -> mount-shell / reuse-shell`，`App.clearView({ preserveViewerShell, preserveMuseumShell })` 决定是否保留 viewer 与转场层。后续若馆内切点 снова出现黑屏、整页跳页感或返回键直接离馆，先查这里，不要再回到“scene 路由一律 clearView + 重建 viewer”的旧实现。
+- [2026-03-16 16:42:00] 馆内转场与路由同步现已收口为：点击 CTA/点位后立即显示 `MuseumShellChrome` 的模糊玻璃过渡层，转场层必须拦截 pointer，直到目标场景达到 `LOW_READY/HIGH_READY/DEGRADED` 再收束；相机视角变化只允许 `replaceState` 更新 `yaw/pitch/fov`，不得再用 `pushState` 污染返回栈。`src/utils/urlBuilder.ts` 也已改为保留 `tilesDebug/debug/fresh` 等非路由参数，后续不要再用“清空所有 query 后重建 URL”的方式破坏调试态。
 - [2026-03-16 14:06:20] `src/app/museumShellState.ts` 现已成为 museum shell 路由与同馆切景策略的单一状态层；后续不要再把 cover gate 判定、preview 预热、同馆 shell/view 复用逻辑散落回 `main.ts`。另一个稳定坑点是：凡是要被 `node --test` 直接执行的 `.ts` 状态模块，其 value import 必须写显式 `.ts` 扩展名；否则 Vite 构建能过，但 Node ESM 测试会在运行时 `ERR_MODULE_NOT_FOUND`。
 - [2026-03-16 13:56:27] 单馆入口路由现已锁定为“先馆级 cover gate、后进场景”。`?museum=<id>` 不再自动跳首个 scene；首次 deep link `?museum=<id>&scene=<id>` 也必须先显示该馆 cover gate，再由 CTA 进入目标 scene。后续若再改 museum 路由，不要回到“museum 路由一进来就重定向 entry scene”的旧口径。
 - [2026-03-16 13:56:27] 同馆 scene 切换现已锁定为“复用同一 viewer shell/canvas”。`App.handleRoute()` 对同馆 scene 变化不能再无条件 `clearView()` 销毁 `PanoViewer`；当前稳定规则是：同馆且 URL 未显式带 `yaw/pitch/fov` 时复用 shell 并保留当前视角，同馆但显式带相机参数时仍复用 shell 但重置到目标视角。跨馆切换才允许重新 mount viewer shell。
@@ -152,8 +167,8 @@ git push origin main
 - [2026-03-09 16:53:03] `telegram-fast` 现已开放只读记忆工具 `memory_search / memory_get`。产品边界收口为：Telegram 前台可以借长期记忆补事实，但长期记忆写入真通道仍只有 HTTP memories；不要把只读 OpenClaw memory 误解成第二写入真源。
 - [2026-03-09 16:12:14] OpenClaw 已从 `2026.3.2` 升级到 `2026.3.8`。Windows 全局升级前必须先停 `OpenClaw Gateway` 并释放占用 `C:\Users\Lenovo\AppData\Roaming\npm\node_modules\openclaw` 的 `node.exe` 锁，否则 `npm i -g openclaw@latest` 会因 `EBUSY: rename` 失败。升级后需复验 `status --deep`、`gateway health`、`channels status --probe`，并确认 `telegram-fast` 仍按 `openai-codex-oauth:gpt-5.4` 运行。
 - [2026-03-09 15:55:08] `telegram-fast` 的高价值外挂基线已放开：当前显式开放 `group:ui / group:automation / group:nodes / agents_list / subagents / sessions_list / sessions_history / sessions_send / sessions_spawn / message`，继续保留 `gateway / tts` 关闭；Dashboard 的 Tools 页现显示 `19/25 enabled`，`browser / canvas / nodes / sessions_* / subagents / message / agents_list` 均已启用。节点宿主当前仍是 `nodes=0`、`Node service not installed`，这表示节点能力入口已开，但还没有配对节点可用。
-- [2026-03-09 15:40:00] Memory 主通道的复利工程已单独沉淀到 `D:\Projects\vrplayer\memory_mcp_compound_playbook.md`。以后排查记忆写入时，优先看这份手册里的真源、SOP、去重口径与恢复顺序；`mcp__memory` 图谱工具不作为本仓主记忆通道。
-- [2026-03-09 15:26:00] 当前窗口的 OpenClaw 复利工程已单独沉淀到 `D:\Projects\vrplayer\openclaw_compound_playbook.md`。以后排查 `telegram-fast` 的模型漂移、项目路由、session reset、真源判断时，优先读这份手册，不要只翻历史聊天或旧截图。
+- [2026-03-09 15:40:00] Memory 主通道的复利工程已单独沉淀到 `D:\Projects\灵感包\研究沉淀\ai_harness\memory_mcp_compound_playbook.md`。以后排查记忆写入时，优先看这份手册里的真源、SOP、去重口径与恢复顺序；`mcp__memory` 图谱工具不作为本仓主记忆通道。
+- [2026-03-09 15:26:00] 当前窗口的 OpenClaw 复利工程已单独沉淀到 `D:\Projects\灵感包\研究沉淀\ai_harness\openclaw_compound_playbook.md`。以后排查 `telegram-fast` 的模型漂移、项目路由、session reset、真源判断时，优先读这份手册，不要只翻历史聊天或旧截图。
 - [2026-03-09 14:18:00] `telegram-fast` 的项目上下文注入规则已经收口：用户消息若命中 `vrplayer / 项目网站 / D:\Projects\vrplayer / 三馆学伴 / 页面 / 场景 / 功能 / 报错` 等项目线索，首轮必须先按项目语义回答，再决定是否执行；`VR眼镜 / 绿灯 / 退出后` 这类弱词单独出现时不算项目命中，fresh 会话下应先按通用硬件/平台问题回答。实现真源在 `C:\Users\Lenovo\.openclaw\workspace-telegram-fast\AGENTS.md` 与 `workspace-telegram-fast/memory/project-*.md`。
 - [2026-03-09 15:18:00] 若另一个窗口或旧会话仍持有“Gemini 为默认模型”的旧上下文，不得据此把 `telegram-fast` 主模型改回 Gemini。当前模型真值只看 `C:\Users\Lenovo\.openclaw\openclaw.json` 中 `agents.defaults.model.primary` 与 `agents.list[id=telegram-fast].model.primary`；历史 memory、旧摘要、旧截图都只能当历史证据，不能当回写指令。
 - [2026-03-09 11:52:00] OpenClaw 的“真全局默认模型”不能只改 `agents.defaults.model.primary`；凡是被 channel binding 直接命中的 agent（当前是 `telegram-fast`）也必须同步改 `agents.list[].model.primary`。否则状态页会显示默认是 `gpt-5.4`，但 Telegram 实际仍按 agent 局部配置跑 Gemini。
@@ -310,7 +325,7 @@ git push origin main
 - [2026-02-26 19:05:10] 周复盘巡检增强：`weekly-review` 固定输出 `weekly_review.latest.md`，`ops-health` 新增 weekly 新鲜度门禁与 `Stale Reports` 明细，周报链路可被自动监控。
 - [2026-03-08 21:27:20] 官方 OpenClaw 复杂任务闭环新增两条监督动作：`contextctl.ps1 -Action telegram-realtrace-once` 与 `contextctl.ps1 -Action morning-digest`。前者即使在等待真实 Telegram 消息时也必须落 `telegram_realtrace.latest.{md,json}`，避免 supervisor 只看到 `missing`；后者统一聚合 `supervisor_digest / execution_eta / night_work_roi / ASYNC_COMMUNICATION / pending_execution_plan`，不另造第二套监督真源。
 - [2026-03-08 22:27:13] 官方 OpenClaw Telegram fast 的附件坑点补充：仅从 `tools.allow` 里移除 `image` 不足以阻止读图，因为 `read` 工具本身也能打开 `jpg/png`。代码/仓库/日志类任务必须在 `workspace-telegram-fast/AGENTS.md` 明确“忽略附件标记、优先执行文本任务、先回执再异步执行”；检索命令默认用 PowerShell 原生收敛写法（`Get-ChildItem -Recurse -File -Include ... | Select-String`），长命令优先带 `yieldMs`。若 Telegram 直连会话仍挂旧 runtime model，优先走官方 `sessions.reset` + `sessions.patch`，不要回退旧 worker。
-- [2026-03-08 23:05:00] 当用户要求进入长期自治循环时，不要停在“等用户下一句”。每轮至少完成 1 份外部网页/官方资料采样、1 份本地转写/灵感库采样、1 条新的可执行 backlog，并把结果写回 `task_plan.md / progress.md / findings.md / supervisor_brief.md / pending_execution_plan.json`。只有红灯风险才暂停；普通研究、收敛和方案生成不等待用户确认。
+- [2026-03-08 23:05:00] 当用户要求进入长期自治循环时，不要停在“等用户下一句”。每轮至少完成 1 份外部网页/官方资料采样、1 份本地转写/灵感库采样、1 条新的可执行 backlog，并把结果写回 `task_plan.md / progress.md / findings.md / D:\Projects\灵感包\研究沉淀\ai_harness\supervisor_brief.md / pending_execution_plan.json`。只有红灯风险才暂停；普通研究、收敛和方案生成不等待用户确认。
 - [2026-03-08 23:12:30] 长期自治循环中的用户可见回复应改为“过程型进度更新”，避免用收尾式总结把线程停住。除红灯风险或用户明确要求总结外，不使用“完成/接下来/等你回复”这类交棒式结束语。
 - [2026-03-09 00:20:00] Memory Management 用例当前只吸收低风险三件套：`Three-Tier Memory` 采用“长期层(MEMORY+HTTP memories) / 项目层(ASYNC+BRIDGE+pending plan) / 新鲜度层(supervisor/morning/heartbeat views)”映射；`Heartbeat State Monitor` 采用被动 freshness 视图 `contextctl.ps1 -Action heartbeat-state`，不打开常驻 heartbeat；`Safe Operations Ledger` 采用显式账本 `SAFE_OPERATIONS.md + safe_ops_ledger.latest.{md,json}`。`self-improving-agent` 只保留只读评估与规则草案，不允许运行时自动改写生产策略。
 - [2026-03-09 08:05:30] `heartbeat-state` 的产品语义已收口到“官方 OpenClaw 主链健康优先”：`safe_ops_ledger / supervisor_digest / telegram_realtrace` 属于主判断项，`ops_health` 仅保留为辅助治理信号，避免旧 V1 试运行/评估 freshness 噪声把 kyuu 主链误判成故障。`self-improving-agent` 的当前外部仓结构证明它更像“learn log + promotion + optional hooks”，现阶段只借鉴其记录/提升机制，不直接装进生产主链。

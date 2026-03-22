@@ -149,6 +149,7 @@ test('same museum route reuses viewer shell and preserves current view when URL 
 
   assert.deepEqual(plan, {
     shellStrategy: 'reuse-shell',
+    transitionDriver: 'viewer',
     viewStrategy: 'preserve-current',
   });
 });
@@ -165,6 +166,7 @@ test('same museum route still resets to target view when URL explicitly carries 
 
   assert.deepEqual(plan, {
     shellStrategy: 'reuse-shell',
+    transitionDriver: 'viewer',
     viewStrategy: 'reset-to-target',
   });
 });
@@ -178,6 +180,7 @@ test('different museum route mounts a fresh viewer shell', () => {
 
   assert.deepEqual(plan, {
     shellStrategy: 'mount-shell',
+    transitionDriver: 'shell',
     viewStrategy: 'reset-to-target',
   });
 });

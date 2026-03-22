@@ -9,6 +9,18 @@ import { LoadStatus } from '../types/loadStatus';
 
 export { LoadStatus } from '../types/loadStatus';
 
+export function isQualityIndicatorDebugEnabled(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  return (
+    params.get('debug') === '1' ||
+    params.get('metrics') === '1' ||
+    params.get('metrics') === 'true' ||
+    params.get('tilesDebug') === '1' ||
+    params.get('tilesDebug') === 'true' ||
+    params.get('tilesDebug') === 'on'
+  );
+}
+
 export class QualityIndicator {
   private element: HTMLElement;
   private currentStatus: LoadStatus = LoadStatus.LOADING_LOW;

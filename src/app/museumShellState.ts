@@ -17,6 +17,7 @@ export type MuseumShellRouteDecision =
 
 export type MuseumSceneRuntimePlan = {
   shellStrategy: 'mount-shell' | 'reuse-shell';
+  transitionDriver: 'viewer' | 'shell';
   viewStrategy: 'reset-to-target' | 'preserve-current';
 };
 
@@ -94,12 +95,14 @@ export function resolveMuseumSceneRuntimePlan({
   if (!sameMuseum) {
     return {
       shellStrategy: 'mount-shell',
+      transitionDriver: 'shell',
       viewStrategy: 'reset-to-target',
     };
   }
 
   return {
     shellStrategy: 'reuse-shell',
+    transitionDriver: 'viewer',
     viewStrategy: hasExplicitRequestedView(requestedView) ? 'reset-to-target' : 'preserve-current',
   };
 }

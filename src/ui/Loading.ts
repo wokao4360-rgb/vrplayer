@@ -1,15 +1,14 @@
-﻿import { isFullscreen } from '../utils/fullscreenState';
+import { isFullscreen } from '../utils/fullscreenState.ts';
 
 export class Loading {
   private element: HTMLElement;
+  private contentMounted = false;
 
   constructor() {
     this.element = document.createElement('div');
     this.element.className = 'loading-overlay';
-    this.render();
     this.applyStyles();
 
-    // 监听全屏状态变化
     const handleFullscreenChange = () => {
       if (isFullscreen()) {
         this.hide();
@@ -20,12 +19,24 @@ export class Loading {
   }
 
   private render(): void {
+    if (this.contentMounted) {
+      return;
+    }
     this.element.innerHTML = `
       <div class="loading-spinner">
         <div class="spinner"></div>
-        <p class="loading-text">加载中...</p>
+        <p class="loading-text">\u52a0\u8f7d\u4e2d...</p>
       </div>
     `;
+    this.contentMounted = true;
+  }
+
+  private clearContent(): void {
+    if (!this.contentMounted) {
+      return;
+    }
+    this.element.replaceChildren();
+    this.contentMounted = false;
   }
 
   private applyStyles(): void {
@@ -77,15 +88,16 @@ export class Loading {
   }
 
   show(): void {
-    // 全屏状态下不显示加载提示
     if (isFullscreen()) {
       return;
     }
+    this.render();
     this.element.classList.add('show');
   }
 
   hide(): void {
     this.element.classList.remove('show');
+    this.clearContent();
   }
 
   getElement(): HTMLElement {

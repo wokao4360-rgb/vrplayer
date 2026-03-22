@@ -408,7 +408,7 @@ export class PanoViewer {
     this.hasPendingViewDelta = false;
   }
 
-    loadScene(sceneData: Scene, options?: { preserveView?: boolean }): void {
+    loadScene(sceneData: Scene, options?: { preserveView?: boolean; allowPendingBlack?: boolean; silentFallback?: boolean }): void {
     // 重置状态
     this.isDegradedMode = false;
     this.resetMetrics(sceneData.id);
@@ -441,6 +441,8 @@ export class PanoViewer {
     // 进入渲染/罗盘系统前统一取反一次：internalYaw = -worldYaw
     // preserveView = true 时，切换场景保持当前视角，不重置 yaw/pitch/fov
     const preserveView = options?.preserveView === true;
+    const allowPendingBlack = options?.allowPendingBlack === true;
+    const silentFallback = options?.silentFallback === true;
     if (!preserveView) {
       // 设置初始视角（world yaw -> internal yaw）
       // 外部若已通过 setView/URL 预设视角，应以 preserveView=true 进入此分支
@@ -493,7 +495,7 @@ export class PanoViewer {
       const manifestUrl = resolveAssetUrl(tilesConfig.manifest, AssetType.PANO);
       const fallbackUrlLow = tilesConfig.fallbackPanoLow || sceneData.panoLow;
       const fallbackUrlHigh = tilesConfig.fallbackPano || sceneData.pano;
-      const fallbackPlanned = Boolean(fallbackUrlLow || fallbackUrlHigh);
+      const fallbackPlanned = !allowPendingBlack && Boolean(fallbackUrlLow || fallbackUrlHigh);
       let meshFallbackActivated = false;
       this.tilesVisibleStableFrames = 0;
       this.tilesLastError = '';
@@ -595,8 +597,10 @@ export class PanoViewer {
         .catch((err) => {
           console.error('瓦片加载失败，回退传统全景', err);
           this.tilesLastError = err instanceof Error ? err.message : String(err);
-          showToast('瓦片加载失败，已回退到全景图', 2000);
-          this.fallbackToLegacy(sceneData, tilesConfig);
+          if (!silentFallback) {
+            showToast('瓦片加载失败，已回退到全景图', 2000);
+          }
+          this.fallbackToLegacy(sceneData, tilesConfig, { silentFallback, allowPendingBlack });
         });
       return;
     }
@@ -1420,7 +1424,11 @@ export class PanoViewer {
     }
   }
 
-  private fallbackToLegacy(sceneData: Scene, tilesConfig?: { fallbackPano?: string; fallbackPanoLow?: string }): void {
+  private fallbackToLegacy(
+    sceneData: Scene,
+    tilesConfig?: { fallbackPano?: string; fallbackPanoLow?: string },
+    options?: { silentFallback?: boolean; allowPendingBlack?: boolean },
+  ): void {
     const fallbackScene: Scene = {
       ...sceneData,
       pano: tilesConfig?.fallbackPano ?? sceneData.pano,
@@ -1428,9 +1436,15 @@ export class PanoViewer {
       panoTiles: undefined,
     };
     if (fallbackScene.pano || fallbackScene.panoLow) {
-      showToast('瓦片加载失败，已回退到全景图', 2000);
+      if (!options?.silentFallback) {
+        showToast('瓦片加载失败，已回退到全景图', 2000);
+      }
       this.setRenderSource('fallback', 'tiles 失败自动回退');
-      this.loadScene(fallbackScene, { preserveView: true });
+      this.loadScene(fallbackScene, {
+        preserveView: true,
+        allowPendingBlack: options?.allowPendingBlack,
+        silentFallback: options?.silentFallback,
+      });
     } else {
       this.updateLoadStatus(LoadStatus.ERROR);
       if (this.onErrorCallback) {

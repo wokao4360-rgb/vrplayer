@@ -6,7 +6,10 @@ import type { Hotspots } from '../ui/Hotspots';
 import type { VideoPlayer } from '../ui/VideoPlayer';
 import type { GuideTray } from '../ui/GuideTray';
 import type { SceneGuideDrawer } from '../ui/SceneGuideDrawer';
-import type { QualityIndicator } from '../ui/QualityIndicator';
+import {
+  isQualityIndicatorDebugEnabled,
+  type QualityIndicator,
+} from '../ui/QualityIndicator';
 import { LoadStatus } from '../types/loadStatus';
 import { WarmupScheduler, type WarmupQueueTask } from './warmupScheduler';
 
@@ -19,7 +22,14 @@ type SceneUiRuntimeOptions = {
   getPanoViewer: () => PanoViewer | null;
   getCurrentSceneId: () => string | null;
   onModeChange: (mode: AppViewMode) => void;
-  onEnterScene: (sceneId: string) => void;
+  onEnterScene: (
+    sceneId: string,
+    view?: {
+      yaw?: number;
+      pitch?: number;
+      fov?: number;
+    },
+  ) => void;
   onOpenInfo: () => void;
   onOpenSettings: () => void;
   onOpenCommunity: () => void;
@@ -210,6 +220,9 @@ export class SceneUiRuntime {
     if (this.observerMounted || this.observerMounting || this.disposed || this.observerIdleHandle !== null) {
       return;
     }
+    if (!isQualityIndicatorDebugEnabled()) {
+      return;
+    }
 
     if (requestIdle && cancelIdle) {
       this.observerIdleHandle = requestIdle(() => {
@@ -241,16 +254,6 @@ export class SceneUiRuntime {
 
   handleStatusChange(status: LoadStatus): void {
     this.qualityIndicator?.updateStatus(status);
-    if (
-      !this.observerMounted &&
-      !this.observerMounting &&
-      !this.disposed &&
-      (status === LoadStatus.LOW_READY ||
-        status === LoadStatus.HIGH_READY ||
-        status === LoadStatus.DEGRADED)
-    ) {
-      void this.mountObserver();
-    }
     if (status === LoadStatus.HIGH_READY) {
       this.scheduleFeatureWarmup('immediate');
     } else if (status === LoadStatus.DEGRADED) {
@@ -332,6 +335,9 @@ export class SceneUiRuntime {
 
   private async mountObserver(): Promise<void> {
     if (this.observerMounted || this.observerMounting || this.disposed || !this.isAlive()) {
+      return;
+    }
+    if (!isQualityIndicatorDebugEnabled()) {
       return;
     }
     this.observerMounting = true;

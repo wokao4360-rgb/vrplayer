@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - codex/**
   workflow_dispatch:
 
 permissions:
@@ -11,7 +12,7 @@ permissions:
   deployments: write
 
 concurrency:
-  group: cloudflare-pages-production
+  group: cloudflare-pages-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -45,4 +46,4 @@ jobs:
           command: >-
             pages deploy docs
             --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
-            --branch=main
+            --branch=${{ github.ref_name }}

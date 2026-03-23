@@ -1,8 +1,8 @@
-var t=Object.defineProperty;var d=(r,e,s)=>e in r?t(r,e,{enumerable:!0,configurable:!0,writable:!0,value:s}):r[e]=s;var a=(r,e,s)=>d(r,typeof e!="symbol"?e+"":e,s);import{r as i,A as n,k as v,n as l}from"./index-Dn-_A7Ka.js";class u{constructor(e){a(this,"element");this.museum=e,this.element=document.createElement("div"),this.element.className="vr-discovery-page",this.render()}renderSceneCard(e,s){return`
+var t=Object.defineProperty;var d=(r,e,s)=>e in r?t(r,e,{enumerable:!0,configurable:!0,writable:!0,value:s}):r[e]=s;var i=(r,e,s)=>d(r,typeof e!="symbol"?e+"":e,s);import{r as a,A as n,k as v,n as l}from"./index-0uzqXjvn.js";import"./three-renderer-sQHNT78z.js";class _{constructor(e){i(this,"element");this.museum=e,this.element=document.createElement("div"),this.element.className="vr-discovery-page",this.render()}renderSceneCard(e,s){return`
       <article class="vr-scene-card vr-card-enter" style="--vr-card-index:${s}">
         <button class="vr-scene-card__button" type="button" data-scene-id="${e.id}" aria-label="进入${e.name}">
           <div class="vr-scene-card__media">
-            <img src="${i(e.thumb,n.THUMB)}" alt="${e.name}" loading="lazy" decoding="async">
+            <img src="${a(e.thumb,n.THUMB)}" alt="${e.name}" loading="lazy" decoding="async">
             <div class="vr-scene-card__veil"></div>
             <span class="vr-scene-card__seal">场景点位</span>
           </div>
@@ -34,7 +34,7 @@ var t=Object.defineProperty;var d=(r,e,s)=>e in r?t(r,e,{enumerable:!0,configura
             </div>
           </div>
           <div class="vr-scene-banner__media">
-            <img src="${i(this.museum.cover,n.COVER)}" alt="${this.museum.name}" loading="eager" decoding="async">
+            <img src="${a(this.museum.cover,n.COVER)}" alt="${this.museum.name}" loading="eager" decoding="async">
           </div>
         </section>
 
@@ -51,4 +51,4 @@ var t=Object.defineProperty;var d=(r,e,s)=>e in r?t(r,e,{enumerable:!0,configura
           </div>
         </section>
       </div>
-    `,this.element.querySelectorAll(".vr-scene-card__button").forEach(s=>{s.addEventListener("click",()=>{const c=s.getAttribute("data-scene-id");c&&l(this.museum.id,c)})})}getElement(){return this.element}remove(){this.element.remove()}}export{u as SceneListPage};
+    `,this.element.querySelectorAll(".vr-scene-card__button").forEach(s=>{s.addEventListener("click",()=>{const c=s.getAttribute("data-scene-id");c&&l(this.museum.id,c)})})}getElement(){return this.element}remove(){this.element.remove()}}export{_ as SceneListPage};

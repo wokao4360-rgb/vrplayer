@@ -73,6 +73,7 @@ Cloudflare 自动部署前置项：
 
 - 自动部署 Cloudflare 不会替代本地发布源链；仍然必须先执行 `npm run build -> robocopy .\dist .\docs /MIR -> git push origin main`
 - GitHub Action 部署的是仓库里已经提交的 `docs/`，不是未提交的本地 `dist/`
+- `main` 会发布到生产环境；`codex/**` 分支会发布到同名 Cloudflare Pages preview 分支，便于用当前开发分支的 `pages.dev` 预览做验收
 
 ---
 
@@ -124,6 +125,8 @@ Cloudflare 自动部署前置项：
 
 ## Agent Notes (Persistent)
 
+- [2026-03-23 10:25:00] `MuseumShellChrome` 的 transition progress 文案不能再有默认值，也不能在未激活时把“低清预览已就绪 / 正在恢复清晰 / 正在准备下一段漫游画面”这类字符串常驻在 DOM。当前安全基线是：`progressLabel` 只有显式传入时才渲染；未传时 `transitionProgress.hidden = true` 且 `textContent=''`。
+- [2026-03-23 10:25:00] Cloudflare Pages workflow 现已区分生产与 preview：`push main` 部署生产，`push codex/**` 部署同名 preview 分支，`pages deploy docs --branch=${github.ref_name}`。以后用户若拿 `pages.dev` 预览验收，先确认该预览域名对应的分支和 bundle，而不是默认它会跟随本地分支自动更新。
 - [2026-03-22 19:35:00] 同馆 `scene` 切点的高级转场主链已恢复为 `requestSceneEntry -> showScene(viewer transition) -> SceneTransitionController -> TravelTransitionOverlay`。即使 `resolveMuseumSceneRuntimePlan().transitionDriver === 'viewer'`，也不能再退回成只有 `sceneMotion` / `allowPendingBlack` 的裸切路径。当前安全基线是：同馆 `fromImage` 优先取当前 viewer snapshot 而不是上一场景整张 preview，且 `.vr-travel-transition.is-active` 必须保持 `pointer-events:none`，保证转场期间用户拖动不会被 overlay 吃掉。
 - [2026-03-22 21:45:00] `TravelTransitionOverlay` 不能只依赖 `.is-active` 的 CSS 类来显隐；同馆高级转场里必须由 `start()/render()/hide()` 显式写入 `visibility/opacity/pointer-events`，否则会出现 transition session 已 active 但 overlay 仍停在 `opacity:0/visibility:hidden`、用户体感为“完全没有动画”的退化。
 - [2026-03-22 17:10:41] Cloudflare 现已补齐“push main 后自动部署”这条 CI 线：GitHub Actions `Deploy Cloudflare Pages` 会直接把当前提交里的 `docs/` 发布到 `CLOUDFLARE_PAGES_PROJECT_NAME`。这条自动化只接管 Cloudflare 部署，不会替代 `build -> dist -> docs` 源链；以后若线上还是旧版本，先查本次 push 里的 `docs/**` 是否已同步，再查 Actions 里的 Cloudflare deploy job。

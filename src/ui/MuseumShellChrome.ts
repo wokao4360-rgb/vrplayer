@@ -23,6 +23,7 @@ function ensureStyles(): void {
   if (document.getElementById(STYLE_ID)) {
     return;
   }
+
   const style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
@@ -46,11 +47,9 @@ function ensureStyles(): void {
       position: absolute;
       inset: 0;
       opacity: 0;
-      pointer-events: none;
-      transition:
-        opacity 360ms var(--vr-shell-ease-out),
-        visibility 360ms var(--vr-shell-ease-out);
       visibility: hidden;
+      pointer-events: none;
+      transition: opacity 360ms var(--vr-shell-ease-out), visibility 360ms var(--vr-shell-ease-out);
       overflow: hidden;
     }
 
@@ -61,6 +60,11 @@ function ensureStyles(): void {
 
     .vr-shell-chrome__layer.is-interactive {
       pointer-events: auto;
+    }
+
+    .vr-shell-chrome__layer.is-leaving {
+      opacity: 0;
+      visibility: hidden;
     }
 
     .vr-shell-chrome__bg,
@@ -90,7 +94,7 @@ function ensureStyles(): void {
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at 50% 20%, rgba(255, 246, 232, 0.22), transparent 45%),
+        radial-gradient(circle at 50% 18%, rgba(255, 246, 232, 0.24), transparent 44%),
         linear-gradient(180deg, rgba(17, 14, 10, 0.12), rgba(17, 14, 10, 0.56));
       backdrop-filter: blur(8px);
     }
@@ -128,15 +132,6 @@ function ensureStyles(): void {
       backdrop-filter: blur(24px);
       position: relative;
       overflow: hidden;
-    }
-
-    .vr-shell-chrome__card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      border: 1px solid rgba(255,255,255,0.06);
-      pointer-events: none;
     }
 
     .vr-shell-chrome__brand-row {
@@ -215,31 +210,17 @@ function ensureStyles(): void {
       padding: 15px 24px;
       min-width: 198px;
       color: #24170d;
-      background:
-        linear-gradient(135deg, rgba(255, 240, 213, 0.96), rgba(210, 169, 109, 0.94));
-      box-shadow:
-        0 16px 36px rgba(19, 12, 6, 0.18),
-        inset 0 1px 0 rgba(255,255,255,0.55);
+      background: linear-gradient(135deg, rgba(255, 240, 213, 0.96), rgba(210, 169, 109, 0.94));
+      box-shadow: 0 16px 36px rgba(19, 12, 6, 0.18), inset 0 1px 0 rgba(255,255,255,0.55);
       font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
       font-size: 14px;
       font-weight: 700;
       letter-spacing: 0.06em;
-      transition:
-        transform 160ms var(--vr-shell-ease-out),
-        box-shadow 220ms var(--vr-shell-ease-out),
-        filter 220ms var(--vr-shell-ease-out);
+      transition: transform 160ms var(--vr-shell-ease-out), box-shadow 220ms var(--vr-shell-ease-out);
     }
 
     .vr-shell-chrome__cta:hover {
       transform: translateY(-1px) scale(1.01);
-      box-shadow:
-        0 18px 44px rgba(19, 12, 6, 0.24),
-        inset 0 1px 0 rgba(255,255,255,0.6);
-      filter: saturate(1.04);
-    }
-
-    .vr-shell-chrome__cta:active {
-      transform: scale(0.985);
     }
 
     .vr-shell-chrome__cta-note {
@@ -254,6 +235,10 @@ function ensureStyles(): void {
       margin-top: 20px;
       display: grid;
       gap: 10px;
+    }
+
+    .vr-shell-chrome__progress[hidden] {
+      display: none;
     }
 
     .vr-shell-chrome__progress-label {
@@ -282,15 +267,6 @@ function ensureStyles(): void {
       animation: vr-shell-progress 1.2s linear infinite;
     }
 
-    .vr-shell-chrome__layer[data-stage="preview-ready"] {
-      opacity: 0.88;
-    }
-
-    .vr-shell-chrome__layer.is-leaving {
-      opacity: 0;
-      visibility: hidden;
-    }
-
     @keyframes vr-shell-progress {
       0% { transform: translateX(-30%); }
       100% { transform: translateX(310%); }
@@ -313,19 +289,12 @@ function ensureStyles(): void {
         padding: 20px 18px 18px;
       }
 
-      .vr-shell-chrome__brand-row {
-        margin-bottom: 18px;
-      }
-
-      .vr-shell-chrome__footer {
-        align-items: stretch;
-      }
-
       .vr-shell-chrome__cta {
         width: 100%;
       }
     }
   `;
+
   document.head.appendChild(style);
 }
 
@@ -336,30 +305,31 @@ export class MuseumShellChrome {
   private readonly coverBackground: HTMLDivElement;
   private readonly transitionBackground: HTMLDivElement;
   private readonly transitionSnapshot: HTMLDivElement;
-  private readonly coverTitle: HTMLHeadingElement;
-  private readonly coverSubtitle: HTMLParagraphElement;
   private readonly coverBrand: HTMLSpanElement;
   private readonly coverAppName: HTMLSpanElement;
+  private readonly coverTitle: HTMLHeadingElement;
+  private readonly coverSubtitle: HTMLParagraphElement;
   private readonly coverCta: HTMLButtonElement;
   private readonly transitionBrand: HTMLSpanElement;
+  private readonly transitionAccent: HTMLSpanElement;
   private readonly transitionTitle: HTMLHeadingElement;
   private readonly transitionSubtitle: HTMLParagraphElement;
+  private readonly transitionProgress: HTMLDivElement;
   private readonly transitionProgressLabel: HTMLDivElement;
   private onEnter: (() => void) | null = null;
 
   constructor() {
     ensureStyles();
+
     this.element = document.createElement('div');
     this.element.className = 'vr-shell-chrome';
+
     this.coverLayer = document.createElement('div');
     this.coverLayer.className = 'vr-shell-chrome__layer';
     this.coverLayer.dataset.stage = 'cover';
     this.coverBackground = document.createElement('div');
     this.coverBackground.className = 'vr-shell-chrome__bg';
-    const coverVeil = document.createElement('div');
-    coverVeil.className = 'vr-shell-chrome__veil';
-    const coverGrain = document.createElement('div');
-    coverGrain.className = 'vr-shell-chrome__grain';
+
     const coverContent = document.createElement('div');
     coverContent.className = 'vr-shell-chrome__content';
     const coverCard = document.createElement('div');
@@ -368,11 +338,11 @@ export class MuseumShellChrome {
     coverBrandRow.className = 'vr-shell-chrome__brand-row';
     const coverBrandBadge = document.createElement('div');
     coverBrandBadge.className = 'vr-shell-chrome__brand-badge';
-    const coverBrandDot = document.createElement('span');
-    coverBrandDot.className = 'vr-shell-chrome__brand-dot';
+    const coverDot = document.createElement('span');
+    coverDot.className = 'vr-shell-chrome__brand-dot';
     this.coverBrand = document.createElement('span');
     this.coverAppName = document.createElement('span');
-    coverBrandBadge.append(coverBrandDot, this.coverBrand);
+    coverBrandBadge.append(coverDot, this.coverBrand);
     coverBrandRow.append(coverBrandBadge, this.coverAppName);
     const coverEyebrow = document.createElement('div');
     coverEyebrow.className = 'vr-shell-chrome__eyebrow';
@@ -395,7 +365,7 @@ export class MuseumShellChrome {
     coverFooter.append(this.coverCta, coverNote);
     coverCard.append(coverBrandRow, coverEyebrow, this.coverTitle, this.coverSubtitle, coverFooter);
     coverContent.appendChild(coverCard);
-    this.coverLayer.append(this.coverBackground, coverVeil, coverGrain, coverContent);
+    this.coverLayer.append(this.coverBackground, createVeil(), createGrain(), coverContent);
 
     this.transitionLayer = document.createElement('div');
     this.transitionLayer.className = 'vr-shell-chrome__layer';
@@ -404,10 +374,6 @@ export class MuseumShellChrome {
     this.transitionBackground.className = 'vr-shell-chrome__bg';
     this.transitionSnapshot = document.createElement('div');
     this.transitionSnapshot.className = 'vr-shell-chrome__snapshot';
-    const transitionVeil = document.createElement('div');
-    transitionVeil.className = 'vr-shell-chrome__veil';
-    const transitionGrain = document.createElement('div');
-    transitionGrain.className = 'vr-shell-chrome__grain';
     const transitionContent = document.createElement('div');
     transitionContent.className = 'vr-shell-chrome__content';
     const transitionCard = document.createElement('div');
@@ -416,14 +382,13 @@ export class MuseumShellChrome {
     transitionBrandRow.className = 'vr-shell-chrome__brand-row';
     const transitionBrandBadge = document.createElement('div');
     transitionBrandBadge.className = 'vr-shell-chrome__brand-badge';
-    const transitionBrandDot = document.createElement('span');
-    transitionBrandDot.className = 'vr-shell-chrome__brand-dot';
+    const transitionDot = document.createElement('span');
+    transitionDot.className = 'vr-shell-chrome__brand-dot';
     this.transitionBrand = document.createElement('span');
-    const accentLabel = document.createElement('span');
-    accentLabel.className = 'vr-shell-chrome__cta-note';
-    accentLabel.textContent = 'Scene handoff';
-    transitionBrandBadge.append(transitionBrandDot, this.transitionBrand);
-    transitionBrandRow.append(transitionBrandBadge, accentLabel);
+    this.transitionAccent = document.createElement('span');
+    this.transitionAccent.className = 'vr-shell-chrome__cta-note';
+    transitionBrandBadge.append(transitionDot, this.transitionBrand);
+    transitionBrandRow.append(transitionBrandBadge, this.transitionAccent);
     const transitionEyebrow = document.createElement('div');
     transitionEyebrow.className = 'vr-shell-chrome__eyebrow';
     transitionEyebrow.textContent = '正在切换展点';
@@ -431,26 +396,27 @@ export class MuseumShellChrome {
     this.transitionTitle.className = 'vr-shell-chrome__title';
     this.transitionSubtitle = document.createElement('p');
     this.transitionSubtitle.className = 'vr-shell-chrome__subtitle';
-    const progress = document.createElement('div');
-    progress.className = 'vr-shell-chrome__progress';
+    this.transitionProgress = document.createElement('div');
+    this.transitionProgress.className = 'vr-shell-chrome__progress';
+    this.transitionProgress.hidden = true;
     this.transitionProgressLabel = document.createElement('div');
     this.transitionProgressLabel.className = 'vr-shell-chrome__progress-label';
     const progressBar = document.createElement('div');
     progressBar.className = 'vr-shell-chrome__progress-bar';
-    progress.append(this.transitionProgressLabel, progressBar);
+    this.transitionProgress.append(this.transitionProgressLabel, progressBar);
     transitionCard.append(
       transitionBrandRow,
       transitionEyebrow,
       this.transitionTitle,
       this.transitionSubtitle,
-      progress,
+      this.transitionProgress,
     );
     transitionContent.appendChild(transitionCard);
     this.transitionLayer.append(
       this.transitionBackground,
       this.transitionSnapshot,
-      transitionVeil,
-      transitionGrain,
+      createVeil(),
+      createGrain(),
       transitionContent,
     );
 
@@ -477,41 +443,42 @@ export class MuseumShellChrome {
   }
 
   showEnterPreloading(model: MuseumShellTransitionViewModel): void {
-    this.setTransitionModel(model);
+    this.setTransitionModel(model, '即将进入首个场景');
     this.transitionLayer.dataset.stage = 'enter-preloading';
-    this.transitionLayer.classList.add('is-active');
+    this.transitionLayer.classList.add('is-active', 'is-interactive');
     this.transitionLayer.classList.remove('is-leaving');
   }
 
   startSceneTransition(model: MuseumShellTransitionViewModel): void {
-    this.setTransitionModel(model);
+    this.setTransitionModel(model, 'Scene handoff');
     this.transitionLayer.dataset.stage = 'transition';
-    this.transitionLayer.classList.add('is-active');
+    this.transitionLayer.classList.add('is-active', 'is-interactive');
     this.transitionLayer.classList.remove('is-leaving');
   }
 
   showErrorFallback(model: MuseumShellTransitionViewModel): void {
-    this.setTransitionModel(model);
+    this.setTransitionModel(model, '载入受阻');
     this.transitionLayer.dataset.stage = 'error';
-    this.transitionLayer.classList.add('is-active');
+    this.transitionLayer.classList.add('is-active', 'is-interactive');
     this.transitionLayer.classList.remove('is-leaving');
   }
 
-  markPreviewReady(progressLabel = '低清预览已就绪，正在恢复清晰'): void {
+  markPreviewReady(progressLabel?: string): void {
     this.transitionLayer.dataset.stage = 'preview-ready';
-    this.transitionProgressLabel.textContent = progressLabel;
+    this.setTransitionProgressLabel(progressLabel);
   }
 
   completeTransition(): void {
     this.coverLayer.classList.remove('is-active', 'is-interactive');
     this.coverLayer.classList.add('is-leaving');
-    this.transitionLayer.classList.remove('is-active');
+    this.transitionLayer.classList.remove('is-active', 'is-interactive');
     this.transitionLayer.classList.add('is-leaving');
     window.setTimeout(() => {
       this.coverLayer.classList.remove('is-leaving');
       this.transitionLayer.classList.remove('is-leaving');
       this.transitionLayer.dataset.stage = 'transition';
       this.transitionSnapshot.style.backgroundImage = '';
+      this.setTransitionProgressLabel(undefined);
     }, 420);
   }
 
@@ -519,12 +486,12 @@ export class MuseumShellChrome {
     return this.coverLayer.classList.contains('is-active');
   }
 
-  private setTransitionModel(model: MuseumShellTransitionViewModel): void {
+  private setTransitionModel(model: MuseumShellTransitionViewModel, accentLabel: string): void {
     this.transitionBrand.textContent = model.brandTitle;
+    this.transitionAccent.textContent = model.accentLabel || accentLabel;
     this.transitionTitle.textContent = model.title;
     this.transitionSubtitle.textContent = model.subtitle;
-    this.transitionProgressLabel.textContent =
-      model.progressLabel || '正在准备下一段漫游画面';
+    this.setTransitionProgressLabel(model.progressLabel);
     this.transitionBackground.style.backgroundImage = model.backgroundImage
       ? `url("${model.backgroundImage}")`
       : '';
@@ -532,4 +499,22 @@ export class MuseumShellChrome {
       ? `url("${model.snapshotImage}")`
       : '';
   }
+
+  private setTransitionProgressLabel(progressLabel?: string): void {
+    const nextLabel = progressLabel?.trim() ?? '';
+    this.transitionProgressLabel.textContent = nextLabel;
+    this.transitionProgress.hidden = nextLabel.length === 0;
+  }
+}
+
+function createVeil(): HTMLDivElement {
+  const veil = document.createElement('div');
+  veil.className = 'vr-shell-chrome__veil';
+  return veil;
+}
+
+function createGrain(): HTMLDivElement {
+  const grain = document.createElement('div');
+  grain.className = 'vr-shell-chrome__grain';
+  return grain;
 }

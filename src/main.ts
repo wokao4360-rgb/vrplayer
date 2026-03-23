@@ -383,7 +383,6 @@ class App {
       subtitle: `${museum.name} · 正在进入下一个展点`,
       backgroundImage: resolveAssetUrl(museum.cover, AssetType.COVER) || '',
       snapshotImage: this.resolveScenePreviewAsset(scene),
-      progressLabel: '正在复用馆内壳层并恢复场景',
     };
   }
   private warmMuseumPreviewAssets(museum: Museum, targetSceneId: string): void {
@@ -1040,9 +1039,7 @@ class App {
     const settleTransition = (status: LoadStatus) => {
       if (transitionSettled) return;
       transitionSettled = true;
-      shellChrome.markPreviewReady(
-        status === LoadStatus.HIGH_READY ? '高清已接管，正在收束转场' : '低清预览已就绪，正在恢复清晰',
-      );
+      shellChrome.markPreviewReady();
       window.setTimeout(() => {
         shellChrome.completeTransition();
       }, 260);
@@ -1217,7 +1214,6 @@ class App {
         shellChrome.showErrorFallback({
           ...this.buildMuseumTransitionModel(museum, scene),
           snapshotImage: this.captureViewerSnapshot() || transitionModel.snapshotImage,
-          progressLabel: '转场失败，请检查资源后重试',
         });
       }
     });

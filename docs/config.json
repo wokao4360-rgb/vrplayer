@@ -22,7 +22,11 @@
     "apiBaseUrl": "https://survey-kgdkznycdy.cn-hangzhou.fcapp.run",
     "submitPath": "/submit",
     "statsPath": "/stats",
-    "notice": ""
+    "notice": "",
+    "displayOverrides": {
+      "targetTotalResponses": 247,
+      "targetLatestSubmittedAt": "2026-03-14 16:42:17"
+    }
   },
   "museums": [
     {

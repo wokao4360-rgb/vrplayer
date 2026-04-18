@@ -150,6 +150,12 @@ async function loadSurveyConfig() {
     submitPath: survey.submitPath || '/submit',
     statsPath: survey.statsPath || '/stats',
     notice: String(survey.notice || '').trim(),
+    displayOverrides: {
+      targetTotalResponses: String(survey.displayOverrides?.targetTotalResponses ?? '').trim(),
+      targetLatestSubmittedAt: String(survey.displayOverrides?.targetLatestSubmittedAt ?? '').trim(),
+      topIssuesText: String(survey.displayOverrides?.topIssuesText ?? '').trim(),
+      sampleQuotesText: String(survey.displayOverrides?.sampleQuotesText ?? '').trim(),
+    },
   };
 }
 
@@ -653,6 +659,15 @@ function readStoredDemoOverrides() {
   }
 }
 
+function sanitizeOverrides(overrides = {}) {
+  return {
+    targetTotalResponses: String(overrides.targetTotalResponses ?? '').trim(),
+    targetLatestSubmittedAt: String(overrides.targetLatestSubmittedAt ?? '').trim(),
+    topIssuesText: String(overrides.topIssuesText ?? '').trim(),
+    sampleQuotesText: String(overrides.sampleQuotesText ?? '').trim(),
+  };
+}
+
 function writeStoredDemoOverrides(overrides) {
   window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(overrides));
 }
@@ -778,20 +793,22 @@ async function bootStatsPage() {
 
   const renderLiveStats = (stats, refreshAt) => {
     liveStats = normalizeStatsData(stats);
-    const storedOverrides = readStoredDemoOverrides();
+    const storedOverrides = sanitizeOverrides(readStoredDemoOverrides());
+    const configuredOverrides = sanitizeOverrides(config.displayOverrides);
+    const effectiveOverrides = hasDemoOverrides(storedOverrides) ? storedOverrides : configuredOverrides;
     const metaBase = {
       apiBaseUrl: config.apiBaseUrl,
       refreshAt,
       badgeLabel: STATS_BADGE_LABEL,
     };
 
-    if (hasDemoOverrides(storedOverrides)) {
-      const adjusted = normalizeStatsData(applyStatsDemoAdjustments(liveStats, storedOverrides));
+    if (hasDemoOverrides(effectiveOverrides)) {
+      const adjusted = normalizeStatsData(applyStatsDemoAdjustments(liveStats, effectiveOverrides));
       renderStatsDashboard(summary, statsGrid, quotesCard, adjusted, {
         ...metaBase,
         isCalibrated: true,
       });
-      populateDemoForm(controls, liveStats, storedOverrides);
+      populateDemoForm(controls, liveStats, effectiveOverrides);
       setAdminStatus(controls, '当前为数据校准后的后台展示，不会回写后端。', 'warning');
       return;
     }

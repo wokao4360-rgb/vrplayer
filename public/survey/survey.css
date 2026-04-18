@@ -218,26 +218,27 @@ body {
 .stats-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 14px;
   margin-bottom: 16px;
 }
 
 .stats-summary__card {
-  padding: 14px 16px;
-  border-radius: 16px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
   border: 1px solid var(--survey-line);
   background: rgba(255, 255, 255, 0.72);
 }
 
 .stats-summary__label {
   color: var(--survey-muted);
-  font-size: 13px;
-  margin-bottom: 6px;
+  font-size: 12px;
+  margin-bottom: 4px;
 }
 
 .stats-summary__value {
-  font-size: 28px;
+  font-size: 24px;
   color: var(--survey-accent);
   line-height: 1.1;
   word-break: break-word;
@@ -248,8 +249,9 @@ body {
 }
 
 .stats-summary__value--compact {
-  font-size: 22px;
-  line-height: 1.25;
+  font-size: 18px;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .stats-summary__note {
@@ -637,8 +639,56 @@ body {
 }
 
 @media (max-width: 1280px) {
-  .stats-summary,
   .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-summary {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .stats-summary__card {
+    padding: 10px 12px;
+  }
+
+  .stats-summary__value {
+    font-size: 22px;
+  }
+
+  .stats-summary__value--compact {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 1040px) {
+  .stats-summary {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .stats-summary__card {
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+
+  .stats-summary__label {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .stats-summary__value {
+    font-size: 19px;
+  }
+
+  .stats-summary__value--compact {
+    font-size: 13px;
+    letter-spacing: -0.02em;
+  }
+}
+
+@media (max-width: 900px) {
+  .stats-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -646,8 +696,7 @@ body {
 @media (max-width: 1080px) {
   .survey-layout,
   .stats-grid,
-  .stats-panels,
-  .stats-summary {
+  .stats-panels {
     grid-template-columns: 1fr;
   }
 
@@ -658,7 +707,6 @@ body {
 
   .survey-hero,
   .survey-card,
-  .stats-summary,
   .stats-panel,
   .stats-card,
   .quotes-card {
@@ -684,5 +732,11 @@ body {
 
   .quotes-card__header {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 680px) {
+  .stats-summary {
+    grid-template-columns: 1fr;
   }
 }

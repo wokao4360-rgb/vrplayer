@@ -753,7 +753,7 @@ async function bootSurveyPage() {
   });
 
   status.textContent = config.apiBaseUrl
-    ? '问卷已就绪，可直接填写并提交。'
+    ? ''
     : '页面已就绪，待接入 survey.apiBaseUrl 后即可提交。';
 }
 

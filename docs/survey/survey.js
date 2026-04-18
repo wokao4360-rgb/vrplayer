@@ -510,23 +510,19 @@ function renderStatsSummary(container, stats, meta) {
     {
       label: '回收样本数',
       value: stats.totalResponses || 0,
-      note: '当前统计窗口内的总提交人次',
     },
     {
       label: '有效样本',
       value: stats.validResponses || 0,
-      note: '可直接用于项目论证与成果截图',
     },
     {
       label: '异常样本',
       value: stats.flaggedResponses || 0,
-      note: '主要用于标记历史编码异常或脏数据',
     },
     {
       label: '最新提交时间',
       value: stats.latestSubmittedAt || '暂无',
       compact: true,
-      note: meta.apiBaseUrl ? '来自实时统计接口' : '待配置统计接口地址',
     },
   ];
 
@@ -536,8 +532,7 @@ function renderStatsSummary(container, stats, meta) {
         <article class="stats-summary__card ${card.compact ? 'stats-summary__card--wide' : ''}">
           <div class="stats-summary__label">${escapeHtml(card.label)}</div>
           <div class="stats-summary__value ${card.compact ? 'stats-summary__value--compact' : ''}">${escapeHtml(card.value)}</div>
-        <div class="stats-summary__note">${escapeHtml(card.note)}</div>
-      </article>
+        </article>
       `,
     )
     .join('');

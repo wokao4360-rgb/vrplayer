@@ -1,0 +1,12 @@
+{
+  "name": "pucheng-survey-fc-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "check": "node --check index.js"
+  },
+  "dependencies": {
+    "ali-oss": "^6.22.0"
+  }
+}

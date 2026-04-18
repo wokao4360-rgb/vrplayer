@@ -17,6 +17,13 @@
     "endpoint": "https://chat-fachfrmdcz.cn-hangzhou.fcapp.run/",
     "authToken": ""
   },
+  "survey": {
+    "enabled": true,
+    "apiBaseUrl": "https://survey-kgdkznycdy.cn-hangzhou.fcapp.run",
+    "submitPath": "/submit",
+    "statsPath": "/stats",
+    "notice": ""
+  },
   "museums": [
     {
       "id": "wangding",

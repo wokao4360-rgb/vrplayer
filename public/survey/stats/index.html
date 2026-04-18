@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>蒲城三馆问卷统计</title>
+    <link rel="stylesheet" href="../survey.css" />
+  </head>
+  <body data-page="stats">
+    <main class="survey-shell">
+      <section class="survey-hero">
+        <div class="survey-brand">鼎虎清源 · 蒲城三馆问卷聚合统计</div>
+        <h1>问卷后台数据展示页</h1>
+        <p class="survey-lead">
+          该问卷仅展示匿名聚合结果，不含个人敏感信息，仅用于项目需求识别与服务优化。
+        </p>
+        <div class="survey-meta">
+          <span id="stats-notice">仅展示聚合统计数据</span>
+          <a class="survey-link" href="../">返回问卷页</a>
+        </div>
+      </section>
+
+      <section class="stats-console">
+        <details class="stats-admin" id="stats-admin">
+          <summary>数据校准工具</summary>
+          <div class="stats-admin__hint">
+            这里支持手动修改“展示样本量 / 最新时间 / 高频问题 / 反馈摘录”，用于校准后台展示效果。
+            所有校准都只影响当前页面，不回写后端。
+          </div>
+          <form class="stats-admin__form" id="stats-admin-form">
+            <label class="stats-admin__field">
+              <span>展示样本量</span>
+              <input id="stats-demo-total" type="number" min="0" step="1" />
+            </label>
+            <label class="stats-admin__field">
+              <span>展示时间</span>
+              <input id="stats-demo-latest" type="text" placeholder="2026-04-18 10:30:00" />
+            </label>
+            <label class="stats-admin__field stats-admin__field--wide">
+              <span>高频问题（每行一条）</span>
+              <textarea id="stats-demo-issues" rows="3"></textarea>
+            </label>
+            <label class="stats-admin__field stats-admin__field--wide">
+              <span>反馈摘录（每行一条）</span>
+              <textarea id="stats-demo-quotes" rows="4"></textarea>
+            </label>
+            <div class="stats-admin__actions">
+              <button class="survey-button" id="stats-demo-apply" type="button">应用数据校准</button>
+              <button class="survey-button survey-button--ghost" id="stats-demo-reset" type="button">恢复实时展示</button>
+              <button class="survey-button survey-button--ghost" id="stats-live-refresh" type="button">重新拉取实时统计</button>
+            </div>
+            <div class="stats-admin__status" id="stats-admin-status">统计加载中...</div>
+          </form>
+        </details>
+      </section>
+
+      <section class="stats-summary" id="stats-summary"></section>
+      <section class="stats-grid" id="stats-grid"></section>
+      <section class="quotes-card" id="quotes-card"></section>
+    </main>
+
+    <script src="../survey.js" type="module"></script>
+  </body>
+</html>

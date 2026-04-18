@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>蒲城三馆问卷调查</title>
+    <link rel="stylesheet" href="./survey.css" />
+  </head>
+  <body data-page="survey">
+    <main class="survey-shell">
+      <section class="survey-hero">
+        <div class="survey-brand">鼎虎清源 · 蒲城三馆真实问卷调查</div>
+        <h1>先把真实需求收清楚，再把产品做扎实</h1>
+        <p class="survey-lead">
+          本问卷仅用于蒲城三馆数字研学项目的需求识别、服务优化和项目书证据补强，不收集姓名、手机号等敏感信息。
+        </p>
+        <div class="survey-meta">
+          <span id="survey-notice"></span>
+          <a class="survey-link" id="stats-link" href="./stats/" target="_blank" rel="noreferrer">查看聚合统计</a>
+        </div>
+      </section>
+
+      <section class="survey-layout">
+        <div class="survey-card">
+          <div class="survey-card__eyebrow">问卷入口</div>
+          <div class="survey-qr-wrap">
+            <img id="survey-qr" alt="问卷二维码" />
+            <div class="survey-link-box">
+              <div class="survey-link-box__label">问卷链接</div>
+              <div class="survey-link-box__value" id="survey-link-value"></div>
+              <button class="survey-button survey-button--ghost" id="copy-link-button" type="button">复制链接</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="survey-card survey-card--form">
+          <div class="survey-card__eyebrow">问卷内容</div>
+          <form id="survey-form" class="survey-form"></form>
+          <div class="survey-actions">
+            <button class="survey-button" id="submit-button" type="submit" form="survey-form">提交真实问卷</button>
+            <div class="survey-status" id="survey-status">问卷加载中...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./survey.js" type="module"></script>
+  </body>
+  </html>

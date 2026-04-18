@@ -11,6 +11,8 @@ type BottomDockOptions = {
   onOpenCommunity?: () => void;
   onOpenInfo?: () => void;
   onOpenSettings?: () => void;
+  onSmartNarration?: () => void;
+  onPhotoAsk?: () => void;
   sceneId?: string;
   sceneName?: string;
   museum?: Museum;
@@ -39,10 +41,28 @@ function isPanelTab(tab: DockTabKey): tab is 'community' | 'map' | 'dollhouse' {
   return tab === 'community' || tab === 'map' || tab === 'dollhouse';
 }
 
+function createNarrationIcon(): string {
+  return `
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 5.5V18.5L18 12L8 5.5Z" fill="currentColor"/>
+  <path d="M4.5 7.5V16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+}
+
+function createCameraIcon(): string {
+  return `
+<svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8.2 6.5L9.7 4.5H14.3L15.8 6.5H19C20.1046 6.5 21 7.39543 21 8.5V17.5C21 18.6046 20.1046 19.5 19 19.5H5C3.89543 19.5 3 18.6046 3 17.5V8.5C3 7.39543 3.89543 6.5 5 6.5H8.2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+  <circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.8"/>
+</svg>`;
+}
+
 export class BottomDock {
   private element: HTMLElement;
   private dockEl: HTMLElement;
   private panelsHost: HTMLElement;
+  private narrationBtn: HTMLButtonElement;
+  private photoBtn: HTMLButtonElement;
   private panels: DockPanelsLike | null = null;
   private panelsLoadPromise: Promise<void> | null = null;
   private destroyed = false;
@@ -51,6 +71,8 @@ export class BottomDock {
   private onOpenCommunity?: () => void;
   private onOpenInfo?: () => void;
   private onOpenSettings?: () => void;
+  private onSmartNarration?: () => void;
+  private onPhotoAsk?: () => void;
   private initialTab: DockTabKey;
   private sceneId?: string;
   private sceneName?: string;
@@ -70,6 +92,8 @@ export class BottomDock {
     this.onOpenCommunity = options.onOpenCommunity;
     this.onOpenInfo = options.onOpenInfo;
     this.onOpenSettings = options.onOpenSettings;
+    this.onSmartNarration = options.onSmartNarration;
+    this.onPhotoAsk = options.onPhotoAsk;
     this.initialTab = options.initialTab || 'guide';
     this.sceneId = options.sceneId;
     this.sceneName = options.sceneName;
@@ -83,6 +107,38 @@ export class BottomDock {
     this.panelsHost = document.createElement('div');
     this.panelsHost.className = 'vr-dock-panels-host';
     this.element.appendChild(this.panelsHost);
+
+    this.narrationBtn = document.createElement('button');
+    this.narrationBtn.type = 'button';
+    this.narrationBtn.className = 'vr-btn vr-dock-side-action vr-dock-narration-action';
+    this.narrationBtn.setAttribute('aria-label', '智能讲解');
+    this.narrationBtn.innerHTML = `<span class="vr-dock-side-icon">${createNarrationIcon()}</span><span class="vr-dock-side-label">智能讲解</span>`;
+    this.narrationBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      interactionBus.emitUIEngaged();
+      window.dispatchEvent(new CustomEvent('fcchat:smart-narration'));
+      if (this.onSmartNarration) {
+        this.onSmartNarration();
+      }
+    });
+    this.element.appendChild(this.narrationBtn);
+
+    this.photoBtn = document.createElement('button');
+    this.photoBtn.type = 'button';
+    this.photoBtn.className = 'vr-btn vr-dock-photo-action';
+    this.photoBtn.setAttribute('aria-label', '拍照问这一幕');
+    this.photoBtn.innerHTML = `<span class="vr-dock-photo-icon">${createCameraIcon()}</span>`;
+    this.photoBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      interactionBus.emitUIEngaged();
+      window.dispatchEvent(new CustomEvent('fcchat:photo-ask'));
+      if (this.onPhotoAsk) {
+        this.onPhotoAsk();
+      }
+    });
+    this.element.appendChild(this.photoBtn);
 
     this.dockEl = document.createElement('div');
     this.dockEl.className = 'vr-dock vr-glass';

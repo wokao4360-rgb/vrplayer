@@ -62,7 +62,10 @@ import {
   createTransitionIntentState,
   queueLatestTransitionIntent,
 } from './app/sceneTransitionMath';
-import { resolveSceneTransitionAssets } from './app/sceneTransitionAssets';
+import {
+  resolveSceneTransitionAssets,
+  resolveSceneTransitionPreviewUrl,
+} from './app/sceneTransitionAssets';
 import { SceneTransitionController, type TransitionSession } from './app/sceneTransitionController';
 import {
   resolveRuntimeTransitionScene,
@@ -454,13 +457,72 @@ class App {
     return this.viewerContainer;
   }
   private resolveScenePreviewAsset(scene: Scene): string {
+    return this.resolveSourceScenePreviewAsset(scene);
+  }
+
+  private resolveSourceScenePreviewAsset(scene: Scene): string {
     return (
-      resolveAssetUrl(scene.panoLow, AssetType.PANO) ||
-      resolveAssetUrl(scene.thumb, AssetType.THUMB) ||
-      scene.panoLow ||
-      scene.thumb ||
-      ''
+      resolveSceneTransitionPreviewUrl({
+        thumbUrl: this.resolveTransitionPreviewAssetUrl(scene.thumb, AssetType.THUMB),
+        panoLowUrl: this.resolveTransitionPreviewAssetUrl(scene.panoLow, AssetType.PANO),
+        prefer: 'thumb',
+      }) || ''
     );
+  }
+
+  private resolveTargetScenePreviewAsset(scene: Scene): string {
+    return (
+      resolveSceneTransitionPreviewUrl({
+        thumbUrl: this.resolveTransitionPreviewAssetUrl(scene.thumb, AssetType.THUMB),
+        panoLowUrl: this.resolveTransitionPreviewAssetUrl(scene.panoLow, AssetType.PANO),
+        prefer: 'thumb',
+      }) || ''
+    );
+  }
+
+  private resolveTransitionPreviewAssetUrl(
+    asset: string | undefined,
+    type: AssetType,
+  ): string {
+    if (!asset || typeof asset !== 'string' || asset.trim() === '') {
+      return '';
+    }
+    const trimmed = asset.trim();
+    if (/^(?:data|blob):/i.test(trimmed)) {
+      return trimmed;
+    }
+    const sameOriginDocsAsset = this.rewriteRepoDocsAssetToCurrentOrigin(trimmed);
+    if (sameOriginDocsAsset) {
+      return sameOriginDocsAsset;
+    }
+    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('//')) {
+      return resolveAssetUrl(trimmed, type) || trimmed;
+    }
+    try {
+      if (trimmed.startsWith('/')) {
+        return new URL(trimmed.slice(1), document.baseURI).toString();
+      }
+      return new URL(trimmed, document.baseURI).toString();
+    } catch {
+      return resolveAssetUrl(trimmed, type) || trimmed;
+    }
+  }
+
+  private rewriteRepoDocsAssetToCurrentOrigin(url: string): string {
+    const normalized = url.trim();
+    const rawMatch = normalized.match(
+      /^https:\/\/raw\.githubusercontent\.com\/wokao4360-rgb\/vrplayer\/main\/docs\/(.+)$/i,
+    );
+    if (rawMatch) {
+      return new URL(rawMatch[1], document.baseURI).toString();
+    }
+    const pagesMatch = normalized.match(
+      /^https:\/\/wokao4360-rgb\.github\.io\/vrplayer\/(.+)$/i,
+    );
+    if (pagesMatch) {
+      return new URL(pagesMatch[1], document.baseURI).toString();
+    }
+    return '';
   }
   private captureViewerSnapshot(): string {
     const canvas = this.panoViewer?.getDomElement();
@@ -897,16 +959,22 @@ class App {
       pitch: targetPitch,
       fov: targetFov,
     };
-    const previewUrl = this.resolveScenePreviewAsset(scene) || undefined;
+    const sourcePreviewUrl = (
+      previousScene
+        ? this.resolveSourceScenePreviewAsset(previousScene)
+        : this.resolveSourceScenePreviewAsset(scene)
+    ) || undefined;
+    const targetPreviewUrl = this.resolveTargetScenePreviewAsset(scene) || undefined;
     const transitionAssets = resolveSceneTransitionAssets({
       coverWasVisible,
-      previewUrl,
-      previewAlreadyReady: Boolean(previewUrl),
+      sourcePreviewUrl,
+      targetPreviewUrl,
+      targetPreviewAlreadyReady: Boolean(targetPreviewUrl),
       coverHeroUrl: resolveAssetUrl(museum.cover, AssetType.COVER) || museum.cover,
-      viewerSnapshot: this.captureViewerSnapshot(),
-      previousScenePreviewImage: previousScene ? this.resolveScenePreviewAsset(previousScene) : '',
+      viewerSnapshot: viewerDrivenTransition ? undefined : this.captureViewerSnapshot(),
+      previousScenePreviewImage: previousScene ? this.resolveSourceScenePreviewAsset(previousScene) : '',
     });
-    const runtimeSceneData = resolveRuntimeTransitionScene(scene, previewUrl);
+    const runtimeSceneData = resolveRuntimeTransitionScene(scene, targetPreviewUrl);
     const sceneEnterMeta = this.activeSceneEnterMeta ?? { source: 'route' as const };
     this.activeSceneEnterMeta = null;
     const targetWorldView = {
@@ -917,6 +985,112 @@ class App {
     let cameraMotionYielded = false;
     let transitionSession: TransitionSession | null = null;
     let sceneLoadCommitted = !viewerDrivenTransition;
+    let coreUiRequested = false;
+    let coreUiMountStarted = false;
+    let chatInitRequested = false;
+    let chatInitStarted = false;
+    let transitionSettled = false;
+    let chatInitFallbackTimer: number | null = null;
+    let syncSceneUiRuntimeRefs = () => {
+      this.bottomDock = this.sceneUiRuntime?.getBottomDock() ?? null;
+      this.topModeTabs = this.sceneUiRuntime?.getTopModeTabs() ?? null;
+      this.hotspots = this.sceneUiRuntime?.getHotspots() ?? null;
+      this.videoPlayer = this.sceneUiRuntime?.getVideoPlayer() ?? null;
+      this.guideTray = this.sceneUiRuntime?.getGuideTray() ?? null;
+      this.sceneGuideDrawer = this.sceneUiRuntime?.getSceneGuideDrawer() ?? null;
+      this.qualityIndicator = this.sceneUiRuntime?.getQualityIndicator() ?? null;
+    };
+    let maybeMountCoreSceneUi = () => {};
+    let maybeInitChatRuntime = () => {};
+    const clearChatInitFallback = () => {
+      if (chatInitFallbackTimer == null) return;
+      window.clearTimeout(chatInitFallbackTimer);
+      chatInitFallbackTimer = null;
+    };
+    const ensureChatRuntime = () => {
+      if (chatInitRequested) return;
+      chatInitRequested = true;
+      clearChatInitFallback();
+      maybeInitChatRuntime();
+    };
+    const ensureCoreSceneUi = () => {
+      if (coreUiRequested) return;
+      coreUiRequested = true;
+      maybeMountCoreSceneUi();
+    };
+    const settleTransition = (status: LoadStatus) => {
+      if (transitionSettled) return;
+      transitionSettled = true;
+      shellChrome.markPreviewReady();
+      window.setTimeout(() => {
+        shellChrome.completeTransition();
+      }, 260);
+    };
+    const commitSceneLoad = (): void => {
+      if (sceneLoadCommitted || !this.panoViewer) {
+        return;
+      }
+      sceneLoadCommitted = true;
+      transitionSession?.markLoadCommitted();
+      this.currentMuseum = museum;
+      this.currentScene = scene;
+      this.hideUIError();
+      ensureCoreSceneUi();
+      syncSceneUiRuntimeRefs();
+      ensureChatRuntime();
+      void this.mountTopRightControls(viewerContainer, scene, devMode);
+      this.panoViewer.loadScene(runtimeSceneData, {
+        preserveView: true,
+        silentFallback: true,
+      });
+      this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
+      this.bindRouteViewSync();
+    };
+    if (viewerDrivenTransition) {
+      const sceneTransitionController = this.ensureSceneTransitionController();
+      transitionSession = sceneTransitionController.start({
+        currentWorldView: previousWorldView,
+        targetWorldView,
+        sourceKind: coverWasVisible ? 'cover' : 'scene',
+        fromMapPoint: previousScene?.mapPoint,
+        toMapPoint: scene.mapPoint,
+        fromImage: transitionAssets.fromImage,
+        targetPreviewImage: transitionAssets.targetPreviewImage,
+        hotspotScreenX: sceneEnterMeta.hotspotScreenX,
+        releaseMode: 'low',
+        onCameraFrame: (view, context) => {
+          if (!this.panoViewer) {
+            return;
+          }
+          if (!sceneLoadCommitted && shouldCommitSceneLoad(context.frame)) {
+            commitSceneLoad();
+          }
+          if (this.panoViewer.isInteracting()) {
+            cameraMotionYielded = true;
+            return;
+          }
+          if (cameraMotionYielded) {
+            return;
+          }
+          const yawScene = sceneLoadCommitted || context.useTargetScene ? scene : previousScene ?? scene;
+          const internalYaw = worldYawToInternalYaw(yawScene, view.yaw);
+          this.panoViewer.setView(internalYaw, view.pitch, view.fov);
+        },
+      });
+      this.activeTransitionSession = transitionSession;
+      void transitionSession.waitForCompletion().then((result) => {
+        if (this.activeTransitionSession === transitionSession) {
+          this.activeTransitionSession = null;
+        }
+        if (result === 'completed') {
+          this.flushQueuedSceneEntry();
+          return;
+        }
+        this.transitionIntentState = createTransitionIntentState();
+        this.pendingSceneEnterMeta = null;
+        this.activeSceneEnterMeta = null;
+      });
+    }
     // 鏂?UI锛氬乏涓婅鍦烘櫙鏍囬锛堝瑙嗛鏍硷級
     this.sceneTitleEl = document.createElement('div');
     this.sceneTitleEl.className = 'vr-scenetitle';
@@ -982,7 +1156,9 @@ class App {
       this.loadChatRuntimeModule(),
       this.loadSceneUiRuntimeModule(),
     ]);
-    this.chatRuntime = new ChatRuntime();
+    this.chatRuntime = new ChatRuntime({
+      captureCurrentViewImage: () => this.captureViewerSnapshot(),
+    });
     this.chatRuntime.updateContext({
       museum,
       scene,
@@ -1011,11 +1187,19 @@ class App {
       onOpenCommunity: () => {
         void this.chatRuntime?.ensureInit();
       },
+      onSmartNarration: () => {
+        ensureChatRuntime();
+        void this.chatRuntime?.ensureInit();
+      },
+      onPhotoAsk: () => {
+        ensureChatRuntime();
+        void this.chatRuntime?.ensureInit();
+      },
       onWarmupFeatures: async () => {
         await this.loadAppModalsModule();
       },
     });
-    const syncSceneUiRuntimeRefs = () => {
+    syncSceneUiRuntimeRefs = () => {
       this.bottomDock = this.sceneUiRuntime?.getBottomDock() ?? null;
       this.topModeTabs = this.sceneUiRuntime?.getTopModeTabs() ?? null;
       this.hotspots = this.sceneUiRuntime?.getHotspots() ?? null;
@@ -1024,42 +1208,11 @@ class App {
       this.sceneGuideDrawer = this.sceneUiRuntime?.getSceneGuideDrawer() ?? null;
       this.qualityIndicator = this.sceneUiRuntime?.getQualityIndicator() ?? null;
     };
-    let coreUiRequested = false;
-    let chatInitRequested = false;
-    let transitionSettled = false;
-    let chatInitFallbackTimer: number | null = window.setTimeout(() => {
-      if (chatInitRequested) return;
-      chatInitRequested = true;
-      void this.chatRuntime?.ensureInit();
-      if (__VR_DEBUG__) {
-        console.debug('[showScene] chat init fallback triggered');
+    maybeMountCoreSceneUi = () => {
+      if (!coreUiRequested || coreUiMountStarted || !this.sceneUiRuntime) {
+        return;
       }
-    }, 3500);
-
-    const settleTransition = (status: LoadStatus) => {
-      if (transitionSettled) return;
-      transitionSettled = true;
-      shellChrome.markPreviewReady();
-      window.setTimeout(() => {
-        shellChrome.completeTransition();
-      }, 260);
-    };
-
-    const clearChatInitFallback = () => {
-      if (chatInitFallbackTimer == null) return;
-      window.clearTimeout(chatInitFallbackTimer);
-      chatInitFallbackTimer = null;
-    };
-    const ensureChatRuntime = () => {
-      if (chatInitRequested) return;
-      chatInitRequested = true;
-      clearChatInitFallback();
-      void this.chatRuntime?.ensureInit();
-    };
-
-    const ensureCoreSceneUi = () => {
-      if (coreUiRequested) return;
-      coreUiRequested = true;
+      coreUiMountStarted = true;
       void this.sceneUiRuntime
         ?.mountCore()
         .then(() => {
@@ -1071,74 +1224,30 @@ class App {
           }
         });
     };
-    const commitSceneLoad = (): void => {
-      if (sceneLoadCommitted || !this.panoViewer) {
+    maybeInitChatRuntime = () => {
+      if (!chatInitRequested || chatInitStarted || !this.chatRuntime) {
         return;
       }
-      sceneLoadCommitted = true;
-      transitionSession?.markLoadCommitted();
-      this.currentMuseum = museum;
-      this.currentScene = scene;
-      this.hideUIError();
-      ensureCoreSceneUi();
-      syncSceneUiRuntimeRefs();
-      ensureChatRuntime();
-      void this.mountTopRightControls(viewerContainer, scene, devMode);
-      this.panoViewer.loadScene(runtimeSceneData, {
-        preserveView: true,
-        silentFallback: true,
-      });
-      this.panoViewer.setSceneData(museum.id, scene.id, scene.hotspots);
-      this.bindRouteViewSync();
+      chatInitStarted = true;
+      void this.chatRuntime.ensureInit();
     };
-    if (viewerDrivenTransition) {
-      const sceneTransitionController = this.ensureSceneTransitionController();
-      transitionSession = sceneTransitionController.start({
-        currentWorldView: previousWorldView,
-        targetWorldView,
-        sourceKind: coverWasVisible ? 'cover' : 'scene',
-        fromMapPoint: previousScene?.mapPoint,
-        toMapPoint: scene.mapPoint,
-        fromImage: transitionAssets.fromImage,
-        targetPreviewImage: transitionAssets.targetPreviewImage,
-        hotspotScreenX: sceneEnterMeta.hotspotScreenX,
-        releaseMode: 'low',
-        onCameraFrame: (view, context) => {
-          if (!this.panoViewer) {
-            return;
-          }
-          if (this.panoViewer.isInteracting()) {
-            cameraMotionYielded = true;
-            if (!sceneLoadCommitted) {
-              commitSceneLoad();
-            }
-            return;
-          }
-          if (!sceneLoadCommitted && shouldCommitSceneLoad(context.frame)) {
-            commitSceneLoad();
-          }
-          if (cameraMotionYielded) {
-            return;
-          }
-          const yawScene = sceneLoadCommitted || context.useTargetScene ? scene : previousScene ?? scene;
-          const internalYaw = worldYawToInternalYaw(yawScene, view.yaw);
-          this.panoViewer.setView(internalYaw, view.pitch, view.fov);
-        },
-      });
-      this.activeTransitionSession = transitionSession;
-      void transitionSession.waitForCompletion().then((result) => {
-        if (this.activeTransitionSession === transitionSession) {
-          this.activeTransitionSession = null;
+    if (!chatInitRequested) {
+      chatInitFallbackTimer = window.setTimeout(() => {
+        if (chatInitRequested) return;
+        chatInitRequested = true;
+        maybeInitChatRuntime();
+        if (__VR_DEBUG__) {
+          console.debug('[showScene] chat init fallback triggered');
         }
-        if (result === 'completed') {
-          this.flushQueuedSceneEntry();
-          return;
-        }
-        this.transitionIntentState = createTransitionIntentState();
-        this.pendingSceneEnterMeta = null;
-        this.activeSceneEnterMeta = null;
-      });
+      }, 3500);
     }
+    syncSceneUiRuntimeRefs();
+    if (coreUiRequested) {
+      maybeMountCoreSceneUi();
+    }
+    if (chatInitRequested) {
+      maybeInitChatRuntime();
+    };
     // 璁剧疆鍔犺浇鐘舵€佸彉鍖栧洖璋?
     this.panoViewer.setOnStatusChange((status) => {
       const committedReadyStatus = shouldForwardCommittedSceneStatus(sceneLoadCommitted, status);
@@ -1154,7 +1263,19 @@ class App {
         settleTransition(status);
       }
       if (committedReadyStatus) {
-        transitionSession?.markStatus(status);
+        if (
+          status === LoadStatus.LOW_READY ||
+          status === LoadStatus.HIGH_READY ||
+          status === LoadStatus.DEGRADED
+        ) {
+          window.requestAnimationFrame(() => {
+            const liveTargetImage = this.captureViewerSnapshot() || targetPreviewUrl;
+            transitionSession?.setTargetPreviewImage(liveTargetImage);
+            transitionSession?.markStatus(status);
+          });
+        } else {
+          transitionSession?.markStatus(status);
+        }
       }
       if (
         sceneLoadCommitted &&

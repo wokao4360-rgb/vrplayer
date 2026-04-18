@@ -8,11 +8,16 @@ type ChatContext = {
   fcChatConfig: FcChatConfig | null | undefined;
 };
 
+type ChatRuntimeOptions = {
+  captureCurrentViewImage?: () => string;
+};
+
 function hasValidEndpoint(config: FcChatConfig | null | undefined): config is FcChatConfig {
   return Boolean(config?.endpoint && config.endpoint.trim());
 }
 
 export class ChatRuntime {
+  private readonly captureCurrentViewImage?: () => string;
   private context: ChatContext | null = null;
   private contextToken = 0;
   private initPromise: Promise<void> | null = null;
@@ -21,10 +26,35 @@ export class ChatRuntime {
     FcChatPanel: typeof import('../ui/FcChatPanel').FcChatPanel;
     FcChatClient: typeof import('../services/fcChatClient').FcChatClient;
   }> | null = null;
+  private handleSmartNarration = () => {
+    void this.ensureInit().then(() => {
+      this.panel?.playPresetNarration();
+    });
+  };
+  private handlePhotoAsk = () => {
+    void this.ensureInit().then(() => {
+      this.panel?.askCurrentView();
+    });
+  };
+
+  constructor(options: ChatRuntimeOptions = {}) {
+    this.captureCurrentViewImage = options.captureCurrentViewImage;
+    window.addEventListener('fcchat:smart-narration', this.handleSmartNarration);
+    window.addEventListener('fcchat:photo-ask', this.handlePhotoAsk);
+  }
 
   updateContext(context: ChatContext): void {
     this.context = context;
     this.contextToken += 1;
+    if (this.panel) {
+      this.panel.updateContext({
+        museumId: context.museum.id,
+        museumName: context.museum.name,
+        sceneId: context.scene.id,
+        sceneTitle: context.scene.name,
+        url: window.location.href,
+      });
+    }
   }
 
   async warmup(): Promise<void> {
@@ -77,6 +107,17 @@ export class ChatRuntime {
         sceneTitle: latest.scene.name,
         museumName: latest.museum.name,
         url: window.location.href,
+      }, {
+        captureCurrentViewImage: () => {
+          const dataUrl = this.captureCurrentViewImage?.() || "";
+          if (!dataUrl) {
+            return null;
+          }
+          return {
+            dataUrl,
+            mimeType: "image/jpeg",
+          };
+        },
       });
     })();
 
@@ -94,6 +135,8 @@ export class ChatRuntime {
     this.initPromise = null;
     this.panel?.remove();
     this.panel = null;
+    window.removeEventListener('fcchat:smart-narration', this.handleSmartNarration);
+    window.removeEventListener('fcchat:photo-ask', this.handlePhotoAsk);
   }
 
   private loadChatModules(): Promise<{

@@ -8,13 +8,16 @@ const overlaySource = readFileSync(
 );
 
 test('travel transition overlay explicitly promotes inline visibility on start', () => {
+  assert.match(overlaySource, /this\.element\.style\.transition = 'none';/);
   assert.match(overlaySource, /this\.element\.style\.opacity = '1';/);
   assert.match(overlaySource, /this\.element\.style\.visibility = 'visible';/);
   assert.match(overlaySource, /this\.element\.style\.pointerEvents = 'none';/);
 });
 
 test('travel transition overlay clears inline visibility during teardown', () => {
+  assert.match(overlaySource, /this\.element\.style\.transition =\s*'opacity 140ms cubic-bezier\(0\.16, 1, 0\.3, 1\), visibility 140ms cubic-bezier\(0\.16, 1, 0\.3, 1\)';/);
   assert.match(overlaySource, /this\.element\.style\.visibility = 'hidden';/);
+  assert.match(overlaySource, /this\.element\.style\.transition = '';/);
   assert.match(overlaySource, /this\.element\.style\.visibility = '';/);
   assert.match(overlaySource, /this\.element\.style\.pointerEvents = '';/);
 });

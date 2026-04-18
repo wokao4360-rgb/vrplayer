@@ -1,7 +1,8 @@
 export type ResolveSceneTransitionAssetsArgs = {
   coverWasVisible: boolean;
-  previewUrl?: string;
-  previewAlreadyReady: boolean;
+  sourcePreviewUrl?: string;
+  targetPreviewUrl?: string;
+  targetPreviewAlreadyReady: boolean;
   coverHeroUrl?: string;
   viewerSnapshot?: string;
   previousScenePreviewImage?: string;
@@ -12,16 +13,29 @@ export type SceneTransitionAssets = {
   targetPreviewImage?: string;
 };
 
+export function resolveSceneTransitionPreviewUrl(args: {
+  thumbUrl?: string;
+  panoLowUrl?: string;
+  prefer?: 'thumb' | 'panoLow';
+}): string | undefined {
+  return args.prefer === 'panoLow'
+    ? firstNonEmpty(args.panoLowUrl, args.thumbUrl)
+    : firstNonEmpty(args.thumbUrl, args.panoLowUrl);
+}
+
 export function resolveSceneTransitionAssets(
   args: ResolveSceneTransitionAssetsArgs,
 ): SceneTransitionAssets {
-  const previewImage = firstNonEmpty(args.previewUrl);
-  const targetPreviewImage = args.previewAlreadyReady ? previewImage : undefined;
+  const sourcePreviewImage = firstNonEmpty(args.sourcePreviewUrl);
+  const targetPreviewImage = args.targetPreviewAlreadyReady
+    ? firstNonEmpty(args.targetPreviewUrl)
+    : undefined;
 
   if (args.coverWasVisible) {
     return {
       fromImage: firstNonEmpty(
-        previewImage,
+        targetPreviewImage,
+        sourcePreviewImage,
         args.previousScenePreviewImage,
         args.viewerSnapshot,
         args.coverHeroUrl,
@@ -33,8 +47,9 @@ export function resolveSceneTransitionAssets(
   return {
     fromImage: firstNonEmpty(
       args.viewerSnapshot,
+      sourcePreviewImage,
       args.previousScenePreviewImage,
-      previewImage,
+      targetPreviewImage,
       args.coverHeroUrl,
     ),
     targetPreviewImage,

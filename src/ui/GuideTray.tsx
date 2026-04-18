@@ -4,7 +4,6 @@
  */
 
 import type { Scene } from '../types/config';
-import type { SceneEnterMeta } from '../app/sceneTransitionTypes.ts';
 import { resolveAssetUrl, AssetType } from '../utils/assetResolver';
 import { toProxiedImageUrl } from '../utils/externalImage';
 
@@ -12,7 +11,7 @@ type GuideTrayOptions = {
   museumId: string;
   currentSceneId: string;
   scenes: Scene[];
-  onSceneClick?: (sceneId: string, meta?: SceneEnterMeta) => void;
+  onSceneClick?: (sceneId: string) => void;
   onMoreClick?: () => void;
   onClose?: () => void;
 };
@@ -23,7 +22,7 @@ export class GuideTray {
   private museumId: string;
   private currentSceneId: string;
   private scenes: Scene[];
-  private onSceneClick?: (sceneId: string, meta?: SceneEnterMeta) => void;
+  private onSceneClick?: (sceneId: string) => void;
   private onMoreClick?: () => void;
   private onClose?: () => void;
 
@@ -110,7 +109,7 @@ export class GuideTray {
         e.stopPropagation();
         // 框3点击直接切换场景
         if (this.onSceneClick) {
-          this.onSceneClick(scene.id, { source: 'guide-tray' });
+          this.onSceneClick(scene.id);
         }
       });
 

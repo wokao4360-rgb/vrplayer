@@ -369,7 +369,7 @@ body{
 }
 
 .vr-teammodal-close:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(245, 237, 227, 0.78);
   opacity: 1; /* hover 才显现 */
 }
 
@@ -583,8 +583,8 @@ body{
   background: rgba(20, 20, 20, 0.62);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(190, 121, 83, 0.12);
+  box-shadow: 0 10px 24px rgba(53, 35, 20, 0.14);
   color: var(--text);
   padding: 14px 16px 14px;
   display: flex;
@@ -943,11 +943,86 @@ body{
   /* 基础态：锁定 transform，只允许垂直方向，不影响居中 */
   transform: translate3d(0, 0, 0);
 }
+.vr-dock-side-action,
+.vr-dock-photo-action{
+  pointer-events: auto;
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(190, 121, 83, 0.18);
+  background: rgba(248, 241, 232, 0.92);
+  color: rgba(98, 65, 42, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 26px rgba(53, 35, 20, 0.16);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.vr-dock-side-action{
+  left: calc(50% - 258px);
+  bottom: 8px;
+  min-width: 94px;
+  height: 50px;
+  border-radius: 999px;
+  gap: 7px;
+  padding: 0 15px;
+}
+.vr-dock-side-icon,
+.vr-dock-photo-icon{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.vr-dock-side-label{
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.vr-dock-photo-action{
+  left: 50%;
+  bottom: 58px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: rgba(248, 241, 232, 0.98);
+  color: rgba(98, 65, 42, 0.96);
+}
+.vr-dock-side-action:hover,
+.vr-dock-photo-action:hover{
+  background: rgba(243, 231, 218, 0.98);
+  border-color: rgba(190, 121, 83, 0.32);
+  box-shadow: 0 14px 28px rgba(53, 35, 20, 0.22);
+  color: rgba(167, 82, 47, 0.98);
+}
+.vr-dock-side-action:active{
+  transform: scale(0.97);
+}
+.vr-dock-photo-action:active{
+  transform: translateX(-50%) scale(0.96);
+}
 
 /* 手机端小屏：底部按钮组增加安全区，防止叠压 */
 @media (max-width: 480px), ((max-width: 520px) and (pointer: coarse)) {
   .vr-dock-wrap{
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .vr-dock-side-action{
+    left: 10px;
+    bottom: 6px;
+    min-width: 78px;
+    height: 46px;
+    padding: 0 11px;
+  }
+  .vr-dock-side-label{
+    font-size: 12px;
+  }
+  .vr-dock-photo-action{
+    bottom: 54px;
+    width: 54px;
+    height: 54px;
   }
   
 }
@@ -993,19 +1068,20 @@ body{
   align-items: center;
   justify-content: center;
   gap: 2px;
-  color: rgba(255,255,255,0.82);
-  opacity: 0.85;
-  transition: opacity 150ms ease, transform 150ms ease, color 150ms ease;
+  color: rgba(96, 67, 45, 0.84);
+  opacity: 0.94;
+  transition: opacity 150ms ease, transform 150ms ease, color 150ms ease, background 150ms ease;
   background: transparent;
 }
 .vr-dock-tab:hover {
-  opacity: 0.85;
+  opacity: 1;
   transform: translateY(-1px);
+  background: rgba(255,255,255,0.52);
 }
 .vr-dock-tab.active{
   opacity: 1;
-  color: rgba(255,255,255,0.95);
-  background: transparent;
+  color: rgba(167, 82, 47, 0.98);
+  background: rgba(255,255,255,0.72);
 }
 .vr-dock-tab.active .vr-dock-tab-icon {
   opacity: 1;
@@ -2104,6 +2180,65 @@ body{
   height: 100%;
   stroke: currentColor;
   fill: none;
+}
+.vr-guide-route-card{
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(245, 244, 237, 0.16) 0%, transparent 48%),
+    linear-gradient(145deg, rgba(201, 100, 66, 0.12) 0%, rgba(245, 244, 237, 0.10) 100%);
+  border: 1px solid rgba(240, 238, 230, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vr-guide-route-title{
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.9);
+  text-transform: uppercase;
+}
+.vr-guide-route-chips{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vr-guide-route-chip{
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(240,238,230,0.18);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.92);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 150ms ease, transform 150ms ease, border-color 150ms ease;
+}
+.vr-guide-route-chip:hover{
+  background: rgba(255,255,255,0.16);
+}
+.vr-guide-route-chip:active{
+  transform: scale(0.98);
+}
+.vr-guide-route-chip.is-active{
+  background: rgba(201,100,66,0.26);
+  border-color: rgba(217,119,87,0.42);
+}
+.vr-guide-route-summary{
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.82);
+}
+.vr-guide-empty{
+  padding: 14px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px dashed rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 /* GuideTray - 导览轻量预览条（框3） */

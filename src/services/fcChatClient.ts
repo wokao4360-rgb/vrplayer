@@ -18,6 +18,16 @@ export type FcChatHistoryItem = {
   text: string;
 };
 
+export type FcChatImageAttachment = {
+  type: "image";
+  dataUrl: string;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+  sceneId?: string;
+  sceneTitle?: string;
+};
+
 export type FcChatConfig = {
   endpoint: string;      // e.g. https://xxx.fcapp.run/
   authToken?: string;    // optional
@@ -57,7 +67,8 @@ function buildPayload(
   question: string,
   ctx?: FcChatContext,
   history: FcChatHistoryItem[] = [],
-  sessionId = ""
+  sessionId = "",
+  imageAttachment?: FcChatImageAttachment
 ): AnyObj {
   const normalizedHistory = history
     .map((item) => ({
@@ -171,6 +182,30 @@ function buildPayload(
       })),
     };
   }
+  if (imageAttachment?.dataUrl) {
+    payload.imageDataUrl = imageAttachment.dataUrl;
+    payload.attachments = [
+      {
+        type: "image",
+        mimeType: imageAttachment.mimeType || "image/jpeg",
+        dataUrl: imageAttachment.dataUrl,
+        width: imageAttachment.width ?? 0,
+        height: imageAttachment.height ?? 0,
+        sceneId: imageAttachment.sceneId || ctx?.sceneId || "",
+        sceneTitle: imageAttachment.sceneTitle || ctx?.sceneTitle || "",
+      },
+    ];
+    if (payload.context && typeof payload.context === "object") {
+      payload.context.currentViewImage = {
+        hasImage: true,
+        mimeType: imageAttachment.mimeType || "image/jpeg",
+        width: imageAttachment.width ?? 0,
+        height: imageAttachment.height ?? 0,
+        sceneId: imageAttachment.sceneId || ctx?.sceneId || "",
+        sceneTitle: imageAttachment.sceneTitle || ctx?.sceneTitle || "",
+      };
+    }
+  }
   return payload;
 }
 
@@ -275,7 +310,8 @@ export class FcChatClient {
     question: string,
     ctx?: FcChatContext,
     history: FcChatHistoryItem[] = [],
-    sessionId = ""
+    sessionId = "",
+    imageAttachment?: FcChatImageAttachment
   ): Promise<{ answer: string; model?: string }> {
     const q = (question || "").trim();
     if (!q) throw new Error("empty question");
@@ -298,7 +334,7 @@ export class FcChatClient {
       const resp = await fetch(this.endpoint, {
         method: "POST",
         headers,
-        body: JSON.stringify(buildPayload(q, ctx, history, sessionId)),
+        body: JSON.stringify(buildPayload(q, ctx, history, sessionId, imageAttachment)),
         signal: controller.signal,
       });
 

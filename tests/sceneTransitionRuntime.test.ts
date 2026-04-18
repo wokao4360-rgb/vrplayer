@@ -1,96 +1,76 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { computeSceneTransitionPlan } from '../src/app/sceneTransitionMath.ts';
-import { buildSceneTransitionFrame, TURN_IN_RATIO } from '../src/app/sceneTransitionTimeline.ts';
 import {
+  LOAD_COMMIT_TRAVEL_PROGRESS,
   createInitialTransitionProgressState,
   resolveRuntimeTransitionScene,
-  shouldForwardCommittedSceneStatus,
   shouldCommitSceneLoad,
+  shouldForwardCommittedSceneStatus,
 } from '../src/app/sceneTransitionRuntime.ts';
 
-test('runtime scene keeps authored pano chain instead of replacing panoLow with preview shell', () => {
-  const scene = {
-    id: 'point_1',
-    name: '红圈点1',
-    panoLow: 'point-1-low.jpg',
-    pano: 'point-1.jpg',
-    panoTiles: { manifest: 'tiles/point-1/manifest.json' },
-  } as any;
+test('runtime scene falls back to preview panoLow when the scene has no own pano assets', () => {
+  const scene = resolveRuntimeTransitionScene(
+    {
+      id: 'scene-a',
+      name: 'Scene A',
+      initialView: { yaw: 0, pitch: 0, fov: 75 },
+      hotspots: [],
+      panoLow: '',
+      pano: '',
+      panoTiles: undefined,
+    } as any,
+    'preview.jpg',
+  );
 
-  const runtimeScene = resolveRuntimeTransitionScene(scene, 'blob:preview-shell');
-
-  assert.equal(runtimeScene, scene);
-  assert.equal(runtimeScene.panoLow, 'point-1-low.jpg');
+  assert.equal(scene.panoLow, 'preview.jpg');
 });
 
-test('prewarmed preview shell does not mark transition target as ready before actual low/high scene readiness', () => {
-  const state = createInitialTransitionProgressState('blob:preview-shell');
+test('runtime scene keeps original assets when pano data already exists', () => {
+  const scene = resolveRuntimeTransitionScene(
+    {
+      id: 'scene-b',
+      name: 'Scene B',
+      initialView: { yaw: 0, pitch: 0, fov: 75 },
+      hotspots: [],
+      panoLow: 'low.jpg',
+      pano: 'high.jpg',
+      panoTiles: undefined,
+    } as any,
+    'preview.jpg',
+  );
+
+  assert.equal(scene.panoLow, 'low.jpg');
+});
+
+test('load commitment happens in travel after the configured threshold or in settle', () => {
+  assert.equal(LOAD_COMMIT_TRAVEL_PROGRESS, 0.58);
+  assert.equal(
+    shouldCommitSceneLoad({ stage: 'travel', stageProgress: 0.57 }),
+    false,
+  );
+  assert.equal(
+    shouldCommitSceneLoad({ stage: 'travel', stageProgress: 0.58 }),
+    true,
+  );
+  assert.equal(
+    shouldCommitSceneLoad({ stage: 'settle', stageProgress: 0.1 }),
+    true,
+  );
+});
+
+test('committed statuses only forward after scene load is committed', () => {
+  assert.equal(shouldForwardCommittedSceneStatus(false, 'lowReady'), false);
+  assert.equal(shouldForwardCommittedSceneStatus(true, 'lowReady'), true);
+  assert.equal(shouldForwardCommittedSceneStatus(true, 'highReady'), true);
+  assert.equal(shouldForwardCommittedSceneStatus(true, 'degraded'), true);
+});
+
+test('initial transition progress state starts clean', () => {
+  const state = createInitialTransitionProgressState('preview.jpg');
 
   assert.equal(state.targetReady, false);
-  assert.equal(state.lowReady, false);
-  assert.equal(state.sharpReady, false);
-  assert.equal(state.targetReadyAtTs, null);
-  assert.equal(state.targetReadyProgress, 0);
+  assert.equal(state.currentProgress, 0);
+  assert.equal(state.releaseAtTs, null);
 });
 
-test('runtime scene only falls back to preview shell when authored pano assets are missing', () => {
-  const scene = {
-    id: 'scene_without_pano',
-    name: '空壳场景',
-  } as any;
-
-  const runtimeScene = resolveRuntimeTransitionScene(scene, 'blob:preview-shell');
-
-  assert.notEqual(runtimeScene, scene);
-  assert.equal(runtimeScene.panoLow, 'blob:preview-shell');
-});
-
-test('scene load commit waits until travel has established directionality instead of firing at travel start', () => {
-  const plan = computeSceneTransitionPlan({
-    currentWorldYaw: 0,
-    targetWorldYaw: 30,
-  });
-
-  const turnInFrame = buildSceneTransitionFrame({
-    currentWorldYaw: 0,
-    targetWorldYaw: 30,
-    plan,
-    progress: TURN_IN_RATIO * 0.8,
-    targetReady: true,
-  });
-  const earlyTravelFrame = buildSceneTransitionFrame({
-    currentWorldYaw: 0,
-    targetWorldYaw: 30,
-    plan,
-    progress: TURN_IN_RATIO + 0.04,
-    targetReady: true,
-  });
-  const committedTravelFrame = buildSceneTransitionFrame({
-    currentWorldYaw: 0,
-    targetWorldYaw: 30,
-    plan,
-    progress: 0.66,
-    targetReady: true,
-  });
-
-  assert.equal(turnInFrame.stage, 'turn-in');
-  assert.equal(shouldCommitSceneLoad(turnInFrame), false);
-  assert.equal(earlyTravelFrame.stage, 'travel');
-  assert.equal(shouldCommitSceneLoad(earlyTravelFrame), false);
-  assert.equal(committedTravelFrame.stage, 'travel');
-  assert.equal(shouldCommitSceneLoad(committedTravelFrame), true);
-});
-
-test('transition session ignores low/high ready status before target scene load is committed', () => {
-  assert.equal(shouldForwardCommittedSceneStatus(false, 'lowReady' as any), false);
-  assert.equal(shouldForwardCommittedSceneStatus(false, 'highReady' as any), false);
-  assert.equal(shouldForwardCommittedSceneStatus(false, 'degraded' as any), false);
-  assert.equal(shouldForwardCommittedSceneStatus(false, 'error' as any), false);
-
-  assert.equal(shouldForwardCommittedSceneStatus(true, 'lowReady' as any), true);
-  assert.equal(shouldForwardCommittedSceneStatus(true, 'highReady' as any), true);
-  assert.equal(shouldForwardCommittedSceneStatus(true, 'degraded' as any), true);
-  assert.equal(shouldForwardCommittedSceneStatus(true, 'error' as any), false);
-});

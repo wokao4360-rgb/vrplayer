@@ -1,9 +1,11 @@
 import type { MapPoint } from '../types/config.ts';
 import { LoadStatus } from '../types/loadStatus.ts';
-import { computeSceneTransitionPlan, type SceneTransitionPlan } from './sceneTransitionMath.ts';
-import { buildSceneTransitionFrame, type SceneTransitionFrame } from './sceneTransitionTimeline.ts';
 import { TravelTransitionOverlay } from '../ui/TravelTransitionOverlay.ts';
 import { buildSceneTransitionCameraView } from './sceneTransitionCamera.ts';
+import {
+  computeSceneTransitionPlan,
+  type SceneTransitionPlan,
+} from './sceneTransitionMath.ts';
 import {
   computeSceneTransitionProgress,
   isTargetSceneReadyForReveal,
@@ -12,6 +14,10 @@ import {
   type TransitionProgressState,
 } from './sceneTransitionGate.ts';
 import { createInitialTransitionProgressState } from './sceneTransitionRuntime.ts';
+import {
+  buildSceneTransitionFrame,
+  type SceneTransitionFrame,
+} from './sceneTransitionTimeline.ts';
 
 export type SceneTransitionView = {
   yaw: number;
@@ -40,7 +46,6 @@ export type SceneTransitionControllerStartArgs = {
 };
 
 type TransitionCompletion = 'completed' | 'cancelled';
-
 type TransitionSessionState = TransitionProgressState;
 
 export class SceneTransitionController {

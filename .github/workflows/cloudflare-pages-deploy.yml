@@ -1,0 +1,49 @@
+name: Deploy Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+      - codex/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: cloudflare-pages-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Cloudflare deploy config
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
+        run: |
+          missing=()
+          [ -z "$CF_API_TOKEN" ] && missing+=("CLOUDFLARE_API_TOKEN")
+          [ -z "$CF_ACCOUNT_ID" ] && missing+=("CLOUDFLARE_ACCOUNT_ID")
+          [ -z "$CF_PROJECT_NAME" ] && missing+=("CLOUDFLARE_PAGES_PROJECT_NAME")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf '::error title=Missing Cloudflare deploy config::Set GitHub secrets/vars first: %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+      - name: Deploy committed docs/ to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: >-
+            pages deploy docs
+            --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
+            --branch=${{ github.ref_name }}

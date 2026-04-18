@@ -360,3 +360,4 @@ function round3(value: number): number {
 function round4(value: number): number {
   return Number(value.toFixed(4));
 }
+

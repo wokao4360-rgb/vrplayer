@@ -272,3 +272,4 @@ test('fov pulse contracts first then rebounds during travel before returning to 
   assert.ok(mid.fovDelta >= FOV_PULSE_OUT * 0.45);
   assert.ok(late.fovDelta <= 0.4);
 });
+

@@ -58,3 +58,4 @@ function clamp(value: number, min: number, max: number): number {
 function round2(value: number): number {
   return Number(value.toFixed(2));
 }
+

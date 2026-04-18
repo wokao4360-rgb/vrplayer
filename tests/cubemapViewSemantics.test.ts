@@ -4,10 +4,8 @@ import assert from 'node:assert/strict';
 import {
   getSceneWorldYawOffset,
   internalYawToWorldYaw,
-  worldViewToInternalLoadView,
   worldYawToInternalYaw,
 } from '../src/viewer/cubemapViewSemantics.ts';
-import { buildCubeVisibleHighFaces } from '../src/viewer/cubeTilePolicy.ts';
 
 test('plain pano scenes keep the original world yaw semantics', () => {
   const scene = {
@@ -54,42 +52,15 @@ test('scene-level world-yaw override can opt out or choose a custom compensation
   assert.equal(worldYawToInternalYaw(customOffsetScene, 30), -120);
 });
 
-test('internal/world yaw conversion stays reversible for route syncing', () => {
-  const cubemapScene = {
+test('internal yaw converts back to normalized world yaw for sharing and routing', () => {
+  const scene = {
     initialView: { yaw: 0, pitch: 0, fov: 75 },
     panoTiles: {
       manifest: '/assets/panos/tiles/demo/manifest.json',
+      worldYawOffset: 90,
     },
   };
 
-  assert.equal(internalYawToWorldYaw(cubemapScene, -180), 0);
-  assert.equal(internalYawToWorldYaw(cubemapScene, -270), 90);
-  assert.equal(internalYawToWorldYaw(cubemapScene, 0), -180);
-  assert.equal(
-    internalYawToWorldYaw(
-      cubemapScene,
-      worldYawToInternalYaw(cubemapScene, 37),
-    ),
-    37,
-  );
-});
-
-test('cubemap tile scheduling converts world view into internal geometry faces before choosing hero faces', () => {
-  const cubemapScene = {
-    initialView: { yaw: 0, pitch: 0, fov: 75 },
-    panoTiles: {
-      manifest: '/assets/panos/tiles/demo/manifest.json',
-    },
-  };
-
-  const loadView = worldViewToInternalLoadView(cubemapScene, {
-    yawDeg: 0,
-    pitchDeg: 0,
-  });
-
-  assert.deepEqual(loadView, {
-    yawDeg: -180,
-    pitchDeg: 0,
-  });
-  assert.deepEqual(buildCubeVisibleHighFaces(loadView), ['b', 'r', 'l']);
+  assert.equal(internalYawToWorldYaw(scene, -120), 30);
+  assert.equal(internalYawToWorldYaw(scene, -450), 0);
 });

@@ -11,15 +11,12 @@ import type { SceneHotspot } from '../types/config';
 import { interactionBus } from '../ui/interactionBus';
 import { loadExternalImageBitmap, ExternalImageLoadError } from '../utils/externalImage';
 import { ZoomHud } from '../ui/ZoomHud';
+import { showToast } from '../ui/toast';
 import { TileCanvasPano, TileMeshFallbackRequiredError } from './TileCanvasPano';
 import { fetchTileManifest, type TileManifest } from './tileManifest';
 import { PanoLifecycleRuntime } from './panoLifecycleRuntime';
-import {
-  resolveInitialTileFallbackVisibility,
-  selectInitialTileBackend,
-  shouldAllowLegacyTileFallback,
-} from './tileFormatPolicy';
-import { internalYawToWorldYaw, worldYawToInternalYaw } from './cubemapViewSemantics';
+import { resolveInitialTileFallbackVisibility, selectInitialTileBackend } from './tileFormatPolicy';
+import { worldYawToInternalYaw } from './cubemapViewSemantics';
 
 type NadirPatchType = import('./NadirPatch').NadirPatch;
 
@@ -183,7 +180,6 @@ export class PanoViewer {
 
   // 拾取模式
   private pickMode = false;
-  private interactionLocked = false;
   private pickStartX = 0;
   private pickStartY = 0;
   private pickStartTime = 0;
@@ -293,7 +289,6 @@ export class PanoViewer {
   }
 
   private onPointerDown(e: MouseEvent): void {
-    if (this.interactionLocked) return;
     this.isDragging = true;
     this.lastMouseX = e.clientX;
     this.lastMouseY = e.clientY;
@@ -302,7 +297,6 @@ export class PanoViewer {
   }
 
   private onPointerMove(e: MouseEvent): void {
-    if (this.interactionLocked) return;
     if (!this.isDragging) return;
     
     const deltaX = e.clientX - this.lastMouseX;
@@ -315,10 +309,6 @@ export class PanoViewer {
   }
 
   private onPointerUp(): void {
-    if (this.interactionLocked) {
-      this.isDragging = false;
-      return;
-    }
     this.isDragging = false;
   }
 
@@ -328,7 +318,6 @@ export class PanoViewer {
   private isPinching = false;
 
   private onTouchStart(e: TouchEvent): void {
-    if (this.interactionLocked) return;
     if (e.touches.length === 1) {
       this.isDragging = true;
       this.touchStartX = e.touches[0].clientX;
@@ -350,7 +339,6 @@ export class PanoViewer {
 
   private onTouchMove(e: TouchEvent): void {
     e.preventDefault();
-    if (this.interactionLocked) return;
 
     // 单指拖拽控制（VR模式下也允许）
     if (e.touches.length === 1 && this.isDragging) {
@@ -375,19 +363,12 @@ export class PanoViewer {
   }
 
   private onTouchEnd(): void {
-    if (this.interactionLocked) {
-      this.isDragging = false;
-      this.isPinching = false;
-      this.lastTouchDistance = 0;
-      return;
-    }
     this.isDragging = false;
     this.isPinching = false;
   }
 
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
-    if (this.interactionLocked) return;
     const newFov = this.fov + e.deltaY * 0.1;
     this.setFovInternal(newFov);
     
@@ -427,7 +408,7 @@ export class PanoViewer {
     this.hasPendingViewDelta = false;
   }
 
-    loadScene(sceneData: Scene, options?: { preserveView?: boolean }): void {
+    loadScene(sceneData: Scene, options?: { preserveView?: boolean; allowPendingBlack?: boolean; silentFallback?: boolean }): void {
     // 重置状态
     this.isDegradedMode = false;
     this.resetMetrics(sceneData.id);
@@ -460,6 +441,8 @@ export class PanoViewer {
     // 进入渲染/罗盘系统前统一取反一次：internalYaw = -worldYaw
     // preserveView = true 时，切换场景保持当前视角，不重置 yaw/pitch/fov
     const preserveView = options?.preserveView === true;
+    const allowPendingBlack = options?.allowPendingBlack === true;
+    const silentFallback = options?.silentFallback === true;
     if (!preserveView) {
       // 设置初始视角（world yaw -> internal yaw）
       // 外部若已通过 setView/URL 预设视角，应以 preserveView=true 进入此分支
@@ -512,9 +495,8 @@ export class PanoViewer {
       const manifestUrl = resolveAssetUrl(tilesConfig.manifest, AssetType.PANO);
       const fallbackUrlLow = tilesConfig.fallbackPanoLow || sceneData.panoLow;
       const fallbackUrlHigh = tilesConfig.fallbackPano || sceneData.pano;
-      const fallbackPlanned = Boolean(fallbackUrlLow || fallbackUrlHigh);
+      const fallbackPlanned = !allowPendingBlack && Boolean(fallbackUrlLow || fallbackUrlHigh);
       let meshFallbackActivated = false;
-      let allowLegacyTileFallback = false;
       this.tilesVisibleStableFrames = 0;
       this.tilesLastError = '';
       this.tilesLowReady = false;
@@ -544,7 +526,6 @@ export class PanoViewer {
       };
       fetchTileManifest(manifestUrl)
         .then(async (manifest) => {
-          allowLegacyTileFallback = shouldAllowLegacyTileFallback(manifest);
           const switchToMeshFallback = async (reason: TileMeshFallbackRequiredError) => {
             if (meshFallbackActivated || this.disposed || !this.tilePano) {
               return;
@@ -553,7 +534,7 @@ export class PanoViewer {
             const previousTilePano = this.tilePano;
             const nextTilePano =
               manifest.type === 'cubemap-tiles'
-                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady, sceneData)
+                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
                 : new (await import('./TileMeshPano')).TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
             if ('setPerformanceMode' in nextTilePano) {
               (nextTilePano as any).setPerformanceMode(this.perfMode);
@@ -571,7 +552,7 @@ export class PanoViewer {
           if (selectInitialTileBackend(manifest) === 'mesh') {
             this.tilePano =
               manifest.type === 'cubemap-tiles'
-                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady, sceneData)
+                ? new (await import('./CubeMeshPano')).CubeMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady)
                 : new (await import('./TileMeshPano')).TileMeshPano(this.scene, this.renderer, onFirstDraw, onHighReady);
           } else {
             this.tilePano =
@@ -580,7 +561,6 @@ export class PanoViewer {
                     this.scene,
                     onFirstDraw,
                     onHighReady,
-                    sceneData,
                     switchToMeshFallback,
                   )
                 : new TileCanvasPano(
@@ -591,9 +571,7 @@ export class PanoViewer {
                     this.renderer.capabilities.maxTextureSize || 0
                   );
           }
-          const initialFallbackVisible =
-            allowLegacyTileFallback &&
-            resolveInitialTileFallbackVisibility(manifest, fallbackPlanned);
+          const initialFallbackVisible = resolveInitialTileFallbackVisibility(manifest, fallbackPlanned);
           if (initialFallbackVisible) {
             if (fallbackUrlLow) {
               this.showFallbackTexture(resolveAssetUrl(fallbackUrlLow, AssetType.PANO_LOW), geometry, true);
@@ -609,25 +587,20 @@ export class PanoViewer {
           });
         })
         .then(() => {
+          if (!this.tilesLowReady) {
+            this.tilesLowReady = true;
+            this.updateLoadStatus(LoadStatus.LOW_READY);
+            if (this.onLoadCallback) this.onLoadCallback();
+          }
           this.tilePano?.prime(this.camera);
         })
         .catch((err) => {
-          console.error('瓦片加载失败', err);
+          console.error('瓦片加载失败，回退传统全景', err);
           this.tilesLastError = err instanceof Error ? err.message : String(err);
-          if (allowLegacyTileFallback) {
-            this.fallbackToLegacy(sceneData, tilesConfig);
-            return;
+          if (!silentFallback) {
+            showToast('瓦片加载失败，已回退到全景图', 2000);
           }
-          if (this.tilesLowReady) {
-            this.isDegradedMode = true;
-            this.updateLoadStatus(LoadStatus.DEGRADED);
-            this.setRenderSource('low', 'AVIF 加载失败，禁用 KTX/JPG fallback');
-            return;
-          }
-          this.updateLoadStatus(LoadStatus.ERROR);
-          if (this.onErrorCallback) {
-            this.onErrorCallback(err instanceof Error ? err : new Error(String(err)));
-          }
+          this.fallbackToLegacy(sceneData, tilesConfig, { silentFallback, allowPendingBlack });
         });
       return;
     }
@@ -1052,18 +1025,9 @@ export class PanoViewer {
     const maxLevel = status?.maxLevel ?? '';
     const highReady = status?.highReady ? 'true' : 'false';
     const levels = status?.levels ?? '';
-    const policyView = (status as any)?.policyView ?? '';
-    const lowFaceOrder = (status as any)?.lowFaceOrder ?? '';
-    const visibleHighFaces = (status as any)?.visibleHighFaces ?? '';
-    const initialHighFaces = (status as any)?.initialHighFaces ?? '';
-    const activatedHighFaces = (status as any)?.activatedHighFaces ?? '';
     const renderSource = this.renderSource;
     const switchReason = this.renderSwitchReason;
     const clearedCount = this.clearedCount;
-    const currentView = this.getCurrentView();
-    const currentWorldYaw =
-      this.scene ? Number(internalYawToWorldYaw(this.scene, currentView.yaw).toFixed(2)) : currentView.yaw;
-    const currentWorldPitch = Number(currentView.pitch.toFixed(2));
     this.tilesDebugEl.textContent =
       `mode=${mode}\n` +
       `renderSource=${renderSource}\n` +
@@ -1078,23 +1042,8 @@ export class PanoViewer {
       `lastTileUrl=${lastTileUrl}\n` +
       `lastTilePixels=${lastTilePixels}\n` +
       `lastError=${lastError}\n` +
-      `view=world:${currentWorldYaw}/${currentWorldPitch} internal:${currentView.yaw.toFixed(2)}/${currentView.pitch.toFixed(2)}/${currentView.fov.toFixed(1)}\n` +
-      `policyView=${policyView}\n` +
-      `lowFaceOrder=${lowFaceOrder}\n` +
-      `visibleHighFaces=${visibleHighFaces}\n` +
-      `initialHighFaces=${initialHighFaces}\n` +
-      `activatedHighFaces=${activatedHighFaces}\n` +
       `canvas=${canvasSize} zMax=${maxLevel} levels=${levels} highReady=${highReady}\n` +
       `lowReady=${this.tilesLowReady}`;
-  }
-
-  setInteractionLocked(locked: boolean): void {
-    this.interactionLocked = locked;
-    if (locked) {
-      this.isDragging = false;
-      this.isPinching = false;
-      this.lastTouchDistance = 0;
-    }
   }
 
   private renderFrame(dtMs: number): void {
@@ -1170,7 +1119,7 @@ export class PanoViewer {
       if (status.lastError) {
         this.tilesLastError = status.lastError;
       }
-      if (!this.tilesLowReady && status.tilesVisible) {
+      if (!this.tilesLowReady && status.tilesLoadedCount > 0) {
         this.tilesLowReady = true;
         this.updateLoadStatus(LoadStatus.LOW_READY);
       }
@@ -1475,7 +1424,11 @@ export class PanoViewer {
     }
   }
 
-  private fallbackToLegacy(sceneData: Scene, tilesConfig?: { fallbackPano?: string; fallbackPanoLow?: string }): void {
+  private fallbackToLegacy(
+    sceneData: Scene,
+    tilesConfig?: { fallbackPano?: string; fallbackPanoLow?: string },
+    options?: { silentFallback?: boolean; allowPendingBlack?: boolean },
+  ): void {
     const fallbackScene: Scene = {
       ...sceneData,
       pano: tilesConfig?.fallbackPano ?? sceneData.pano,
@@ -1483,8 +1436,15 @@ export class PanoViewer {
       panoTiles: undefined,
     };
     if (fallbackScene.pano || fallbackScene.panoLow) {
+      if (!options?.silentFallback) {
+        showToast('瓦片加载失败，已回退到全景图', 2000);
+      }
       this.setRenderSource('fallback', 'tiles 失败自动回退');
-      this.loadScene(fallbackScene, { preserveView: true });
+      this.loadScene(fallbackScene, {
+        preserveView: true,
+        allowPendingBlack: options?.allowPendingBlack,
+        silentFallback: options?.silentFallback,
+      });
     } else {
       this.updateLoadStatus(LoadStatus.ERROR);
       if (this.onErrorCallback) {

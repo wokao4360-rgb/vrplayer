@@ -3,34 +3,30 @@ import assert from 'node:assert/strict';
 
 import { resolveSceneTransitionAssets } from '../src/app/sceneTransitionAssets.ts';
 
-test('cover-driven transition uses target preview shell instead of cover hero as source image', () => {
+test('cover route prefers preview image and keeps target preview gated', () => {
   const assets = resolveSceneTransitionAssets({
     coverWasVisible: true,
-    previewUrl: '/assets/panos/wangding/anti-corruption_interactive-low.jpg',
+    previewUrl: 'preview-low.jpg',
     previewAlreadyReady: false,
-    coverHeroUrl: '/assets/covers/wangding/hero-cover.jpg',
+    coverHeroUrl: 'cover-hero.jpg',
+    viewerSnapshot: 'snapshot.jpg',
+    previousScenePreviewImage: 'prev-preview.jpg',
   });
 
-  assert.equal(
-    assets.fromImage,
-    '/assets/panos/wangding/anti-corruption_interactive-low.jpg',
-  );
+  assert.equal(assets.fromImage, 'preview-low.jpg');
   assert.equal(assets.targetPreviewImage, undefined);
 });
 
-test('scene-to-scene transition prefers previous low preview shell before any live snapshot fallback', () => {
+test('scene route prefers current viewer snapshot before previous scene preview fallback', () => {
   const assets = resolveSceneTransitionAssets({
     coverWasVisible: false,
-    previewUrl: '/assets/panos/wangding/culture_achievement-low.jpg',
+    previewUrl: 'preview-low.jpg',
     previewAlreadyReady: true,
-    coverHeroUrl: '/assets/covers/wangding/hero-cover.jpg',
-    viewerSnapshot: 'data:image/jpeg;base64,current-view',
-    previousScenePreviewImage: '/assets/panos/wangding/south_gate-low.jpg',
+    coverHeroUrl: 'cover-hero.jpg',
+    viewerSnapshot: 'snapshot.jpg',
+    previousScenePreviewImage: 'prev-preview.jpg',
   });
 
-  assert.equal(assets.fromImage, '/assets/panos/wangding/south_gate-low.jpg');
-  assert.equal(
-    assets.targetPreviewImage,
-    '/assets/panos/wangding/culture_achievement-low.jpg',
-  );
+  assert.equal(assets.fromImage, 'snapshot.jpg');
+  assert.equal(assets.targetPreviewImage, 'preview-low.jpg');
 });

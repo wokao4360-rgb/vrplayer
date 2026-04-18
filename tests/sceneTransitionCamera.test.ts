@@ -83,3 +83,4 @@ test('transition camera returns exact target view at final frame', () => {
 
   assert.deepEqual(view, { yaw: 22, pitch: -6, fov: 68 });
 });
+

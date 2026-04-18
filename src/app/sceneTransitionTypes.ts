@@ -16,3 +16,10 @@ export type SceneEnterMeta = {
   hotspotScreenX?: number;
   hotspotId?: string;
 };
+
+export type SceneTransitionView = {
+  yaw: number;
+  pitch: number;
+  fov: number;
+};
+

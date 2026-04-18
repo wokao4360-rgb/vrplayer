@@ -1,4 +1,4 @@
-import type { Scene } from '../types/config.ts';
+import type { Scene } from '../types/config';
 import type { TransitionProgressState } from './sceneTransitionGate.ts';
 import type { SceneTransitionFrame } from './sceneTransitionTimeline.ts';
 
@@ -57,3 +57,4 @@ export function shouldForwardCommittedSceneStatus(
     status === 'highReady' ||
     status === 'degraded';
 }
+

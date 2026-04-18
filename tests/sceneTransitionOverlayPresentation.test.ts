@@ -156,3 +156,4 @@ test('scene settle presentation sheds residual overlay quickly instead of linger
     brightnessMin: 0.98,
   });
 });
+

@@ -1,5 +1,14 @@
 import type { MapPoint } from '../types/config.ts';
 
+export type SceneTransitionPlan = {
+  durationMs: number;
+  settleMs: number;
+  travelDirX: -1 | 1;
+  wipeFrom: 'left' | 'right';
+  turnLead: number;
+  curveStrength: number;
+};
+
 export type SceneTransitionIntent = {
   museumId: string;
   sceneId: string;
@@ -10,22 +19,12 @@ export type SceneTransitionIntent = {
   };
 };
 
-export type SceneTransitionIntentState = {
+export type TransitionIntentState = {
   active: SceneTransitionIntent | null;
   pending: SceneTransitionIntent | null;
 };
 
-export type SceneTransitionPlan = {
-  deltaYaw: number;
-  travelDirX: -1 | 1;
-  wipeFrom: 'left' | 'right';
-  curveStrength: number;
-  turnLead: number;
-  durationMs: number;
-  settleMs: number;
-};
-
-export type ComputeSceneTransitionPlanArgs = {
+type ComputeSceneTransitionPlanArgs = {
   currentWorldYaw: number;
   targetWorldYaw: number;
   hotspotScreenX?: number;
@@ -33,49 +32,38 @@ export type ComputeSceneTransitionPlanArgs = {
   toMapPoint?: MapPoint;
 };
 
-export const SHORT_HOP_MS = 480;
-export const MID_HOP_MS = 620;
-export const LARGE_TURN_MS = 760;
-export const MIN_HOP_MS = 420;
-export const MAX_HOP_MS = 850;
-export const SETTLE_MS = 120;
-export const LARGE_TURN_SETTLE_MS = 140;
-export const TURN_LEAD_FACTOR = 0.32;
-export const MAX_TURN_LEAD_DEG = 18;
+const SHORT_HOP_MS = 480;
+const MID_HOP_MS = 620;
+const LARGE_TURN_MS = 760;
+const TURN_LEAD_FACTOR = 0.32;
+const MAX_TURN_LEAD_DEG = 18;
 
-export function shortestAngleDelta(fromDeg: number, toDeg: number): number {
-  let delta = (toDeg - fromDeg) % 360;
-  if (delta > 180) delta -= 360;
-  if (delta < -180) delta += 360;
-  return Number(delta.toFixed(2));
-}
-
-export function computeSceneTransitionPlan(
-  args: ComputeSceneTransitionPlanArgs,
-): SceneTransitionPlan {
-  const deltaYaw = shortestAngleDelta(args.currentWorldYaw, args.targetWorldYaw);
-  const absDelta = Math.abs(deltaYaw);
-  const travelDirX = resolveTravelDirX(deltaYaw, args.hotspotScreenX);
-  const mapDistance = resolveMapDistance(args.fromMapPoint, args.toMapPoint);
-  const durationMs = resolveDuration(absDelta, mapDistance);
-  const turnLead = Number(
-    Math.min(absDelta * TURN_LEAD_FACTOR, MAX_TURN_LEAD_DEG).toFixed(1),
-  );
-  const curveStrength =
-    absDelta < 18 ? 0 : Number(Math.min(absDelta / 60, 1).toFixed(2));
+export function computeSceneTransitionPlan({
+  currentWorldYaw,
+  targetWorldYaw,
+  hotspotScreenX,
+  fromMapPoint,
+  toMapPoint,
+}: ComputeSceneTransitionPlanArgs): SceneTransitionPlan {
+  const yawDelta = shortestAngleDelta(currentWorldYaw, targetWorldYaw);
+  const travelDirX = resolveTravelDirX(yawDelta, hotspotScreenX, fromMapPoint, toMapPoint);
+  const absYawDelta = Math.abs(yawDelta);
+  const durationMs = resolveDurationMs(absYawDelta);
+  const settleMs = durationMs >= LARGE_TURN_MS ? 140 : 120;
+  const turnLead = round1(Math.min(MAX_TURN_LEAD_DEG, Math.max(0, absYawDelta * TURN_LEAD_FACTOR)));
+  const curveStrength = round2(clamp(Math.max(0, absYawDelta - 12) / 40, 0, 1));
 
   return {
-    deltaYaw,
+    durationMs,
+    settleMs,
     travelDirX,
     wipeFrom: travelDirX > 0 ? 'right' : 'left',
-    curveStrength,
     turnLead,
-    durationMs,
-    settleMs: durationMs >= LARGE_TURN_MS ? LARGE_TURN_SETTLE_MS : SETTLE_MS,
+    curveStrength,
   };
 }
 
-export function createTransitionIntentState(): SceneTransitionIntentState {
+export function createTransitionIntentState(): TransitionIntentState {
   return {
     active: null,
     pending: null,
@@ -83,73 +71,83 @@ export function createTransitionIntentState(): SceneTransitionIntentState {
 }
 
 export function queueLatestTransitionIntent(
-  state: SceneTransitionIntentState,
+  state: TransitionIntentState,
   next: SceneTransitionIntent,
-): SceneTransitionIntentState {
+): TransitionIntentState {
   if (!state.active) {
-    return {
-      active: next,
-      pending: null,
-    };
+    return { active: next, pending: null };
   }
-  return {
-    active: state.active,
-    pending: next,
-  };
+  return { active: state.active, pending: next };
 }
 
-export function consumeQueuedTransitionIntent(state: SceneTransitionIntentState): {
+export function consumeQueuedTransitionIntent(
+  state: TransitionIntentState,
+): {
   next: SceneTransitionIntent | null;
-  state: SceneTransitionIntentState;
+  state: TransitionIntentState;
 } {
-  if (!state.pending) {
+  if (state.pending) {
     return {
-      next: null,
+      next: state.pending,
       state: {
-        active: null,
+        active: state.pending,
         pending: null,
       },
     };
   }
   return {
-    next: state.pending,
+    next: null,
     state: {
-      active: state.pending,
+      active: null,
       pending: null,
     },
   };
 }
 
-function resolveTravelDirX(deltaYaw: number, hotspotScreenX?: number): -1 | 1 {
-  const absDelta = Math.abs(deltaYaw);
-  if (absDelta >= 8) {
-    return deltaYaw >= 0 ? 1 : -1;
+function resolveDurationMs(absYawDelta: number): number {
+  if (absYawDelta < 18) {
+    return SHORT_HOP_MS;
   }
-  if (typeof hotspotScreenX === 'number') {
-    return hotspotScreenX >= 0.5 ? 1 : -1;
-  }
-  return deltaYaw >= 0 ? 1 : -1;
-}
-
-function resolveMapDistance(fromMapPoint?: MapPoint, toMapPoint?: MapPoint): number {
-  if (!fromMapPoint || !toMapPoint) {
-    return 0;
-  }
-  const dx = toMapPoint.x - fromMapPoint.x;
-  const dy = toMapPoint.y - fromMapPoint.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function resolveDuration(absDelta: number, mapDistance: number): number {
-  if (absDelta >= 60 || mapDistance >= 220) {
-    return LARGE_TURN_MS;
-  }
-  if (absDelta >= 18 || mapDistance >= 70) {
+  if (absYawDelta < 72) {
     return MID_HOP_MS;
   }
-  return clampDuration(SHORT_HOP_MS);
+  return LARGE_TURN_MS;
 }
 
-function clampDuration(durationMs: number): number {
-  return Math.max(MIN_HOP_MS, Math.min(MAX_HOP_MS, durationMs));
+function resolveTravelDirX(
+  yawDelta: number,
+  hotspotScreenX?: number,
+  fromMapPoint?: MapPoint,
+  toMapPoint?: MapPoint,
+): -1 | 1 {
+  if (Math.abs(yawDelta) >= 8) {
+    return yawDelta >= 0 ? 1 : -1;
+  }
+  if (typeof hotspotScreenX === 'number' && Number.isFinite(hotspotScreenX)) {
+    return hotspotScreenX < 0.5 ? -1 : 1;
+  }
+  if (fromMapPoint && toMapPoint && fromMapPoint.x !== toMapPoint.x) {
+    return toMapPoint.x >= fromMapPoint.x ? 1 : -1;
+  }
+  return yawDelta >= 0 ? 1 : -1;
 }
+
+function shortestAngleDelta(from: number, to: number): number {
+  let delta = to - from;
+  while (delta > 180) delta -= 360;
+  while (delta < -180) delta += 360;
+  return delta;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round1(value: number): number {
+  return Number(value.toFixed(1));
+}
+
+function round2(value: number): number {
+  return Number(value.toFixed(2));
+}
+

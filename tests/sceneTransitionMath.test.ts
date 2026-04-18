@@ -88,3 +88,4 @@ test('transition intent queue keeps only the latest pending click while active',
   assert.deepEqual(consumed.state.active, third);
   assert.equal(consumed.state.pending, null);
 });
+

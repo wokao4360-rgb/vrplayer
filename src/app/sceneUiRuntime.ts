@@ -1,74 +1,18 @@
 import type { Museum, Scene } from '../types/config';
 import type { PanoViewer } from '../viewer/PanoViewer';
-import type { SceneEnterMeta, SceneEnterView } from './sceneTransitionTypes.ts';
 import type { BottomDock } from '../ui/BottomDock';
 import type { TopModeTabs, AppViewMode } from '../ui/TopModeTabs';
 import type { Hotspots } from '../ui/Hotspots';
 import type { VideoPlayer } from '../ui/VideoPlayer';
 import type { GuideTray } from '../ui/GuideTray';
 import type { SceneGuideDrawer } from '../ui/SceneGuideDrawer';
+import {
+  isQualityIndicatorDebugEnabled,
+  type QualityIndicator,
+} from '../ui/QualityIndicator';
 import { LoadStatus } from '../types/loadStatus';
+import type { SceneEnterMeta } from './sceneTransitionTypes';
 import { WarmupScheduler, type WarmupQueueTask } from './warmupScheduler';
-
-let bottomDockModulePromise: Promise<typeof import('../ui/BottomDock')> | null = null;
-let topModeTabsModulePromise: Promise<typeof import('../ui/TopModeTabs')> | null = null;
-let hotspotsModulePromise: Promise<typeof import('../ui/Hotspots')> | null = null;
-let videoPlayerModulePromiseShared: Promise<typeof import('../ui/VideoPlayer')> | null = null;
-let guideTrayModulePromiseShared: Promise<typeof import('../ui/GuideTray')> | null = null;
-let sceneGuideDrawerModulePromiseShared: Promise<typeof import('../ui/SceneGuideDrawer')> | null = null;
-
-function loadBottomDockModule(): Promise<typeof import('../ui/BottomDock')> {
-  if (!bottomDockModulePromise) {
-    bottomDockModulePromise = import('../ui/BottomDock');
-  }
-  return bottomDockModulePromise;
-}
-
-function loadTopModeTabsModule(): Promise<typeof import('../ui/TopModeTabs')> {
-  if (!topModeTabsModulePromise) {
-    topModeTabsModulePromise = import('../ui/TopModeTabs');
-  }
-  return topModeTabsModulePromise;
-}
-
-function loadHotspotsModule(): Promise<typeof import('../ui/Hotspots')> {
-  if (!hotspotsModulePromise) {
-    hotspotsModulePromise = import('../ui/Hotspots');
-  }
-  return hotspotsModulePromise;
-}
-
-function loadVideoPlayerModuleShared(): Promise<typeof import('../ui/VideoPlayer')> {
-  if (!videoPlayerModulePromiseShared) {
-    videoPlayerModulePromiseShared = import('../ui/VideoPlayer');
-  }
-  return videoPlayerModulePromiseShared;
-}
-
-function loadGuideTrayModuleShared(): Promise<typeof import('../ui/GuideTray')> {
-  if (!guideTrayModulePromiseShared) {
-    guideTrayModulePromiseShared = import('../ui/GuideTray');
-  }
-  return guideTrayModulePromiseShared;
-}
-
-function loadSceneGuideDrawerModuleShared(): Promise<typeof import('../ui/SceneGuideDrawer')> {
-  if (!sceneGuideDrawerModulePromiseShared) {
-    sceneGuideDrawerModulePromiseShared = import('../ui/SceneGuideDrawer');
-  }
-  return sceneGuideDrawerModulePromiseShared;
-}
-
-export async function prewarmSceneUiRuntimeModules(): Promise<void> {
-  await Promise.allSettled([
-    loadBottomDockModule(),
-    loadTopModeTabsModule(),
-    loadHotspotsModule(),
-    loadVideoPlayerModuleShared(),
-    loadGuideTrayModuleShared(),
-    loadSceneGuideDrawerModuleShared(),
-  ]);
-}
 
 type SceneUiRuntimeOptions = {
   appElement: HTMLElement;
@@ -81,7 +25,11 @@ type SceneUiRuntimeOptions = {
   onModeChange: (mode: AppViewMode) => void;
   onEnterScene: (
     sceneId: string,
-    view?: SceneEnterView,
+    view?: {
+      yaw?: number;
+      pitch?: number;
+      fov?: number;
+    },
     meta?: SceneEnterMeta,
   ) => void;
   onOpenInfo: () => void;
@@ -123,7 +71,13 @@ export class SceneUiRuntime {
   private videoPlayer: VideoPlayer | null = null;
   private guideTray: GuideTray | null = null;
   private sceneGuideDrawer: SceneGuideDrawer | null = null;
+  private qualityIndicator: QualityIndicator | null = null;
   private handleMetricsEvent: ((event: Event) => void) | null = null;
+
+  private videoPlayerModulePromise: Promise<typeof import('../ui/VideoPlayer')> | null = null;
+  private guideTrayModulePromise: Promise<typeof import('../ui/GuideTray')> | null = null;
+  private sceneGuideDrawerModulePromise: Promise<typeof import('../ui/SceneGuideDrawer')> | null = null;
+  private qualityIndicatorModulePromise: Promise<typeof import('../ui/QualityIndicator')> | null = null;
 
   constructor(options: SceneUiRuntimeOptions) {
     this.options = options;
@@ -153,6 +107,10 @@ export class SceneUiRuntime {
     return this.sceneGuideDrawer;
   }
 
+  getQualityIndicator(): QualityIndicator | null {
+    return this.qualityIndicator;
+  }
+
   async mountCore(): Promise<void> {
     if (this.coreMounted || this.coreMounting || this.disposed || !this.isAlive()) {
       return;
@@ -160,9 +118,9 @@ export class SceneUiRuntime {
     this.coreMounting = true;
     try {
       const [{ BottomDock }, { TopModeTabs }, { Hotspots }] = await Promise.all([
-        loadBottomDockModule(),
-        loadTopModeTabsModule(),
-        loadHotspotsModule(),
+        import('../ui/BottomDock'),
+        import('../ui/TopModeTabs'),
+        import('../ui/Hotspots'),
       ]);
       if (this.coreMounted || this.disposed || !this.isAlive()) {
         return;
@@ -235,8 +193,8 @@ export class SceneUiRuntime {
           museumId: this.options.museum.id,
           currentSceneId: this.options.scene.id,
           scenes: this.options.museum.scenes,
-          onSceneClick: (sceneId, meta) => {
-            this.options.onEnterScene(sceneId, undefined, meta);
+          onSceneClick: (sceneId) => {
+            this.options.onEnterScene(sceneId, undefined, { source: 'guide-tray' });
           },
           onMoreClick: () => {
             void this.openSceneGuideDrawer();
@@ -262,6 +220,9 @@ export class SceneUiRuntime {
 
   scheduleObserverMount(): void {
     if (this.observerMounted || this.observerMounting || this.disposed || this.observerIdleHandle !== null) {
+      return;
+    }
+    if (!isQualityIndicatorDebugEnabled()) {
       return;
     }
 
@@ -294,16 +255,7 @@ export class SceneUiRuntime {
   }
 
   handleStatusChange(status: LoadStatus): void {
-    if (
-      !this.observerMounted &&
-      !this.observerMounting &&
-      !this.disposed &&
-      (status === LoadStatus.LOW_READY ||
-        status === LoadStatus.HIGH_READY ||
-        status === LoadStatus.DEGRADED)
-    ) {
-      void this.mountObserver();
-    }
+    this.qualityIndicator?.updateStatus(status);
     if (status === LoadStatus.HIGH_READY) {
       this.scheduleFeatureWarmup('immediate');
     } else if (status === LoadStatus.DEGRADED) {
@@ -329,6 +281,8 @@ export class SceneUiRuntime {
       this.handleMetricsEvent = null;
     }
 
+    this.qualityIndicator?.remove();
+    this.qualityIndicator = null;
     this.sceneGuideDrawer?.remove();
     this.sceneGuideDrawer = null;
     this.guideTray?.remove();
@@ -370,11 +324,11 @@ export class SceneUiRuntime {
         museumId: this.options.museum.id,
         currentSceneId: this.options.scene.id,
         scenes: this.options.museum.scenes,
-        onSceneEnter: (sceneId, meta) => {
-          this.options.onEnterScene(sceneId, undefined, meta);
-        },
         onClose: () => {
           // no-op
+        },
+        onEnterScene: (sceneId, view, meta) => {
+          this.options.onEnterScene(sceneId, view, meta ?? { source: 'guide-drawer' });
         },
       });
       this.options.appElement.appendChild(this.sceneGuideDrawer.getElement());
@@ -388,8 +342,37 @@ export class SceneUiRuntime {
     if (this.observerMounted || this.observerMounting || this.disposed || !this.isAlive()) {
       return;
     }
+    if (!isQualityIndicatorDebugEnabled()) {
+      return;
+    }
     this.observerMounting = true;
     try {
+      const { QualityIndicator } = await this.loadQualityIndicatorModule();
+      if (this.observerMounted || this.disposed || !this.isAlive()) {
+        return;
+      }
+
+      if (!this.qualityIndicator) {
+        this.qualityIndicator = new QualityIndicator();
+        this.options.appElement.appendChild(this.qualityIndicator.getElement());
+      }
+
+      const panoViewer = this.options.getPanoViewer();
+      if (panoViewer) {
+        this.qualityIndicator.updateStatus(panoViewer.getLoadStatus());
+      }
+
+      if (!this.handleMetricsEvent) {
+        this.handleMetricsEvent = (event: Event) => {
+          if (!this.qualityIndicator) {
+            return;
+          }
+          const detail = (event as CustomEvent).detail || {};
+          this.qualityIndicator.updateMetrics(detail);
+        };
+        window.addEventListener('vr:metrics', this.handleMetricsEvent);
+      }
+
       this.observerMounted = true;
     } finally {
       this.observerMounting = false;
@@ -397,15 +380,31 @@ export class SceneUiRuntime {
   }
 
   private loadVideoPlayerModule(): Promise<typeof import('../ui/VideoPlayer')> {
-    return loadVideoPlayerModuleShared();
+    if (!this.videoPlayerModulePromise) {
+      this.videoPlayerModulePromise = import('../ui/VideoPlayer');
+    }
+    return this.videoPlayerModulePromise;
   }
 
   private loadGuideTrayModule(): Promise<typeof import('../ui/GuideTray')> {
-    return loadGuideTrayModuleShared();
+    if (!this.guideTrayModulePromise) {
+      this.guideTrayModulePromise = import('../ui/GuideTray');
+    }
+    return this.guideTrayModulePromise;
   }
 
   private loadSceneGuideDrawerModule(): Promise<typeof import('../ui/SceneGuideDrawer')> {
-    return loadSceneGuideDrawerModuleShared();
+    if (!this.sceneGuideDrawerModulePromise) {
+      this.sceneGuideDrawerModulePromise = import('../ui/SceneGuideDrawer');
+    }
+    return this.sceneGuideDrawerModulePromise;
+  }
+
+  private loadQualityIndicatorModule(): Promise<typeof import('../ui/QualityIndicator')> {
+    if (!this.qualityIndicatorModulePromise) {
+      this.qualityIndicatorModulePromise = import('../ui/QualityIndicator');
+    }
+    return this.qualityIndicatorModulePromise;
   }
 
   private isAlive(): boolean {

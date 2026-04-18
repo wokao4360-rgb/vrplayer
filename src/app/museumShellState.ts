@@ -17,6 +17,7 @@ export type MuseumShellRouteDecision =
 
 export type MuseumSceneRuntimePlan = {
   shellStrategy: 'mount-shell' | 'reuse-shell';
+  transitionDriver: 'viewer' | 'shell';
   viewStrategy: 'reset-to-target' | 'preserve-current';
 };
 
@@ -68,7 +69,7 @@ export function resolveMuseumShellRoute({
     throw new Error(`museum ${museum.id} does not contain any scenes`);
   }
 
-  if (!hasEnteredMuseum || !requestedSceneId) {
+  if (!hasEnteredMuseum) {
     return {
       kind: 'cover',
       museumId: museum.id,
@@ -94,12 +95,14 @@ export function resolveMuseumSceneRuntimePlan({
   if (!sameMuseum) {
     return {
       shellStrategy: 'mount-shell',
+      transitionDriver: 'shell',
       viewStrategy: 'reset-to-target',
     };
   }
 
   return {
     shellStrategy: 'reuse-shell',
+    transitionDriver: 'viewer',
     viewStrategy: hasExplicitRequestedView(requestedView) ? 'reset-to-target' : 'preserve-current',
   };
 }
@@ -114,10 +117,7 @@ export function buildMuseumCoverModel({
     appName,
     brandTitle,
     title: museum.name,
-    subtitle:
-      museum.marketing?.hook?.trim() ||
-      museum.description?.trim() ||
-      `${museum.name} 单馆连续漫游，进入后可在同一壳层内切换场景。`,
+    subtitle: museum.marketing?.hook?.trim() || museum.description?.trim() || museum.name,
     ctaLabel: '点击开启 VR 漫游',
     heroImage: museum.cover,
     targetSceneId,
@@ -132,11 +132,8 @@ export function buildMuseumPreloadPlan({
   const primarySceneIds = targetScene ? [targetScene.id] : [];
   const neighborSceneIds = targetScene ? collectNeighborSceneIds(targetScene) : [];
   const previewAssets = uniqueDefinedStrings([
-    targetScene?.panoLow ?? targetScene?.thumb,
-    ...neighborSceneIds.map((sceneId) => {
-      const neighborScene = museum.scenes.find((scene) => scene.id === sceneId);
-      return neighborScene?.panoLow ?? neighborScene?.thumb;
-    }),
+    targetScene?.panoLow,
+    ...neighborSceneIds.map((sceneId) => museum.scenes.find((scene) => scene.id === sceneId)?.thumb),
   ]);
 
   return {

@@ -94,3 +94,31 @@ test('mobile layout profile is wired into the main runtime and mobile-heavy UI s
     'Guide drawer should have dedicated compact-mobile overrides',
   );
 });
+
+test('compact mobile dock narrows the nav pill and moves narration to the photo right side', () => {
+  const uiCssSource = readFileSync(
+    new URL('../src/ui/ui.css', import.meta.url),
+    'utf8',
+  );
+
+  assert.ok(
+    uiCssSource.includes('width: min(84vw, 320px);'),
+    'compact mobile dock should stop stretching nearly edge-to-edge',
+  );
+  assert.ok(
+    uiCssSource.includes('html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-narration-action'),
+    'compact mobile dock should have a dedicated narration-action placement rule',
+  );
+  assert.ok(
+    uiCssSource.includes('left: calc(50% + 34px);'),
+    'compact mobile narration action should sit to the right of the centered photo button',
+  );
+  assert.ok(
+    uiCssSource.includes('html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-side-action{\n  bottom: 58px;'),
+    'compact mobile narration action should rise above the dock pill instead of being covered by it',
+  );
+  assert.ok(
+    uiCssSource.includes('bottom: 58px;'),
+    'compact mobile photo action should sit clearly above the dock pill',
+  );
+});

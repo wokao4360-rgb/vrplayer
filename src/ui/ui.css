@@ -3643,32 +3643,35 @@ html[data-vr-layout="mobile-compact"] .vr-dock-wrap{
 }
 
 html[data-vr-layout="mobile-compact"] .vr-dock{
-  width: min(100%, 360px);
+  width: min(84vw, 320px);
   gap: 4px;
-  padding: 6px 8px 7px;
-  border-radius: 24px;
+  padding: 5px 7px 6px;
+  border-radius: 22px;
   background: linear-gradient(180deg, rgba(32, 24, 18, 0.34), rgba(32, 24, 18, 0.16));
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 10px 22px rgba(0,0,0,0.16);
 }
 
 html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-side-action{
-  left: calc(50% - min(160px, 42vw));
-  bottom: 4px;
-  min-width: 76px;
-  height: 42px;
+  bottom: 58px;
+  min-width: 72px;
+  height: 40px;
   gap: 6px;
-  padding: 0 12px;
+  padding: 0 10px;
   border-radius: 999px;
   background: rgba(248, 241, 232, 0.94);
 }
 
+html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-narration-action{
+  left: calc(50% + 34px);
+}
+
 html[data-vr-layout="mobile-compact"] .vr-dock-side-label{
-  font-size: 11px;
+  font-size: 10px;
 }
 
 html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-photo-action{
-  bottom: 46px;
+  bottom: 58px;
   width: 48px;
   height: 48px;
   box-shadow: 0 12px 22px rgba(53, 35, 20, 0.18);
@@ -3677,17 +3680,17 @@ html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-photo-action{
 html[data-vr-layout="mobile-compact"] .vr-dock-tab{
   width: auto;
   min-width: 0;
-  height: 40px;
-  gap: 3px;
+  height: 38px;
+  gap: 2px;
 }
 
 html[data-vr-layout="mobile-compact"] .vr-dock-tab-icon{
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
 }
 
 html[data-vr-layout="mobile-compact"] .vr-dock-tab-label{
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1;
   text-shadow: none;
 }

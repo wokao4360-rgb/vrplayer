@@ -114,7 +114,7 @@ test('transition never reaches settle band before target preview is ready', () =
     releaseMode: 'high',
   });
 
-  assert.ok(progress < 0.8);
+  assert.equal(progress, TARGET_READY_HOLD_PROGRESS);
 });
 
 test('preview shell readiness alone does not count as target reveal readiness', () => {

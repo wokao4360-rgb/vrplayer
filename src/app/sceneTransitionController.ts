@@ -8,7 +8,7 @@ import {
 } from './sceneTransitionMath.ts';
 import {
   computeSceneTransitionProgress,
-  isTargetSceneReadyForReveal,
+  MIN_TARGET_REVEAL_PROGRESS,
   isTransitionReleaseReady,
   type SceneTransitionReleaseMode,
   type TransitionProgressState,
@@ -110,6 +110,10 @@ export class TransitionSession {
   start(): void {
     this.active = true;
     this.args.onInteractionLock?.(true);
+    const overlayElement = this.overlay.getElement();
+    overlayElement.dataset.durationMs = String(this.plan.durationMs);
+    overlayElement.dataset.settleMs = String(this.plan.settleMs);
+    overlayElement.dataset.turnLead = String(this.plan.turnLead);
     this.overlay.start({
       fromImage: this.args.fromImage,
       targetImage: this.args.targetPreviewImage,
@@ -125,13 +129,7 @@ export class TransitionSession {
   }
 
   markTargetReady(): void {
-    if (this.state.targetReady) {
-      return;
-    }
-    this.state.targetReady = true;
-    this.state.targetReadyAtTs = performance.now();
-    this.state.targetReadyProgress = this.state.currentProgress;
-    this.markReleaseReady(this.state.targetReadyAtTs);
+    this.maybeActivateReveal(performance.now(), this.state.currentProgress);
   }
 
   markLoadCommitted(): void {
@@ -141,22 +139,19 @@ export class TransitionSession {
   markStatus(status: LoadStatus): void {
     if (status === LoadStatus.LOW_READY) {
       this.state.lowReady = true;
-      this.markTargetReady();
-      this.markReleaseReady(performance.now());
+      this.maybeActivateReveal(performance.now(), this.state.currentProgress);
       return;
     }
     if (status === LoadStatus.HIGH_READY || status === LoadStatus.DEGRADED) {
       this.state.lowReady = true;
       this.state.sharpReady = true;
-      this.markTargetReady();
-      this.markReleaseReady(performance.now());
+      this.maybeActivateReveal(performance.now(), this.state.currentProgress);
     }
   }
 
   markError(): void {
     this.state.failed = true;
-    this.markTargetReady();
-    this.markReleaseReady(performance.now());
+    this.maybeActivateReveal(performance.now(), this.state.currentProgress);
   }
 
   isActive(): boolean {
@@ -192,14 +187,18 @@ export class TransitionSession {
         this.state.targetReadyAtTs = ts;
       }
     }
-    const progress = this.computeProgress(ts);
+    let progress = this.computeProgress(ts);
     this.state.currentProgress = progress;
+    if (this.maybeActivateReveal(ts, progress)) {
+      progress = this.computeProgress(ts);
+      this.state.currentProgress = progress;
+    }
     const frame = buildSceneTransitionFrame({
       currentWorldYaw: this.args.currentWorldView.yaw,
       targetWorldYaw: this.args.targetWorldView.yaw,
       plan: this.plan,
       progress,
-      targetReady: isTargetSceneReadyForReveal(this.state),
+      targetReady: this.state.targetReady,
       targetReadyProgress: this.state.targetReadyProgress,
       sourceKind: this.args.sourceKind ?? 'scene',
     });
@@ -253,6 +252,24 @@ export class TransitionSession {
     this.active = false;
     this.resolveCompletion('completed');
     this.handleDispose();
+  }
+
+  private maybeActivateReveal(ts: number, progress: number): boolean {
+    if (this.state.targetReady) {
+      return false;
+    }
+    const revealCandidate = this.state.failed || (
+      this.state.loadCommitted &&
+      (this.state.lowReady || this.state.sharpReady)
+    );
+    if (!revealCandidate || progress < MIN_TARGET_REVEAL_PROGRESS) {
+      return false;
+    }
+    this.state.targetReady = true;
+    this.state.targetReadyAtTs = ts;
+    this.state.targetReadyProgress = progress;
+    this.markReleaseReady(ts);
+    return true;
   }
 
   private markReleaseReady(ts: number): void {

@@ -10,7 +10,7 @@ export type SceneTransitionFrame = {
   sourceKind: 'scene' | 'cover';
   displayWorldYaw: number;
   travelDirX: -1 | 1;
-  wipeFrom: 'left' | 'right';
+  wipeFrom: 'left' | 'right' | 'center';
   revealProgress: number;
   targetMixProgress: number;
   settleStrength: number;
@@ -28,6 +28,7 @@ export type SceneTransitionFrame = {
   toShiftPercent: number;
   shearDeg: number;
   curveStrength: number;
+  forwardDriveStrength: number;
   occlusionOpacity: number;
 };
 
@@ -41,18 +42,18 @@ type BuildSceneTransitionFrameArgs = {
   sourceKind?: 'scene' | 'cover';
 };
 
-export const TURN_IN_RATIO = 0.22;
-export const WIPE_SOFTNESS = 0.1;
-export const DISTORTION_STRENGTH = 0.13;
+export const TURN_IN_RATIO = 0.44;
+export const WIPE_SOFTNESS = 0.08;
+export const DISTORTION_STRENGTH = 0.4;
 export const BLUR_STRENGTH = 16;
-export const FOV_PULSE_IN = -2.6;
-export const FOV_PULSE_OUT = 0.9;
+export const FOV_PULSE_IN = -5.8;
+export const FOV_PULSE_OUT = 2.8;
 
 const SETTLE_RATIO_MIN = 0.12;
 const SETTLE_RATIO_MAX = 0.2;
-const DEFAULT_GLASS_ALPHA = 0.14;
-const TARGET_NOT_READY_GLASS_ALPHA = 0.18;
-const OCCLUSION_ALPHA = 0.22;
+const DEFAULT_GLASS_ALPHA = 0.22;
+const TARGET_NOT_READY_GLASS_ALPHA = 0.3;
+const OCCLUSION_ALPHA = 0.38;
 
 export function buildSceneTransitionFrame({
   currentWorldYaw,
@@ -67,6 +68,8 @@ export function buildSceneTransitionFrame({
   const totalMs = plan.durationMs + plan.settleMs;
   const settleRatio = clamp(plan.settleMs / Math.max(totalMs, 1), SETTLE_RATIO_MIN, SETTLE_RATIO_MAX);
   const settleStart = 1 - settleRatio;
+  const forwardRevealMode = plan.wipeFrom === 'center';
+  const lateralFactor = forwardRevealMode ? 0.18 : 1;
   const turnInEndYaw = normalizeSignedAngle(
     currentWorldYaw + plan.travelDirX * plan.turnLead,
   );
@@ -76,12 +79,14 @@ export function buildSceneTransitionFrame({
     targetReady,
     targetReadyProgress,
     sourceKind,
+    forwardRevealMode,
   });
 
   if (normalizedProgress <= TURN_IN_RATIO) {
     const localT = easeOutCubic(safeRatio(normalizedProgress, TURN_IN_RATIO));
     const displayWorldYaw = interpolateAngle(currentWorldYaw, turnInEndYaw, localT);
-    const blurPx = mix(BLUR_STRENGTH, BLUR_STRENGTH * 0.82, localT);
+    const forwardLift = plan.forwardDriveStrength * (0.22 + localT * 0.28);
+    const blurPx = mix(BLUR_STRENGTH * 0.92, BLUR_STRENGTH * 0.68, localT) - forwardLift * 1.3;
     return {
       progress: round4(normalizedProgress),
       stageProgress: round4(localT),
@@ -94,21 +99,42 @@ export function buildSceneTransitionFrame({
       revealProgress: 0,
       targetMixProgress: 0,
       settleStrength: 0,
-      fromOpacity: round3(sourceKind === 'cover' ? mix(0.22, 0.14, localT) : mix(0.68, 0.42, localT)),
-      fromEdgeMix: round3(sourceKind === 'cover' ? 0.98 : mix(0.84, 0.94, localT)),
-      targetFocus: round3(sourceKind === 'cover' ? mix(0.16, 0.26, localT) : mix(0.18, 0.3, localT)),
+      fromOpacity: round3(
+        sourceKind === 'cover'
+          ? mix(0.28, 0.16, localT)
+          : forwardRevealMode
+            ? mix(0.94, 0.78, localT) - forwardLift * 0.04
+            : mix(0.9, 0.7, localT) - forwardLift * 0.1,
+      ),
+      fromEdgeMix: round3(
+        sourceKind === 'cover'
+          ? 0.995
+          : forwardRevealMode
+            ? mix(0.34, 0.7, localT) + forwardLift * 0.08
+            : mix(0.26, 0.6, localT) + forwardLift * 0.06,
+      ),
+      targetFocus: round3(
+        sourceKind === 'cover'
+          ? mix(0.22, 0.38, localT)
+          : forwardRevealMode
+            ? mix(0.04, 0.1, localT) + forwardLift * 0.08
+            : mix(0.08, 0.18, localT) + forwardLift * 0.14,
+      ),
       wipeSoftness: WIPE_SOFTNESS,
-      distortionStrength: DISTORTION_STRENGTH * (sourceKind === 'cover' ? 0.42 : 0.5),
-      blurPx: round2(blurPx),
+      distortionStrength: round3(
+        DISTORTION_STRENGTH * (sourceKind === 'cover' ? 0.68 : 0.92) * (1 + forwardLift * 0.4),
+      ),
+      blurPx: round2(Math.max(7.5, blurPx)),
       glassAlpha: TARGET_NOT_READY_GLASS_ALPHA,
-      motionBlurStrength: 0.035,
-      fovDelta: round2(FOV_PULSE_IN * (0.6 + 0.4 * localT)),
-      zoomScale: round4(1 + 0.012 * localT),
-      fromShiftPercent: round2(plan.travelDirX * (sourceKind === 'cover' ? 1.8 : 1.4) * localT),
-      toShiftPercent: round2(plan.travelDirX * 5.8 * (1 - localT)),
-      shearDeg: round2(plan.travelDirX * (1.1 + plan.curveStrength * 2.6) * localT),
-      curveStrength: plan.curveStrength,
-      occlusionOpacity: round3((0.08 + plan.curveStrength * 0.12) * localT),
+      motionBlurStrength: round3(0.11 + forwardLift * 0.12),
+      fovDelta: round2(FOV_PULSE_IN * (0.68 + 0.32 * localT)),
+      zoomScale: round4(1 + 0.032 * localT + forwardLift * 0.04),
+      fromShiftPercent: round2(plan.travelDirX * (sourceKind === 'cover' ? 3.4 : 3.4 + forwardLift * 2.8) * localT * lateralFactor),
+      toShiftPercent: round2(plan.travelDirX * (12.6 + forwardLift * 6.4) * (1 - localT * 0.9) * lateralFactor),
+      shearDeg: round2(plan.travelDirX * (2.1 + plan.curveStrength * 4.8) * localT * lateralFactor),
+      curveStrength: round3(Math.min(1, plan.curveStrength * 1.08)),
+      forwardDriveStrength: round3(plan.forwardDriveStrength),
+      occlusionOpacity: round3((0.22 + plan.curveStrength * 0.28 + plan.forwardDriveStrength * 0.18) * localT),
     };
   }
 
@@ -119,31 +145,44 @@ export function buildSceneTransitionFrame({
     const midBell = bellCurve(travelT);
     const blurBase = targetReady
       ? mix(
-          BLUR_STRENGTH * (sourceKind === 'cover' ? 0.54 : 0.38),
+          BLUR_STRENGTH * (sourceKind === 'cover' ? 0.62 : 0.48),
           BLUR_STRENGTH * 0.08,
           targetRevealState.revealProgress,
         )
-      : BLUR_STRENGTH * (sourceKind === 'cover' ? 0.96 : 0.7);
-    const blurPx = blurBase + BLUR_STRENGTH * 0.08 * midBell;
+      : BLUR_STRENGTH * (sourceKind === 'cover' ? 0.94 : 0.68);
+    const forwardDrive = plan.forwardDriveStrength * (0.32 + midBell * 0.68);
+    const blurPx = blurBase + BLUR_STRENGTH * 0.05 * midBell;
     const distortionStrength =
-      DISTORTION_STRENGTH * (0.72 + 0.2 * midBell + plan.curveStrength * 0.12);
+      DISTORTION_STRENGTH * (1.08 + 0.5 * midBell + plan.curveStrength * 0.24 + plan.forwardDriveStrength * 0.3);
     const fromOpacity = targetReady
       ? sourceKind === 'cover'
-        ? mix(0.16, 0.02, targetRevealState.targetMixProgress)
-        : mix(0.36, 0.03, targetRevealState.targetMixProgress)
+        ? mix(0.22, 0.02, targetRevealState.targetMixProgress)
+        : forwardRevealMode
+          ? mix(0.84, 0.28, targetRevealState.targetMixProgress)
+          : mix(0.66, 0.12, targetRevealState.targetMixProgress)
       : sourceKind === 'cover'
-        ? 0.24
-        : mix(0.28, 0.14, easedTravel);
+        ? 0.28
+        : forwardRevealMode
+          ? mix(0.82, 0.64, easedTravel) - forwardDrive * 0.02
+          : mix(0.62, 0.38, easedTravel) - forwardDrive * 0.12;
     const fromEdgeMix = sourceKind === 'cover'
       ? 0.98
       : targetReady
-        ? mix(0.82, 0.96, targetRevealState.targetMixProgress)
-        : mix(0.92, 0.98, easedTravel);
+        ? forwardRevealMode
+          ? mix(0.68, 0.94, targetRevealState.targetMixProgress)
+          : mix(0.52, 0.9, targetRevealState.targetMixProgress)
+        : forwardRevealMode
+          ? mix(0.62, 0.88, easedTravel) + forwardDrive * 0.08
+          : mix(0.52, 0.88, easedTravel) + forwardDrive * 0.12;
     const targetFocus = targetReady
-      ? targetRevealState.targetFocus
+      ? forwardRevealMode
+        ? targetRevealState.targetFocus * 0.76
+        : targetRevealState.targetFocus
       : sourceKind === 'cover'
-        ? 0.12
-        : mix(0.28, 0.42, midBell);
+        ? 0.16
+        : forwardRevealMode
+          ? mix(0.08, 0.16, midBell) + forwardDrive * 0.04
+          : mix(0.16, 0.36, midBell) + forwardDrive * 0.14;
     return {
       progress: round4(normalizedProgress),
       stageProgress: round4(easedTravel),
@@ -161,22 +200,35 @@ export function buildSceneTransitionFrame({
       targetFocus: round3(targetFocus),
       wipeSoftness: round3(WIPE_SOFTNESS + plan.curveStrength * 0.03),
       distortionStrength: round3(distortionStrength),
-      blurPx: round2(blurPx),
+      blurPx: round2(
+        Math.max(
+          forwardRevealMode ? 6.6 : 5.5,
+          blurPx - plan.forwardDriveStrength * (forwardRevealMode ? 2.4 : 4.1),
+        ),
+      ),
       glassAlpha: round3(targetReady ? DEFAULT_GLASS_ALPHA : TARGET_NOT_READY_GLASS_ALPHA),
-      motionBlurStrength: round3(0.035 + midBell * 0.08),
+      motionBlurStrength: round3(
+        0.2 + midBell * 0.38 + plan.forwardDriveStrength * (forwardRevealMode ? 0.16 : 0.12),
+      ),
       fovDelta: round2(resolveTravelFovDelta(normalizedProgress, settleStart)),
-      zoomScale: round4(1 + 0.015 + midBell * 0.02),
-      fromShiftPercent: round2(plan.travelDirX * mix(sourceKind === 'cover' ? 2.2 : 1.8, sourceKind === 'cover' ? 5.2 : 4.2, easedTravel)),
-      toShiftPercent: round2(plan.travelDirX * mix(5.4, 0.4, targetRevealState.revealProgress)),
-      shearDeg: round2(plan.travelDirX * (1.4 + plan.curveStrength * 3.4) * midBell),
-      curveStrength: plan.curveStrength,
-      occlusionOpacity: round3((0.1 + plan.curveStrength * (OCCLUSION_ALPHA * 0.8)) * midBell),
+      zoomScale: round4(
+        1 +
+          0.05 +
+          midBell * 0.072 +
+          plan.forwardDriveStrength * (forwardRevealMode ? 0.052 + midBell * 0.07 : 0.036 + midBell * 0.054),
+      ),
+      fromShiftPercent: round2(plan.travelDirX * mix(sourceKind === 'cover' ? 3.8 : 3.2, sourceKind === 'cover' ? 9.4 : 8.4, easedTravel) * lateralFactor),
+      toShiftPercent: round2(plan.travelDirX * mix(14.8 + plan.forwardDriveStrength * 6, 0.3, targetRevealState.revealProgress) * lateralFactor),
+      shearDeg: round2(plan.travelDirX * (3.4 + plan.curveStrength * 7.6 + plan.forwardDriveStrength * 2.8) * midBell * lateralFactor),
+      curveStrength: round3(Math.min(1, plan.curveStrength * 1.1)),
+      forwardDriveStrength: round3(plan.forwardDriveStrength),
+      occlusionOpacity: round3((0.28 + plan.curveStrength * (OCCLUSION_ALPHA + 0.12) + plan.forwardDriveStrength * 0.24) * midBell),
     };
   }
 
   const settleT = easeOutQuad(safeRatio(normalizedProgress - settleStart, 1 - settleStart));
   const settleStartYaw = interpolateAngle(turnInEndYaw, targetWorldYaw, 1);
-  const blurPx = targetReady ? mix(BLUR_STRENGTH * 0.18, 0, settleT) : BLUR_STRENGTH * 0.82;
+  const blurPx = targetReady ? mix(BLUR_STRENGTH * 0.22, 0, settleT) : BLUR_STRENGTH * 0.88;
   const revealProgress = targetReady
     ? round3(mix(targetRevealState.revealProgress, 1, settleT))
     : 0;
@@ -202,12 +254,12 @@ export function buildSceneTransitionFrame({
       targetReady
         ? mix(
             sourceKind === 'cover'
-              ? mix(0.08, 0.02, targetRevealState.targetMixProgress)
-              : mix(0.12, 0.04, targetRevealState.targetMixProgress),
+              ? mix(0.1, 0.02, targetRevealState.targetMixProgress)
+              : mix(0.22, 0.06, targetRevealState.targetMixProgress),
             0,
             settleT,
           )
-        : (sourceKind === 'cover' ? 0.28 : 0.16),
+        : (sourceKind === 'cover' ? 0.32 : 0.18),
     ),
     fromEdgeMix: round3(sourceKind === 'cover' ? 1 : (targetReady ? mix(0.9, 0.98, settleT) : 0.98)),
     targetFocus,
@@ -215,36 +267,37 @@ export function buildSceneTransitionFrame({
     distortionStrength: round3(DISTORTION_STRENGTH * (1 - settleT * 0.8)),
     blurPx: round2(blurPx),
     glassAlpha: round3(targetReady ? mix(DEFAULT_GLASS_ALPHA, 0.08, settleT) : TARGET_NOT_READY_GLASS_ALPHA),
-    motionBlurStrength: round3(targetReady ? mix(0.08, 0, settleT) : 0.04),
-    fovDelta: round2(mix(0.4, 0, settleT)),
-    zoomScale: round4(mix(1.012, 1, settleT)),
-    fromShiftPercent: round2(plan.travelDirX * mix(sourceKind === 'cover' ? 2.8 : 2.2, 0, settleT)),
-    toShiftPercent: round2(plan.travelDirX * mix(0.8, 0, settleT)),
-    shearDeg: round2(plan.travelDirX * mix(1.2 + plan.curveStrength * 1.8, 0, settleT)),
-    curveStrength: plan.curveStrength,
-    occlusionOpacity: round3(mix(0.1 + plan.curveStrength * 0.12, 0, settleT)),
+    motionBlurStrength: round3(targetReady ? mix(0.12, 0, settleT) : 0.07),
+    fovDelta: round2(mix(0.55, 0, settleT)),
+    zoomScale: round4(mix(1.02, 1, settleT)),
+    fromShiftPercent: round2(plan.travelDirX * mix(sourceKind === 'cover' ? 3.6 : 3, 0, settleT) * lateralFactor),
+    toShiftPercent: round2(plan.travelDirX * mix(1.4, 0, settleT) * lateralFactor),
+    shearDeg: round2(plan.travelDirX * mix(1.9 + plan.curveStrength * 2.5, 0, settleT) * lateralFactor),
+    curveStrength: round3(Math.min(1, plan.curveStrength * 1.08)),
+    forwardDriveStrength: round3(plan.forwardDriveStrength),
+    occlusionOpacity: round3(mix(0.16 + plan.curveStrength * 0.2 + plan.forwardDriveStrength * 0.08, 0, settleT)),
   };
 }
 
 function resolveTravelFovDelta(progress: number, settleStart: number): number {
-  if (progress <= 0.22) {
-    return mix(0, FOV_PULSE_IN, easeOutCubic(safeRatio(progress, 0.22)));
+  if (progress <= 0.26) {
+    return mix(0, FOV_PULSE_IN, easeOutCubic(safeRatio(progress, 0.26)));
   }
-  if (progress <= 0.48) {
+  if (progress <= 0.54) {
     return mix(
       FOV_PULSE_IN,
       FOV_PULSE_OUT,
-      easeInOutCubic(safeRatio(progress - 0.22, 0.26)),
+      easeInOutCubic(safeRatio(progress - 0.26, 0.28)),
     );
   }
   if (progress <= settleStart) {
     return mix(
       FOV_PULSE_OUT,
-      0.45,
-      easeOutCubic(safeRatio(progress - 0.48, Math.max(settleStart - 0.48, 0.001))),
+      0.6,
+      easeOutCubic(safeRatio(progress - 0.54, Math.max(settleStart - 0.54, 0.001))),
     );
   }
-  return 0.45;
+  return 0.6;
 }
 
 function resolveTargetRevealState({
@@ -253,12 +306,14 @@ function resolveTargetRevealState({
   targetReady,
   targetReadyProgress,
   sourceKind,
+  forwardRevealMode,
 }: {
   normalizedProgress: number;
   settleStart: number;
   targetReady: boolean;
   targetReadyProgress?: number;
   sourceKind: 'scene' | 'cover';
+  forwardRevealMode: boolean;
 }): {
   revealProgress: number;
   targetMixProgress: number;
@@ -273,26 +328,32 @@ function resolveTargetRevealState({
   }
 
   const readyProgress = clamp(
-    targetReadyProgress ?? TURN_IN_RATIO,
+    Math.max(
+      targetReadyProgress ?? TURN_IN_RATIO,
+      sourceKind === 'scene'
+        ? TURN_IN_RATIO + (forwardRevealMode ? 0.18 : 0.1)
+        : TURN_IN_RATIO + 0.05,
+    ),
     0,
     Math.min(normalizedProgress, settleStart),
   );
-  const readyWindow = Math.max((1 - readyProgress) * 0.85, 0.001);
+  const readyWindow = Math.max((1 - readyProgress) * (forwardRevealMode ? 0.82 : 0.68), 0.001);
   const readyDelta = Math.max(normalizedProgress - readyProgress, 0);
   const revealRatio = safeRatio(readyDelta, readyWindow);
-  const revealProgress = easeInOutCubic(revealRatio);
-  const mixLead = easeOutQuad(safeRatio(readyDelta, readyWindow * 1.08));
+  const constrainedRevealRatio = forwardRevealMode ? Math.pow(revealRatio, 1.28) : revealRatio;
+  const revealProgress = easeInOutCubic(constrainedRevealRatio);
+  const mixLead = easeOutQuad(safeRatio(readyDelta, readyWindow * (forwardRevealMode ? 1.04 : 0.88)));
   const targetMixProgress = clamp(
-    (sourceKind === 'cover' ? 0.03 : 0.02) +
-      revealProgress * (sourceKind === 'cover' ? 0.86 : 0.82) +
-      mixLead * (sourceKind === 'cover' ? 0.1 : 0.08),
+    (sourceKind === 'cover' ? 0.03 : 0.0) +
+      revealProgress * (sourceKind === 'cover' ? 0.82 : forwardRevealMode ? 0.54 : 0.72) +
+      mixLead * (sourceKind === 'cover' ? 0.12 : forwardRevealMode ? 0.07 : 0.1),
     0,
-    0.97,
+    forwardRevealMode ? 0.72 : 0.94,
   );
   const targetFocus = clamp(
-    (sourceKind === 'cover' ? 0.23 : 0.14) +
-      revealProgress * (sourceKind === 'cover' ? 0.69 : 0.58) +
-      mixLead * (sourceKind === 'cover' ? 0.1 : 0.08),
+    (sourceKind === 'cover' ? 0.2 : forwardRevealMode ? 0.02 : 0.04) +
+      revealProgress * (sourceKind === 'cover' ? 0.66 : forwardRevealMode ? 0.42 : 0.56) +
+      mixLead * (sourceKind === 'cover' ? 0.12 : forwardRevealMode ? 0.06 : 0.1),
     0,
     1,
   );
@@ -360,4 +421,3 @@ function round3(value: number): number {
 function round4(value: number): number {
   return Number(value.toFixed(4));
 }
-

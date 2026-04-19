@@ -35,6 +35,8 @@ type SceneUiRuntimeOptions = {
   onOpenInfo: () => void;
   onOpenSettings: () => void;
   onOpenCommunity: () => void;
+  onSmartNarration?: () => void;
+  onPhotoAsk?: () => void;
   onWarmupFeatures?: () => Promise<void> | void;
 };
 
@@ -142,6 +144,8 @@ export class SceneUiRuntime {
         },
         onOpenInfo: this.options.onOpenInfo,
         onOpenSettings: this.options.onOpenSettings,
+        onSmartNarration: this.options.onSmartNarration,
+        onPhotoAsk: this.options.onPhotoAsk,
         sceneId: this.options.scene.id,
         sceneName: this.options.scene.name,
         museum: this.options.museum,

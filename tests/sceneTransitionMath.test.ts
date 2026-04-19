@@ -17,11 +17,12 @@ test('small forward hop keeps short duration with no artificial arc', () => {
     toMapPoint: { x: 138, y: 204 },
   });
 
-  assert.equal(plan.durationMs, 480);
+  assert.equal(plan.durationMs, 720);
   assert.equal(plan.travelDirX, 1);
   assert.equal(plan.wipeFrom, 'right');
-  assert.equal(plan.turnLead, 1.9);
+  assert.equal(plan.turnLead, 0);
   assert.equal(plan.curveStrength, 0);
+  assert.equal(plan.forwardDriveStrength, 0);
 });
 
 test('medium side hop biases into a curved travel heading', () => {
@@ -32,11 +33,12 @@ test('medium side hop biases into a curved travel heading', () => {
     toMapPoint: { x: 210, y: 130 },
   });
 
-  assert.equal(plan.durationMs, 620);
+  assert.equal(plan.durationMs, 900);
   assert.equal(plan.travelDirX, 1);
   assert.equal(plan.wipeFrom, 'right');
-  assert.ok(plan.turnLead > 10 && plan.turnLead < 12);
+  assert.ok(plan.turnLead > 20 && plan.turnLead < 22);
   assert.ok(plan.curveStrength > 0.5);
+  assert.ok(plan.forwardDriveStrength >= 0.02);
 });
 
 test('large left turn uses large-turn duration and left-origin wipe', () => {
@@ -47,11 +49,12 @@ test('large left turn uses large-turn duration and left-origin wipe', () => {
     toMapPoint: { x: 120, y: 360 },
   });
 
-  assert.equal(plan.durationMs, 760);
+  assert.equal(plan.durationMs, 1040);
   assert.equal(plan.travelDirX, -1);
   assert.equal(plan.wipeFrom, 'left');
-  assert.equal(plan.turnLead, 18);
+  assert.equal(plan.turnLead, 36);
   assert.equal(plan.settleMs, 140);
+  assert.ok(plan.forwardDriveStrength >= 0.16);
 });
 
 test('screen-space hotspot offset decides wipe side when yaw delta is tiny', () => {
@@ -63,6 +66,35 @@ test('screen-space hotspot offset decides wipe side when yaw delta is tiny', () 
 
   assert.equal(plan.travelDirX, -1);
   assert.equal(plan.wipeFrom, 'left');
+});
+
+test('tiny yaw delta still gets directional lead when lateral map relation is strong', () => {
+  const plan = computeSceneTransitionPlan({
+    currentWorldYaw: 0,
+    targetWorldYaw: 4,
+    fromMapPoint: { x: 40, y: 80 },
+    toMapPoint: { x: 220, y: 92 },
+  });
+
+  assert.equal(plan.travelDirX, 1);
+  assert.ok(plan.turnLead >= 18);
+  assert.ok(plan.curveStrength >= 0.5);
+  assert.ok(plan.forwardDriveStrength >= 0.3);
+});
+
+test('tiny yaw delta still gets a stronger travel phase when map distance is long', () => {
+  const plan = computeSceneTransitionPlan({
+    currentWorldYaw: 0,
+    targetWorldYaw: 0,
+    fromMapPoint: { x: 650, y: 2170 },
+    toMapPoint: { x: 650, y: 1660 },
+  });
+
+  assert.equal(plan.durationMs, 980);
+  assert.equal(plan.turnLead, 0);
+  assert.equal(plan.wipeFrom, 'center');
+  assert.ok(plan.curveStrength >= 0.55);
+  assert.ok(plan.forwardDriveStrength >= 0.75);
 });
 
 test('transition intent queue keeps only the latest pending click while active', () => {
@@ -88,4 +120,3 @@ test('transition intent queue keeps only the latest pending click while active',
   assert.deepEqual(consumed.state.active, third);
   assert.equal(consumed.state.pending, null);
 });
-

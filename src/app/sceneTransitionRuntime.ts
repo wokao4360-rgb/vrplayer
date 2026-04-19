@@ -2,7 +2,7 @@ import type { Scene } from '../types/config';
 import type { TransitionProgressState } from './sceneTransitionGate.ts';
 import type { SceneTransitionFrame } from './sceneTransitionTimeline.ts';
 
-export const LOAD_COMMIT_TRAVEL_PROGRESS = 0.58;
+export const LOAD_COMMIT_TRAVEL_PROGRESS = 0.72;
 
 export function createInitialTransitionProgressState(
   _previewImage?: string,
@@ -25,10 +25,11 @@ export function resolveRuntimeTransitionScene(
   scene: Scene,
   previewUrl?: string,
 ): Scene {
-  if (scene.panoTiles?.manifest || scene.panoLow || scene.pano) {
+  if (!previewUrl) {
     return scene;
   }
-  if (!previewUrl) {
+  const hasOwnLow = typeof scene.panoLow === 'string' && scene.panoLow.trim().length > 0;
+  if (hasOwnLow) {
     return scene;
   }
   return {
@@ -57,4 +58,3 @@ export function shouldForwardCommittedSceneStatus(
     status === 'highReady' ||
     status === 'degraded';
 }
-

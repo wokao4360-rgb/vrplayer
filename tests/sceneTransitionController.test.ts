@@ -18,3 +18,8 @@ test('controller keeps optional interaction lock and exposes the classic transit
   assert.match(controllerSource, /buildSceneTransitionCameraView\(/);
 });
 
+test('controller delays reveal activation until the minimum progress floor is reached', () => {
+  assert.match(controllerSource, /MIN_TARGET_REVEAL_PROGRESS/);
+  assert.match(controllerSource, /maybeActivateReveal\(ts: number, progress: number\): boolean/);
+  assert.match(controllerSource, /progress < MIN_TARGET_REVEAL_PROGRESS/);
+});

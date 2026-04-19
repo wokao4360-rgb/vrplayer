@@ -84,3 +84,30 @@ test('transition camera returns exact target view at final frame', () => {
   assert.deepEqual(view, { yaw: 22, pitch: -6, fov: 68 });
 });
 
+test('long straight hop adds a forward-drive pitch pulse instead of feeling like pure zoom', () => {
+  const plan = computeSceneTransitionPlan({
+    currentWorldYaw: 0,
+    targetWorldYaw: 0,
+    fromMapPoint: { x: 650, y: 2170 },
+    toMapPoint: { x: 650, y: 1660 },
+  });
+  const frame = buildSceneTransitionFrame({
+    currentWorldYaw: 0,
+    targetWorldYaw: 0,
+    plan,
+    progress: 0.22,
+    targetReady: false,
+  });
+
+  const view = buildSceneTransitionCameraView({
+    frame,
+    currentWorldView: { yaw: 0, pitch: 0, fov: 75 },
+    targetWorldView: { yaw: 0, pitch: 0, fov: 75 },
+    loadCommitted: false,
+  });
+
+  assert.equal(frame.wipeFrom, 'center');
+  assert.ok(plan.forwardDriveStrength >= 0.75);
+  assert.notEqual(view.pitch, 0);
+  assert.ok(view.pitch < -1.2);
+});

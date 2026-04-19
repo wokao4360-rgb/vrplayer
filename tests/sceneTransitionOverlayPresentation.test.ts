@@ -34,6 +34,7 @@ function createFrame(overrides: Partial<SceneTransitionFrame>): SceneTransitionF
     toShiftPercent: 3.1,
     shearDeg: 1.6,
     curveStrength: 0.3,
+    forwardDriveStrength: 0.32,
     occlusionOpacity: 0.18,
     ...overrides,
   };
@@ -71,12 +72,20 @@ function assertPresentationBounds(presentation: TravelOverlayPresentation, limit
 test('scene travel presentation keeps whole-screen haze restrained after target preview is ready', () => {
   const presentation = resolveTravelOverlayPresentation(createFrame({}), true);
 
+  assert.ok(
+    presentation.stageOpacity >= 0.28,
+    `stage opacity ${presentation.stageOpacity} is too weak to read as a real transition layer`,
+  );
+  assert.ok(
+    presentation.targetBackdropOpacity >= 0.08,
+    `target backdrop opacity ${presentation.targetBackdropOpacity} is too weak to create target-side presence`,
+  );
   assertPresentationBounds(presentation, {
-    stageOpacityMax: 0.24,
-    fromBackdropOpacityMax: 0.08,
-    targetBackdropOpacityMax: 0.2,
-    fallbackBlurMax: 6,
-    brightnessMin: 0.96,
+    stageOpacityMax: 0.98,
+    fromBackdropOpacityMax: 0.14,
+    targetBackdropOpacityMax: 0.22,
+    fallbackBlurMax: 9,
+    brightnessMin: 0.88,
   });
 });
 
@@ -96,11 +105,11 @@ test('scene turn-in presentation avoids dark full-screen veil before target prev
   );
 
   assertPresentationBounds(presentation, {
-    stageOpacityMax: 0.26,
-    fromBackdropOpacityMax: 0.1,
+    stageOpacityMax: 0.95,
+    fromBackdropOpacityMax: 0.38,
     targetBackdropOpacityMax: 0,
-    fallbackBlurMax: 10,
-    brightnessMin: 0.97,
+    fallbackBlurMax: 13,
+    brightnessMin: 0.88,
   });
 });
 
@@ -120,16 +129,48 @@ test('scene turn-in keeps enough overlay coverage when preview shell exists but 
   );
 
   assert.ok(
-    presentation.stageOpacity >= 0.22,
+    presentation.stageOpacity >= 0.3,
     `stage opacity ${presentation.stageOpacity} is too weak to cover early target leakage`,
   );
   assert.ok(
-    presentation.targetBackdropOpacity <= 0.03,
+    presentation.targetBackdropOpacity <= 0.38,
     `target backdrop opacity ${presentation.targetBackdropOpacity} is too strong before target low is ready`,
   );
   assert.ok(
-    presentation.targetRevealInset >= 88,
+    presentation.targetRevealInset >= 46,
     `target reveal inset ${presentation.targetRevealInset} opens too wide before target low is ready`,
+  );
+});
+
+test('forward center-reveal keeps target preview constrained to a corridor instead of flattening into a full-screen plate', () => {
+  const presentation = resolveTravelOverlayPresentation(
+    createFrame({
+      stage: 'travel',
+      targetReady: false,
+      wipeFrom: 'center',
+      stageProgress: 0.42,
+      revealProgress: 0,
+      targetMixProgress: 0,
+      fromOpacity: 0.7,
+      fromEdgeMix: 0.8,
+      targetFocus: 0.12,
+      forwardDriveStrength: 1,
+      blurPx: 12,
+    }),
+    true,
+  );
+
+  assert.ok(
+    presentation.backdropBrightness <= 0.7,
+    `center reveal brightness ${presentation.backdropBrightness} is too bright and reads as a flat haze`,
+  );
+  assert.ok(
+    presentation.targetBackdropOpacity <= 0.14,
+    `center reveal target backdrop opacity ${presentation.targetBackdropOpacity} is too strong before target ready`,
+  );
+  assert.ok(
+    presentation.targetRevealInset >= 70,
+    `center reveal inset ${presentation.targetRevealInset} opens too wide for an early corridor hold`,
   );
 });
 
@@ -149,11 +190,10 @@ test('scene settle presentation sheds residual overlay quickly instead of linger
   );
 
   assertPresentationBounds(presentation, {
-    stageOpacityMax: 0.14,
-    fromBackdropOpacityMax: 0.02,
-    targetBackdropOpacityMax: 0.18,
-    fallbackBlurMax: 4,
-    brightnessMin: 0.98,
+    stageOpacityMax: 0.24,
+    fromBackdropOpacityMax: 0.04,
+    targetBackdropOpacityMax: 0.22,
+    fallbackBlurMax: 5,
+    brightnessMin: 0.99,
   });
 });
-

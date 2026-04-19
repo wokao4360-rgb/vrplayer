@@ -43,14 +43,31 @@ test('runtime scene keeps original assets when pano data already exists', () => 
   assert.equal(scene.panoLow, 'low.jpg');
 });
 
+test('runtime scene injects preview panoLow for tile scenes that lack their own low fallback', () => {
+  const scene = resolveRuntimeTransitionScene(
+    {
+      id: 'scene-c',
+      name: 'Scene C',
+      initialView: { yaw: 0, pitch: 0, fov: 75 },
+      hotspots: [],
+      panoLow: '',
+      pano: '',
+      panoTiles: { manifest: 'tiles/scene-c.json' },
+    } as any,
+    'preview.jpg',
+  );
+
+  assert.equal(scene.panoLow, 'preview.jpg');
+});
+
 test('load commitment happens in travel after the configured threshold or in settle', () => {
-  assert.equal(LOAD_COMMIT_TRAVEL_PROGRESS, 0.58);
+  assert.equal(LOAD_COMMIT_TRAVEL_PROGRESS, 0.72);
   assert.equal(
-    shouldCommitSceneLoad({ stage: 'travel', stageProgress: 0.57 }),
+    shouldCommitSceneLoad({ stage: 'travel', stageProgress: 0.65 }),
     false,
   );
   assert.equal(
-    shouldCommitSceneLoad({ stage: 'travel', stageProgress: 0.58 }),
+    shouldCommitSceneLoad({ stage: 'travel', stageProgress: 0.72 }),
     true,
   );
   assert.equal(
@@ -73,4 +90,3 @@ test('initial transition progress state starts clean', () => {
   assert.equal(state.currentProgress, 0);
   assert.equal(state.releaseAtTs, null);
 });
-

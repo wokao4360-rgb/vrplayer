@@ -22,8 +22,9 @@ export type TransitionProgressArgs = {
   releaseMode?: SceneTransitionReleaseMode;
 };
 
-export const TARGET_READY_HOLD_PROGRESS = 0.74;
-export const POST_READY_DURATION_MS = 180;
+export const TARGET_READY_HOLD_PROGRESS = 0.86;
+export const POST_READY_DURATION_MS = 460;
+export const MIN_TARGET_REVEAL_PROGRESS = 0.56;
 
 export function isTransitionReleaseReady(
   state: Pick<TransitionProgressState, 'lowReady' | 'sharpReady' | 'failed' | 'loadCommitted'>,
@@ -93,4 +94,3 @@ export function computeSceneTransitionProgress({
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
-

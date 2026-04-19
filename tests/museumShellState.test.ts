@@ -51,14 +51,14 @@ const museum = {
     },
     {
       id: 'west_room_1',
-      name: '西屋1',
+      name: '西屋 1',
       thumb: '/assets/thumbs/linzexu/west_room_1.jpg',
       panoLow: '/assets/panos/linzexu/west_room_1-low.jpg',
       hotspots: [],
     },
     {
       id: 'east_room_1',
-      name: '东屋1',
+      name: '东屋 1',
       thumb: '/assets/thumbs/linzexu/east_room_1.jpg',
       panoLow: '/assets/panos/linzexu/east_room_1-low.jpg',
       hotspots: [],
@@ -135,8 +135,8 @@ test('preload plan prioritizes target scene preview and one-hop neighbors', () =
   assert.deepEqual(plan.neighborSceneIds, ['west_room_1', 'east_room_1']);
   assert.deepEqual(plan.previewAssets, [
     '/assets/panos/linzexu/south_gate-low.jpg',
-    '/assets/thumbs/linzexu/west_room_1.jpg',
-    '/assets/thumbs/linzexu/east_room_1.jpg',
+    '/assets/panos/linzexu/west_room_1-low.jpg',
+    '/assets/panos/linzexu/east_room_1-low.jpg',
   ]);
 });
 

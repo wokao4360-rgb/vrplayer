@@ -69,7 +69,7 @@ export function resolveMuseumShellRoute({
     throw new Error(`museum ${museum.id} does not contain any scenes`);
   }
 
-  if (!hasEnteredMuseum) {
+  if (!hasEnteredMuseum || !requestedSceneId) {
     return {
       kind: 'cover',
       museumId: museum.id,
@@ -117,7 +117,10 @@ export function buildMuseumCoverModel({
     appName,
     brandTitle,
     title: museum.name,
-    subtitle: museum.marketing?.hook?.trim() || museum.description?.trim() || museum.name,
+    subtitle:
+      museum.marketing?.hook?.trim() ||
+      museum.description?.trim() ||
+      `${museum.name} 单馆连续漫游，进入后可在同一壳层内切换场景。`,
     ctaLabel: '点击开启 VR 漫游',
     heroImage: museum.cover,
     targetSceneId,
@@ -132,8 +135,11 @@ export function buildMuseumPreloadPlan({
   const primarySceneIds = targetScene ? [targetScene.id] : [];
   const neighborSceneIds = targetScene ? collectNeighborSceneIds(targetScene) : [];
   const previewAssets = uniqueDefinedStrings([
-    targetScene?.panoLow,
-    ...neighborSceneIds.map((sceneId) => museum.scenes.find((scene) => scene.id === sceneId)?.thumb),
+    targetScene?.panoLow ?? targetScene?.thumb,
+    ...neighborSceneIds.map((sceneId) => {
+      const neighborScene = museum.scenes.find((scene) => scene.id === sceneId);
+      return neighborScene?.panoLow ?? neighborScene?.thumb;
+    }),
   ]);
 
   return {

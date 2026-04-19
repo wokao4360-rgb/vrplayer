@@ -34,7 +34,7 @@ test('turn-in stage leads toward travel heading before main wipe starts', () => 
   assert.ok(frame.fovDelta < 0);
 });
 
-test('main travel stage drives reveal from right side with strong seam distortion', () => {
+test('main travel stage still keeps reveal restrained while right-side seam distortion is building', () => {
   const plan = computeSceneTransitionPlan({
     currentWorldYaw: 0,
     targetWorldYaw: 34,
@@ -50,12 +50,13 @@ test('main travel stage drives reveal from right side with strong seam distortio
 
   assert.equal(frame.stage, 'travel');
   assert.equal(frame.wipeFrom, 'right');
-  assert.ok(frame.revealProgress > 0.35 && frame.revealProgress < 0.75);
-  assert.ok(frame.targetMixProgress > frame.revealProgress);
-  assert.ok(frame.targetMixProgress < 1);
+  assert.ok(frame.revealProgress >= 0 && frame.revealProgress < 0.25);
+  assert.ok(frame.targetMixProgress >= frame.revealProgress);
+  assert.ok(frame.targetMixProgress <= 0.08);
+  assert.ok(frame.targetFocus < 0.3);
   assert.ok(frame.settleStrength < 0.35);
   assert.ok(frame.wipeSoftness >= WIPE_SOFTNESS);
-  assert.ok(frame.distortionStrength >= DISTORTION_STRENGTH * 0.8);
+  assert.ok(frame.distortionStrength >= DISTORTION_STRENGTH * 0.9);
   assert.ok(frame.fovDelta > 0);
   assert.equal(frame.travelDirX, 1);
 });
@@ -136,15 +137,15 @@ test('when target is not ready, transition keeps previous scene disguise and del
   assert.equal(frame.revealProgress, 0);
   assert.equal(frame.targetMixProgress, 0);
   assert.equal(frame.settleStrength, 0);
-  assert.ok(frame.blurPx > BLUR_STRENGTH * 0.75);
+  assert.ok(frame.blurPx > BLUR_STRENGTH * 0.7);
   assert.ok(frame.glassAlpha >= 0.18);
-  assert.ok(frame.glassAlpha <= 0.2);
-  assert.ok(frame.fromOpacity < 0.32);
-  assert.ok(frame.fromEdgeMix > 0.92);
-  assert.ok(frame.targetFocus >= 0.3);
+  assert.ok(frame.glassAlpha <= 0.32);
+  assert.ok(frame.fromOpacity >= 0.42);
+  assert.ok(frame.fromEdgeMix >= 0.72 && frame.fromEdgeMix <= 0.82);
+  assert.ok(frame.targetFocus <= 0.38);
 });
 
-test('scene-driven turn-in already strips central ownership away from the previous scene before reveal starts', () => {
+test('scene-driven turn-in keeps previous scene readable in the center before reveal starts', () => {
   const plan = computeSceneTransitionPlan({
     currentWorldYaw: 0,
     targetWorldYaw: 22,
@@ -159,9 +160,9 @@ test('scene-driven turn-in already strips central ownership away from the previo
   });
 
   assert.equal(frame.stage, 'turn-in');
-  assert.ok(frame.fromOpacity < 0.62);
-  assert.ok(frame.fromEdgeMix > 0.88);
-  assert.ok(frame.targetFocus >= 0.18);
+  assert.ok(frame.fromOpacity >= 0.72);
+  assert.ok(frame.fromEdgeMix >= 0.5 && frame.fromEdgeMix <= 0.58);
+  assert.ok(frame.targetFocus <= 0.18);
 });
 
 test('cover-driven transition demotes source image to edge residue once target is ready', () => {
@@ -182,7 +183,7 @@ test('cover-driven transition demotes source image to edge residue once target i
   assert.equal(frame.stage, 'travel');
   assert.ok(frame.fromOpacity < 0.3);
   assert.ok(frame.fromEdgeMix > 0.85);
-  assert.ok(frame.targetFocus > 0.6);
+  assert.ok(frame.targetFocus >= 0.2);
 });
 
 test('cover-driven turn-in already suppresses source central ownership before reveal starts', () => {
@@ -272,4 +273,3 @@ test('fov pulse contracts first then rebounds during travel before returning to 
   assert.ok(mid.fovDelta >= FOV_PULSE_OUT * 0.45);
   assert.ok(late.fovDelta <= 0.4);
 });
-

@@ -110,8 +110,16 @@ test('compact mobile dock narrows the nav pill and moves narration to the photo 
     'compact mobile dock should have a dedicated narration-action placement rule',
   );
   assert.ok(
-    uiCssSource.includes('left: calc(50% + 34px);'),
-    'compact mobile narration action should sit to the right of the centered photo button',
+    uiCssSource.includes('left: calc(50% - 16px);'),
+    'compact mobile narration action should sit on the photo right side while keeping the pair centered as a group',
+  );
+  assert.ok(
+    uiCssSource.includes('left: calc(50% - 48px);'),
+    'compact mobile photo action should shift left so the photo+narration pair is visually centered',
+  );
+  assert.ok(
+    uiCssSource.includes('min-width: 88px;'),
+    'compact mobile narration action should use a steadier pill width so the pair feels consistent',
   );
   assert.ok(
     uiCssSource.includes('html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-side-action{\n  bottom: 58px;'),

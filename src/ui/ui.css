@@ -3654,16 +3654,16 @@ html[data-vr-layout="mobile-compact"] .vr-dock{
 
 html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-side-action{
   bottom: 58px;
-  min-width: 72px;
-  height: 40px;
+  min-width: 88px;
+  height: 42px;
   gap: 6px;
-  padding: 0 10px;
+  padding: 0 12px;
   border-radius: 999px;
   background: rgba(248, 241, 232, 0.94);
 }
 
 html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-narration-action{
-  left: calc(50% + 34px);
+  left: calc(50% - 16px);
 }
 
 html[data-vr-layout="mobile-compact"] .vr-dock-side-label{
@@ -3671,6 +3671,7 @@ html[data-vr-layout="mobile-compact"] .vr-dock-side-label{
 }
 
 html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-photo-action{
+  left: calc(50% - 48px);
   bottom: 58px;
   width: 48px;
   height: 48px;

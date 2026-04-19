@@ -296,6 +296,7 @@ export class FcChatPanel {
     this.input.type = "text";
     this.input.id = "fcchat-message-input";
     this.input.name = "message";
+    this.input.autocomplete = "off";
     this.input.placeholder = "继续提问";
     this.input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") this.onSend();
@@ -2835,6 +2836,121 @@ export class FcChatPanel {
         .fcchat-recall-panel{
           max-height: 138px;
         }
+      }
+
+      html[data-vr-layout="mobile-compact"] .fcchat-root{
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        top: auto !important;
+        width: 100vw !important;
+        height: min(70vh, 620px) !important;
+        border-radius: 22px 22px 0 0 !important;
+        box-shadow: 0 -14px 38px rgba(31, 23, 18, 0.22);
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-header{
+        cursor: default !important;
+        padding: 12px 14px 10px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-title{
+        font-size: 18px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-disclaimer{
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-contextbar{
+        gap: 6px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-context-pill{
+        height: 28px;
+        padding: 0 10px;
+        font-size: 11px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-workbench{
+        padding: 6px 10px 8px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-workbench-panel{
+        max-height: 140px;
+        padding: 8px 9px 10px;
+        border-radius: 14px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-workbench-tab{
+        height: 32px;
+        font-size: 12px;
+        padding: 0 12px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-list{
+        padding: 8px 10px;
+        gap: 10px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-bubble{
+        max-width: 90%;
+        padding: 9px 11px;
+        border-radius: 12px;
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-response-card{
+        max-width: 92%;
+        border-radius: 15px;
+        padding: 12px 12px 10px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-response-card-title{
+        font-size: 16px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-response-card-body p,
+      html[data-vr-layout="mobile-compact"] .fcchat-response-list-item{
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-status{
+        padding: 5px 10px 0;
+        font-size: 11px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-composer{
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-inputbar{
+        gap: 8px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-input{
+        height: 40px;
+        border-radius: 12px;
+        font-size: 15px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-btn-primary{
+        min-width: 72px;
+        height: 40px;
+        border-radius: 12px;
+        font-size: 14px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-recall-panel{
+        max-height: 122px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-fab{
+        left: 12px;
+        right: auto;
+        top: auto;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
+        width: 42px;
+        height: 42px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-fab svg{
+        width: 42px;
+        height: 42px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-caption-overlay{
+        width: min(320px, calc(100vw - 24px));
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 70px);
+        max-height: 84px;
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+      html[data-vr-layout="mobile-compact"] .fcchat-first-hint{
+        max-width: 188px;
+        font-size: 12px;
+        white-space: normal;
       }
 
       .fcchat-root.is-swiping{

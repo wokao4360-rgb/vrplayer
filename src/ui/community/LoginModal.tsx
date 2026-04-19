@@ -55,6 +55,7 @@ export class LoginModal {
     this.inputEl.type = 'text';
     this.inputEl.id = 'community-login-name';
     this.inputEl.name = 'username';
+    this.inputEl.autocomplete = 'nickname';
     this.inputEl.placeholder = '用户名（2-12字）';
     this.inputEl.maxLength = 12;
     this.inputEl.addEventListener('keydown', (e) => {

@@ -3566,6 +3566,138 @@ body{
   }
 }
 
+html[data-vr-layout="mobile-compact"] .vr-scenetitle{
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  max-width: 78px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(23, 17, 12, 0.34), rgba(23, 17, 12, 0.18));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.14);
+  text-shadow: none;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-topmodes{
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 92px;
+  right: 84px;
+  transform: none;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: linear-gradient(180deg, rgba(23, 17, 12, 0.34), rgba(23, 17, 12, 0.14));
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.14);
+}
+
+html[data-vr-layout="mobile-compact"] .vr-topmodes::-webkit-scrollbar{
+  display: none;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-topmodes__btn{
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 1px;
+  line-height: 1.1;
+  flex: 0 0 auto;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-topmodes__btn.is-active::after{
+  height: 1.5px;
+  bottom: -1px;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-topright-controls{
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  right: 8px;
+  gap: 6px;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-topright-btn{
+  min-width: 32px;
+  min-height: 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.14);
+}
+
+html[data-vr-layout="mobile-compact"] .vr-topright-btn svg{
+  width: 18px;
+  height: 18px;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-dock-wrap{
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  gap: 8px;
+  padding-inline: 8px;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-dock{
+  width: min(100%, 360px);
+  gap: 4px;
+  padding: 6px 8px 7px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(32, 24, 18, 0.34), rgba(32, 24, 18, 0.16));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.16);
+}
+
+html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-side-action{
+  left: calc(50% - min(160px, 42vw));
+  bottom: 4px;
+  min-width: 76px;
+  height: 42px;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(248, 241, 232, 0.94);
+}
+
+html[data-vr-layout="mobile-compact"] .vr-dock-side-label{
+  font-size: 11px;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-dock-wrap .vr-dock-photo-action{
+  bottom: 46px;
+  width: 48px;
+  height: 48px;
+  box-shadow: 0 12px 22px rgba(53, 35, 20, 0.18);
+}
+
+html[data-vr-layout="mobile-compact"] .vr-dock-tab{
+  width: auto;
+  min-width: 0;
+  height: 40px;
+  gap: 3px;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-dock-tab-icon{
+  width: 17px;
+  height: 17px;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-dock-tab-label{
+  font-size: 10px;
+  line-height: 1;
+  text-shadow: none;
+}
+
+html[data-vr-layout="mobile-compact"] .vr-panel,
+html[data-vr-layout="mobile-compact"] .vr-modal-panel{
+  width: min(96vw, 480px);
+  border-radius: 18px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vr-topmodes,
   .vr-topright-btn,

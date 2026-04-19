@@ -1101,6 +1101,93 @@ export class SceneGuideDrawer {
           height: 148px;
         }
       }
+      html[data-vr-layout="mobile-compact"] .vr-guide-panel{
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: min(78vh, 720px);
+        border-radius: 24px 24px 0 0;
+        box-shadow: 0 -16px 34px rgba(73, 49, 28, 0.22);
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-header{
+        padding: 12px 14px 10px;
+        gap: 8px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-title{
+        font-size: 18px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-subtitle{
+        font-size: 12px;
+        line-height: 1.5;
+        max-width: none;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-innovation-strip{
+        display: none;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-search{
+        padding: 0 14px 10px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-search-input{
+        height: 34px;
+        font-size: 12px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-body{
+        padding: 0 14px calc(12px + env(safe-area-inset-bottom, 0px));
+        gap: 10px;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-preview{
+        order: 0;
+        gap: 8px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-preview-image{
+        height: 112px;
+        border-radius: 12px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-preview-title{
+        font-size: 13px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-route-card{
+        padding: 10px;
+        border-radius: 14px;
+        gap: 8px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-route-title{
+        font-size: 11px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-route-chip{
+        height: 26px;
+        font-size: 11px;
+        padding: 0 10px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-route-summary,
+      html[data-vr-layout="mobile-compact"] .vr-guide-id{
+        font-size: 11px;
+        line-height: 1.5;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-preview-enter{
+        width: 100%;
+        justify-content: center;
+        height: 34px;
+        font-size: 12px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-list{
+        gap: 5px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-item{
+        padding: 8px;
+        border-radius: 12px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-thumb{
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+      }
+      html[data-vr-layout="mobile-compact"] .vr-guide-name{
+        font-size: 12px;
+      }
     `;
     document.head.appendChild(style);
   }

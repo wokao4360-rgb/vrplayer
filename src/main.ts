@@ -74,6 +74,7 @@ import {
 } from './app/sceneTransitionRuntime';
 import type { SceneEnterMeta, SceneEnterView } from './app/sceneTransitionTypes';
 import type { MuseumShellChrome, MuseumShellTransitionViewModel } from './ui/MuseumShellChrome';
+import { applyVrLayoutProfile, detectCurrentVrLayoutProfile } from './ui/layoutProfile';
 import './ui/uiRefresh.css';
 if (__VR_DEBUG__) {
   void Promise.all([import('./utils/debugHelper'), import('./ui/interactionBus')])
@@ -187,12 +188,18 @@ class App {
   private chatRuntimeModulePromise: Promise<typeof import('./app/chatRuntime')> | null = null;
   private configErrorPanelModulePromise: Promise<typeof import('./ui/ConfigErrorPanel')> | null = null;
   private museumShellChromeModulePromise: Promise<typeof import('./ui/MuseumShellChrome')> | null = null;
+  private readonly handleLayoutProfileSync = () => {
+    this.syncLayoutProfile();
+  };
   constructor() {
     const appElement = document.getElementById('app');
     if (!appElement) {
       throw new Error('找不到 #app 元素');
     }
     this.appElement = appElement;
+    this.syncLayoutProfile();
+    window.addEventListener('resize', this.handleLayoutProfileSync, { passive: true });
+    window.addEventListener('orientationchange', this.handleLayoutProfileSync);
     // 鍒濆鍖栧叏灞€ ModalHost锛堢敤浜庣儹鐐瑰脊绐楃瓑锛?
     ensureModalHost();
     
@@ -217,6 +224,12 @@ class App {
     
     this.bindFullscreenEventsOnce();
     this.init();
+  }
+
+  private syncLayoutProfile(): void {
+    const profile = detectCurrentVrLayoutProfile(window);
+    document.documentElement.dataset.vrLayout = profile;
+    applyVrLayoutProfile(document, profile);
   }
   private bindFullscreenEventsOnce(): void {
     if (this.hasBoundFullscreenEvents) return;
